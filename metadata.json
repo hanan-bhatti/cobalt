@@ -1,0 +1,6 @@
+{
+  "name": "Second Brain",
+  "description": "A universal capture and personal knowledge archive with minimalist design and Gemini AI OCR region marking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

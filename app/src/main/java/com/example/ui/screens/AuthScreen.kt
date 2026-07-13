@@ -1,0 +1,474 @@
+package com.example.ui.screens
+
+import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Mail
+import androidx.compose.material.icons.outlined.Sync
+import androidx.compose.material.icons.outlined.CloudQueue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.ui.viewmodel.SecondBrainViewModel
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AuthScreen(
+    viewModel: SecondBrainViewModel,
+    onNavigateBack: () -> Unit,
+    onNavigateToLegal: (String) -> Unit = {},
+    modifier: Modifier = Modifier
+) {
+    val userEmail by viewModel.userEmail.collectAsState()
+    val authError by viewModel.authError.collectAsState()
+    val emailLinkSent by viewModel.emailLinkSent.collectAsState()
+    val pendingEmailLink by viewModel.pendingEmailLink.collectAsState()
+
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var isSignUp by remember { mutableStateOf(false) }
+    var isEmailLinkMode by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Cloud Sync Settings", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("auth_back_button")) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Go back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+        modifier = modifier.fillMaxSize()
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .padding(24.dp),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            if (userEmail != null) {
+                // SIGNED IN / USER PROFILE STATE
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Sync,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(64.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Cloud Backup Active",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Your second brain is synced to Firebase.",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.secondary,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Logged in as",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.secondary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = userEmail ?: "",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    Button(
+                        onClick = { viewModel.signOut() },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("sign_out_button")
+                    ) {
+                        Text("Sign Out", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+            } else {
+                // SIGN IN / SIGN UP FORM
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 20.dp)
+                ) {
+                    Text(
+                        text = if (isSignUp) "Create Firebase Account" else "Welcome to Second Brain",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = if (isSignUp) "Register to automatically sync notes and files to the cloud." else "Sign in to enable Firestore backup and sync across devices.",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+
+                    val isFirebaseAvailable = viewModel.isFirebaseAvailable
+                    if (!isFirebaseAvailable) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.CloudQueue,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "Sandbox Simulation Mode",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Text(
+                                        text = "Firebase configuration is not detected in this environment. To test the app, you can use any email/password as a simulated sandbox login.",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                                        lineHeight = 15.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    if (authError != null) {
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp)
+                        ) {
+                            Text(
+                                text = authError ?: "",
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
+                    }
+
+                    // Email Field
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Email Address") },
+                        leadingIcon = { Icon(Icons.Filled.Mail, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(20.dp),
+                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
+                            .testTag("auth_email_input")
+                    )
+
+                    val activeLink = pendingEmailLink
+                    if (activeLink != null) {
+                        // Confirm Email link complete action
+                        Button(
+                            onClick = {
+                                viewModel.completeEmailLinkSignIn(email, activeLink)
+                            },
+                            shape = RoundedCornerShape(20.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                                .testTag("confirm_email_link_button")
+                        ) {
+                            Text(
+                                text = "Confirm Email & Complete Sign-In",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                    } else {
+                        if (!isEmailLinkMode) {
+                            // Password Field
+                            OutlinedTextField(
+                                value = password,
+                                onValueChange = { password = it },
+                                label = { Text("Password") },
+                                leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
+                                singleLine = true,
+                                visualTransformation = PasswordVisualTransformation(),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 16.dp)
+                                    .testTag("auth_password_input")
+                            )
+
+                            var termsAccepted by remember { mutableStateOf(false) }
+
+                            if (isSignUp) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = termsAccepted,
+                                        onCheckedChange = { termsAccepted = it }
+                                    )
+                                    Text(
+                                        text = "I agree to the Terms & Conditions and Privacy Policy.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            // Action Button (Prism blue accent color)
+                            Button(
+                                onClick = {
+                                    if (isSignUp) {
+                                        viewModel.signUp(email, password)
+                                    } else {
+                                        viewModel.signIn(email, password)
+                                    }
+                                },
+                                enabled = !isSignUp || termsAccepted,
+                                shape = RoundedCornerShape(20.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                                    .testTag("submit_auth_button")
+                            ) {
+                                Text(
+                                    text = if (isSignUp) "Register Account" else "Sign In",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
+                        } else {
+                            // Email Link passwordless submit
+                            Button(
+                                onClick = {
+                                    viewModel.sendSignInLink(email)
+                                },
+                                shape = RoundedCornerShape(20.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                                    .testTag("submit_email_link_button")
+                            ) {
+                                Text(
+                                    text = "Send Sign-In Link",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        HorizontalDivider(
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+                        Text(
+                            text = " OR ",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+                        HorizontalDivider(
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.signInWithGoogle(context) { success ->
+                                if (success) {
+                                    onNavigateBack()
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("google_sign_in_button")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.CloudQueue,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Continue with Google",
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Toggle text (Restrained links styling)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (pendingEmailLink == null) {
+                            TextButton(
+                                onClick = { isEmailLinkMode = !isEmailLinkMode },
+                                modifier = Modifier.testTag("toggle_email_link_mode")
+                            ) {
+                                Text(
+                                    text = if (isEmailLinkMode) "Use Email & Password instead" else "Sign in with passwordless link instead",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+
+                        if (!isEmailLinkMode && pendingEmailLink == null) {
+                            TextButton(
+                                onClick = { isSignUp = !isSignUp },
+                                modifier = Modifier.testTag("toggle_auth_mode_button")
+                            ) {
+                                Text(
+                                    text = if (isSignUp) "Already have an account? Sign In" else "New to Second Brain? Create Account",
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Spacer(modifier = Modifier.weight(1f))
+                            TextButton(onClick = { onNavigateToLegal("privacy") }) {
+                                Text("Privacy Policy", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                            }
+                            Text("•", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            TextButton(onClick = { onNavigateToLegal("terms") }) {
+                                Text("Terms & Conditions", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
