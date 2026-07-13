@@ -24,6 +24,11 @@ jobs:
         run: |
           printf '%s' "$KEYSTORE_BASE64" | base64 -di > app/release-key.jks
 
+      - name: Clean and self-heal Gradle Wrapper JAR
+        run: |
+          mkdir -p gradle/wrapper
+          curl -Lo gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v9.3.1/gradle/wrapper/gradle-wrapper.jar
+
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
