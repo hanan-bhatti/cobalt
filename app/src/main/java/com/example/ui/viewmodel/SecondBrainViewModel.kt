@@ -223,8 +223,18 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     private val _isOcrLoading = MutableStateFlow(false)
     val isOcrLoading: StateFlow<Boolean> = _isOcrLoading.asStateFlow()
 
+    private val _ocrError = MutableStateFlow<String?>(null)
+    val ocrError: StateFlow<String?> = _ocrError.asStateFlow()
+
+    fun clearOcrError() {
+        _ocrError.value = null
+    }
+
     private val _availableModels = MutableStateFlow<List<String>>(emptyList())
     val availableModels: StateFlow<List<String>> = _availableModels.asStateFlow()
+
+    private val _extractedLinksToReview = MutableStateFlow<List<ExtractedLinkReview>>(emptyList())
+    val extractedLinksToReview: StateFlow<List<ExtractedLinkReview>> = _extractedLinksToReview.asStateFlow()
 
     fun fetchAvailableModels() {
         val apiKey = settingsRepository.geminiApiKey.value.ifEmpty { com.example.BuildConfig.GEMINI_API_KEY }
@@ -263,6 +273,9 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _authError = MutableStateFlow<String?>(null)
     val authError: StateFlow<String?> = _authError.asStateFlow()
+
+    private val _authSuccess = MutableStateFlow<String?>(null)
+    val authSuccess: StateFlow<String?> = _authSuccess.asStateFlow()
 
     private val _emailLinkSent = MutableStateFlow(false)
     val emailLinkSent: StateFlow<Boolean> = _emailLinkSent.asStateFlow()
@@ -327,6 +340,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     // ----------------------------------------------------
 
     fun signUp(email: String, password: String) {
+        _authSuccess.value = null
         if (email.isBlank() || password.isBlank()) {
             _authError.value = "Email and password cannot be empty."
             return
@@ -349,6 +363,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun signIn(email: String, password: String) {
+        _authSuccess.value = null
         if (email.isBlank() || password.isBlank()) {
             _authError.value = "Email and password cannot be empty."
             return
@@ -420,7 +435,12 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 }
             } catch (e: Exception) {
                 Log.e("SecondBrainVM", "Google Sign-In failed: ${e.message}")
-                _authError.value = e.localizedMessage ?: "Google Sign-In failed."
+                val msg = e.localizedMessage ?: ""
+                _authError.value = if (msg.contains("No credentials available", ignoreCase = true) || msg.contains("NoCredentialException", ignoreCase = true)) {
+                    "Google Sign-In is temporarily unavailable. Please sign in with your Email & Password instead."
+                } else {
+                    "Google Sign-In is currently unavailable. Please try using your Email & Password instead."
+                }
                 onCompletion(false)
             }
         }
@@ -437,6 +457,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun sendSignInLink(email: String) {
+        _authSuccess.value = null
         if (email.isBlank()) {
             _authError.value = "Email address cannot be empty."
             return
@@ -452,7 +473,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         _authError.value = null
         
         val actionCodeSettings = com.google.firebase.auth.ActionCodeSettings.newBuilder()
-            .setUrl("https://second-brain-11.firebaseapp.com/__/auth/action")
+            .setUrl("https://second-brain-11.firebaseapp.com")
             .setHandleCodeInApp(true)
             .setAndroidPackageName(
                 "com.hanan_bhatti.second_brain",
@@ -465,10 +486,31 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             .addOnSuccessListener {
                 prefs.edit().putString("email_link_address", email).apply()
                 _emailLinkSent.value = true
-                _authError.value = "Sign-in link sent to $email! Please click the link in your email to sign in."
+                _authSuccess.value = "Sign-in link sent to $email! Please click the link in your email to sign in."
             }
             .addOnFailureListener {
                 _authError.value = it.localizedMessage ?: "Failed to send sign-in link."
+            }
+    }
+
+    fun sendPasswordResetEmail(email: String) {
+        _authSuccess.value = null
+        if (email.isBlank()) {
+            _authError.value = "Please enter your email address to request a password reset."
+            return
+        }
+        _authError.value = null
+        val auth = repository.firebaseAuth
+        if (auth == null) {
+            _authSuccess.value = "(Sandbox Simulation) Password reset link sent to $email."
+            return
+        }
+        auth.sendPasswordResetEmail(email)
+            .addOnSuccessListener {
+                _authSuccess.value = "Password reset email sent to $email! Please check your inbox."
+            }
+            .addOnFailureListener {
+                _authError.value = it.localizedMessage ?: "Failed to send password reset email."
             }
     }
 
@@ -525,6 +567,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     fun startManualCapture(type: SavedItemType) {
         _capturedBitmap.value = null
         pendingMediaBytes = null
+        _extractedLinksToReview.value = emptyList()
         _activeCaptureItem.value = SavedItem(
             type = type,
             title = "",
@@ -536,6 +579,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         _activeCaptureItem.value = null
         _capturedBitmap.value = null
         pendingMediaBytes = null
+        _extractedLinksToReview.value = emptyList()
     }
 
     /**
@@ -630,6 +674,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         val currentItem = _activeCaptureItem.value ?: return
 
         _isOcrLoading.value = true
+        _ocrError.value = null
         viewModelScope.launch {
             try {
                 val apiKey = settingsRepository.geminiApiKey.value.ifEmpty { com.example.BuildConfig.GEMINI_API_KEY }
@@ -665,29 +710,62 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                         type = if (parsedExtractedText.startsWith("http")) com.example.data.model.SavedItemType.LINK else currentItem.type
                     )
                     
-                    // Automatically save any extracted URLs as independent items
-                    urlsList.forEach { (urlStr, desc) ->
-                        viewModelScope.launch(Dispatchers.IO) {
-                            val newId = java.util.UUID.randomUUID().toString()
-                            val meta = repository.fetchLinkMetadata(urlStr)
-                            val newItem = com.example.data.model.SavedItem(
-                                id = newId,
-                                type = com.example.data.model.SavedItemType.LINK,
-                                title = meta.title ?: "Extracted URL",
-                                content = urlStr,
-                                folders = listOf("AI Extracted"),
-                                linkTitle = meta.title,
-                                linkDescription = desc.ifBlank { meta.description },
-                                linkImage = meta.imageUrl
-                            )
-                            repository.saveItem(newItem)
-                        }
+                    // Stage extracted URLs for review instead of auto-saving
+                    val reviews = urlsList.map { (urlStr, desc) ->
+                        ExtractedLinkReview(
+                            originalUrl = urlStr,
+                            url = urlStr,
+                            description = desc,
+                            isSelected = true
+                        )
                     }
+                    _extractedLinksToReview.value = reviews
+                } else {
+                    _ocrError.value = "Gemini OCR was unable to read this region. Please select a clearer region."
                 }
             } catch (e: Exception) {
                 Log.e("SecondBrainVM", "OCR region extraction failed: ${e.message}")
+                _ocrError.value = e.message ?: "OCR region extraction failed. Please try again."
             } finally {
                 _isOcrLoading.value = false
+            }
+        }
+    }
+
+    fun updateExtractedLink(id: String, updatedUrl: String) {
+        _extractedLinksToReview.value = _extractedLinksToReview.value.map {
+            if (it.id == id) it.copy(url = updatedUrl) else it
+        }
+    }
+
+    fun toggleExtractedLinkSelection(id: String, isSelected: Boolean) {
+        _extractedLinksToReview.value = _extractedLinksToReview.value.map {
+            if (it.id == id) it.copy(isSelected = isSelected) else it
+        }
+    }
+
+    fun confirmAndSaveExtractedLinks() {
+        val linksToSave = _extractedLinksToReview.value.filter { it.isSelected && it.url.isNotBlank() }
+        _extractedLinksToReview.value = emptyList() // Clear review list
+        linksToSave.forEach { reviewItem ->
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    val newId = java.util.UUID.randomUUID().toString()
+                    val meta = repository.fetchLinkMetadata(reviewItem.url)
+                    val newItem = com.example.data.model.SavedItem(
+                        id = newId,
+                        type = com.example.data.model.SavedItemType.LINK,
+                        title = meta.title ?: "Extracted URL",
+                        content = reviewItem.url,
+                        folders = listOf("AI Extracted"),
+                        linkTitle = meta.title,
+                        linkDescription = reviewItem.description.ifBlank { meta.description },
+                        linkImage = meta.imageUrl
+                    )
+                    repository.saveItem(newItem)
+                } catch (e: Exception) {
+                    Log.e("SecondBrainVM", "Failed to save confirmed extracted link: ${e.message}")
+                }
             }
         }
     }
@@ -725,6 +803,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     fun startEditItem(item: SavedItem) {
         _capturedBitmap.value = null
         pendingMediaBytes = null
+        _extractedLinksToReview.value = emptyList()
         _activeCaptureItem.value = item
     }
 
@@ -873,3 +952,11 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 }
+
+data class ExtractedLinkReview(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val originalUrl: String,
+    val url: String,
+    val description: String,
+    val isSelected: Boolean = true
+)

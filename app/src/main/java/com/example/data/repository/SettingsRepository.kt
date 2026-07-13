@@ -12,7 +12,7 @@ class SettingsRepository(context: Context) {
     private val _geminiApiKey = MutableStateFlow(prefs.getString(KEY_GEMINI_API_KEY, "") ?: "")
     val geminiApiKey: StateFlow<String> = _geminiApiKey.asStateFlow()
 
-    private val _selectedModel = MutableStateFlow(prefs.getString(KEY_SELECTED_MODEL, "gemini-1.5-flash") ?: "gemini-1.5-flash")
+    private val _selectedModel = MutableStateFlow(prefs.getString(KEY_SELECTED_MODEL, "gemini-flash-lite-latest") ?: "gemini-flash-lite-latest")
     val selectedModel: StateFlow<String> = _selectedModel.asStateFlow()
 
     private val _ocrSensitivity = MutableStateFlow(prefs.getString(KEY_OCR_SENSITIVITY, "Medium") ?: "Medium")

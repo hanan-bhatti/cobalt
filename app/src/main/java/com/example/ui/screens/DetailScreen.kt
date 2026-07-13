@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -285,7 +286,7 @@ fun DetailScreen(
 
             if (!descriptionToShow.isNullOrBlank()) {
                 Text(
-                    text = descriptionToShow,
+                    text = parseMarkdown(descriptionToShow),
                     fontSize = 17.sp,
                     lineHeight = 26.sp,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)

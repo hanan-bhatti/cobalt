@@ -17,6 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -35,6 +37,7 @@ fun AuthScreen(
 ) {
     val userEmail by viewModel.userEmail.collectAsState()
     val authError by viewModel.authError.collectAsState()
+    val authSuccess by viewModel.authSuccess.collectAsState()
     val emailLinkSent by viewModel.emailLinkSent.collectAsState()
     val pendingEmailLink by viewModel.pendingEmailLink.collectAsState()
 
@@ -217,6 +220,24 @@ fun AuthScreen(
                         }
                     }
 
+                    if (authSuccess != null) {
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = Color(0xFFE8F5E9), // Light green success container
+                            border = BorderStroke(1.dp, Color(0xFF2E7D32).copy(alpha = 0.5f)), // Solid green border
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp)
+                        ) {
+                            Text(
+                                text = authSuccess ?: "",
+                                color = Color(0xFF1B5E20), // Deep green success text
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
+                    }
+
                     // Email Field
                     OutlinedTextField(
                         value = email,
@@ -280,9 +301,31 @@ fun AuthScreen(
                                 ),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(bottom = 16.dp)
+                                    .padding(bottom = 8.dp)
                                     .testTag("auth_password_input")
                             )
+
+                            // Forgot Password Link
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 12.dp),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                TextButton(
+                                    onClick = {
+                                        viewModel.sendPasswordResetEmail(email)
+                                    },
+                                    modifier = Modifier.testTag("forgot_password_button")
+                                ) {
+                                    Text(
+                                        text = "Forgot Password?",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
 
                             var termsAccepted by remember { mutableStateOf(false) }
 
@@ -401,10 +444,10 @@ fun AuthScreen(
                             horizontalArrangement = Arrangement.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Outlined.CloudQueue,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
+                                painter = painterResource(id = R.drawable.ic_google),
+                                contentDescription = "Google Logo",
+                                tint = Color.Unspecified,
+                                modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(

@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -39,6 +41,7 @@ fun ProfileScreen(
     onNavigateToAuth: () -> Unit,
     onNavigateToLegal: (String) -> Unit = {}
 ) {
+    val context = LocalContext.current
     val userEmail by viewModel.userEmail.collectAsState()
     val userName by viewModel.userName.collectAsState()
     val userPhotoUrl by viewModel.userPhotoUrl.collectAsState()
@@ -113,7 +116,9 @@ fun ProfileScreen(
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     ) {
                         Column(
-                            modifier = Modifier.padding(24.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             // Circular Avatar with Gradient
@@ -382,6 +387,7 @@ fun ProfileScreen(
                             IconButton(onClick = {
                                 viewModel.settingsRepository.setGeminiApiKey(apiKeyInput)
                                 viewModel.fetchAvailableModels()
+                                Toast.makeText(context, "Gemini API Key saved", Toast.LENGTH_SHORT).show()
                             }) {
                                 Icon(Icons.Outlined.Save, contentDescription = "Save Key")
                             }
@@ -421,21 +427,30 @@ fun ProfileScreen(
                             expanded = showModelDropdown,
                             onDismissRequest = { showModelDropdown = false }
                         ) {
+                            val modelsToShow = availableModels.ifEmpty {
+                                listOf(
+                                    "gemini-flash-lite-latest",
+                                    "gemini-2.5-flash",
+                                    "gemini-1.5-flash",
+                                    "gemini-1.5-pro",
+                                    "gemini-2.0-flash-exp"
+                                )
+                            }
+                            modelsToShow.forEach { model ->
+                                DropdownMenuItem(
+                                    text = { Text(model) },
+                                    onClick = {
+                                        viewModel.settingsRepository.setSelectedModel(model)
+                                        showModelDropdown = false
+                                        Toast.makeText(context, "OCR Model updated to $model", Toast.LENGTH_SHORT).show()
+                                    }
+                                )
+                            }
                             if (availableModels.isEmpty()) {
                                 DropdownMenuItem(
-                                    text = { Text("No models found. Check API Key.") },
+                                    text = { Text("⚠️ Showing standard models. Save API key to fetch custom list.", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary) },
                                     onClick = { showModelDropdown = false }
                                 )
-                            } else {
-                                availableModels.forEach { model ->
-                                    DropdownMenuItem(
-                                        text = { Text(model) },
-                                        onClick = {
-                                            viewModel.settingsRepository.setSelectedModel(model)
-                                            showModelDropdown = false
-                                        }
-                                    )
-                                }
                             }
                         }
                     }
@@ -488,6 +503,7 @@ fun ProfileScreen(
                                     onClick = {
                                         viewModel.settingsRepository.setOcrSensitivity(option)
                                         showOcrDropdown = false
+                                        Toast.makeText(context, "Extraction Sensitivity updated to $option", Toast.LENGTH_SHORT).show()
                                     }
                                 )
                             }
@@ -530,6 +546,7 @@ fun ProfileScreen(
                                     onClick = {
                                         viewModel.settingsRepository.setThemeMode(option)
                                         showThemeDropdown = false
+                                        Toast.makeText(context, "App Theme updated to $option", Toast.LENGTH_SHORT).show()
                                     }
                                 )
                             }

@@ -1,5 +1,8 @@
 package com.example.ui.screens
 
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.BackHandler
 import android.graphics.Bitmap
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -46,10 +49,12 @@ fun CaptureScreen(
     viewModel: SecondBrainViewModel,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val activeItem by viewModel.activeCaptureItem.collectAsState()
     val capturedBitmap by viewModel.capturedBitmap.collectAsState()
     val isOcrLoading by viewModel.isOcrLoading.collectAsState()
     val customFolders by viewModel.customFolders.collectAsState()
+    val extractedLinks by viewModel.extractedLinksToReview.collectAsState()
 
     val item = activeItem ?: return
     val scrollState = rememberScrollState()
@@ -75,7 +80,11 @@ fun CaptureScreen(
                 },
                 actions = {
                     Button(
-                        onClick = { viewModel.saveActiveItem() },
+                        onClick = {
+                            val isLink = item.type == SavedItemType.LINK
+                            viewModel.saveActiveItem()
+                            Toast.makeText(context, if (isLink) "Link saved" else "Item saved", Toast.LENGTH_SHORT).show()
+                        },
                         shape = RoundedCornerShape(20.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
@@ -206,6 +215,88 @@ fun CaptureScreen(
                         .padding(bottom = 16.dp)
                         .testTag("ocr_result_output")
                 )
+
+                if (extractedLinks.isNotEmpty()) {
+                    Text(
+                        text = "Review Extracted Links",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
+
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
+                    ) {
+                        extractedLinks.forEach { reviewItem ->
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                                ),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Checkbox(
+                                            checked = reviewItem.isSelected,
+                                            onCheckedChange = { checked ->
+                                                viewModel.toggleExtractedLinkSelection(reviewItem.id, checked)
+                                            },
+                                            modifier = Modifier.testTag("review_link_checkbox_${reviewItem.id}")
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        OutlinedTextField(
+                                            value = reviewItem.url,
+                                            onValueChange = { newValue ->
+                                                viewModel.updateExtractedLink(reviewItem.id, newValue)
+                                            },
+                                            label = { Text("URL") },
+                                            singleLine = true,
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                                unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                                            ),
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .testTag("review_link_input_${reviewItem.id}")
+                                        )
+                                    }
+                                    if (reviewItem.description.isNotBlank()) {
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = reviewItem.description,
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                            modifier = Modifier.padding(start = 40.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Button(
+                            onClick = { viewModel.confirmAndSaveExtractedLinks() },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("confirm_save_extracted_links_button")
+                        ) {
+                            Text("Confirm & Save Selected Links", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             }
 
             // MAIN CONTENT EDITOR
@@ -223,37 +314,50 @@ fun CaptureScreen(
 
             val editorFont = if (item.type == SavedItemType.CODE) FontFamily.Monospace else FontFamily.SansSerif
             val isMultiLine = item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE || item.type == SavedItemType.AUDIO
-            OutlinedTextField(
-                value = item.content,
-                onValueChange = { viewModel.updateActiveCaptureItem { item -> item.copy(content = it) } },
-                visualTransformation = if (item.type == SavedItemType.TEXT) MarkdownVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
-                placeholder = {
-                    Text(
-                        when (item.type) {
-                            SavedItemType.LINK -> "https://example.com/shared-resource"
-                            SavedItemType.CODE -> "Write or paste source code..."
-                            SavedItemType.IMAGE -> "Screenshot path"
-                            SavedItemType.VIDEO -> "Video file path"
-                            SavedItemType.TEXT -> "Capture your thoughts or paste clipboard contents..."
-                            SavedItemType.AUDIO -> "Voice transcription..."
-                        }
-                    )
-                },
-                shape = RoundedCornerShape(20.dp),
-                minLines = if (isMultiLine) 5 else 1,
-                maxLines = Int.MAX_VALUE,
-                textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = editorFont),
-                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-                    .testTag("capture_content_input")
-            )
+            if (item.type == SavedItemType.TEXT) {
+                RichTextEditor(
+                    value = item.content,
+                    onValueChange = { newContent -> viewModel.updateActiveCaptureItem { captured -> captured.copy(content = newContent) } },
+                    placeholder = { Text("Capture your thoughts or paste clipboard contents...") },
+                    minLines = if (isMultiLine) 5 else 1,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                        .testTag("capture_content_input")
+                )
+            } else {
+                OutlinedTextField(
+                    value = item.content,
+                    onValueChange = { viewModel.updateActiveCaptureItem { captured -> captured.copy(content = it) } },
+                    visualTransformation = androidx.compose.ui.text.input.VisualTransformation.None,
+                    placeholder = {
+                        Text(
+                            when (item.type) {
+                                SavedItemType.LINK -> "https://example.com/shared-resource"
+                                SavedItemType.CODE -> "Write or paste source code..."
+                                SavedItemType.IMAGE -> "Screenshot path"
+                                SavedItemType.VIDEO -> "Video file path"
+                                SavedItemType.TEXT -> "Capture your thoughts or paste clipboard contents..."
+                                SavedItemType.AUDIO -> "Voice transcription..."
+                            }
+                        )
+                    },
+                    shape = RoundedCornerShape(20.dp),
+                    minLines = if (isMultiLine) 5 else 1,
+                    maxLines = Int.MAX_VALUE,
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = editorFont),
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                        .testTag("capture_content_input")
+                )
+            }
 
             if (item.type == SavedItemType.LINK && item.content.isNotBlank()) {
                 Text(

@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -118,6 +119,15 @@ fun HomeScreen(
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("draft_prefs", android.content.Context.MODE_PRIVATE) }
     var showSearchPageOverlay by remember { mutableStateOf(false) }
+
+    BackHandler(enabled = showSearchPageOverlay || isSelectionMode) {
+        if (showSearchPageOverlay) {
+            showSearchPageOverlay = false
+        } else if (isSelectionMode) {
+            viewModel.clearSelection()
+        }
+    }
+
     val coroutineScope = rememberCoroutineScope()
     var showUndoToast by remember { mutableStateOf(false) }
     var deletedItemForUndo by remember { mutableStateOf<SavedItem?>(null) }
@@ -1275,30 +1285,35 @@ fun HomeScreen(
                         )
                     )
 
-                    OutlinedTextField(
-                        value = captureContent,
-                        onValueChange = { captureContent = it },
-                        label = { Text(if (captureType == SavedItemType.TEXT) "Note Content" else "URL / Link") },
-                        placeholder = { 
-                            Text(
-                                if (captureType == SavedItemType.TEXT) {
-                                    "Capture your thoughts or paste note details..."
-                                } else {
-                                    "https://example.com/some-resource"
-                                }
-                            )
-                        },
-                        minLines = if (captureType == SavedItemType.TEXT) 3 else 1,
-                        maxLines = 6,
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("manual_capture_content_input"),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                    if (captureType == SavedItemType.TEXT) {
+                        RichTextEditor(
+                            value = captureContent,
+                            onValueChange = { captureContent = it },
+                            placeholder = { Text("Capture your thoughts or paste note details...") },
+                            minLines = 3,
+                            maxLines = 6,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("manual_capture_content_input")
                         )
-                    )
+                    } else {
+                        OutlinedTextField(
+                            value = captureContent,
+                            onValueChange = { captureContent = it },
+                            label = { Text("URL / Link") },
+                            placeholder = { Text("https://example.com/some-resource") },
+                            minLines = 1,
+                            maxLines = 6,
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("manual_capture_content_input"),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                            )
+                        )
+                    }
                 }
             },
             confirmButton = {
@@ -2213,7 +2228,7 @@ fun ArchiveItemRow(
                         else -> item.content
                     }
                     Text(
-                        text = previewText ?: "",
+                        text = parseMarkdown(previewText ?: ""),
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                         maxLines = 1,
@@ -2835,7 +2850,12 @@ fun SearchPageOverlay(
                         viewModel.setSearchQuery(it)
                     },
                     placeholder = { 
-                        Text("Search your archive...", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) 
+                        Text(
+                            text = "Search...", 
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        ) 
                     },
                     leadingIcon = { 
                         Icon(Icons.Filled.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary) 
@@ -2850,6 +2870,7 @@ fun SearchPageOverlay(
                         }
                     },
                     singleLine = true,
+                    maxLines = 1,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = {
                         if (searchQuery.isNotBlank()) {

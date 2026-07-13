@@ -53,8 +53,8 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="second-brain-11.firebaseapp.com" android:pathPrefix="/__/auth/action" />
-                <data android:scheme="https" android:host="second-brain-11.web.app" android:pathPrefix="/__/auth/action" />
+                <data android:scheme="https" android:host="second-brain-11.firebaseapp.com" android:pathPrefix="/" />
+                <data android:scheme="https" android:host="second-brain-11.web.app" android:pathPrefix="/" />
             </intent-filter>
         </activity>
 
