@@ -3,6 +3,9 @@ name: Build Release
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -41,14 +44,32 @@ jobs:
         run: |
           ./gradlew assembleRelease bundleRelease
 
-      - name: Upload Release APK
+      - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
           path: app/build/outputs/apk/release/*.apk
 
-      - name: Upload Release AAB
+      - name: Upload Release AAB Artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-aab
           path: app/build/outputs/bundle/release/*.aab
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0-build-${{ github.run_number }}
+          name: "Second Brain Release v1.0.0 (Build #${{ github.run_number }})"
+          body: |
+            Automated production build for Second Brain.
+            
+            ### Artifacts Included
+            - **Production APK** (For direct installation)
+            - **Google Play App Bundle (AAB)** (For Play Store upload)
+          draft: false
+          prerelease: false
+          files: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
+
