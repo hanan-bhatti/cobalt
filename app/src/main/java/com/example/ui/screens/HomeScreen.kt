@@ -38,6 +38,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
+import com.example.ui.components.bounceClick
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -95,6 +96,7 @@ fun HomeScreen(
     var captureType by remember { mutableStateOf(SavedItemType.TEXT) }
     var captureTitle by remember { mutableStateOf("") }
     var captureContent by remember { mutableStateOf("") }
+    var isFabExpanded by remember { mutableStateOf(false) }
 
     val speechRecognizerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
@@ -120,11 +122,13 @@ fun HomeScreen(
     val prefs = remember { context.getSharedPreferences("draft_prefs", android.content.Context.MODE_PRIVATE) }
     var showSearchPageOverlay by remember { mutableStateOf(false) }
 
-    BackHandler(enabled = showSearchPageOverlay || isSelectionMode) {
+    BackHandler(enabled = showSearchPageOverlay || isSelectionMode || isFabExpanded) {
         if (showSearchPageOverlay) {
             showSearchPageOverlay = false
         } else if (isSelectionMode) {
             viewModel.clearSelection()
+        } else if (isFabExpanded) {
+            isFabExpanded = false
         }
     }
 
@@ -150,7 +154,8 @@ fun HomeScreen(
         }
     }
 
-    Scaffold(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
         modifier = modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -278,91 +283,6 @@ fun HomeScreen(
                 )
             }
         },
-        floatingActionButton = {
-            if (!isSelectionMode) {
-                var isFabExpanded by remember { mutableStateOf(false) }
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    AnimatedVisibility(
-                        visible = isFabExpanded,
-                        enter = fadeIn() + slideInVertically(initialOffsetY = { 50 }),
-                        exit = fadeOut() + slideOutVertically(targetOffsetY = { 50 })
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            ExtendedFloatingActionButton(
-                                text = { Text("Archive") },
-                                icon = { Icon(Icons.Outlined.Archive, contentDescription = "View Archive") },
-                                onClick = { 
-                                    viewModel.setFolderFilter("Archive")
-                                    isFabExpanded = false
-                                },
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            ExtendedFloatingActionButton(
-                                text = { Text("New Folder") },
-                                icon = { Icon(Icons.Outlined.CreateNewFolder, contentDescription = "New Folder") },
-                                onClick = { 
-                                    showAddFolderDialog = true
-                                    isFabExpanded = false
-                                },
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            ExtendedFloatingActionButton(
-                                text = { Text("Voice Memo") },
-                                icon = { Icon(Icons.Filled.Mic, contentDescription = "Voice Memo") },
-                                onClick = {
-                                    isFabExpanded = false
-                                    val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                        putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                        putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Speak your voice memo...")
-                                    }
-                                    try {
-                                        speechRecognizerLauncher.launch(intent)
-                                    } catch (e: Exception) {
-                                        android.widget.Toast.makeText(context, "Speech recognizer not available", android.widget.Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            ExtendedFloatingActionButton(
-                                text = { Text("New Item") },
-                                icon = { Icon(Icons.Filled.Add, contentDescription = "New Item") },
-                                onClick = {
-                                    captureType = SavedItemType.TEXT
-                                    captureTitle = ""
-                                    captureContent = ""
-                                    showManualCaptureOverlay = true
-                                    isFabExpanded = false
-                                },
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        }
-                    }
-                    FloatingActionButton(
-                        onClick = { isFabExpanded = !isFabExpanded },
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier.testTag("add_item_fab")
-                    ) {
-                        Icon(
-                            imageVector = if (isFabExpanded) Icons.Filled.Close else Icons.Filled.Add,
-                            contentDescription = "Expand actions",
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                }
-            }
-        },
         bottomBar = {
             PersistentCaptureForm(viewModel)
         },
@@ -378,8 +298,8 @@ fun HomeScreen(
             ) {
             
             // Horizontal Filter Chips Row
-            val filteredCustomFolders = customFolders.filter { it != "Archive" }
-            val systemCategories = SavedItemType.entries.map { it.displayName }
+            val filteredCustomFolders = remember(customFolders) { customFolders.filter { it != "Archive" } }
+            val systemCategories = remember { SavedItemType.entries.map { it.displayName } }
 
             LazyRow(
                 modifier = Modifier
@@ -402,7 +322,7 @@ fun HomeScreen(
                 }
 
                 // 2. Custom Folders
-                items(filteredCustomFolders) { folder ->
+                items(filteredCustomFolders, key = { it }) { folder ->
                     val isSelected = selectedFolder == folder
                     FolderChipItem(
                         folder = folder,
@@ -413,7 +333,7 @@ fun HomeScreen(
                 }
 
                 // 5. System Category Folders
-                items(systemCategories) { category ->
+                items(systemCategories, key = { it }) { category ->
                     val isSelected = selectedFolder == category
                     val icon = when (category) {
                         "Links" -> Icons.Outlined.Link
@@ -1385,7 +1305,122 @@ fun HomeScreen(
                 }
             )
         }
+
+        // 1. Full Screen Overlay (dimming the entire screen including top bar and bottom bar)
+        AnimatedVisibility(
+            visible = isFabExpanded,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.55f))
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null
+                    ) {
+                        isFabExpanded = false
+                    }
+            )
+        }
+
+        // 2. Expanded Actions & Floating Action Button (guaranteed on top of the overlay)
+        if (!isSelectionMode) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 90.dp, end = 16.dp), // positioned beautifully above bottom capture bar
+                contentAlignment = Alignment.BottomEnd
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    AnimatedVisibility(
+                        visible = isFabExpanded,
+                        enter = fadeIn() + slideInVertically(initialOffsetY = { 50 }),
+                        exit = fadeOut() + slideOutVertically(targetOffsetY = { 50 })
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            ExtendedFloatingActionButton(
+                                text = { Text("Archive") },
+                                icon = { Icon(Icons.Outlined.Archive, contentDescription = "View Archive") },
+                                onClick = { 
+                                    viewModel.setFolderFilter("Archive")
+                                    isFabExpanded = false
+                                },
+                                modifier = Modifier.bounceClick(),
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            ExtendedFloatingActionButton(
+                                text = { Text("New Folder") },
+                                icon = { Icon(Icons.Outlined.CreateNewFolder, contentDescription = "New Folder") },
+                                onClick = { 
+                                    showAddFolderDialog = true
+                                    isFabExpanded = false
+                                },
+                                modifier = Modifier.bounceClick(),
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            ExtendedFloatingActionButton(
+                                text = { Text("Voice Memo") },
+                                icon = { Icon(Icons.Filled.Mic, contentDescription = "Voice Memo") },
+                                onClick = {
+                                    isFabExpanded = false
+                                    val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                        putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                        putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Speak your voice memo...")
+                                    }
+                                    try {
+                                        speechRecognizerLauncher.launch(intent)
+                                    } catch (e: Exception) {
+                                        android.widget.Toast.makeText(context, "Speech recognizer not available", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                modifier = Modifier.bounceClick(),
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            ExtendedFloatingActionButton(
+                                text = { Text("New Item") },
+                                icon = { Icon(Icons.Filled.Add, contentDescription = "New Item") },
+                                onClick = {
+                                    captureType = SavedItemType.TEXT
+                                    captureTitle = ""
+                                    captureContent = ""
+                                    showManualCaptureOverlay = true
+                                    isFabExpanded = false
+                                },
+                                modifier = Modifier.bounceClick(),
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    }
+                    FloatingActionButton(
+                        onClick = { isFabExpanded = !isFabExpanded },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier.bounceClick().testTag("add_item_fab")
+                    ) {
+                        Icon(
+                            imageVector = if (isFabExpanded) Icons.Filled.Close else Icons.Filled.Add,
+                            contentDescription = "Expand actions",
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
+            }
+        }
     }
+}
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
@@ -1404,6 +1439,7 @@ fun ArchiveItemCard(
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
 
     // Spring animation for subtle press scale
     val scale by animateFloatAsState(
@@ -1446,7 +1482,10 @@ fun ArchiveItemCard(
             ),
             modifier = Modifier
                 .fillMaxWidth()
+                .bounceClick(interactionSource)
                 .combinedClickable(
+                    interactionSource = interactionSource,
+                    indication = androidx.compose.foundation.LocalIndication.current,
                     onClick = onClick,
                     onLongClick = onLongClick ?: { showContextMenu = true }
                 )
@@ -2013,6 +2052,7 @@ fun ArchiveItemRow(
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
 
     // Spring animation for subtle press scale
     val scale by animateFloatAsState(
@@ -2055,7 +2095,10 @@ fun ArchiveItemRow(
             ),
             modifier = Modifier
                 .fillMaxWidth()
+                .bounceClick(interactionSource)
                 .combinedClickable(
+                    interactionSource = interactionSource,
+                    indication = androidx.compose.foundation.LocalIndication.current,
                     onClick = onClick,
                     onLongClick = onLongClick ?: { showContextMenu = true }
                 )
@@ -2593,6 +2636,7 @@ fun FolderChipItem(
             }
         ),
         modifier = Modifier
+            .bounceClick()
             .clip(RoundedCornerShape(20.dp))
             .clickable { onClick() }
             .testTag("folder_chip_$folder")

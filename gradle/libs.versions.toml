@@ -46,9 +46,11 @@ googleid = "1.1.1"
 jsoup = "1.17.2"
 media3 = "1.5.0"
 glance = "1.1.0"
+commonmark = "0.21.0"
 
 [libraries]
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
+commonmark = { group = "org.commonmark", name = "commonmark", version.ref = "commonmark" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }

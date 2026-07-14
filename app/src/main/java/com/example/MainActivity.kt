@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -50,6 +51,15 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val activeCaptureItem by viewModel.activeCaptureItem.collectAsState()
                 val activeDetailItem by viewModel.activeDetailItem.collectAsState()
+
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val uiToast by viewModel.uiToast.collectAsState()
+                LaunchedEffect(uiToast) {
+                    uiToast?.let {
+                        android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+                        viewModel.clearUiToast()
+                    }
+                }
 
                 BackHandler(enabled = activeCaptureItem != null) {
                     viewModel.cancelCapture()

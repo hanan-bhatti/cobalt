@@ -20,6 +20,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import com.example.ui.components.bounceClick
+import com.example.ui.components.MarkdownText
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -60,6 +62,9 @@ fun DetailScreen(
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
 
+    var showLeaveAppDialog by remember { mutableStateOf(false) }
+    var urlToOpen by remember { mutableStateOf("") }
+
     val formatter = remember { SimpleDateFormat("MMMM dd, yyyy", Locale.getDefault()) }
     val formattedDate = formatter.format(Date(item.timestamp))
 
@@ -76,12 +81,12 @@ fun DetailScreen(
             TopAppBar(
                 title = { },
                 navigationIcon = {
-                    IconButton(onClick = onClose, modifier = Modifier.testTag("detail_back_button")) {
+                    IconButton(onClick = onClose, modifier = Modifier.bounceClick().testTag("detail_back_button")) {
                         Icon(Icons.Filled.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onBackground)
                     }
                 },
                 actions = {
-                    IconButton(onClick = { onEdit(item) }, modifier = Modifier.testTag("detail_edit_button")) {
+                    IconButton(onClick = { onEdit(item) }, modifier = Modifier.bounceClick().testTag("detail_edit_button")) {
                         Icon(Icons.Outlined.Edit, contentDescription = "Edit memory")
                     }
                     IconButton(
@@ -101,7 +106,7 @@ fun DetailScreen(
                             }
                             context.startActivity(Intent.createChooser(shareIntent, "Share Memory"))
                         },
-                        modifier = Modifier.testTag("detail_share_button")
+                        modifier = Modifier.bounceClick().testTag("detail_share_button")
                     ) {
                         Icon(Icons.Outlined.Share, contentDescription = "Share memory")
                     }
@@ -285,12 +290,19 @@ fun DetailScreen(
             } else null
 
             if (!descriptionToShow.isNullOrBlank()) {
-                Text(
-                    text = parseMarkdown(descriptionToShow),
-                    fontSize = 17.sp,
-                    lineHeight = 26.sp,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
-                )
+                if (item.type == SavedItemType.TEXT) {
+                    MarkdownText(
+                        markdown = descriptionToShow,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
+                    )
+                } else {
+                    Text(
+                        text = parseMarkdown(descriptionToShow),
+                        fontSize = 17.sp,
+                        lineHeight = 26.sp,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
+                    )
+                }
             }
 
             // RAW URL / CONTENT SNIPPET
@@ -325,12 +337,8 @@ fun DetailScreen(
                                         modifier = Modifier
                                             .size(20.dp)
                                             .clickable {
-                                                try {
-                                                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(item.content))
-                                                    context.startActivity(browserIntent)
-                                                } catch (e: Exception) {
-                                                    Toast.makeText(context, "Invalid URL", Toast.LENGTH_SHORT).show()
-                                                }
+                                                urlToOpen = item.content
+                                                showLeaveAppDialog = true
                                             },
                                         tint = MaterialTheme.colorScheme.primary
                                     )
@@ -416,6 +424,36 @@ fun DetailScreen(
             }
             
             Spacer(modifier = Modifier.height(40.dp))
+            
+            if (showLeaveAppDialog) {
+                AlertDialog(
+                    onDismissRequest = { showLeaveAppDialog = false },
+                    title = { Text("Leaving App") },
+                    text = { Text("You are about to visit an external link in your browser. Do you want to leave the application?") },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                showLeaveAppDialog = false
+                                try {
+                                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(urlToOpen))
+                                    context.startActivity(browserIntent)
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Invalid URL", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        ) {
+                            Text("Leave App")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showLeaveAppDialog = false }
+                        ) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
         }
     }
 }

@@ -24,6 +24,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import com.example.ui.components.bounceClick
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -53,8 +54,16 @@ fun CaptureScreen(
     val activeItem by viewModel.activeCaptureItem.collectAsState()
     val capturedBitmap by viewModel.capturedBitmap.collectAsState()
     val isOcrLoading by viewModel.isOcrLoading.collectAsState()
+    val ocrError by viewModel.ocrError.collectAsState()
     val customFolders by viewModel.customFolders.collectAsState()
     val extractedLinks by viewModel.extractedLinksToReview.collectAsState()
+
+    LaunchedEffect(ocrError) {
+        ocrError?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            viewModel.clearOcrError()
+        }
+    }
 
     val item = activeItem ?: return
     val scrollState = rememberScrollState()
@@ -73,24 +82,20 @@ fun CaptureScreen(
                 navigationIcon = {
                     IconButton(
                         onClick = { viewModel.cancelCapture() },
-                        modifier = Modifier.testTag("cancel_capture_button")
+                        modifier = Modifier.bounceClick().testTag("cancel_capture_button")
                     ) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Go back")
                     }
                 },
                 actions = {
                     Button(
-                        onClick = {
-                            val isLink = item.type == SavedItemType.LINK
-                            viewModel.saveActiveItem()
-                            Toast.makeText(context, if (isLink) "Link saved" else "Item saved", Toast.LENGTH_SHORT).show()
-                        },
+                        onClick = { viewModel.saveActiveItem() },
                         shape = RoundedCornerShape(20.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         ),
-                        modifier = Modifier.testTag("save_capture_button")
+                        modifier = Modifier.bounceClick().testTag("save_capture_button")
                     ) {
                         Text("Save", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
                     }
@@ -291,6 +296,7 @@ fun CaptureScreen(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .bounceClick()
                                 .testTag("confirm_save_extracted_links_button")
                         ) {
                             Text("Confirm & Save Selected Links", fontWeight = FontWeight.Bold)

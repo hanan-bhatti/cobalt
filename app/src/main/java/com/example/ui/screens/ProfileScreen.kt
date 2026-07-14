@@ -22,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import com.example.ui.components.bounceClick
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -66,7 +67,7 @@ fun ProfileScreen(
                 TopAppBar(
                     title = { Text("Profile & Settings", fontWeight = FontWeight.SemiBold) },
                     navigationIcon = {
-                        IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("profile_back_button")) {
+                        IconButton(onClick = onNavigateBack, modifier = Modifier.bounceClick().testTag("profile_back_button")) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
                     },
@@ -457,7 +458,7 @@ fun ProfileScreen(
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
-                        onClick = { viewModel.fetchAvailableModels() },
+                        onClick = { viewModel.fetchAvailableModels(isUserTriggered = true) },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.secondaryContainer,

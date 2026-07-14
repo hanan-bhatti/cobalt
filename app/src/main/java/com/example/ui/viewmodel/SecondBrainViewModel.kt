@@ -233,12 +233,28 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     private val _availableModels = MutableStateFlow<List<String>>(emptyList())
     val availableModels: StateFlow<List<String>> = _availableModels.asStateFlow()
 
+    private val _uiToast = MutableStateFlow<String?>(null)
+    val uiToast: StateFlow<String?> = _uiToast.asStateFlow()
+
+    fun showToast(message: String) {
+        _uiToast.value = message
+    }
+
+    fun clearUiToast() {
+        _uiToast.value = null
+    }
+
     private val _extractedLinksToReview = MutableStateFlow<List<ExtractedLinkReview>>(emptyList())
     val extractedLinksToReview: StateFlow<List<ExtractedLinkReview>> = _extractedLinksToReview.asStateFlow()
 
-    fun fetchAvailableModels() {
+    fun fetchAvailableModels(isUserTriggered: Boolean = false) {
         val apiKey = settingsRepository.geminiApiKey.value.ifEmpty { com.example.BuildConfig.GEMINI_API_KEY }
-        if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") return
+        if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
+            if (isUserTriggered) {
+                showToast("Please save a valid Gemini API Key first.")
+            }
+            return
+        }
         viewModelScope.launch {
             try {
                 val response = com.example.data.remote.RetrofitClient.geminiService.listModels(apiKey)
@@ -246,8 +262,14 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     ?.filter { it.contains("gemini") && (it.contains("pro") || it.contains("flash") || it.contains("vision")) }
                     ?: emptyList()
                 _availableModels.value = models
+                if (isUserTriggered) {
+                    showToast("Refreshed ${models.size} models successfully.")
+                }
             } catch (e: Exception) {
                 Log.e("SecondBrainVM", "Failed to fetch models: ${e.message}")
+                if (isUserTriggered) {
+                    showToast("Failed to refresh models: ${e.message ?: "Unknown error"}")
+                }
             }
         }
     }
@@ -350,12 +372,15 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             _authError.value = null
             prefs.edit().putString("simulated_email", email).apply()
             _userEmail.value = email
+            showToast("Successfully registered and logged in as $email.")
             return
         }
         _authError.value = null
         auth.createUserWithEmailAndPassword(email, password)
             .addOnSuccessListener {
-                _userEmail.value = it.user?.email
+                val userMail = it.user?.email ?: email
+                _userEmail.value = userMail
+                showToast("Successfully registered and logged in as $userMail.")
             }
             .addOnFailureListener {
                 _authError.value = it.localizedMessage ?: "Sign up failed."
@@ -373,12 +398,15 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             _authError.value = null
             prefs.edit().putString("simulated_email", email).apply()
             _userEmail.value = email
+            showToast("Successfully logged in as $email.")
             return
         }
         _authError.value = null
         auth.signInWithEmailAndPassword(email, password)
             .addOnSuccessListener {
-                _userEmail.value = it.user?.email
+                val userMail = it.user?.email ?: email
+                _userEmail.value = userMail
+                showToast("Successfully logged in as $userMail.")
             }
             .addOnFailureListener {
                 _authError.value = it.localizedMessage ?: "Sign in failed."
@@ -391,6 +419,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             _authError.value = null
             prefs.edit().putString("simulated_email", "google.sandbox@example.com").apply()
             _userEmail.value = "google.sandbox@example.com"
+            showToast("Successfully logged in as google.sandbox@example.com.")
             onCompletion(true)
             return
         }
@@ -425,7 +454,9 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
                     val authCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
                     val authResult = auth.signInWithCredential(authCredential).await()
-                    _userEmail.value = authResult.user?.email
+                    val userMail = authResult.user?.email ?: "Google User"
+                    _userEmail.value = userMail
+                    showToast("Successfully logged in as $userMail.")
                     // Sync items automatically upon success
                     repository.syncUnsyncedItems()
                     onCompletion(true)
@@ -542,10 +573,12 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         
         auth.signInWithEmailLink(email, emailLink)
             .addOnSuccessListener { result ->
-                _userEmail.value = result.user?.email
+                val userMail = result.user?.email ?: email
+                _userEmail.value = userMail
                 _pendingEmailLink.value = null
                 prefs.edit().remove("email_link_address").apply()
                 _emailLinkSent.value = false
+                showToast("Successfully logged in as $userMail.")
                 viewModelScope.launch {
                     repository.restoreUserDataFromCloud()
                     repository.syncUnsyncedItems()
@@ -831,6 +864,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 )
                 repository.saveItem(newItem, null)
                 repository.syncUnsyncedItems()
+                showToast("Item saved successfully.")
             } catch (e: Exception) {
                 Log.e("SecondBrainVM", "Failed to save quick note: ${e.message}")
             }
@@ -851,8 +885,10 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                         title = metadata.title ?: finalItem.title.ifBlank { "Shared Link" }
                     )
                 }
+                val isEdit = allItems.value.any { it.id == finalItem.id }
                 repository.saveItem(finalItem, pendingMediaBytes)
                 cancelCapture()
+                showToast(if (isEdit) "Item updated successfully." else "Item saved successfully.")
                 // Sync to Firestore and Storage in background
                 repository.syncUnsyncedItems()
             } catch (e: Exception) {
@@ -883,6 +919,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             }
             val updatedFolders = if (item.folders.contains("Archive")) item.folders else item.folders + "Archive"
             repository.saveItem(item.copy(folders = updatedFolders))
+            showToast("Item archived successfully.")
         }
     }
 
@@ -890,6 +927,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             val updatedFolders = item.folders.filter { it != "Archive" }
             repository.saveItem(item.copy(folders = updatedFolders))
+            showToast("Item unarchived successfully.")
         }
     }
 
