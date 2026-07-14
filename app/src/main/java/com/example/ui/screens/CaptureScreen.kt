@@ -169,6 +169,7 @@ fun CaptureScreen(
                         onRegionSelected = { x, y, w, h ->
                             viewModel.performRegionOcr(x, y, w, h)
                         },
+                        enabled = !isOcrLoading,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -551,12 +552,17 @@ fun CaptureScreen(
 fun ImageMarkingCanvas(
     bitmap: Bitmap,
     onRegionSelected: (x: Int, y: Int, width: Int, height: Int) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
     var pathPoints by remember { mutableStateOf<List<Offset>>(emptyList()) }
     var containerWidth by remember { mutableStateOf(0f) }
     var containerHeight by remember { mutableStateOf(0f) }
+
+    val currentEnabled by androidx.compose.runtime.rememberUpdatedState(enabled)
+    val currentOnRegionSelected by androidx.compose.runtime.rememberUpdatedState(onRegionSelected)
+    val currentBitmap by androidx.compose.runtime.rememberUpdatedState(bitmap)
 
     Box(
         modifier = modifier
@@ -566,32 +572,36 @@ fun ImageMarkingCanvas(
                 containerWidth = coordinates.size.width.toFloat()
                 containerHeight = coordinates.size.height.toFloat()
             }
-            .pointerInput(Unit) {
+            .pointerInput(bitmap) {
                 detectDragGestures(
                     onDragStart = { offset ->
-                        pathPoints = listOf(offset)
+                        if (currentEnabled) {
+                            pathPoints = listOf(offset)
+                        }
                     },
                     onDrag = { change, _ ->
-                        change.consume()
-                        pathPoints = pathPoints + change.position
+                        if (currentEnabled) {
+                            change.consume()
+                            pathPoints = pathPoints + change.position
+                        }
                     },
                     onDragEnd = {
-                        if (pathPoints.isNotEmpty() && containerWidth > 0 && containerHeight > 0) {
+                        if (currentEnabled && pathPoints.isNotEmpty() && containerWidth > 0 && containerHeight > 0) {
                             val minX = pathPoints.minOf { it.x }.coerceIn(0f, containerWidth)
                             val maxX = pathPoints.maxOf { it.x }.coerceIn(0f, containerWidth)
                             val minY = pathPoints.minOf { it.y }.coerceIn(0f, containerHeight)
                             val maxY = pathPoints.maxOf { it.y }.coerceIn(0f, containerHeight)
 
                             // Map coordinates to original bitmap dimensions
-                            val scaleX = bitmap.width / containerWidth
-                            val scaleY = bitmap.height / containerHeight
+                            val scaleX = currentBitmap.width / containerWidth
+                            val scaleY = currentBitmap.height / containerHeight
 
                             val cropX = (minX * scaleX).toInt()
                             val cropY = (minY * scaleY).toInt()
                             val cropWidth = ((maxX - minX) * scaleX).toInt()
                             val cropHeight = ((maxY - minY) * scaleY).toInt()
 
-                            onRegionSelected(cropX, cropY, cropWidth, cropHeight)
+                            currentOnRegionSelected(cropX, cropY, cropWidth, cropHeight)
                         }
                     }
                 )

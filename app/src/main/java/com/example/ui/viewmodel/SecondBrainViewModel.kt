@@ -29,6 +29,41 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     private val repository = SecondBrainRepository(context)
     val settingsRepository = com.example.data.repository.SettingsRepository(context)
 
+    val isFloatingOcrEnabled = settingsRepository.isFloatingOcrEnabled
+    fun setFloatingOcrEnabled(enabled: Boolean) {
+        settingsRepository.setFloatingOcrEnabled(enabled)
+    }
+
+    val edgePanelHeight = settingsRepository.edgePanelHeight
+    fun setEdgePanelHeight(height: Int) {
+        settingsRepository.setEdgePanelHeight(height)
+    }
+
+    val edgePanelThickness = settingsRepository.edgePanelThickness
+    fun setEdgePanelThickness(thickness: Int) {
+        settingsRepository.setEdgePanelThickness(thickness)
+    }
+
+    val edgePanelOpacity = settingsRepository.edgePanelOpacity
+    fun setEdgePanelOpacity(opacity: Float) {
+        settingsRepository.setEdgePanelOpacity(opacity)
+    }
+
+    val edgePanelSide = settingsRepository.edgePanelSide
+    fun setEdgePanelSide(side: String) {
+        settingsRepository.setEdgePanelSide(side)
+    }
+
+    val edgePanelYPercent = settingsRepository.edgePanelYPercent
+    fun setEdgePanelYPercent(yPercent: Float) {
+        settingsRepository.setEdgePanelYPercent(yPercent)
+    }
+
+    val hasDismissedOnboarding = settingsRepository.hasDismissedOnboarding
+    fun dismissOnboarding() {
+        settingsRepository.setHasDismissedOnboarding(true)
+    }
+
     // ----------------------------------------------------
     // STATE FLOWS
     // ----------------------------------------------------
@@ -329,11 +364,16 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 if (user != null) {
                     viewModelScope.launch {
                         _isInitialLoading.value = true
-                        // Automatically pull backed up data from cloud
-                        repository.restoreUserDataFromCloud()
-                        // Automatically push any offline/unsynced data up to cloud
-                        repository.syncUnsyncedItems()
-                        _isInitialLoading.value = false
+                        try {
+                            // Automatically pull backed up data from cloud
+                            repository.restoreUserDataFromCloud()
+                            // Automatically push any offline/unsynced data up to cloud
+                            repository.syncUnsyncedItems()
+                        } catch (e: Exception) {
+                            Log.e("SecondBrainVM", "Initial auto-sync error: ${e.message}", e)
+                        } finally {
+                            _isInitialLoading.value = false
+                        }
                     }
                 }
             }
@@ -702,12 +742,29 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     // REGION OCR / GEMINI API
     // ----------------------------------------------------
 
+    fun startFloatingOcrCapture(bitmap: Bitmap) {
+        _capturedBitmap.value = bitmap
+        _activeCaptureItem.value = SavedItem(
+            type = SavedItemType.IMAGE,
+            title = "Floating OCR Capture",
+            content = "",
+            thumbnailPath = ""
+        )
+        _extractedLinksToReview.value = emptyList()
+        _isOcrLoading.value = false
+        _ocrError.value = null
+    }
+
     fun performRegionOcr(x: Int, y: Int, width: Int, height: Int) {
         val bitmap = _capturedBitmap.value ?: return
         val currentItem = _activeCaptureItem.value ?: return
 
         _isOcrLoading.value = true
         _ocrError.value = null
+
+        // Clear previous extraction results to ensure clean state and hide old bottom panel immediately during extraction
+        _activeCaptureItem.value = currentItem.copy(extractedText = null)
+        _extractedLinksToReview.value = emptyList()
         viewModelScope.launch {
             try {
                 val apiKey = settingsRepository.geminiApiKey.value.ifEmpty { com.example.BuildConfig.GEMINI_API_KEY }

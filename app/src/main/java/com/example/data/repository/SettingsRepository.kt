@@ -21,6 +21,27 @@ class SettingsRepository(context: Context) {
     private val _themeMode = MutableStateFlow(prefs.getString(KEY_THEME_MODE, "System Default") ?: "System Default")
     val themeMode: StateFlow<String> = _themeMode.asStateFlow()
 
+    private val _isFloatingOcrEnabled = MutableStateFlow(prefs.getBoolean(KEY_FLOATING_OCR, false))
+    val isFloatingOcrEnabled: StateFlow<Boolean> = _isFloatingOcrEnabled.asStateFlow()
+
+    private val _edgePanelHeight = MutableStateFlow(prefs.getInt(KEY_EDGE_HEIGHT, 100))
+    val edgePanelHeight: StateFlow<Int> = _edgePanelHeight.asStateFlow()
+
+    private val _edgePanelThickness = MutableStateFlow(prefs.getInt(KEY_EDGE_THICKNESS, 12))
+    val edgePanelThickness: StateFlow<Int> = _edgePanelThickness.asStateFlow()
+
+    private val _edgePanelOpacity = MutableStateFlow(prefs.getFloat(KEY_EDGE_OPACITY, 0.7f))
+    val edgePanelOpacity: StateFlow<Float> = _edgePanelOpacity.asStateFlow()
+
+    private val _edgePanelSide = MutableStateFlow(prefs.getString(KEY_EDGE_SIDE, "Right") ?: "Right")
+    val edgePanelSide: StateFlow<String> = _edgePanelSide.asStateFlow()
+
+    private val _edgePanelYPercent = MutableStateFlow(prefs.getFloat(KEY_EDGE_Y_PERCENT, 0.4f))
+    val edgePanelYPercent: StateFlow<Float> = _edgePanelYPercent.asStateFlow()
+
+    private val _hasDismissedOnboarding = MutableStateFlow(prefs.getBoolean(KEY_HAS_DISMISSED_ONBOARDING, false))
+    val hasDismissedOnboarding: StateFlow<Boolean> = _hasDismissedOnboarding.asStateFlow()
+
     fun setGeminiApiKey(key: String) {
         prefs.edit().putString(KEY_GEMINI_API_KEY, key).apply()
         _geminiApiKey.value = key
@@ -41,10 +62,72 @@ class SettingsRepository(context: Context) {
         _themeMode.value = mode
     }
 
+    fun setFloatingOcrEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_FLOATING_OCR, enabled).apply()
+        _isFloatingOcrEnabled.value = enabled
+    }
+
+    fun setEdgePanelHeight(height: Int) {
+        prefs.edit().putInt(KEY_EDGE_HEIGHT, height).apply()
+        _edgePanelHeight.value = height
+    }
+
+    fun setEdgePanelThickness(thickness: Int) {
+        prefs.edit().putInt(KEY_EDGE_THICKNESS, thickness).apply()
+        _edgePanelThickness.value = thickness
+    }
+
+    fun setEdgePanelOpacity(opacity: Float) {
+        prefs.edit().putFloat(KEY_EDGE_OPACITY, opacity).apply()
+        _edgePanelOpacity.value = opacity
+    }
+
+    fun setEdgePanelSide(side: String) {
+        prefs.edit().putString(KEY_EDGE_SIDE, side).apply()
+        _edgePanelSide.value = side
+    }
+
+    fun setEdgePanelYPercent(yPercent: Float) {
+        prefs.edit().putFloat(KEY_EDGE_Y_PERCENT, yPercent).apply()
+        _edgePanelYPercent.value = yPercent
+    }
+
+    fun setHasDismissedOnboarding(dismissed: Boolean) {
+        prefs.edit().putBoolean(KEY_HAS_DISMISSED_ONBOARDING, dismissed).apply()
+        _hasDismissedOnboarding.value = dismissed
+    }
+
+    private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        when (key) {
+            KEY_GEMINI_API_KEY -> _geminiApiKey.value = prefs.getString(KEY_GEMINI_API_KEY, "") ?: ""
+            KEY_SELECTED_MODEL -> _selectedModel.value = prefs.getString(KEY_SELECTED_MODEL, "gemini-flash-lite-latest") ?: "gemini-flash-lite-latest"
+            KEY_OCR_SENSITIVITY -> _ocrSensitivity.value = prefs.getString(KEY_OCR_SENSITIVITY, "Medium") ?: "Medium"
+            KEY_THEME_MODE -> _themeMode.value = prefs.getString(KEY_THEME_MODE, "System Default") ?: "System Default"
+            KEY_FLOATING_OCR -> _isFloatingOcrEnabled.value = prefs.getBoolean(KEY_FLOATING_OCR, false)
+            KEY_EDGE_HEIGHT -> _edgePanelHeight.value = prefs.getInt(KEY_EDGE_HEIGHT, 100)
+            KEY_EDGE_THICKNESS -> _edgePanelThickness.value = prefs.getInt(KEY_EDGE_THICKNESS, 12)
+            KEY_EDGE_OPACITY -> _edgePanelOpacity.value = prefs.getFloat(KEY_EDGE_OPACITY, 0.7f)
+            KEY_EDGE_SIDE -> _edgePanelSide.value = prefs.getString(KEY_EDGE_SIDE, "Right") ?: "Right"
+            KEY_EDGE_Y_PERCENT -> _edgePanelYPercent.value = prefs.getFloat(KEY_EDGE_Y_PERCENT, 0.4f)
+            KEY_HAS_DISMISSED_ONBOARDING -> _hasDismissedOnboarding.value = prefs.getBoolean(KEY_HAS_DISMISSED_ONBOARDING, false)
+        }
+    }
+
+    init {
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+    }
+
     companion object {
         private const val KEY_GEMINI_API_KEY = "gemini_api_key"
         private const val KEY_SELECTED_MODEL = "selected_model"
         private const val KEY_OCR_SENSITIVITY = "ocr_sensitivity"
         private const val KEY_THEME_MODE = "theme_mode"
+        private const val KEY_FLOATING_OCR = "floating_ocr_enabled"
+        private const val KEY_EDGE_HEIGHT = "edge_panel_height"
+        private const val KEY_EDGE_THICKNESS = "edge_panel_thickness"
+        private const val KEY_EDGE_OPACITY = "edge_panel_opacity"
+        private const val KEY_EDGE_SIDE = "edge_panel_side"
+        private const val KEY_EDGE_Y_PERCENT = "edge_panel_y_percent"
+        private const val KEY_HAS_DISMISSED_ONBOARDING = "has_dismissed_onboarding"
     }
 }

@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Second Brain</string>
+    <string name="shortcut_smart_selection_short">Smart Capture</string>
+    <string name="shortcut_smart_selection_long">Smart Screen Selection</string>
+    <string name="shortcut_quick_note_short">Quick Note</string>
+    <string name="shortcut_quick_note_long">Create Quick Note</string>
 </resources>

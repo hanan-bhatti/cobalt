@@ -512,6 +512,258 @@ fun ProfileScreen(
                     }
                 }
 
+                SectionCard("System-Wide Assistant") {
+                    val isFloatingOcrEnabled by viewModel.isFloatingOcrEnabled.collectAsState()
+                    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+                    var hasOverlayPermission by remember {
+                        mutableStateOf(com.example.utils.PermissionUtils.hasOverlayPermission(context))
+                    }
+
+                    DisposableEffect(lifecycleOwner) {
+                        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                                hasOverlayPermission = com.example.utils.PermissionUtils.hasOverlayPermission(context)
+                            }
+                        }
+                        lifecycleOwner.lifecycle.addObserver(observer)
+                        onDispose {
+                            lifecycleOwner.lifecycle.removeObserver(observer)
+                        }
+                    }
+
+                    Text(
+                        text = "Floating Assistant Panel",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Displays a tiny draggable edge panel handle on your screen so you can trigger OCR instantly from inside any other app.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    if (!hasOverlayPermission) {
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.3f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "Permission Required",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Text(
+                                    text = "To show the floating button, Second Brain needs permission to display over other applications.",
+                                    fontSize = 11.sp,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Button(
+                                    onClick = {
+                                        val intent = android.content.Intent(
+                                            android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                            android.net.Uri.parse("package:${context.packageName}")
+                                        )
+                                        context.startActivity(intent)
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.error
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text("Grant Overlay Permission", fontSize = 11.sp)
+                                }
+                            }
+                        }
+                    } else {
+                        val edgeHeight by viewModel.edgePanelHeight.collectAsState()
+                        val edgeThickness by viewModel.edgePanelThickness.collectAsState()
+                        val edgeOpacity by viewModel.edgePanelOpacity.collectAsState()
+                        val edgeSide by viewModel.edgePanelSide.collectAsState()
+                        val edgeYPercent by viewModel.edgePanelYPercent.collectAsState()
+
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Enable Edge Assistant Panel",
+                                    fontWeight = FontWeight.SemiBold,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Switch(
+                                    checked = isFloatingOcrEnabled,
+                                    onCheckedChange = { isChecked ->
+                                        viewModel.setFloatingOcrEnabled(isChecked)
+                                        val serviceIntent = android.content.Intent(context, com.example.BrainOcrOverlayService::class.java)
+                                        if (isChecked) {
+                                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                                context.startForegroundService(serviceIntent)
+                                            } else {
+                                                context.startService(serviceIntent)
+                                            }
+                                        } else {
+                                            context.stopService(serviceIntent)
+                                        }
+                                    },
+                                    modifier = Modifier.testTag("floating_ocr_switch")
+                                )
+                            }
+
+                            if (isFloatingOcrEnabled) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                    thickness = 0.5.dp,
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
+
+                                Text(
+                                    text = "Edge Panel Customization",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                // 1. Screen Side Selector
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(
+                                        text = "Anchor Screen Edge",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        listOf("Left", "Right").forEach { side ->
+                                            val isSelected = edgeSide == side
+                                            Button(
+                                                onClick = { viewModel.setEdgePanelSide(side) },
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                                    contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                                ),
+                                                shape = RoundedCornerShape(12.dp),
+                                                modifier = Modifier.weight(1f).height(40.dp)
+                                            ) {
+                                                Text(text = "$side Side", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // 2. Vertical position slider
+                                Column {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(text = "Vertical Position (Y)", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(text = "${(edgeYPercent * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                                    }
+                                    Slider(
+                                        value = edgeYPercent,
+                                        onValueChange = { viewModel.setEdgePanelYPercent(it) },
+                                        valueRange = 0f..1f,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+
+                                // 3. Handle opacity slider
+                                Column {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(text = "Handle Transparency / Opacity", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(text = "${(edgeOpacity * 100).toInt()}%", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                                    }
+                                    Slider(
+                                        value = edgeOpacity,
+                                        onValueChange = { viewModel.setEdgePanelOpacity(it) },
+                                        valueRange = 0.1f..1f,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+
+                                // 4. Handle height slider
+                                Column {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(text = "Handle Height", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(text = "${edgeHeight} dp", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                                    }
+                                    Slider(
+                                        value = edgeHeight.toFloat(),
+                                        onValueChange = { viewModel.setEdgePanelHeight(it.toInt()) },
+                                        valueRange = 60f..200f,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+
+                                // 5. Handle width/thickness slider
+                                Column {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(text = "Handle Thickness / Width", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(text = "${edgeThickness} dp", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                                    }
+                                    Slider(
+                                        value = edgeThickness.toFloat(),
+                                        onValueChange = { viewModel.setEdgePanelThickness(it.toInt()) },
+                                        valueRange = 6f..24f,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Info,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = "💡 Drag the edge handle up or down directly on your screen to dynamically save its position on the fly!",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 SectionCard("Appearance") {
                     val themeMode by viewModel.settingsRepository.themeMode.collectAsState()
                     var showThemeDropdown by remember { mutableStateOf(false) }

@@ -19,6 +19,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.Scaffold
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -37,6 +43,18 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Auto-start Floating OCR service if enabled and allowed
+        val settingsRepo = com.example.data.repository.SettingsRepository(applicationContext)
+        if (settingsRepo.isFloatingOcrEnabled.value && com.example.utils.PermissionUtils.hasOverlayPermission(applicationContext)) {
+            val serviceIntent = Intent(applicationContext, BrainOcrOverlayService::class.java)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent)
+            } else {
+                startService(serviceIntent)
+            }
+        }
+
         // Handle shared intent if starting via share-sheet capture
         handleIntent(intent)
 
@@ -52,11 +70,11 @@ class MainActivity : ComponentActivity() {
                 val activeCaptureItem by viewModel.activeCaptureItem.collectAsState()
                 val activeDetailItem by viewModel.activeDetailItem.collectAsState()
 
-                val context = androidx.compose.ui.platform.LocalContext.current
+                val snackbarHostState = remember { SnackbarHostState() }
                 val uiToast by viewModel.uiToast.collectAsState()
                 LaunchedEffect(uiToast) {
                     uiToast?.let {
-                        android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+                        snackbarHostState.showSnackbar(it)
                         viewModel.clearUiToast()
                     }
                 }
@@ -69,87 +87,94 @@ class MainActivity : ComponentActivity() {
                     viewModel.closeDetailItem()
                 }
 
-                @OptIn(ExperimentalSharedTransitionApi::class)
-                SharedTransitionLayout {
-                    Surface(modifier = Modifier.fillMaxSize()) {
-                        // Standard Home and Authentication navigation flow
-                        NavHost(navController = navController, startDestination = "home") {
-                            composable("home") {
-                                HomeScreen(
-                                    viewModel = viewModel,
-                                    onNavigateToProfile = { navController.navigate("profile") },
-                                    sharedTransitionScope = this@SharedTransitionLayout,
-                                    animatedVisibilityScope = this@composable
-                                )
-                            }
-                            composable("profile") {
-                                ProfileScreen(
-                                    viewModel = viewModel,
-                                    onNavigateBack = { navController.popBackStack() },
-                                    onNavigateToAuth = { navController.navigate("auth") },
-                                    onNavigateToLegal = { route -> navController.navigate(route) }
-                                )
-                            }
-                            composable("auth") {
-                                AuthScreen(
-                                    viewModel = viewModel,
-                                    onNavigateBack = { navController.popBackStack() },
-                                    onNavigateToLegal = { route -> navController.navigate(route) }
-                                )
-                            }
-                            composable("privacy") {
-                                com.example.ui.screens.LegalScreen(
-                                    title = "Privacy Policy",
-                                    markdownContent = com.example.ui.screens.LegalDocs.privacyPolicy,
-                                    onBack = { navController.popBackStack() }
-                                )
-                            }
-                            composable("terms") {
-                                com.example.ui.screens.LegalScreen(
-                                    title = "Terms & Conditions",
-                                    markdownContent = com.example.ui.screens.LegalDocs.termsOfConditions,
-                                    onBack = { navController.popBackStack() }
-                                )
-                            }
-                            composable("faq") {
-                                com.example.ui.screens.LegalScreen(
-                                    title = "FAQ",
-                                    markdownContent = com.example.ui.screens.LegalDocs.faq,
-                                    onBack = { navController.popBackStack() }
-                                )
-                            }
-                            composable("about") {
-                                com.example.ui.screens.LegalScreen(
-                                    title = "About",
-                                    markdownContent = com.example.ui.screens.LegalDocs.about,
-                                    onBack = { navController.popBackStack() }
-                                )
-                            }
-                        }
-
-                        // Sliding overlay for the capture screen - mimics Apple's native share action sheet
-                        AnimatedVisibility(
-                            visible = activeCaptureItem != null,
-                            enter = slideInVertically(initialOffsetY = { it }),
-                            exit = slideOutVertically(targetOffsetY = { it })
-                        ) {
-                            CaptureScreen(viewModel = viewModel)
-                        }
-
-                        // Sliding overlay for the memory detail view screen
-                        AnimatedVisibility(
-                            visible = activeDetailItem != null,
-                            enter = slideInVertically(initialOffsetY = { it }),
-                            exit = slideOutVertically(targetOffsetY = { it })
-                        ) {
-                            DetailScreen(
-                                viewModel = viewModel,
-                                onClose = { viewModel.closeDetailItem() },
-                                onEdit = { item ->
-                                    viewModel.closeDetailItem()
-                                    viewModel.startEditItem(item)
+                Scaffold(
+                    snackbarHost = { SnackbarHost(snackbarHostState) },
+                    modifier = Modifier.fillMaxSize()
+                ) { innerPadding ->
+                    Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+                        @OptIn(ExperimentalSharedTransitionApi::class)
+                        SharedTransitionLayout {
+                            Surface(modifier = Modifier.fillMaxSize()) {
+                                // Standard Home and Authentication navigation flow
+                                NavHost(navController = navController, startDestination = "home") {
+                                    composable("home") {
+                                        HomeScreen(
+                                            viewModel = viewModel,
+                                            onNavigateToProfile = { navController.navigate("profile") },
+                                            sharedTransitionScope = this@SharedTransitionLayout,
+                                            animatedVisibilityScope = this@composable
+                                        )
+                                    }
+                                    composable("profile") {
+                                        ProfileScreen(
+                                            viewModel = viewModel,
+                                            onNavigateBack = { navController.popBackStack() },
+                                            onNavigateToAuth = { navController.navigate("auth") },
+                                            onNavigateToLegal = { route -> navController.navigate(route) }
+                                        )
+                                    }
+                                    composable("auth") {
+                                        AuthScreen(
+                                            viewModel = viewModel,
+                                            onNavigateBack = { navController.popBackStack() },
+                                            onNavigateToLegal = { route -> navController.navigate(route) }
+                                        )
+                                    }
+                                    composable("privacy") {
+                                        com.example.ui.screens.LegalScreen(
+                                            title = "Privacy Policy",
+                                            markdownContent = com.example.ui.screens.LegalDocs.privacyPolicy,
+                                            onBack = { navController.popBackStack() }
+                                        )
+                                    }
+                                    composable("terms") {
+                                        com.example.ui.screens.LegalScreen(
+                                            title = "Terms & Conditions",
+                                            markdownContent = com.example.ui.screens.LegalDocs.termsOfConditions,
+                                            onBack = { navController.popBackStack() }
+                                        )
+                                    }
+                                    composable("faq") {
+                                        com.example.ui.screens.LegalScreen(
+                                            title = "FAQ",
+                                            markdownContent = com.example.ui.screens.LegalDocs.faq,
+                                            onBack = { navController.popBackStack() }
+                                        )
+                                    }
+                                    composable("about") {
+                                        com.example.ui.screens.LegalScreen(
+                                            title = "About",
+                                            markdownContent = com.example.ui.screens.LegalDocs.about,
+                                            onBack = { navController.popBackStack() }
+                                        )
+                                    }
                                 }
-                            )
+
+                                // Sliding overlay for the capture screen - mimics Apple's native share action sheet
+                                AnimatedVisibility(
+                                    visible = activeCaptureItem != null,
+                                    enter = slideInVertically(initialOffsetY = { it }),
+                                    exit = slideOutVertically(targetOffsetY = { it })
+                                ) {
+                                    CaptureScreen(viewModel = viewModel)
+                                }
+
+                                // Sliding overlay for the memory detail view screen
+                                AnimatedVisibility(
+                                    visible = activeDetailItem != null,
+                                    enter = slideInVertically(initialOffsetY = { it }),
+                                    exit = slideOutVertically(targetOffsetY = { it })
+                                ) {
+                                    DetailScreen(
+                                        viewModel = viewModel,
+                                        onClose = { viewModel.closeDetailItem() },
+                                        onEdit = { item ->
+                                            viewModel.closeDetailItem()
+                                            viewModel.startEditItem(item)
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -165,6 +190,12 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
+        
+        val openItemId = intent.getStringExtra("OPEN_ITEM_ID")
+        if (openItemId != null) {
+            viewModel.openItemById(openItemId)
+        }
+
         val action = intent.action
         val type = intent.type
 

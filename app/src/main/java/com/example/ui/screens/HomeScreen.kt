@@ -80,6 +80,7 @@ fun HomeScreen(
     val userEmail by viewModel.userEmail.collectAsState()
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
     val selectedItemIds by viewModel.selectedItemIds.collectAsState()
+    val hasDismissedOnboarding by viewModel.hasDismissedOnboarding.collectAsState()
 
     var isDragging by remember { mutableStateOf(false) }
     var mutableItems by remember { mutableStateOf(items) }
@@ -433,16 +434,45 @@ fun HomeScreen(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth(),
-                        contentAlignment = Alignment.TopCenter
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .verticalScroll(rememberScrollState()),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Top
-                        ) {
-                            OnboardingSharingGuide()
+                        if (!hasDismissedOnboarding) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(rememberScrollState()),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Top
+                            ) {
+                                OnboardingSharingGuide(onDismiss = { viewModel.dismissOnboarding() })
+                            }
+                        } else {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(32.dp),
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.FolderSpecial,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.size(64.dp)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "Your Second Brain is Empty",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Share links, photos, code snippets from other apps,\nor tap the '+' button below to add your first memory.",
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
                         }
                     }
                 }
@@ -2408,6 +2438,7 @@ fun ArchiveItemRow(
 
 @Composable
 fun OnboardingSharingGuide(
+    onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -2424,15 +2455,34 @@ fun OnboardingSharingGuide(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "💡 Your Second Brain is Ready!",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Spacer(modifier = Modifier.width(24.dp)) // balance close button
+                Text(
+                    text = "💡 Your Second Brain is Ready!",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(24.dp).testTag("dismiss_onboarding_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Dismiss guide",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
             
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             
             Text(
                 text = "Capture any web link, photo, code block, or note effortlessly.",
