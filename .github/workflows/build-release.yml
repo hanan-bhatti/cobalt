@@ -29,6 +29,21 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
+          validate-wrappers: false
+
+      - name: Verify Release Secrets
+        run: |
+          MISSING_SECRETS=()
+          if [ -z "${{ secrets.KEYSTORE_BASE64 }}" ]; then MISSING_SECRETS+=("KEYSTORE_BASE64"); fi
+          if [ -z "${{ secrets.KEYSTORE_PASSWORD }}" ]; then MISSING_SECRETS+=("KEYSTORE_PASSWORD"); fi
+          if [ -z "${{ secrets.KEY_ALIAS }}" ]; then MISSING_SECRETS+=("KEY_ALIAS"); fi
+          if [ -z "${{ secrets.KEY_PASSWORD }}" ]; then MISSING_SECRETS+=("KEY_PASSWORD"); fi
+          
+          if [ ${#MISSING_SECRETS[@]} -ne 0 ]; then
+            echo "::error::Missing required release secrets: ${MISSING_SECRETS[*]}"
+            echo "Please set up these secrets in your GitHub repository: Settings -> Secrets and variables -> Actions"
+            exit 1
+          fi
 
       - name: Decode Keystore
         env:
