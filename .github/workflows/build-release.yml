@@ -51,8 +51,12 @@ jobs:
         run: |
           printf '%s' "$KEYSTORE_BASE64" | base64 -di > app/release-key.jks
 
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
+      - name: Repair and Verify Gradle Wrapper
+        run: |
+          echo "Repairing Gradle Wrapper..."
+          mkdir -p gradle/wrapper
+          curl -sSLo gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v9.3.1/gradle/wrapper/gradle-wrapper.jar
+          chmod +x ./gradlew
 
       - name: Build Release APK and AAB
         env:
