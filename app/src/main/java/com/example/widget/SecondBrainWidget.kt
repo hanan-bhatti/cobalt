@@ -57,10 +57,24 @@ class SecondBrainWidget : GlanceAppWidget() {
     
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val repository = SecondBrainRepository(context)
+        var isFromCache = false
+        var isTimeout = false
+        
         val items = try {
-            repository.getAllItems()
+            val fetched = kotlinx.coroutines.withTimeoutOrNull(2000) {
+                repository.getAllItems()
+            }
+            if (fetched != null) {
+                WidgetCache.saveItemsToCache(context, fetched)
+                fetched
+            } else {
+                isTimeout = true
+                isFromCache = true
+                WidgetCache.getCachedItems(context)
+            }
         } catch (e: Exception) {
-            emptyList()
+            isFromCache = true
+            WidgetCache.getCachedItems(context)
         }
 
         provideContent {
@@ -73,7 +87,7 @@ class SecondBrainWidget : GlanceAppWidget() {
                     .padding(12.dp)
             ) {
                 Column(modifier = GlanceModifier.fillMaxSize()) {
-                    WidgetHeader()
+                    WidgetHeader(isFromCache = isFromCache, isTimeout = isTimeout)
                     
                     Spacer(modifier = GlanceModifier.height(10.dp))
                     
@@ -82,11 +96,16 @@ class SecondBrainWidget : GlanceAppWidget() {
                             modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
                             contentAlignment = Alignment.Center
                         ) {
+                            val emptyText = if (isTimeout) {
+                                "Connection timed out\nTap a quick action to capture"
+                            } else {
+                                "Your second brain is empty\nTap a quick action to capture"
+                            }
                             Text(
-                                text = "Your second brain is empty\nTap a quick action to capture",
+                                text = emptyText,
                                 style = TextStyle(
                                     color = androidx.glance.color.ColorProvider(day = Color(0xFF9E9E9E), night = Color(0xFF9E9E9E)),
-                                    fontSize = 12.sp,
+                                    fontSize = 11.sp,
                                     textAlign = androidx.glance.text.TextAlign.Center
                                 )
                             )
@@ -112,24 +131,27 @@ class SecondBrainWidget : GlanceAppWidget() {
 }
 
 @androidx.compose.runtime.Composable
-fun WidgetHeader() {
+fun WidgetHeader(isFromCache: Boolean = false, isTimeout: Boolean = false) {
     val context = LocalContext.current
     Row(
         modifier = GlanceModifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Glowing brand badge in marker orange
+        // Glowing brand badge in marker orange or warning colors
+        val badgeColor = if (isTimeout) Color(0xFFD84315) else if (isFromCache) Color(0xFFEF6C00) else Color(0xFFFF6F1E)
+        val badgeText = if (isTimeout) "TIMEOUT" else if (isFromCache) "CACHED" else "BRAIN"
+        
         Box(
             modifier = GlanceModifier
-                .background(Color(0xFFFF6F1E)) // Marker Orange
+                .background(badgeColor)
                 .cornerRadius(6.dp)
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Text(
-                text = "BRAIN",
+                text = badgeText,
                 style = TextStyle(
                     fontWeight = FontWeight.Bold,
-                    fontSize = 10.sp,
+                    fontSize = 9.sp,
                     color = androidx.glance.color.ColorProvider(day = Color.White, night = Color.White)
                 )
             )
@@ -141,7 +163,7 @@ fun WidgetHeader() {
             text = "Second Brain",
             style = TextStyle(
                 fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 color = androidx.glance.color.ColorProvider(day = Color.White, night = Color.White)
             )
         )
