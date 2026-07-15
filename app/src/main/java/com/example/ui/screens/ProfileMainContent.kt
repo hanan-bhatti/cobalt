@@ -180,21 +180,22 @@ fun ProfileMainContent(
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                 
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    ArchiveStat(iconResId = R.drawable.ic_custom_link, count = totalLinks, label = "Links")
-                    ArchiveStat(iconResId = R.drawable.ic_custom_image, count = totalImages, label = "Images")
-                    ArchiveStat(iconResId = R.drawable.ic_custom_video, count = totalVideos, label = "Videos")
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
-                    horizontalArrangement = Arrangement.Start
-                ) {
-                    ArchiveStat(iconResId = R.drawable.ic_custom_text, count = totalText, label = "Text", modifier = Modifier.weight(1f))
-                    ArchiveStat(iconResId = R.drawable.ic_custom_code, count = totalCode, label = "Code", modifier = Modifier.weight(1f))
-                    Spacer(modifier = Modifier.weight(1f))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ArchiveStatRow(iconResId = R.drawable.ic_custom_link, count = totalLinks, label = "Links", modifier = Modifier.weight(1f))
+                        ArchiveStatRow(iconResId = R.drawable.ic_custom_image, count = totalImages, label = "Images", modifier = Modifier.weight(1f))
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ArchiveStatRow(iconResId = R.drawable.ic_custom_video, count = totalVideos, label = "Videos", modifier = Modifier.weight(1f))
+                        ArchiveStatRow(iconResId = R.drawable.ic_custom_text, count = totalText, label = "Text", modifier = Modifier.weight(1f))
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ArchiveStatRow(iconResId = R.drawable.ic_custom_code, count = totalCode, label = "Code", modifier = Modifier.weight(1f))
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
                 }
             }
         }
@@ -277,20 +278,25 @@ fun SectionContainer(title: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-fun ArchiveStat(iconResId: Int, count: Int, label: String, modifier: Modifier = Modifier) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+fun ArchiveStatRow(iconResId: Int, count: Int, label: String, modifier: Modifier = Modifier) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
         modifier = modifier
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+            .padding(12.dp)
     ) {
-        Icon(
-            painter = painterResource(id = iconResId),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(28.dp)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "$count", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-        Text(text = label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                painter = painterResource(id = iconResId),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = label, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+        }
+        Text(text = "$count", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 

@@ -64,6 +64,11 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         settingsRepository.setHasDismissedOnboarding(true)
     }
 
+    val isRecentCapturesExpanded = settingsRepository.isRecentCapturesExpanded
+    fun setRecentCapturesExpanded(expanded: Boolean) {
+        settingsRepository.setRecentCapturesExpanded(expanded)
+    }
+
     // ----------------------------------------------------
     // STATE FLOWS
     // ----------------------------------------------------
@@ -813,6 +818,49 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 _isOcrLoading.value = false
             }
         }
+     }
+
+    fun formatSpeechWithGemini(speechText: String) {
+        val currentItem = _activeCaptureItem.value ?: return
+        _isOcrLoading.value = true
+        _ocrError.value = null
+
+        viewModelScope.launch {
+            try {
+                val apiKey = settingsRepository.geminiApiKey.value.ifEmpty { com.example.BuildConfig.GEMINI_API_KEY }
+                
+                if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
+                    _ocrError.value = "Please save a valid Gemini API Key first."
+                    _isOcrLoading.value = false
+                    return@launch
+                }
+
+                val result = repository.formatSpeechText(
+                    speechText = speechText,
+                    apiKey = apiKey,
+                    model = settingsRepository.selectedModel.value
+                )
+
+                if (result != null && !result.startsWith("Error")) {
+                    val extractedTitle = extractTitleFromMarkdown(result)
+                    _activeCaptureItem.value = _activeCaptureItem.value?.copy(
+                        content = result,
+                        title = extractedTitle ?: _activeCaptureItem.value?.title ?: "Formatted Voice Memo"
+                    )
+                } else {
+                    _ocrError.value = result ?: "Failed to format speech."
+                }
+            } catch (e: Exception) {
+                _ocrError.value = e.localizedMessage ?: "Unknown error"
+            } finally {
+                _isOcrLoading.value = false
+            }
+        }
+    }
+
+    private fun extractTitleFromMarkdown(markdown: String): String? {
+        val line = markdown.lines().firstOrNull { it.trim().startsWith("# ") }
+        return line?.replace("#", "")?.trim()
     }
 
     
@@ -1112,9 +1160,26 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     folders = selectedFolders,
                     timestamp = System.currentTimeMillis()
                 )
-                repository.saveItem(newItem, null)
+                val savedItem = repository.saveItem(newItem, null)
                 repository.syncUnsyncedItems()
                 showToast("Item saved successfully.")
+                
+                if (type == SavedItemType.LINK && content.isNotBlank()) {
+                    launch(kotlinx.coroutines.Dispatchers.IO) {
+                        try {
+                            val metadata = repository.fetchLinkMetadata(content)
+                            val updatedItem = savedItem.copy(
+                                linkTitle = metadata.title,
+                                linkDescription = metadata.description,
+                                linkImage = metadata.imageUrl,
+                                title = metadata.title ?: savedItem.title
+                            )
+                            repository.saveItem(updatedItem, null)
+                        } catch (e: Exception) {
+                            Log.e("SecondBrainVM", "Bg link preview error: ${e.message}")
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("SecondBrainVM", "Failed to save quick note: ${e.message}")
             }

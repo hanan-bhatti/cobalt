@@ -226,7 +226,7 @@ fun SearchScreen(
                 )
 
                 LazyColumn(
-                    contentPadding = PaddingValues(bottom = 80.dp), // For bottom nav spacing
+                    contentPadding = PaddingValues(bottom = 100.dp), // For bottom nav spacing
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(items, key = { it.id }) { item ->

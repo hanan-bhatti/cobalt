@@ -101,7 +101,7 @@ fun HomeScreen(
     var captureTitle by remember { mutableStateOf("") }
     var captureContent by remember { mutableStateOf("") }
     var isFabExpanded by remember { mutableStateOf(false) }
-    var isRecentCapturesExpanded by remember { mutableStateOf(true) }
+    val isRecentCapturesExpanded by viewModel.isRecentCapturesExpanded.collectAsState()
 
     val speechRecognizerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
@@ -354,7 +354,7 @@ fun HomeScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { isRecentCapturesExpanded = !isRecentCapturesExpanded }
+                        .clickable { viewModel.setRecentCapturesExpanded(!isRecentCapturesExpanded) }
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -493,7 +493,7 @@ fun HomeScreen(
                     ) { targetIsList ->
                         if (targetIsList) {
                             LazyColumn(
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                                contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 100.dp),
                                 verticalArrangement = Arrangement.spacedBy(10.dp),
                                 modifier = Modifier.fillMaxSize()
                             ) {
@@ -504,7 +504,7 @@ fun HomeScreen(
                         } else {
                             LazyVerticalGrid(
                                 columns = GridCells.Fixed(2),
-                                contentPadding = PaddingValues(16.dp),
+                                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 100.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.fillMaxSize()
@@ -542,7 +542,7 @@ fun HomeScreen(
                                             viewModel.updateOrderIndices(mutableItems)
                                         }
                                     ),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 100.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         itemsIndexed(mutableItems, key = { _, item -> item.id }) { index, item ->
@@ -640,7 +640,7 @@ fun HomeScreen(
                                     viewModel.updateOrderIndices(mutableItems)
                                 }
                             ),
-                        contentPadding = PaddingValues(16.dp),
+                        contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 100.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
@@ -1293,15 +1293,15 @@ fun HomeScreen(
                 Button(
                     onClick = {
                         if (captureContent.isNotBlank()) {
-                            viewModel.startManualCapture(captureType)
-                            viewModel.updateActiveCaptureItem { item ->
-                                item.copy(
-                                    title = captureTitle,
-                                    content = captureContent
-                                )
-                            }
-                            viewModel.saveActiveItem()
+                            viewModel.saveLocalTextItem(
+                                title = captureTitle,
+                                content = captureContent,
+                                type = captureType,
+                                selectedFolders = emptyList()
+                            )
                             showManualCaptureOverlay = false
+                            captureTitle = ""
+                            captureContent = ""
                         }
                     },
                     shape = RoundedCornerShape(20.dp),
@@ -1396,15 +1396,7 @@ fun HomeScreen(
                                 SmallFloatingActionButton(
                                     onClick = { 
                                         isFabExpanded = false
-                                        val intent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                        }
-                                        try {
-                                            speechRecognizerLauncher.launch(intent)
-                                        } catch (e: Exception) {
-                                            // Fallback if no speech recognizer
-                                            viewModel.startManualCapture(SavedItemType.AUDIO)
-                                        }
+                                        viewModel.startManualCapture(SavedItemType.AUDIO)
                                     },
                                     containerColor = MaterialTheme.colorScheme.surface,
                                     contentColor = MaterialTheme.colorScheme.primary
@@ -1447,9 +1439,10 @@ fun HomeScreen(
 
                     FloatingActionButton(
                         onClick = { isFabExpanded = !isFabExpanded },
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.testTag("fab_expand")
+                        shape = CircleShape,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag("fab_expand").size(64.dp)
                     ) {
                         val rotation by animateFloatAsState(targetValue = if (isFabExpanded) 45f else 0f)
                         Icon(
@@ -1521,14 +1514,13 @@ fun ArchiveItemCard(
             ),
             elevation = CardDefaults.cardElevation(
                 defaultElevation = if (isSelected) 8.dp else 2.dp,
-                pressedElevation = 8.dp
+                pressedElevation = 2.dp
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .bounceClick(interactionSource)
                 .combinedClickable(
                     interactionSource = interactionSource,
-                    indication = androidx.compose.foundation.LocalIndication.current,
+                    indication = null,
                     onClick = onClick,
                     onLongClick = onLongClick ?: { showContextMenu = true }
                 )
@@ -2082,14 +2074,13 @@ fun ArchiveItemRow(
             ),
             elevation = CardDefaults.cardElevation(
                 defaultElevation = if (isSelected) 6.dp else 2.dp,
-                pressedElevation = 6.dp
+                pressedElevation = 2.dp
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .bounceClick(interactionSource)
                 .combinedClickable(
                     interactionSource = interactionSource,
-                    indication = androidx.compose.foundation.LocalIndication.current,
+                    indication = null,
                     onClick = onClick,
                     onLongClick = onLongClick ?: { showContextMenu = true }
                 )

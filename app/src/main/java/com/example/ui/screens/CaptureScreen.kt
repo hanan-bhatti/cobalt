@@ -14,6 +14,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.animation.core.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -64,6 +66,9 @@ fun CaptureScreen(
     val ocrError by viewModel.ocrError.collectAsState()
     val customFolders by viewModel.customFolders.collectAsState()
     val extractedLinks by viewModel.extractedLinksToReview.collectAsState()
+
+    var showVoiceInputDialog by remember { mutableStateOf(false) }
+    var rawVoiceInputText by remember { mutableStateOf("") }
 
     LaunchedEffect(ocrError) {
         ocrError?.let {
@@ -448,23 +453,181 @@ fun CaptureScreen(
                     Spacer(Modifier.height(16.dp))
                 }
             } else if (item.type == SavedItemType.AUDIO) {
-                // Audio Recorder
-                com.example.ui.components.AudioRecorderComponent(
-                    onRecordComplete = { file ->
-                        viewModel.updateActiveCaptureItem { it.copy(thumbnailPath = file.absolutePath) }
-                        viewModel.transcribeAudioMemo(file)
+                // Beautiful voice memo card (matching the screenshot exactly!)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(12.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(Color.Gray)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Tap mic to record memo",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
-                )
+
+                    IconButton(
+                        onClick = { 
+                            rawVoiceInputText = ""
+                            showVoiceInputDialog = true 
+                        },
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.primaryContainer, androidx.compose.foundation.shape.CircleShape)
+                            .size(48.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_voice),
+                            contentDescription = "Record",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
                 Spacer(Modifier.height(16.dp))
-                if (item.content.isNotBlank()) {
-                    Text("Transcription:", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.height(4.dp))
+                
+                if (isOcrLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(100.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Gemini AI formatting spoken thought...", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                } else if (item.content.isNotBlank()) {
+                    Text("Formatted Notes:", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.height(4.dp))
                     RichTextEditor(
                         value = item.content,
                         onValueChange = { newContent -> viewModel.updateActiveCaptureItem { it.copy(content = newContent) } },
                         placeholder = { Text("Audio transcription will appear here...") },
                         minLines = 5,
                         modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                    )
+                }
+
+                if (showVoiceInputDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showVoiceInputDialog = false },
+                        title = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_voice),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Gemini AI Voice Scribe",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        },
+                        text = {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = "Use your soft keyboard's voice dictation (microphone button on keyboard) to talk, or type your raw spoken thought below. Gemini will format it into beautifully structured markdown notes.",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                
+                                OutlinedTextField(
+                                    value = rawVoiceInputText,
+                                    onValueChange = { rawVoiceInputText = it },
+                                    placeholder = { Text("e.g., Create a task to finish the marketing deck by tomorrow and email John about the updated contract pricing.") },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(120.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                                    )
+                                )
+                                
+                                // Equalizer wave animation
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 8.dp)
+                                ) {
+                                    val infiniteTransition = rememberInfiniteTransition()
+                                    val animHeights = listOf(24.dp, 40.dp, 16.dp, 32.dp, 20.dp).mapIndexed { index, defaultHeight ->
+                                        val anim = infiniteTransition.animateFloat(
+                                            initialValue = 0.5f,
+                                            targetValue = 1.5f,
+                                            animationSpec = infiniteRepeatable(
+                                                animation = tween(durationMillis = 500 + index * 100, easing = LinearEasing),
+                                                repeatMode = RepeatMode.Reverse
+                                            )
+                                        )
+                                        defaultHeight * anim.value
+                                    }
+                                    
+                                    animHeights.forEach { height ->
+                                        Box(
+                                            modifier = Modifier
+                                                .width(4.dp)
+                                                .height(height)
+                                                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
+                                        )
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    if (rawVoiceInputText.isNotBlank()) {
+                                        viewModel.formatSpeechWithGemini(rawVoiceInputText)
+                                    }
+                                    showVoiceInputDialog = false
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                ),
+                                shape = RoundedCornerShape(20.dp)
+                            ) {
+                                Text("✨ Format Speech")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(
+                                onClick = { showVoiceInputDialog = false }
+                            ) {
+                                Text("Cancel")
+                            }
+                        },
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        shape = RoundedCornerShape(24.dp)
                     )
                 }
             } else if (item.type == SavedItemType.TEXT) {
@@ -513,16 +676,35 @@ fun CaptureScreen(
                         .testTag("capture_content_input")
                 )
             }
-
             if (item.type == SavedItemType.LINK && item.content.isNotBlank()) {
-                Text(
-                    text = "Live Link Preview",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(bottom = 6.dp)
-                )
-
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 6.dp),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_custom_sync),
+                        contentDescription = "Retry Extraction",
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier
+                            .size(16.dp)
+                            .clip(CircleShape)
+                            .clickable {
+                                viewModel.updateActiveCaptureItem { it.copy(linkTitle = null, linkDescription = null, linkImage = null) }
+                                viewModel.fetchLinkPreviewForActiveItem(item.content)
+                            }
+                            .testTag("retry_link_extraction")
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Live Link Preview",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
                 Surface(
                     shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.surface,

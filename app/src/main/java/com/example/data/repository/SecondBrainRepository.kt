@@ -87,6 +87,47 @@ class SecondBrainRepository(private val context: Context) {
         }
     }
 
+    suspend fun formatSpeechText(
+        speechText: String,
+        apiKey: String,
+        model: String
+    ): String? = withContext(Dispatchers.IO) {
+        if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
+            return@withContext "API Key Missing. Enter your key in the AI Studio Secrets panel or the Profile page."
+        }
+
+        val promptText = """
+            You are an expert voice memo scribe for a Second Brain app.
+            Format the following spoken thought or speech memo into a beautifully organized, professional, and clear Markdown document.
+            Requirements:
+            1. Provide a beautiful, highly descriptive H1 title at the very top (do not use generic titles like "Voice Memo").
+            2. Add a short, punchy summary of the core message.
+            3. Use elegant, structured bullet points, sections, or bold key terms with appropriate emojis to organize action items, key concepts, or reminders.
+            4. Make sure it looks clean, uses generous whitespace, and is easy to scan.
+            
+            Input Speech/Memo:
+            $speechText
+        """.trimIndent()
+
+        val request = com.example.data.remote.GenerateContentRequest(
+            contents = listOf(
+                com.example.data.remote.Content(
+                    parts = listOf(
+                        com.example.data.remote.Part(text = promptText)
+                    )
+                )
+            )
+        )
+
+        try {
+            val response = com.example.data.remote.RetrofitClient.geminiService.generateContent("models/$model", apiKey, request)
+            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
+        } catch (e: Exception) {
+            Log.e("SecondBrainRepo", "Gemini Speech format call failed: ${e.message}")
+            "Error: ${e.localizedMessage ?: "Formatting failed"}"
+        }
+    }
+
     // ----------------------------------------------------
     // LOCAL ROOM DATABASE FLOWS
     // ----------------------------------------------------

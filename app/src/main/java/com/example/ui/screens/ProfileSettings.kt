@@ -231,11 +231,20 @@ fun SettingsScreen(
                         }
                     }
 
-                    SettingsRow(
-                        title = "Refresh Models",
-                        showChevron = false,
-                        onClick = { viewModel.fetchAvailableModels(isUserTriggered = true) }
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        FilledTonalButton(
+                            onClick = { viewModel.fetchAvailableModels(isUserTriggered = true) }
+                        ) {
+                            Icon(painter = painterResource(id = R.drawable.ic_custom_sync), contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Refresh Models")
+                        }
+                    }
                 }
 
                 SettingsSection(title = "OCR Sensitivity", subtext = "Adjust OCR precision. 'High' extracts more detail but might include background noise.") {
@@ -318,28 +327,33 @@ fun SettingsRow(title: String, value: String? = null, showChevron: Boolean = tru
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f)
         )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.End,
-            modifier = Modifier.weight(1.5f)
-        ) {
-            if (value != null) {
-                Text(
-                    text = value, 
-                    style = MaterialTheme.typography.bodyMedium, 
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-            }
-            if (onClick != null && showChevron) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_custom_chevron_right),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
-                )
+        if (value != null || (onClick != null && showChevron)) {
+            Spacer(modifier = Modifier.width(16.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End,
+                modifier = if (value != null) Modifier.weight(1f) else Modifier.wrapContentWidth()
+            ) {
+                if (value != null) {
+                    Text(
+                        text = value, 
+                        style = MaterialTheme.typography.bodyMedium, 
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                if (onClick != null && showChevron) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_custom_chevron_right),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }

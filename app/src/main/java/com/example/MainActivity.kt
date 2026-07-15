@@ -26,6 +26,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -131,30 +133,6 @@ BackHandler(enabled = activeDetailItem != null) {
 
                 Scaffold(
                     snackbarHost = { SnackbarHost(snackbarHostState) },
-                    bottomBar = {
-                        val routesWithBottomBar = listOf("home", "search", "folders", "profile")
-                        if (currentRoute in routesWithBottomBar) {
-                            val items = listOf(
-                                BottomBarItem("home", R.drawable.ic_custom_home, "Home"),
-                                BottomBarItem("search", R.drawable.ic_custom_search, "Search"),
-                                BottomBarItem("folders", R.drawable.ic_custom_folder, "Folders"),
-                                BottomBarItem("profile", R.drawable.ic_custom_profile, "Profile")
-                            )
-                            CustomBottomBar(
-                                items = items,
-                                currentRoute = currentRoute,
-                                onNavigate = { route ->
-                                    navController.navigate(route) {
-                                        popUpTo("home") {
-                                            if (route == "home") {
-                                                inclusive = true
-                                            }
-                                        }
-                                    }
-                                }
-                            )
-                        }
-                    },
                     modifier = Modifier.fillMaxSize()
                 ) { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
@@ -253,6 +231,36 @@ BackHandler(enabled = activeDetailItem != null) {
                                         }
                                     )
                                 }
+                            }
+                        }
+
+                        // Floating CustomBottomBar Overlay
+                        val routesWithBottomBar = listOf("home", "search", "folders", "profile")
+                        if (currentRoute in routesWithBottomBar && activeCaptureItem == null && activeDetailItem == null) {
+                            val items = listOf(
+                                BottomBarItem("home", R.drawable.ic_custom_home, "Home"),
+                                BottomBarItem("search", R.drawable.ic_custom_search, "Search"),
+                                BottomBarItem("folders", R.drawable.ic_custom_folder, "Folders"),
+                                BottomBarItem("profile", R.drawable.ic_custom_profile, "Profile")
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .fillMaxWidth()
+                            ) {
+                                CustomBottomBar(
+                                    items = items,
+                                    currentRoute = currentRoute,
+                                    onNavigate = { route ->
+                                        navController.navigate(route) {
+                                            popUpTo("home") {
+                                                if (route == "home") {
+                                                    inclusive = true
+                                                }
+                                            }
+                                        }
+                                    }
+                                )
                             }
                         }
                     }

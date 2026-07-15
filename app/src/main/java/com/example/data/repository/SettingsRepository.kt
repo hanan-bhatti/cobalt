@@ -42,6 +42,9 @@ class SettingsRepository(context: Context) {
     private val _hasDismissedOnboarding = MutableStateFlow(prefs.getBoolean(KEY_HAS_DISMISSED_ONBOARDING, false))
     val hasDismissedOnboarding: StateFlow<Boolean> = _hasDismissedOnboarding.asStateFlow()
 
+    private val _isRecentCapturesExpanded = MutableStateFlow(prefs.getBoolean(KEY_RECENT_CAPTURES_EXPANDED, true))
+    val isRecentCapturesExpanded: StateFlow<Boolean> = _isRecentCapturesExpanded.asStateFlow()
+
     fun setGeminiApiKey(key: String) {
         prefs.edit().putString(KEY_GEMINI_API_KEY, key).apply()
         _geminiApiKey.value = key
@@ -97,6 +100,11 @@ class SettingsRepository(context: Context) {
         _hasDismissedOnboarding.value = dismissed
     }
 
+    fun setRecentCapturesExpanded(expanded: Boolean) {
+        prefs.edit().putBoolean(KEY_RECENT_CAPTURES_EXPANDED, expanded).apply()
+        _isRecentCapturesExpanded.value = expanded
+    }
+
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
             KEY_GEMINI_API_KEY -> _geminiApiKey.value = prefs.getString(KEY_GEMINI_API_KEY, "") ?: ""
@@ -110,6 +118,7 @@ class SettingsRepository(context: Context) {
             KEY_EDGE_SIDE -> _edgePanelSide.value = prefs.getString(KEY_EDGE_SIDE, "Right") ?: "Right"
             KEY_EDGE_Y_PERCENT -> _edgePanelYPercent.value = prefs.getFloat(KEY_EDGE_Y_PERCENT, 0.4f)
             KEY_HAS_DISMISSED_ONBOARDING -> _hasDismissedOnboarding.value = prefs.getBoolean(KEY_HAS_DISMISSED_ONBOARDING, false)
+            KEY_RECENT_CAPTURES_EXPANDED -> _isRecentCapturesExpanded.value = prefs.getBoolean(KEY_RECENT_CAPTURES_EXPANDED, true)
         }
     }
 
@@ -129,5 +138,6 @@ class SettingsRepository(context: Context) {
         private const val KEY_EDGE_SIDE = "edge_panel_side"
         private const val KEY_EDGE_Y_PERCENT = "edge_panel_y_percent"
         private const val KEY_HAS_DISMISSED_ONBOARDING = "has_dismissed_onboarding"
+        private const val KEY_RECENT_CAPTURES_EXPANDED = "recent_captures_expanded"
     }
 }

@@ -144,8 +144,9 @@ fun FoldersScreen(
             )
         } else {
             // MAIN FOLDERS DIRECTORY LIST VIEW
-            Scaffold(
-                topBar = {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Scaffold(
+                    topBar = {
                     TopAppBar(
                         title = {
                             Column {
@@ -181,16 +182,6 @@ fun FoldersScreen(
                         )
                     )
                 },
-                floatingActionButton = {
-                    FloatingActionButton(
-                        onClick = { showAddFolderDialog = true },
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.testTag("fab_create_folder")
-                    ) {
-                        Icon(painter = painterResource(id = R.drawable.ic_custom_plus), contentDescription = "Add Folder")
-                    }
-                },
                 containerColor = MaterialTheme.colorScheme.background
             ) { innerPadding ->
                 val pinnedFolders = remember(customFolderEntities) {
@@ -206,7 +197,7 @@ fun FoldersScreen(
                         .fillMaxSize()
                         .padding(innerPadding)
                         .padding(horizontal = 16.dp),
-                    contentPadding = PaddingValues(bottom = 80.dp),
+                    contentPadding = PaddingValues(bottom = 100.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
@@ -321,8 +312,25 @@ fun FoldersScreen(
                         }
                     }
                 }
+                
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = 16.dp, end = 16.dp)
+                ) {
+                    FloatingActionButton(
+                        onClick = { showAddFolderDialog = true },
+                        shape = CircleShape,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag("fab_create_folder").size(64.dp)
+                    ) {
+                        Icon(painter = painterResource(id = R.drawable.ic_custom_plus), contentDescription = "New Folder", modifier = Modifier.size(24.dp))
+                    }
+                }
             }
         }
+    }
     }
 
     // Add Custom Folder Dialog
@@ -668,7 +676,7 @@ fun FolderContentsBrowser(
                 modifier = Modifier
                     .padding(innerPadding)
                     .fillMaxSize(),
-                contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 80.dp),
+                contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 100.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(folderItems, key = { it.id }) { item ->
