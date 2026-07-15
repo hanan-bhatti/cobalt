@@ -46,6 +46,8 @@ import com.example.data.model.SavedItemType
 import com.example.ui.viewmodel.SecondBrainViewModel
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.res.painterResource
+import com.example.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,7 +91,11 @@ fun CaptureScreen(
                         onClick = { viewModel.cancelCapture() },
                         modifier = Modifier.bounceClick().testTag("cancel_capture_button")
                     ) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Go back")
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_back),
+                            contentDescription = "Go back",
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 },
                 actions = {
@@ -390,7 +396,11 @@ fun CaptureScreen(
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
                     ) {
-                        Icon(if (item.type == SavedItemType.IMAGE) Icons.Outlined.Image else Icons.Outlined.VideoLibrary, contentDescription = null)
+                        Icon(
+                            painter = painterResource(id = if (item.type == SavedItemType.IMAGE) R.drawable.ic_custom_image else R.drawable.ic_custom_video),
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
                         Spacer(Modifier.width(4.dp))
                         Text(
                             text = if (item.content.isBlank()) "Select Media" else "Change Media",
@@ -409,7 +419,11 @@ fun CaptureScreen(
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
                         ) {
-                            Icon(Icons.Outlined.DocumentScanner, contentDescription = null)
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_text),
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
                             Spacer(Modifier.width(4.dp))
                             Text(
                                 text = "Extract Links",
@@ -540,7 +554,7 @@ fun CaptureScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Language,
+                                        painter = painterResource(id = R.drawable.ic_custom_globe),
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.secondary,
                                         modifier = Modifier.size(24.dp)
@@ -666,7 +680,7 @@ fun CaptureScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Info,
+                        painter = painterResource(id = R.drawable.ic_custom_info),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.size(16.dp)

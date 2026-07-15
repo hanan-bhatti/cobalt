@@ -1,4 +1,6 @@
 package com.example
+import com.example.R
+import androidx.compose.ui.res.painterResource
 
 import android.app.Activity
 import android.content.Context
@@ -223,7 +225,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                             .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(percent = 50))
                             .align(Alignment.TopEnd)
                     ) {
-                        Icon(Icons.Default.Close, contentDescription = "Close overlay", tint = Color.White)
+                        Icon(painter = painterResource(id = R.drawable.ic_custom_close), contentDescription = "Close overlay", tint = Color.White)
                     }
 
                     // OCR Progress Overlay
@@ -327,7 +329,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                         },
                                         modifier = Modifier.size(28.dp)
                                     ) {
-                                        Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(18.dp))
+                                        Icon(painter = painterResource(id = R.drawable.ic_custom_close), contentDescription = "Clear", modifier = Modifier.size(18.dp))
                                     }
                                 }
 
@@ -362,7 +364,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                                 ) {
                                                     Icon(
-                                                        imageVector = if (tab == "Links") Icons.Outlined.Link else Icons.Outlined.Description,
+                                                        painter = painterResource(id = if (tab == "Links") R.drawable.ic_custom_link else R.drawable.ic_custom_text),
                                                         contentDescription = null,
                                                         tint = if (isSelected) MaterialTheme.colorScheme.onPrimary 
                                                                else if (hasContent) MaterialTheme.colorScheme.onSurface 
@@ -520,7 +522,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                                Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                                Icon(painter = painterResource(id = R.drawable.ic_custom_folder), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                                                 Text(
                                                     text = "Select Folders / Tags",
                                                     fontWeight = FontWeight.Bold,
@@ -533,7 +535,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                 modifier = Modifier.height(32.dp),
                                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
                                             ) {
-                                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Icon(painter = painterResource(id = R.drawable.ic_custom_plus), contentDescription = null, modifier = Modifier.size(16.dp))
                                                 Spacer(modifier = Modifier.width(4.dp))
                                                 Text("New Folder", style = MaterialTheme.typography.bodySmall)
                                             }
@@ -610,7 +612,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                                                     ) {
                                                         Icon(
-                                                            imageVector = if (isFolderSelected) Icons.Default.Check else Icons.Outlined.Folder,
+                                                            painter = painterResource(id = if (isFolderSelected) R.drawable.ic_custom_check else R.drawable.ic_custom_folder),
                                                             contentDescription = null,
                                                             tint = if (isFolderSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                                                             modifier = Modifier.size(14.dp)
@@ -647,7 +649,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                             ),
                                             modifier = Modifier.fillMaxWidth().height(48.dp)
                                         ) {
-                                            Icon(Icons.Outlined.Link, contentDescription = null)
+                                            Icon(painter = painterResource(id = R.drawable.ic_custom_link), contentDescription = null)
                                             Spacer(modifier = Modifier.width(8.dp))
                                             Text("Save Selected Links to Brain", fontWeight = FontWeight.Bold)
                                         }
@@ -676,7 +678,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                             ),
                                             modifier = Modifier.fillMaxWidth().height(48.dp)
                                         ) {
-                                            Icon(Icons.Outlined.Description, contentDescription = null)
+                                            Icon(painter = painterResource(id = R.drawable.ic_custom_text), contentDescription = null)
                                             Spacer(modifier = Modifier.width(8.dp))
                                             Text("Save Formatted Note to Brain", fontWeight = FontWeight.Bold)
                                         }

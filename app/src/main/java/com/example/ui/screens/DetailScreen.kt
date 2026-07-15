@@ -46,6 +46,8 @@ import com.example.ui.viewmodel.SecondBrainViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.res.painterResource
+import com.example.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,12 +84,21 @@ fun DetailScreen(
                 title = { },
                 navigationIcon = {
                     IconButton(onClick = onClose, modifier = Modifier.bounceClick().testTag("detail_back_button")) {
-                        Icon(Icons.Filled.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onBackground)
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_close),
+                            contentDescription = "Close",
+                            tint = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 },
                 actions = {
                     IconButton(onClick = { onEdit(item) }, modifier = Modifier.bounceClick().testTag("detail_edit_button")) {
-                        Icon(Icons.Outlined.Edit, contentDescription = "Edit memory")
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_edit),
+                            contentDescription = "Edit memory",
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                     IconButton(
                         onClick = {
@@ -108,7 +119,11 @@ fun DetailScreen(
                         },
                         modifier = Modifier.bounceClick().testTag("detail_share_button")
                     ) {
-                        Icon(Icons.Outlined.Share, contentDescription = "Share memory")
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_share),
+                            contentDescription = "Share memory",
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -155,15 +170,20 @@ fun DetailScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        val icon = when (item.type) {
-                            SavedItemType.LINK -> Icons.Outlined.Language
-                            SavedItemType.IMAGE -> Icons.Outlined.Image
-                            SavedItemType.VIDEO -> Icons.Outlined.PlayCircle
-                            SavedItemType.CODE -> Icons.Outlined.Code
-                            SavedItemType.TEXT -> Icons.Outlined.Description
-                            SavedItemType.AUDIO -> Icons.Outlined.Mic
+                        val iconResId = when (item.type) {
+                            SavedItemType.LINK -> R.drawable.ic_custom_link
+                            SavedItemType.IMAGE -> R.drawable.ic_custom_image
+                            SavedItemType.VIDEO -> R.drawable.ic_custom_video
+                            SavedItemType.CODE -> R.drawable.ic_custom_code
+                            SavedItemType.TEXT -> R.drawable.ic_custom_text
+                            SavedItemType.AUDIO -> R.drawable.ic_custom_voice
                         }
-                        Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(
+                            painter = painterResource(id = iconResId),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         Text(
                             text = item.type.displayName,
                             fontSize = 14.sp,
@@ -173,7 +193,12 @@ fun DetailScreen(
                     }
                     if (!item.isSynced) {
                         Text("•", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
-                        Icon(Icons.Outlined.CloudOff, contentDescription = "Local Only", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_cloud_queue),
+                            contentDescription = "Local Only",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
 
@@ -339,7 +364,7 @@ fun DetailScreen(
                             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                                 if (item.type == SavedItemType.LINK) {
                                     Icon(
-                                        imageVector = Icons.Outlined.OpenInBrowser,
+                                        painter = painterResource(id = R.drawable.ic_custom_link_external),
                                         contentDescription = "Open Link",
                                         modifier = Modifier
                                             .size(20.dp)
@@ -351,7 +376,7 @@ fun DetailScreen(
                                     )
                                 }
                                 Icon(
-                                    imageVector = Icons.Outlined.ContentCopy,
+                                    painter = painterResource(id = R.drawable.ic_custom_copy),
                                     contentDescription = "Copy",
                                     modifier = Modifier
                                         .size(20.dp)
@@ -395,7 +420,7 @@ fun DetailScreen(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Filled.AutoAwesome,
+                                    painter = painterResource(id = R.drawable.ic_custom_star),
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(14.dp)
@@ -409,7 +434,7 @@ fun DetailScreen(
                                 )
                             }
                             Icon(
-                                imageVector = Icons.Outlined.ContentCopy,
+                                painter = painterResource(id = R.drawable.ic_custom_copy),
                                 contentDescription = "Copy",
                                 modifier = Modifier
                                     .size(20.dp)

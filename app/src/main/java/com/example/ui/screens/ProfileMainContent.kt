@@ -34,9 +34,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.R
 import com.example.data.model.SavedItemType
-import com.example.ui.viewmodel.SecondBrainViewModel
+import androidx.compose.ui.res.painterResource
 import java.util.Locale
+import com.example.ui.viewmodel.SecondBrainViewModel
+import androidx.compose.runtime.collectAsState
 
 @Composable
 fun ProfileMainContent(
@@ -89,7 +92,7 @@ fun ProfileMainContent(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.AccountCircle,
+                            painter = painterResource(id = R.drawable.ic_custom_profile),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(48.dp)
@@ -181,16 +184,16 @@ fun ProfileMainContent(
                     modifier = Modifier.fillMaxWidth().padding(20.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    ArchiveStat(icon = Icons.Default.Link, count = totalLinks, label = "Links")
-                    ArchiveStat(icon = Icons.Default.Image, count = totalImages, label = "Images")
-                    ArchiveStat(icon = Icons.Default.OndemandVideo, count = totalVideos, label = "Videos")
+                    ArchiveStat(iconResId = R.drawable.ic_custom_link, count = totalLinks, label = "Links")
+                    ArchiveStat(iconResId = R.drawable.ic_custom_image, count = totalImages, label = "Images")
+                    ArchiveStat(iconResId = R.drawable.ic_custom_video, count = totalVideos, label = "Videos")
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
                     horizontalArrangement = Arrangement.Start
                 ) {
-                    ArchiveStat(icon = Icons.Default.Notes, count = totalText, label = "Text", modifier = Modifier.weight(1f))
-                    ArchiveStat(icon = Icons.Default.Code, count = totalCode, label = "Code", modifier = Modifier.weight(1f))
+                    ArchiveStat(iconResId = R.drawable.ic_custom_text, count = totalText, label = "Text", modifier = Modifier.weight(1f))
+                    ArchiveStat(iconResId = R.drawable.ic_custom_code, count = totalCode, label = "Code", modifier = Modifier.weight(1f))
                     Spacer(modifier = Modifier.weight(1f))
                 }
             }
@@ -274,12 +277,17 @@ fun SectionContainer(title: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-fun ArchiveStat(icon: androidx.compose.ui.graphics.vector.ImageVector, count: Int, label: String, modifier: Modifier = Modifier) {
+fun ArchiveStat(iconResId: Int, count: Int, label: String, modifier: Modifier = Modifier) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
     ) {
-        Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(28.dp))
+        Icon(
+            painter = painterResource(id = iconResId),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(28.dp)
+        )
         Spacer(modifier = Modifier.height(8.dp))
         Text(text = "$count", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
         Text(text = label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -298,7 +306,7 @@ fun ClickableRow(title: String, onClick: () -> Unit) {
     ) {
         Text(text = title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            painter = painterResource(id = R.drawable.ic_custom_chevron_right),
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp)

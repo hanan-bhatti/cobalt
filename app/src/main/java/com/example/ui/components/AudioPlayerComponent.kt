@@ -1,4 +1,6 @@
 package com.example.ui.components
+import androidx.compose.ui.res.painterResource
+import com.example.R
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -75,7 +77,7 @@ fun AudioPlayerComponent(
             modifier = Modifier.background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
         ) {
             Icon(
-                imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                painter = painterResource(id = if (isPlaying) R.drawable.ic_custom_pause else R.drawable.ic_custom_play),
                 contentDescription = if (isPlaying) "Pause" else "Play",
                 tint = MaterialTheme.colorScheme.onPrimaryContainer
             )

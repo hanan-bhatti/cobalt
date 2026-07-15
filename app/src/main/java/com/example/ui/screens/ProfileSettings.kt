@@ -28,6 +28,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.example.ui.viewmodel.SecondBrainViewModel
 import kotlinx.coroutines.flow.StateFlow
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
@@ -82,7 +84,11 @@ fun SettingsScreen(
                 title = { Text("Settings", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Back")
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_back),
+                            contentDescription = "Back",
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
@@ -172,10 +178,14 @@ fun SettingsScreen(
                         singleLine = true,
                         visualTransformation = if (keyVisibility) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
-                            val image = if (keyVisibility) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                            val iconResId = if (keyVisibility) R.drawable.ic_custom_eye else R.drawable.ic_custom_eye_off
                             val description = if (keyVisibility) "Hide API Key" else "Show API Key"
                             IconButton(onClick = { keyVisibility = !keyVisibility }) {
-                                Icon(imageVector = image, contentDescription = description)
+                                Icon(
+                                    painter = painterResource(id = iconResId),
+                                    contentDescription = description,
+                                    modifier = Modifier.size(24.dp)
+                                )
                             }
                         },
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
@@ -325,7 +335,7 @@ fun SettingsRow(title: String, value: String? = null, showChevron: Boolean = tru
             }
             if (onClick != null && showChevron) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    painter = painterResource(id = R.drawable.ic_custom_chevron_right),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
@@ -373,7 +383,11 @@ fun EdgePanelSettingsScreen(viewModel: SecondBrainViewModel, onNavigateBack: () 
                 title = { Text("Edge Panel", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Back")
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_back),
+                            contentDescription = "Back",
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)

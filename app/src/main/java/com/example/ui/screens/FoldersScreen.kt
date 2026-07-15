@@ -29,6 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import com.example.data.local.CustomFolderEntity
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
@@ -51,32 +53,17 @@ val folderPresetColors = listOf(
 
 // Preset Palette of standard premium Icons
 val folderPresetIcons = listOf(
-    "folder" to Icons.Default.Folder,
-    "star" to Icons.Default.Star,
-    "book" to Icons.Default.Book,
-    "code" to Icons.Default.Code,
-    "heart" to Icons.Default.Favorite,
-    "work" to Icons.Default.Work,
-    "school" to Icons.Default.School,
-    "home" to Icons.Default.Home,
-    "shopping" to Icons.Default.ShoppingCart,
-    "music" to Icons.Default.MusicNote
+    "folder",
+    "star",
+    "book",
+    "code",
+    "heart",
+    "work",
+    "school",
+    "home",
+    "shopping",
+    "music"
 )
-
-fun getFolderIcon(iconName: String?): ImageVector {
-    return when (iconName) {
-        "star" -> Icons.Default.Star
-        "book" -> Icons.Default.Book
-        "code" -> Icons.Default.Code
-        "heart" -> Icons.Default.Favorite
-        "work" -> Icons.Default.Work
-        "school" -> Icons.Default.School
-        "home" -> Icons.Default.Home
-        "shopping" -> Icons.Default.ShoppingCart
-        "music" -> Icons.Default.MusicNote
-        else -> Icons.Default.Folder
-    }
-}
 
 fun parseHexColor(hex: String?, defaultColor: Color = Color(0xFF6750A4)): Color {
     if (hex.isNullOrBlank()) return defaultColor
@@ -85,6 +72,33 @@ fun parseHexColor(hex: String?, defaultColor: Color = Color(0xFF6750A4)): Color 
     } catch (e: Exception) {
         defaultColor
     }
+}
+
+@Composable
+fun FolderIcon(
+    iconName: String?,
+    modifier: Modifier = Modifier,
+    tint: Color = MaterialTheme.colorScheme.primary
+) {
+    val resId = when (iconName) {
+        "folder" -> R.drawable.ic_custom_folder
+        "star" -> R.drawable.ic_custom_star
+        "book" -> R.drawable.ic_custom_text
+        "code" -> R.drawable.ic_custom_code
+        "heart" -> R.drawable.ic_custom_heart
+        "work" -> R.drawable.ic_custom_work
+        "school" -> R.drawable.ic_custom_school
+        "home" -> R.drawable.ic_custom_home
+        "shopping" -> R.drawable.ic_custom_shopping
+        "music" -> R.drawable.ic_custom_music
+        else -> R.drawable.ic_custom_folder
+    }
+    Icon(
+        painter = painterResource(id = resId),
+        contentDescription = null,
+        tint = tint,
+        modifier = modifier
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -156,7 +170,7 @@ fun FoldersScreen(
                                 modifier = Modifier.testTag("create_folder_button")
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.CreateNewFolder,
+                                    painter = painterResource(id = R.drawable.ic_custom_add_folder),
                                     contentDescription = "Create Folder",
                                     tint = MaterialTheme.colorScheme.primary
                                 )
@@ -174,7 +188,7 @@ fun FoldersScreen(
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.testTag("fab_create_folder")
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Folder")
+                        Icon(painter = painterResource(id = R.drawable.ic_custom_plus), contentDescription = "Add Folder")
                     }
                 },
                 containerColor = MaterialTheme.colorScheme.background
@@ -212,18 +226,18 @@ fun FoldersScreen(
                         val count = remember(allItems) {
                             allItems.count { it.type == type && !it.folders.contains("Archive") }
                         }
-                        val icon = when (type) {
-                            SavedItemType.LINK -> Icons.Outlined.Link
-                            SavedItemType.IMAGE -> Icons.Outlined.Image
-                            SavedItemType.VIDEO -> Icons.Outlined.VideoLibrary
-                            SavedItemType.CODE -> Icons.Outlined.Code
-                            SavedItemType.TEXT -> Icons.Outlined.Description
-                            SavedItemType.AUDIO -> Icons.Outlined.Mic
+                        val iconResId = when (type) {
+                            SavedItemType.LINK -> R.drawable.ic_custom_link
+                            SavedItemType.IMAGE -> R.drawable.ic_custom_image
+                            SavedItemType.VIDEO -> R.drawable.ic_custom_video
+                            SavedItemType.CODE -> R.drawable.ic_custom_code
+                            SavedItemType.TEXT -> R.drawable.ic_custom_text
+                            SavedItemType.AUDIO -> R.drawable.ic_custom_voice
                         }
                         SystemCategoryCard(
                             name = type.displayName,
                             count = count,
-                            icon = icon,
+                            iconResId = iconResId,
                             onClick = { activeBrowseFolder = type.displayName },
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -277,7 +291,7 @@ fun FoldersScreen(
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Icon(
-                                        imageVector = Icons.Outlined.FolderOpen,
+                                        painter = painterResource(id = R.drawable.ic_custom_folder_open),
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.secondary,
                                         modifier = Modifier.size(48.dp)
@@ -370,7 +384,7 @@ fun FoldersScreen(
 fun SystemCategoryCard(
     name: String,
     count: Int,
-    icon: ImageVector,
+    iconResId: Int,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
@@ -389,7 +403,7 @@ fun SystemCategoryCard(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Icon(
-                imageVector = icon,
+                painter = painterResource(id = iconResId),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(24.dp)
@@ -441,9 +455,8 @@ fun PinnedFolderCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = getFolderIcon(folder.iconName),
-                    contentDescription = null,
+                FolderIcon(
+                    iconName = folder.iconName,
                     tint = themeColor,
                     modifier = Modifier.size(26.dp)
                 )
@@ -452,7 +465,7 @@ fun PinnedFolderCard(
                     modifier = Modifier.size(24.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Settings,
+                        painter = painterResource(id = R.drawable.ic_custom_settings),
                         contentDescription = "Customize",
                         tint = themeColor.copy(alpha = 0.6f),
                         modifier = Modifier.size(16.dp)
@@ -478,7 +491,7 @@ fun PinnedFolderCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
-                        imageVector = Icons.Filled.PushPin,
+                        painter = painterResource(id = R.drawable.ic_custom_pin),
                         contentDescription = "Pinned",
                         tint = themeColor,
                         modifier = Modifier.size(10.dp)
@@ -529,9 +542,8 @@ fun FolderDirectoryItem(
                         .background(themeColor.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = getFolderIcon(folder.iconName),
-                        contentDescription = null,
+                    FolderIcon(
+                        iconName = folder.iconName,
                         tint = themeColor,
                         modifier = Modifier.size(22.dp)
                     )
@@ -558,9 +570,10 @@ fun FolderDirectoryItem(
 
             IconButton(onClick = onCustomize) {
                 Icon(
-                    imageVector = Icons.Default.MoreVert,
+                    painter = painterResource(id = R.drawable.ic_custom_settings),
                     contentDescription = "Options",
-                    tint = MaterialTheme.colorScheme.secondary
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
@@ -606,7 +619,11 @@ fun FolderContentsBrowser(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_back),
+                            contentDescription = "Back",
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -625,7 +642,7 @@ fun FolderContentsBrowser(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
                     Icon(
-                        imageVector = Icons.Outlined.FolderOpen,
+                        painter = painterResource(id = R.drawable.ic_custom_folder_open),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.size(64.dp)
@@ -672,13 +689,13 @@ fun FolderBrowseItemRow(
     onClick: () -> Unit
 ) {
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    val displayIcon = when (item.type) {
-        SavedItemType.LINK -> Icons.Outlined.Link
-        SavedItemType.IMAGE -> Icons.Outlined.Image
-        SavedItemType.VIDEO -> Icons.Outlined.VideoLibrary
-        SavedItemType.CODE -> Icons.Outlined.Code
-        SavedItemType.TEXT -> Icons.Outlined.Description
-        SavedItemType.AUDIO -> Icons.Outlined.Mic
+    val iconResId = when (item.type) {
+        SavedItemType.LINK -> R.drawable.ic_custom_link
+        SavedItemType.IMAGE -> R.drawable.ic_custom_image
+        SavedItemType.VIDEO -> R.drawable.ic_custom_video
+        SavedItemType.CODE -> R.drawable.ic_custom_code
+        SavedItemType.TEXT -> R.drawable.ic_custom_text
+        SavedItemType.AUDIO -> R.drawable.ic_custom_voice
     }
 
     Surface(
@@ -704,7 +721,7 @@ fun FolderBrowseItemRow(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = displayIcon,
+                    painter = painterResource(id = iconResId),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
@@ -732,7 +749,7 @@ fun FolderBrowseItemRow(
             }
 
             Icon(
-                imageVector = Icons.Default.ChevronRight,
+                painter = painterResource(id = R.drawable.ic_custom_chevron_right),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.size(20.dp)
@@ -810,7 +827,7 @@ fun FolderCustomizerDialog(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = if (isPinned) Icons.Default.PushPin else Icons.Outlined.PushPin,
+                                painter = painterResource(id = R.drawable.ic_custom_pin),
                                 contentDescription = null,
                                 tint = if (isPinned) parseHexColor(selectedColorHex) else MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.size(20.dp)
@@ -838,7 +855,8 @@ fun FolderCustomizerDialog(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             contentPadding = PaddingValues(vertical = 4.dp)
                         ) {
-                            items(folderPresetIcons) { (iconName, iconVector) ->
+                            items(folderPresetIcons.size) { index ->
+                                val iconName = folderPresetIcons[index]
                                 val isSelected = selectedIconName == iconName
                                 Box(
                                     modifier = Modifier
@@ -857,9 +875,8 @@ fun FolderCustomizerDialog(
                                         .clickable { selectedIconName = iconName },
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(
-                                        imageVector = iconVector,
-                                        contentDescription = null,
+                                    FolderIcon(
+                                        iconName = iconName,
                                         tint = if (isSelected) parseHexColor(selectedColorHex) else MaterialTheme.colorScheme.secondary,
                                         modifier = Modifier.size(18.dp)
                                     )
@@ -894,7 +911,7 @@ fun FolderCustomizerDialog(
                                 ) {
                                     if (isSelected) {
                                         Icon(
-                                            imageVector = Icons.Default.Check,
+                                            painter = painterResource(id = R.drawable.ic_custom_check),
                                             contentDescription = "Selected",
                                             tint = Color.White,
                                             modifier = Modifier.size(18.dp)
@@ -917,7 +934,7 @@ fun FolderCustomizerDialog(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().testTag("delete_folder_btn")
                     ) {
-                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(painter = painterResource(id = R.drawable.ic_custom_delete), contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Delete Folder")
                     }

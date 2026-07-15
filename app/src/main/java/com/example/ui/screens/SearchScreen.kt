@@ -23,6 +23,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -107,7 +109,7 @@ fun SearchScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = Icons.Filled.Search,
+                                painter = painterResource(id = R.drawable.ic_custom_search),
                                 contentDescription = "Search",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                 modifier = Modifier.size(20.dp)
@@ -131,7 +133,7 @@ fun SearchScreen(
                                     modifier = Modifier.size(20.dp).padding(0.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Filled.Close,
+                                        painter = painterResource(id = R.drawable.ic_custom_close),
                                         contentDescription = "Clear search",
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(16.dp)
@@ -188,7 +190,7 @@ fun SearchScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = Icons.Filled.History,
+                                    painter = painterResource(id = R.drawable.ic_custom_history),
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp)
@@ -277,7 +279,7 @@ fun SearchItemRow(item: SavedItem, onClick: () -> Unit) {
                         )
                     } else {
                         Icon(
-                            imageVector = Icons.Default.Link,
+                            painter = painterResource(id = R.drawable.ic_custom_link),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -285,21 +287,21 @@ fun SearchItemRow(item: SavedItem, onClick: () -> Unit) {
                 }
                 SavedItemType.CODE -> {
                     Icon(
-                        imageVector = Icons.Default.Code,
+                        painter = painterResource(id = R.drawable.ic_custom_code),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 SavedItemType.AUDIO -> {
                     Icon(
-                        imageVector = Icons.Default.Mic,
+                        painter = painterResource(id = R.drawable.ic_custom_voice),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 else -> { // TEXT
                     Icon(
-                        imageVector = Icons.Default.Description,
+                        painter = painterResource(id = R.drawable.ic_custom_text),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -371,7 +373,7 @@ fun SearchItemRow(item: SavedItem, onClick: () -> Unit) {
 
         // Right Arrow
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            painter = painterResource(id = R.drawable.ic_custom_arrow_right),
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
             modifier = Modifier.size(20.dp)

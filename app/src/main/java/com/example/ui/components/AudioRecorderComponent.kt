@@ -1,4 +1,6 @@
 package com.example.ui.components
+import androidx.compose.ui.res.painterResource
+import com.example.R
 
 import android.media.MediaRecorder
 import androidx.compose.foundation.background
@@ -94,7 +96,7 @@ fun AudioRecorderComponent(
                 .background(if (isRecording) Color.Red.copy(alpha = 0.1f) else MaterialTheme.colorScheme.primaryContainer, CircleShape)
         ) {
             Icon(
-                imageVector = if (isRecording) Icons.Filled.Stop else Icons.Filled.Mic,
+                painter = painterResource(id = if (isRecording) R.drawable.ic_custom_stop else R.drawable.ic_custom_voice),
                 contentDescription = "Record",
                 tint = if (isRecording) Color.Red else MaterialTheme.colorScheme.onPrimaryContainer
             )

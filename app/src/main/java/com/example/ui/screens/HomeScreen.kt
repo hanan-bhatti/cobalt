@@ -39,6 +39,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
 import com.example.ui.components.bounceClick
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -178,7 +180,7 @@ fun HomeScreen(
                             modifier = Modifier.testTag("clear_selection_button")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Close,
+                                painter = painterResource(id = R.drawable.ic_custom_close),
                                 contentDescription = "Clear selection",
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -190,7 +192,7 @@ fun HomeScreen(
                             modifier = Modifier.testTag("select_all_button")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.SelectAll,
+                                painter = painterResource(id = R.drawable.ic_custom_select_all),
                                 contentDescription = "Select all",
                                 tint = MaterialTheme.colorScheme.primary
                             )
@@ -200,7 +202,7 @@ fun HomeScreen(
                             modifier = Modifier.testTag("bulk_tag_button")
                         ) {
                             Icon(
-                                imageVector = Icons.Outlined.Folder,
+                                painter = painterResource(id = R.drawable.ic_custom_folder),
                                 contentDescription = "Bulk tag folders",
                                 tint = MaterialTheme.colorScheme.primary
                             )
@@ -210,7 +212,7 @@ fun HomeScreen(
                             modifier = Modifier.testTag("bulk_delete_button")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Delete,
+                                painter = painterResource(id = R.drawable.ic_custom_delete),
                                 contentDescription = "Bulk delete selected",
                                 tint = MaterialTheme.colorScheme.error
                             )
@@ -245,7 +247,7 @@ fun HomeScreen(
                             modifier = Modifier.testTag("toggle_view_button")
                         ) {
                             Icon(
-                                imageVector = if (isListView) Icons.Outlined.GridView else Icons.Outlined.ViewList,
+                                painter = painterResource(id = if (isListView) R.drawable.ic_custom_grid else R.drawable.ic_custom_list),
                                 contentDescription = if (isListView) "Switch to Grid View" else "Switch to List View",
                                 tint = MaterialTheme.colorScheme.onBackground
                             )
@@ -279,7 +281,7 @@ fun HomeScreen(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Outlined.Search,
+                        painter = painterResource(id = R.drawable.ic_custom_search),
                         contentDescription = "Search",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -311,7 +313,7 @@ fun HomeScreen(
                     FolderChipItem(
                         folder = "All",
                         isSelected = isSelected,
-                        icon = Icons.Outlined.Folder,
+                        painter = painterResource(id = R.drawable.ic_custom_folder),
                         onClick = { viewModel.setFolderFilter("All") }
                     )
                 }
@@ -322,7 +324,7 @@ fun HomeScreen(
                     FolderChipItem(
                         folder = folder,
                         isSelected = isSelected,
-                        icon = Icons.Outlined.FolderSpecial,
+                        painter = painterResource(id = R.drawable.ic_custom_star),
                         onClick = { viewModel.setFolderFilter(folder) }
                     )
                 }
@@ -330,18 +332,18 @@ fun HomeScreen(
                 // 5. System Category Folders
                 items(systemCategories, key = { it }) { category ->
                     val isSelected = selectedFolder == category
-                    val icon = when (category) {
-                        "Links" -> Icons.Outlined.Link
-                        "Images" -> Icons.Outlined.Image
-                        "Videos" -> Icons.Outlined.VideoLibrary
-                        "Code" -> Icons.Outlined.Code
-                        "Text" -> Icons.Outlined.Description
-                        else -> Icons.Outlined.Folder
+                    val painter = when (category) {
+                        "Links" -> painterResource(id = R.drawable.ic_custom_link)
+                        "Images" -> painterResource(id = R.drawable.ic_custom_image)
+                        "Videos" -> painterResource(id = R.drawable.ic_custom_video)
+                        "Code" -> painterResource(id = R.drawable.ic_custom_code)
+                        "Text" -> painterResource(id = R.drawable.ic_custom_text)
+                        else -> painterResource(id = R.drawable.ic_custom_folder)
                     }
                     FolderChipItem(
                         folder = category,
                         isSelected = isSelected,
-                        icon = icon,
+                        painter = painter,
                         onClick = { viewModel.setFolderFilter(category) }
                     )
                 }
@@ -364,7 +366,7 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.secondary
                     )
                     Icon(
-                        imageVector = if (isRecentCapturesExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        painter = painterResource(id = if (isRecentCapturesExpanded) R.drawable.ic_custom_chevron_up else R.drawable.ic_custom_chevron_down),
                         contentDescription = if (isRecentCapturesExpanded) "Collapse" else "Expand",
                         tint = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.size(20.dp)
@@ -412,7 +414,7 @@ fun HomeScreen(
                             modifier = Modifier.padding(32.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Outlined.Search,
+                                painter = painterResource(id = R.drawable.ic_custom_search),
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.size(48.dp)
@@ -456,7 +458,7 @@ fun HomeScreen(
                                 verticalArrangement = Arrangement.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Outlined.FolderSpecial,
+                                    painter = painterResource(id = R.drawable.ic_custom_folder_special),
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.secondary,
                                     modifier = Modifier.size(64.dp)
@@ -734,7 +736,7 @@ fun HomeScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            imageVector = Icons.Default.Delete,
+                            painter = painterResource(id = R.drawable.ic_custom_delete),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(20.dp)
@@ -934,7 +936,7 @@ fun HomeScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Outlined.Folder,
+                                        painter = painterResource(id = R.drawable.ic_custom_folder),
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(20.dp)
@@ -997,7 +999,7 @@ fun HomeScreen(
                             modifier = Modifier.testTag("dialog_create_folder_button")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Add,
+                                painter = painterResource(id = R.drawable.ic_custom_plus),
                                 contentDescription = "Create and assign folder",
                                 modifier = Modifier.size(20.dp)
                             )
@@ -1082,7 +1084,7 @@ fun HomeScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Outlined.Folder,
+                                        painter = painterResource(id = R.drawable.ic_custom_folder),
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(24.dp)
@@ -1139,7 +1141,7 @@ fun HomeScreen(
                             modifier = Modifier.testTag("bulk_tag_create_folder_button")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Add,
+                                painter = painterResource(id = R.drawable.ic_custom_plus),
                                 contentDescription = "Create and assign folder",
                                 modifier = Modifier.size(20.dp)
                             )
@@ -1170,7 +1172,7 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.FolderSpecial,
+                        painter = painterResource(id = R.drawable.ic_custom_folder_special),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
@@ -1203,7 +1205,7 @@ fun HomeScreen(
                         listOf(SavedItemType.TEXT, SavedItemType.LINK).forEach { type ->
                             val isSelected = captureType == type
                             val typeLabel = if (type == SavedItemType.TEXT) "Text Note" else "Web Link"
-                            val typeIcon = if (type == SavedItemType.TEXT) Icons.Outlined.Description else Icons.Outlined.Link
+                            val typeIconRes = if (type == SavedItemType.TEXT) R.drawable.ic_custom_text else R.drawable.ic_custom_link
 
                             Surface(
                                 shape = RoundedCornerShape(20.dp),
@@ -1225,7 +1227,7 @@ fun HomeScreen(
                                     horizontalArrangement = Arrangement.Center
                                 ) {
                                     Icon(
-                                        imageVector = typeIcon,
+                                        painter = painterResource(id = typeIconRes),
                                         contentDescription = null,
                                         modifier = Modifier.size(18.dp)
                                     )
@@ -1384,7 +1386,7 @@ fun HomeScreen(
                                     containerColor = MaterialTheme.colorScheme.surface,
                                     contentColor = MaterialTheme.colorScheme.primary
                                 ) {
-                                    Icon(Icons.Outlined.Edit, contentDescription = "Quick Note")
+                                    Icon(painter = painterResource(id = R.drawable.ic_custom_edit), contentDescription = "Quick Note")
                                 }
                             }
                             
@@ -1407,7 +1409,7 @@ fun HomeScreen(
                                     containerColor = MaterialTheme.colorScheme.surface,
                                     contentColor = MaterialTheme.colorScheme.primary
                                 ) {
-                                    Icon(Icons.Outlined.Mic, contentDescription = "Voice Memo")
+                                    Icon(painter = painterResource(id = R.drawable.ic_custom_voice), contentDescription = "Voice Memo")
                                 }
                             }
                             
@@ -1422,7 +1424,7 @@ fun HomeScreen(
                                     containerColor = MaterialTheme.colorScheme.surface,
                                     contentColor = MaterialTheme.colorScheme.primary
                                 ) {
-                                    Icon(Icons.Outlined.CreateNewFolder, contentDescription = "New Folder")
+                                    Icon(painter = painterResource(id = R.drawable.ic_custom_add_folder), contentDescription = "New Folder")
                                 }
                             }
                             
@@ -1437,7 +1439,7 @@ fun HomeScreen(
                                     containerColor = MaterialTheme.colorScheme.surface,
                                     contentColor = MaterialTheme.colorScheme.primary
                                 ) {
-                                    Icon(Icons.Outlined.AddBox, contentDescription = "New Item")
+                                    Icon(painter = painterResource(id = R.drawable.ic_custom_plus), contentDescription = "New Item")
                                 }
                             }
                         }
@@ -1451,7 +1453,7 @@ fun HomeScreen(
                     ) {
                         val rotation by animateFloatAsState(targetValue = if (isFabExpanded) 45f else 0f)
                         Icon(
-                            imageVector = Icons.Default.Add,
+                            painter = painterResource(id = R.drawable.ic_custom_plus),
                             contentDescription = "Add options",
                             modifier = Modifier.graphicsLayer(rotationZ = rotation)
                         )
@@ -1564,7 +1566,7 @@ fun ArchiveItemCard(
                               )
                             if (item.type == SavedItemType.VIDEO) {
                                 Icon(
-                                    imageVector = Icons.Filled.PlayCircle,
+                                    painter = painterResource(id = R.drawable.ic_custom_play),
                                     contentDescription = "Video",
                                     tint = Color.White,
                                     modifier = Modifier
@@ -1581,7 +1583,7 @@ fun ArchiveItemCard(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Code,
+                                    painter = painterResource(id = R.drawable.ic_custom_code),
                                     contentDescription = null,
                                     tint = Color.White,
                                     modifier = Modifier.size(36.dp)
@@ -1619,7 +1621,7 @@ fun ArchiveItemCard(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Link,
+                                        painter = painterResource(id = R.drawable.ic_custom_link),
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                         modifier = Modifier.size(36.dp)
@@ -1635,7 +1637,7 @@ fun ArchiveItemCard(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = if (item.type == SavedItemType.AUDIO) Icons.Default.Mic else Icons.Default.Notes,
+                                    painter = painterResource(id = if (item.type == SavedItemType.AUDIO) R.drawable.ic_custom_voice else R.drawable.ic_custom_text),
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                     modifier = Modifier.size(36.dp)
@@ -1689,7 +1691,7 @@ fun ArchiveItemCard(
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
                                 Icon(
-                                    imageVector = if (item.isSynced) Icons.Outlined.CloudDone else Icons.Outlined.CloudQueue,
+                                    painter = painterResource(id = if (item.isSynced) R.drawable.ic_custom_cloud_done else R.drawable.ic_custom_cloud_queue),
                                     contentDescription = if (item.isSynced) "Synced to Cloud" else "Local Only",
                                     tint = if (item.isSynced) {
                                         MaterialTheme.colorScheme.primary
@@ -1717,16 +1719,16 @@ fun ArchiveItemCard(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            val icon = when (item.type) {
-                                SavedItemType.LINK -> Icons.Outlined.Link
-                                SavedItemType.IMAGE -> Icons.Outlined.Image
-                                SavedItemType.VIDEO -> Icons.Outlined.VideoLibrary
-                                SavedItemType.CODE -> Icons.Outlined.Code
-                                SavedItemType.TEXT -> Icons.Outlined.Description
-                                SavedItemType.AUDIO -> Icons.Outlined.Mic
+                            val iconResId = when (item.type) {
+                                SavedItemType.LINK -> R.drawable.ic_custom_link
+                                SavedItemType.IMAGE -> R.drawable.ic_custom_image
+                                SavedItemType.VIDEO -> R.drawable.ic_custom_video
+                                SavedItemType.CODE -> R.drawable.ic_custom_code
+                                SavedItemType.TEXT -> R.drawable.ic_custom_text
+                                SavedItemType.AUDIO -> R.drawable.ic_custom_voice
                             }
                             Icon(
-                                imageVector = icon,
+                                painter = painterResource(id = iconResId),
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.size(10.dp)
@@ -1810,7 +1812,7 @@ fun ArchiveItemCard(
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)) {
                                         if (isArchiveBadge) {
-                                            Icon(imageVector = Icons.Filled.Archive, contentDescription = null, modifier = Modifier.size(10.dp).padding(end = 2.dp), tint = MaterialTheme.colorScheme.secondary)
+                                            Icon(painter = painterResource(id = R.drawable.ic_custom_archive), contentDescription = null, modifier = Modifier.size(10.dp).padding(end = 2.dp), tint = MaterialTheme.colorScheme.secondary)
                                         }
                                         Text(
                                             text = folder,
@@ -1840,7 +1842,7 @@ fun ArchiveItemCard(
             },
             leadingIcon = {
                 Icon(
-                    imageVector = Icons.Outlined.FolderOpen,
+                    painter = painterResource(id = R.drawable.ic_custom_folder_open),
                     contentDescription = null,
                     modifier = Modifier.size(20.dp)
                 )
@@ -1860,7 +1862,7 @@ fun ArchiveItemCard(
             },
             leadingIcon = {
                 Icon(
-                    imageVector = Icons.Outlined.Share,
+                    painter = painterResource(id = R.drawable.ic_custom_share),
                     contentDescription = null,
                     modifier = Modifier.size(20.dp)
                 )
@@ -1878,7 +1880,7 @@ fun ArchiveItemCard(
             },
             leadingIcon = {
                 Icon(
-                    imageVector = if (isArchived) Icons.Outlined.Unarchive else Icons.Outlined.Archive,
+                    painter = painterResource(id = if (isArchived) R.drawable.ic_custom_unarchive else R.drawable.ic_custom_archive),
                     contentDescription = null,
                     modifier = Modifier.size(20.dp)
                 )
@@ -1894,7 +1896,7 @@ fun ArchiveItemCard(
             },
             leadingIcon = {
                 Icon(
-                    imageVector = Icons.Default.DeleteOutline,
+                    painter = painterResource(id = R.drawable.ic_custom_delete),
                     contentDescription = null,
                     tint = Color.Red,
                     modifier = Modifier.size(20.dp)
@@ -1967,10 +1969,10 @@ fun SwipeToDismissWrapper(
                 SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
                 SwipeToDismissBoxValue.Settled -> Alignment.Center
             }
-            val icon = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> if (isArchived) Icons.Outlined.Unarchive else Icons.Filled.Archive
-                SwipeToDismissBoxValue.EndToStart -> Icons.Filled.Delete
-                SwipeToDismissBoxValue.Settled -> Icons.Filled.Delete
+            val iconResId = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> if (isArchived) R.drawable.ic_custom_unarchive else R.drawable.ic_custom_archive
+                SwipeToDismissBoxValue.EndToStart -> R.drawable.ic_custom_delete
+                SwipeToDismissBoxValue.Settled -> R.drawable.ic_custom_delete
             }
             val text = when (direction) {
                 SwipeToDismissBoxValue.StartToEnd -> if (isArchived) "Restore" else "Archive"
@@ -1992,7 +1994,7 @@ fun SwipeToDismissWrapper(
                     ) {
                         if (direction == SwipeToDismissBoxValue.StartToEnd) {
                             Icon(
-                                imageVector = icon,
+                                painter = painterResource(id = iconResId),
                                 contentDescription = text,
                                 tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -2008,7 +2010,7 @@ fun SwipeToDismissWrapper(
                                 color = MaterialTheme.colorScheme.onErrorContainer
                             )
                             Icon(
-                                imageVector = icon,
+                                painter = painterResource(id = iconResId),
                                 contentDescription = text,
                                 tint = MaterialTheme.colorScheme.onErrorContainer
                             )
@@ -2140,16 +2142,16 @@ fun ArchiveItemRow(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        val icon = when (item.type) {
-                            SavedItemType.LINK -> Icons.Outlined.Link
-                            SavedItemType.IMAGE -> Icons.Outlined.Image
-                            SavedItemType.VIDEO -> Icons.Outlined.VideoLibrary
-                            SavedItemType.CODE -> Icons.Outlined.Code
-                            SavedItemType.TEXT -> Icons.Outlined.Description
-                            SavedItemType.AUDIO -> Icons.Outlined.Mic
+                        val iconResId = when (item.type) {
+                            SavedItemType.LINK -> R.drawable.ic_custom_link
+                            SavedItemType.IMAGE -> R.drawable.ic_custom_image
+                            SavedItemType.VIDEO -> R.drawable.ic_custom_video
+                            SavedItemType.CODE -> R.drawable.ic_custom_code
+                            SavedItemType.TEXT -> R.drawable.ic_custom_text
+                            SavedItemType.AUDIO -> R.drawable.ic_custom_voice
                         }
                         Icon(
-                            imageVector = icon,
+                            painter = painterResource(id = iconResId),
                             contentDescription = null,
                             tint = typeColor,
                             modifier = Modifier.size(28.dp)
@@ -2198,7 +2200,7 @@ fun ArchiveItemRow(
                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                             ) {
                                 Icon(
-                                    imageVector = if (item.isSynced) Icons.Outlined.CloudDone else Icons.Outlined.CloudQueue,
+                                    painter = painterResource(id = if (item.isSynced) R.drawable.ic_custom_cloud_done else R.drawable.ic_custom_cloud_queue),
                                     contentDescription = null,
                                     tint = if (item.isSynced) {
                                         MaterialTheme.colorScheme.primary
@@ -2288,7 +2290,7 @@ fun ArchiveItemRow(
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)) {
                                         if (isArchiveBadge) {
-                                            Icon(imageVector = Icons.Filled.Archive, contentDescription = null, modifier = Modifier.size(10.dp).padding(end = 2.dp), tint = MaterialTheme.colorScheme.secondary)
+                                            Icon(painter = painterResource(id = R.drawable.ic_custom_archive), contentDescription = null, modifier = Modifier.size(10.dp).padding(end = 2.dp), tint = MaterialTheme.colorScheme.secondary)
                                         }
                                         Text(
                                             text = folder,
@@ -2339,7 +2341,7 @@ fun ArchiveItemRow(
                 },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Outlined.FolderOpen,
+                        painter = painterResource(id = R.drawable.ic_custom_folder_open),
                         contentDescription = null,
                         modifier = Modifier.size(20.dp)
                     )
@@ -2359,7 +2361,7 @@ fun ArchiveItemRow(
                 },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Outlined.Share,
+                        painter = painterResource(id = R.drawable.ic_custom_share),
                         contentDescription = null,
                         modifier = Modifier.size(20.dp)
                     )
@@ -2377,7 +2379,7 @@ fun ArchiveItemRow(
                 },
                 leadingIcon = {
                     Icon(
-                        imageVector = if (isArchived) Icons.Outlined.Unarchive else Icons.Outlined.Archive,
+                        painter = painterResource(id = if (isArchived) R.drawable.ic_custom_unarchive else R.drawable.ic_custom_archive),
                         contentDescription = null,
                         modifier = Modifier.size(20.dp)
                     )
@@ -2393,7 +2395,7 @@ fun ArchiveItemRow(
                 },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Default.DeleteOutline,
+                        painter = painterResource(id = R.drawable.ic_custom_delete),
                         contentDescription = null,
                         tint = Color.Red,
                         modifier = Modifier.size(20.dp)
@@ -2443,7 +2445,7 @@ fun OnboardingSharingGuide(
                     modifier = Modifier.size(24.dp).testTag("dismiss_onboarding_button")
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Close,
+                        painter = painterResource(id = R.drawable.ic_custom_close),
                         contentDescription = "Dismiss guide",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
@@ -2523,7 +2525,7 @@ fun SharingGuideVisualMockup() {
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Language,
+                    painter = painterResource(id = R.drawable.ic_custom_globe),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)
@@ -2546,7 +2548,7 @@ fun SharingGuideVisualMockup() {
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.ArrowForward,
+                painter = painterResource(id = R.drawable.ic_custom_arrow_right),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
@@ -2566,7 +2568,7 @@ fun SharingGuideVisualMockup() {
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.FolderSpecial,
+                    painter = painterResource(id = R.drawable.ic_custom_folder_special),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.size(24.dp)
@@ -2631,7 +2633,7 @@ fun OnboardingStepRow(
 fun FolderChipItem(
     folder: String,
     isSelected: Boolean,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    painter: androidx.compose.ui.graphics.painter.Painter,
     onClick: () -> Unit
 ) {
     Surface(
@@ -2666,7 +2668,7 @@ fun FolderChipItem(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Icon(
-                imageVector = icon,
+                painter = painter,
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
                 tint = if (isSelected) {
@@ -2761,7 +2763,7 @@ fun PersistentCaptureForm(viewModel: SecondBrainViewModel) {
                             }
                         }
                     ) {
-                        Icon(Icons.Filled.Send, contentDescription = "Save Note", tint = MaterialTheme.colorScheme.primary)
+                        Icon(painter = painterResource(id = R.drawable.ic_custom_send), contentDescription = "Save Note", tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             } else {
@@ -2775,7 +2777,7 @@ fun PersistentCaptureForm(viewModel: SecondBrainViewModel) {
                         isExpanded = false
                         focusManager.clearFocus()
                     }) {
-                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Collapse")
+                        Icon(painter = painterResource(id = R.drawable.ic_custom_chevron_down), contentDescription = "Collapse")
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
@@ -2845,7 +2847,7 @@ fun PersistentCaptureForm(viewModel: SecondBrainViewModel) {
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     shape = RoundedCornerShape(24.dp)
                 ) {
-                    Icon(Icons.Filled.Send, contentDescription = "Save Note")
+                    Icon(painter = painterResource(id = R.drawable.ic_custom_send), contentDescription = "Save Note")
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Save Note")
                 }
@@ -3032,7 +3034,7 @@ fun RecentCaptureMicroCard(
                     }
                     SavedItemType.LINK -> {
                         Icon(
-                            imageVector = Icons.Default.Link,
+                            painter = painterResource(id = R.drawable.ic_custom_link),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
@@ -3040,7 +3042,7 @@ fun RecentCaptureMicroCard(
                     }
                     SavedItemType.CODE -> {
                         Icon(
-                            imageVector = Icons.Default.Code,
+                            painter = painterResource(id = R.drawable.ic_custom_code),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
@@ -3048,7 +3050,7 @@ fun RecentCaptureMicroCard(
                     }
                     SavedItemType.AUDIO -> {
                         Icon(
-                            imageVector = Icons.Default.Mic,
+                            painter = painterResource(id = R.drawable.ic_custom_voice),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
@@ -3056,7 +3058,7 @@ fun RecentCaptureMicroCard(
                     }
                     else -> {
                         Icon(
-                            imageVector = Icons.Default.Description,
+                            painter = painterResource(id = R.drawable.ic_custom_text),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)

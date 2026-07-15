@@ -1,4 +1,6 @@
 package com.example.ui.screens
+import com.example.R
+import androidx.compose.ui.res.painterResource
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -73,7 +75,7 @@ fun RichTextEditor(
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Edit,
+                        painter = painterResource(id = R.drawable.ic_custom_edit),
                         contentDescription = "Edit Mode",
                         tint = editTextColor,
                         modifier = Modifier.size(16.dp)
@@ -91,7 +93,7 @@ fun RichTextEditor(
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Visibility,
+                        painter = painterResource(id = R.drawable.ic_custom_eye),
                         contentDescription = "Preview Mode",
                         tint = previewTextColor,
                         modifier = Modifier.size(16.dp)

@@ -135,10 +135,10 @@ BackHandler(enabled = activeDetailItem != null) {
                         val routesWithBottomBar = listOf("home", "search", "folders", "profile")
                         if (currentRoute in routesWithBottomBar) {
                             val items = listOf(
-                                BottomBarItem("home", Icons.Filled.Home, Icons.Outlined.Home, "Home"),
-                                BottomBarItem("search", Icons.Filled.Search, Icons.Outlined.Search, "Search"),
-                                BottomBarItem("folders", Icons.Filled.Folder, Icons.Outlined.Folder, "Folders"),
-                                BottomBarItem("profile", Icons.Filled.Person, Icons.Outlined.Person, "Profile")
+                                BottomBarItem("home", R.drawable.ic_custom_home, "Home"),
+                                BottomBarItem("search", R.drawable.ic_custom_search, "Search"),
+                                BottomBarItem("folders", R.drawable.ic_custom_folder, "Folders"),
+                                BottomBarItem("profile", R.drawable.ic_custom_profile, "Profile")
                             )
                             CustomBottomBar(
                                 items = items,

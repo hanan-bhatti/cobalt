@@ -52,7 +52,7 @@ fun AuthScreen(
                 title = { Text("Cloud Sync Settings", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("auth_back_button")) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Go back")
+                        Icon(painter = painterResource(id = R.drawable.ic_custom_back), contentDescription = "Go back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -80,7 +80,7 @@ fun AuthScreen(
                         .padding(top = 40.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Sync,
+                        painter = painterResource(id = R.drawable.ic_custom_sync),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(64.dp)
@@ -176,7 +176,7 @@ fun AuthScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = Icons.Outlined.CloudQueue,
+                                    painter = painterResource(id = R.drawable.ic_custom_cloud_queue),
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(24.dp)
@@ -243,7 +243,7 @@ fun AuthScreen(
                         value = email,
                         onValueChange = { email = it },
                         label = { Text("Email Address") },
-                        leadingIcon = { Icon(Icons.Filled.Mail, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
+                        leadingIcon = { Icon(painter = painterResource(id = R.drawable.ic_custom_mail), contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
                         singleLine = true,
                         shape = RoundedCornerShape(20.dp),
                         colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
@@ -288,7 +288,7 @@ fun AuthScreen(
                                 value = password,
                                 onValueChange = { password = it },
                                 label = { Text("Password") },
-                                leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
+                                leadingIcon = { Icon(painter = painterResource(id = R.drawable.ic_custom_lock), contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
                                 singleLine = true,
                                 visualTransformation = PasswordVisualTransformation(),
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
