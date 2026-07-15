@@ -33,6 +33,11 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
+import android.view.animation.OvershootInterpolator
+import android.view.animation.DecelerateInterpolator
 import androidx.core.app.NotificationCompat
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
@@ -68,6 +73,17 @@ class BrainOcrOverlayService : Service() {
     private fun getEdgePanelHeight(): Int = prefs.getInt("edge_panel_height", 100)
     private fun getEdgePanelOpacity(): Float = prefs.getFloat("edge_panel_opacity", 0.7f)
     
+    private fun isDarkTheme(): Boolean {
+        val theme = prefs.getString("theme_mode", "System Default") ?: "System Default"
+        return when (theme) {
+            "Dark" -> true
+            "Light" -> false
+            else -> {
+                (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            }
+        }
+    }
+    
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "edge_panel_height" || key == "edge_panel_thickness" || 
             key == "edge_panel_opacity" || key == "edge_panel_side" || 
@@ -91,7 +107,13 @@ class BrainOcrOverlayService : Service() {
 
         createNotificationChannel()
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                NOTIFICATION_ID,
+                buildNotification(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            )
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 NOTIFICATION_ID,
                 buildNotification(),
@@ -345,6 +367,7 @@ class BrainOcrOverlayService : Service() {
         val root = containerView ?: return
         val side = getEdgePanelSide()
         val yPercent = getEdgePanelYPercent()
+        val isDark = isDarkTheme()
 
         isExpanded = true
         handleView?.visibility = View.GONE
@@ -354,12 +377,21 @@ class BrainOcrOverlayService : Service() {
             orientation = LinearLayout.VERTICAL
             setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
             val bg = GradientDrawable().apply {
-                setColor(Color.parseColor("#18181A")) // Pure high contrast charcoal
+                if (isDark) {
+                    setColors(intArrayOf(Color.parseColor("#1C1B1F"), Color.parseColor("#121113")))
+                } else {
+                    setColors(intArrayOf(Color.parseColor("#FCFCFF"), Color.parseColor("#F4F4F9")))
+                }
+                orientation = GradientDrawable.Orientation.TL_BR
                 cornerRadius = dpToPx(20).toFloat()
-                setStroke(dpToPx(1), Color.parseColor("#303033")) // M3 card outline
+                // Glowing vibrant orange accent rays border
+                setStroke(dpToPx(2), Color.parseColor("#FF7043"))
             }
             background = bg
             elevation = dpToPx(16).toFloat()
+            alpha = 0f
+            scaleX = 0.85f
+            scaleY = 0.85f
         }
 
         // Header Section
@@ -376,7 +408,7 @@ class BrainOcrOverlayService : Service() {
         val titleTv = TextView(this).apply {
             text = "SECOND BRAIN"
             textSize = 13f
-            setTextColor(Color.parseColor("#FFFFFF"))
+            setTextColor(if (isDark) Color.parseColor("#FFFFFF") else Color.parseColor("#1C1B1F"))
             typeface = Typeface.create("sans-serif-black", Typeface.BOLD)
         }
         titleContainer.addView(titleTv)
@@ -393,7 +425,7 @@ class BrainOcrOverlayService : Service() {
 
         val closeIv = ImageView(this).apply {
             setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
-            imageTintList = ColorStateList.valueOf(Color.parseColor("#9E9E9E"))
+            imageTintList = ColorStateList.valueOf(if (isDark) Color.parseColor("#9E9E9E") else Color.parseColor("#5A5A5E"))
             setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4))
             isClickable = true
             setOnClickListener { collapsePanel() }
@@ -405,13 +437,18 @@ class BrainOcrOverlayService : Service() {
         // Divider
         panel.addView(createDivider())
 
-        // 1. Smart Screen OCR button
+        // 1. Smart Screen OCR button (Gradient background based on theme)
         val ocrButton = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12))
             val shape = GradientDrawable().apply {
-                setColor(Color.parseColor("#232326"))
+                if (isDark) {
+                    setColors(intArrayOf(Color.parseColor("#2C221F"), Color.parseColor("#221C1A")))
+                } else {
+                    setColors(intArrayOf(Color.parseColor("#FFEBE5"), Color.parseColor("#FFDFD5")))
+                }
+                orientation = GradientDrawable.Orientation.LEFT_RIGHT
                 cornerRadius = dpToPx(12).toFloat()
                 setStroke(dpToPx(1), Color.parseColor("#4DFF7043")) // 30% alpha of FF7043
             }
@@ -432,7 +469,7 @@ class BrainOcrOverlayService : Service() {
         val ocrText = TextView(this).apply {
             text = "Smart Screen OCR / Lens"
             textSize = 11.5f
-            setTextColor(Color.parseColor("#FFFFFF"))
+            setTextColor(if (isDark) Color.parseColor("#FFFFFF") else Color.parseColor("#1C1B1F"))
             typeface = Typeface.DEFAULT_BOLD
             setPadding(dpToPx(10), 0, 0, 0)
         }
@@ -444,7 +481,7 @@ class BrainOcrOverlayService : Service() {
         val noteTitle = TextView(this).apply {
             text = "QUICK NOTE"
             textSize = 9f
-            setTextColor(Color.parseColor("#757575"))
+            setTextColor(if (isDark) Color.parseColor("#9E9E9E") else Color.parseColor("#505054"))
             typeface = Typeface.DEFAULT_BOLD
             setPadding(0, dpToPx(14), 0, dpToPx(6))
         }
@@ -452,14 +489,14 @@ class BrainOcrOverlayService : Service() {
 
         val noteInput = EditText(this).apply {
             hint = "Capture a quick thought..."
-            setHintTextColor(Color.parseColor("#4C4C4F"))
-            setTextColor(Color.parseColor("#E0E0E0"))
+            setHintTextColor(if (isDark) Color.parseColor("#5A5A5D") else Color.parseColor("#8E8E93"))
+            setTextColor(if (isDark) Color.parseColor("#E0E0E0") else Color.parseColor("#1C1B1F"))
             textSize = 12f
             setPadding(dpToPx(10), dpToPx(8), dpToPx(10), dpToPx(8))
             val shape = GradientDrawable().apply {
-                setColor(Color.parseColor("#1D1D20"))
+                setColor(if (isDark) Color.parseColor("#161618") else Color.parseColor("#FFFFFF"))
                 cornerRadius = dpToPx(8).toFloat()
-                setStroke(dpToPx(1), Color.parseColor("#2E2E31"))
+                setStroke(dpToPx(1), if (isDark) Color.parseColor("#303033") else Color.parseColor("#DCDCD1"))
             }
             background = shape
             maxLines = 3
@@ -480,7 +517,8 @@ class BrainOcrOverlayService : Service() {
             typeface = Typeface.DEFAULT_BOLD
             setPadding(dpToPx(14), dpToPx(6), dpToPx(14), dpToPx(6))
             val btnShape = GradientDrawable().apply {
-                setColor(Color.parseColor("#FF7043"))
+                setColors(intArrayOf(Color.parseColor("#FF8A65"), Color.parseColor("#FF7043")))
+                orientation = GradientDrawable.Orientation.LEFT_RIGHT
                 cornerRadius = dpToPx(8).toFloat()
             }
             background = btnShape
@@ -513,7 +551,7 @@ class BrainOcrOverlayService : Service() {
         val recentTitle = TextView(this).apply {
             text = "RECENT ARCHIVES"
             textSize = 9f
-            setTextColor(Color.parseColor("#757575"))
+            setTextColor(if (isDark) Color.parseColor("#9E9E9E") else Color.parseColor("#505054"))
             typeface = Typeface.DEFAULT_BOLD
             setPadding(0, dpToPx(14), 0, dpToPx(6))
         }
@@ -534,7 +572,7 @@ class BrainOcrOverlayService : Service() {
                         val emptyTv = TextView(applicationContext).apply {
                             text = "No recent archives"
                             textSize = 10.5f
-                            setTextColor(Color.parseColor("#505054"))
+                            setTextColor(if (isDark) Color.parseColor("#505054") else Color.parseColor("#8E8E93"))
                             gravity = Gravity.CENTER
                             setPadding(0, dpToPx(8), 0, dpToPx(8))
                         }
@@ -546,9 +584,9 @@ class BrainOcrOverlayService : Service() {
                                 gravity = Gravity.CENTER_VERTICAL
                                 setPadding(dpToPx(8), dpToPx(8), dpToPx(8), dpToPx(8))
                                 val itemShape = GradientDrawable().apply {
-                                    setColor(Color.parseColor("#1D1D20"))
+                                    setColor(if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FFFFFF"))
                                     cornerRadius = dpToPx(8).toFloat()
-                                    setStroke(dpToPx(1), Color.parseColor("#262629"))
+                                    setStroke(dpToPx(1), if (isDark) Color.parseColor("#2E2E31") else Color.parseColor("#E2E2E6"))
                                 }
                                 background = itemShape
                                 val lp = LinearLayout.LayoutParams(
@@ -589,7 +627,7 @@ class BrainOcrOverlayService : Service() {
                             val title = TextView(applicationContext).apply {
                                 text = if (item.title.isNotBlank()) item.title else "Untitled Note"
                                 textSize = 11f
-                                setTextColor(Color.parseColor("#E0E0E0"))
+                                setTextColor(if (isDark) Color.parseColor("#E0E0E0") else Color.parseColor("#1C1B1F"))
                                 typeface = Typeface.DEFAULT_BOLD
                                 maxLines = 1
                                 ellipsize = TextUtils.TruncateAt.END
@@ -599,7 +637,7 @@ class BrainOcrOverlayService : Service() {
                             val snippet = TextView(applicationContext).apply {
                                 text = item.content
                                 textSize = 9f
-                                setTextColor(Color.parseColor("#757575"))
+                                setTextColor(if (isDark) Color.parseColor("#9E9E9E") else Color.parseColor("#5A5A5E"))
                                 maxLines = 1
                                 ellipsize = TextUtils.TruncateAt.END
                             }
@@ -618,47 +656,103 @@ class BrainOcrOverlayService : Service() {
 
         // Expand layout params
         val params = root.layoutParams as WindowManager.LayoutParams
-        params.width = dpToPx(285)
-        params.height = WindowManager.LayoutParams.WRAP_CONTENT
-        // Clear flags so we can capture focus (needed for EditText input)
+        val startWidth = dpToPx(getEdgePanelThickness() + EXTRA_TOUCH_WIDTH_DP)
+        val startHeight = dpToPx(getEdgePanelHeight())
+        val endWidth = dpToPx(285)
+
+        // Measure panel height dynamically
+        panel.measure(
+            View.MeasureSpec.makeMeasureSpec(endWidth, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        val endHeight = panel.measuredHeight
+
         params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or 
                        WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or 
                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         params.y = calculateYPosition(yPercent)
-        windowManager.updateViewLayout(root, params)
+
+        // ValueAnimator for beautiful smooth spring expansion animation
+        val animator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 320
+            interpolator = OvershootInterpolator(0.9f)
+            addUpdateListener { animation ->
+                val fraction = animation.animatedValue as Float
+                params.width = (startWidth + (endWidth - startWidth) * fraction).toInt()
+                params.height = (startHeight + (endHeight - startHeight) * fraction).toInt()
+                
+                panel.alpha = fraction
+                panel.scaleX = 0.85f + 0.15f * fraction
+                panel.scaleY = 0.85f + 0.15f * fraction
+                
+                if (containerView != null) {
+                    windowManager.updateViewLayout(root, params)
+                }
+            }
+        }
+        animator.start()
         updateSystemGestureExclusions()
     }
 
     private fun collapsePanel() {
         val root = containerView ?: return
+        val panel = panelView ?: return
         val side = getEdgePanelSide()
         val yPercent = getEdgePanelYPercent()
         val thickness = getEdgePanelThickness()
         val height = getEdgePanelHeight()
 
         isExpanded = false
-        
-        panelView?.let {
-            root.removeView(it)
-            panelView = null
-        }
-
-        handleView?.visibility = View.VISIBLE
-        // Restore handle parameters inside layout
-        handleView?.layoutParams = FrameLayout.LayoutParams(
-            dpToPx(thickness),
-            FrameLayout.LayoutParams.MATCH_PARENT
-        ).apply {
-            gravity = if (side == "Right") Gravity.END else Gravity.START
-        }
 
         val params = root.layoutParams as WindowManager.LayoutParams
-        params.width = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
-        params.height = dpToPx(height)
-        params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-        params.y = calculateYPosition(yPercent)
-        windowManager.updateViewLayout(root, params)
-        updateSystemGestureExclusions()
+        val startWidth = params.width
+        val startHeight = params.height
+        val endWidth = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
+        val endHeight = dpToPx(height)
+
+        // ValueAnimator for beautiful smooth shrink collapse animation
+        val animator = ValueAnimator.ofFloat(1f, 0f).apply {
+            duration = 250
+            interpolator = DecelerateInterpolator()
+            addUpdateListener { animation ->
+                val fraction = animation.animatedValue as Float
+                params.width = (endWidth + (startWidth - endWidth) * fraction).toInt()
+                params.height = (endHeight + (startHeight - endHeight) * fraction).toInt()
+                
+                panel.alpha = fraction
+                panel.scaleX = 0.85f + 0.15f * fraction
+                panel.scaleY = 0.85f + 0.15f * fraction
+
+                if (containerView != null) {
+                    windowManager.updateViewLayout(root, params)
+                }
+            }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    if (containerView != null) {
+                        root.removeView(panel)
+                        panelView = null
+                        handleView?.visibility = View.VISIBLE
+                        
+                        // Restore handle parameters inside layout
+                        handleView?.layoutParams = FrameLayout.LayoutParams(
+                            dpToPx(thickness),
+                            FrameLayout.LayoutParams.MATCH_PARENT
+                        ).apply {
+                            gravity = if (side == "Right") Gravity.END else Gravity.START
+                        }
+                        
+                        params.width = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
+                        params.height = dpToPx(height)
+                        params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                        params.y = calculateYPosition(yPercent)
+                        windowManager.updateViewLayout(root, params)
+                        updateSystemGestureExclusions()
+                    }
+                }
+            })
+        }
+        animator.start()
     }
 
     private fun toggleExpand() {

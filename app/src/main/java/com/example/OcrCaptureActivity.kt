@@ -118,10 +118,14 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
             putExtra("result_code", resultCode)
             putExtra("result_data", data)
         }
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent)
+            } else {
+                startService(serviceIntent)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("OcrCaptureActivity", "Failed to start capture service: ${e.message}", e)
         }
     }
 

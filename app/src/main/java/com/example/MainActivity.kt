@@ -79,10 +79,14 @@ class MainActivity : ComponentActivity() {
         val settingsRepo = com.example.data.repository.SettingsRepository(applicationContext)
         if (settingsRepo.isFloatingOcrEnabled.value && com.example.utils.PermissionUtils.hasOverlayPermission(applicationContext)) {
             val serviceIntent = Intent(applicationContext, BrainOcrOverlayService::class.java)
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                startForegroundService(serviceIntent)
-            } else {
-                startService(serviceIntent)
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    startForegroundService(serviceIntent)
+                } else {
+                    startService(serviceIntent)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SecondBrain", "Failed to start OCR overlay service: ${e.message}", e)
             }
         }
 

@@ -40,6 +40,15 @@ import androidx.glance.appwidget.cornerRadius
 
 class SecondBrainWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = SecondBrainWidget()
+
+    override fun onUpdate(
+        context: Context,
+        appWidgetManager: android.appwidget.AppWidgetManager,
+        appWidgetIds: IntArray
+    ) {
+        super.onUpdate(context, appWidgetManager, appWidgetIds)
+        WidgetUpdater.update(context)
+    }
 }
 
 class SecondBrainWidget : GlanceAppWidget() {

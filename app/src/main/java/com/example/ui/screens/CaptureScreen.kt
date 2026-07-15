@@ -44,6 +44,8 @@ import coil.compose.AsyncImage
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.ui.viewmodel.SecondBrainViewModel
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -304,6 +306,7 @@ fun CaptureScreen(
                                             },
                                             label = { Text("URL") },
                                             singleLine = true,
+                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                                             colors = OutlinedTextFieldDefaults.colors(
                                                 focusedContainerColor = MaterialTheme.colorScheme.surface,
                                                 unfocusedContainerColor = MaterialTheme.colorScheme.surface
@@ -362,7 +365,7 @@ fun CaptureScreen(
                 androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
             ) { uri ->
                 if (uri != null) {
-                    viewModel.updateActiveCaptureItem { it.copy(content = uri.toString()) }
+                    viewModel.handleMediaSelected(uri, item.type)
                 }
             }
 
@@ -373,7 +376,7 @@ fun CaptureScreen(
                 // native media picker
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
@@ -383,11 +386,18 @@ fun CaptureScreen(
                                 else androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.VideoOnly
                             ))
                         },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
                     ) {
                         Icon(if (item.type == SavedItemType.IMAGE) Icons.Outlined.Image else Icons.Outlined.VideoLibrary, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(if (item.content.isBlank()) "Select Media" else "Change Media")
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = if (item.content.isBlank()) "Select Media" else "Change Media",
+                            maxLines = 1,
+                            fontSize = 13.sp,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                     if (item.content.isNotBlank() && item.type == SavedItemType.IMAGE) {
                         Button(
@@ -395,11 +405,18 @@ fun CaptureScreen(
                                 val uri = android.net.Uri.parse(item.content)
                                 viewModel.performFullImageOcr(uri, context)
                             },
+                            modifier = Modifier.weight(1.1f),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
                         ) {
                             Icon(Icons.Outlined.DocumentScanner, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Extract Links (OCR)")
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = "Extract Links",
+                                maxLines = 1,
+                                fontSize = 13.sp,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
                 }
@@ -452,6 +469,11 @@ fun CaptureScreen(
                     value = item.content,
                     onValueChange = { viewModel.updateActiveCaptureItem { captured -> captured.copy(content = it) } },
                     visualTransformation = androidx.compose.ui.text.input.VisualTransformation.None,
+                    keyboardOptions = if (item.type == SavedItemType.LINK) {
+                        KeyboardOptions(keyboardType = KeyboardType.Uri)
+                    } else {
+                        KeyboardOptions.Default
+                    },
                     placeholder = {
                         Text(
                             when (item.type) {

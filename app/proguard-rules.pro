@@ -24,6 +24,10 @@
 -keep class com.example.data.model.** { *; }
 -keep class com.example.data.local.** { *; }
 
+# Keep Glance App Widget components
+-keep class com.example.widget.** { *; }
+-keep class androidx.glance.** { *; }
+
 # General keep rules for Coroutines / Moshi just in case
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}

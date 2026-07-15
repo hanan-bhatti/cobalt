@@ -825,9 +825,19 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
 
         viewModelScope.launch {
             try {
-                val inputStream = context.contentResolver.openInputStream(uri)
-                val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
-                inputStream?.close()
+                // Use Coil to load the image robustly. This handles content://, file://, raw paths, and http:// / https:// (Firebase links)
+                val loader = coil.Coil.imageLoader(context)
+                val request = coil.request.ImageRequest.Builder(context)
+                    .data(uri)
+                    .allowHardware(false) // software bitmap is required for OCR / region selection
+                    .build()
+                val result = loader.execute(request)
+                val bitmap = if (result is coil.request.SuccessResult) {
+                    (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                } else {
+                    null
+                }
+
                 if (bitmap == null) {
                     _ocrError.value = "Failed to decode image for OCR."
                     _isOcrLoading.value = false
@@ -841,7 +851,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     return@launch
                 }
 
-                val result = repository.extractTextFromRegion(
+                val resultText = repository.extractTextFromRegion(
                     bitmap = bitmap,
                     x = 0, y = 0, width = bitmap.width, height = bitmap.height,
                     apiKey = apiKey,
@@ -849,11 +859,11 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     sensitivity = "High"
                 )
 
-                if (result != null) {
-                    var parsedExtractedText = result
+                if (resultText != null) {
+                    var parsedExtractedText = resultText
                     val urlsList = mutableListOf<Pair<String, String>>()
                     try {
-                        val jsonText = result.trim().removePrefix("```json").removeSuffix("```").trim()
+                        val jsonText = resultText.trim().removePrefix("```json").removeSuffix("```").trim()
                         val jsonObject = org.json.JSONObject(jsonText)
                         parsedExtractedText = jsonObject.optString("extractedText", jsonText)
                         val urlsArray = jsonObject.optJSONArray("urls")
@@ -1033,6 +1043,51 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         pendingMediaBytes = null
         _extractedLinksToReview.value = emptyList()
         _activeCaptureItem.value = item
+
+        if (item.type == SavedItemType.IMAGE && item.content.isNotBlank()) {
+            _isOcrLoading.value = true
+            viewModelScope.launch {
+                try {
+                    val loader = coil.Coil.imageLoader(context)
+                    val request = coil.request.ImageRequest.Builder(context)
+                        .data(item.content)
+                        .allowHardware(false) // software bitmap is required for OCR / region selection
+                        .build()
+                    val result = loader.execute(request)
+                    if (result is coil.request.SuccessResult) {
+                        val bitmap = (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                        _capturedBitmap.value = bitmap
+                    }
+                } catch (e: Exception) {
+                    Log.e("SecondBrainVM", "Failed to pre-load image bitmap for edit: ${e.message}")
+                } finally {
+                    _isOcrLoading.value = false
+                }
+            }
+        }
+    }
+
+    fun handleMediaSelected(uri: android.net.Uri, type: SavedItemType) {
+        viewModelScope.launch {
+            try {
+                val bytes = readUriBytes(uri)
+                if (bytes != null) {
+                    pendingMediaBytes = bytes
+                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    _capturedBitmap.value = bitmap
+                    
+                    val extension = if (type == SavedItemType.IMAGE) "jpg" else "mp4"
+                    val localPath = repository.saveToLocalCache("media_${UUID.randomUUID()}.$extension", bytes)
+                    updateActiveCaptureItem { it.copy(content = localPath, thumbnailPath = localPath, type = type) }
+                } else {
+                    // Fallback to Uri string if bytes can't be read directly
+                    updateActiveCaptureItem { it.copy(content = uri.toString(), thumbnailPath = uri.toString(), type = type) }
+                }
+            } catch (e: Exception) {
+                Log.e("SecondBrainVM", "Error in handleMediaSelected: ${e.message}")
+                updateActiveCaptureItem { it.copy(content = uri.toString(), thumbnailPath = uri.toString(), type = type) }
+            }
+        }
     }
 
     fun updateActiveCaptureItem(updater: (SavedItem) -> SavedItem) {

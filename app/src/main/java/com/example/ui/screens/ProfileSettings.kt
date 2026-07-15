@@ -34,6 +34,14 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.ui.text.style.TextOverflow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -150,6 +158,9 @@ fun SettingsScreen(
                     val currentKey by viewModel.settingsRepository.geminiApiKey.collectAsState()
                     LaunchedEffect(currentKey) { apiKey = currentKey }
                     
+                    var keyVisibility by remember { mutableStateOf(false) }
+                    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+
                     OutlinedTextField(
                         value = apiKey,
                         onValueChange = { 
@@ -158,7 +169,22 @@ fun SettingsScreen(
                         },
                         label = { Text("API Key") },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                        singleLine = true
+                        singleLine = true,
+                        visualTransformation = if (keyVisibility) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            val image = if (keyVisibility) Icons.Default.Visibility else Icons.Default.VisibilityOff
+                            val description = if (keyVisibility) "Hide API Key" else "Show API Key"
+                            IconButton(onClick = { keyVisibility = !keyVisibility }) {
+                                Icon(imageVector = image, contentDescription = description)
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                viewModel.settingsRepository.setGeminiApiKey(apiKey)
+                                focusManager.clearFocus()
+                            }
+                        )
                     )
                 }
 
@@ -219,6 +245,7 @@ fun SettingsScreen(
                                     containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                                     contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
@@ -275,10 +302,25 @@ fun SettingsRow(title: String, value: String? = null, showChevron: Boolean = tru
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = title, 
+            style = MaterialTheme.typography.bodyLarge, 
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End,
+            modifier = Modifier.weight(1.5f)
+        ) {
             if (value != null) {
-                Text(text = value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = value, 
+                    style = MaterialTheme.typography.bodyMedium, 
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 Spacer(modifier = Modifier.width(8.dp))
             }
             if (onClick != null && showChevron) {
