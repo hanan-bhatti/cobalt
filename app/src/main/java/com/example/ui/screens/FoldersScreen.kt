@@ -3,6 +3,10 @@ package com.example.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import com.example.ui.components.bounceClick
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -676,7 +680,8 @@ fun FolderContentsBrowser(
                         // Direct standard Item card layout
                         FolderBrowseItemRow(
                             item = item,
-                            onClick = { viewModel.showDetailItem(item) }
+                            onClick = { viewModel.showDetailItem(item) },
+                            onLongClick = { /* TODO: Implement long click action */ }
                         )
                     }
                 }
@@ -686,11 +691,14 @@ fun FolderContentsBrowser(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 fun FolderBrowseItemRow(
     item: SavedItem,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null
 ) {
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    var showContextMenu by remember { mutableStateOf(false) }
     val iconResId = when (item.type) {
         SavedItemType.LINK -> R.drawable.ic_custom_link
         SavedItemType.IMAGE -> R.drawable.ic_custom_image
@@ -700,14 +708,20 @@ fun FolderBrowseItemRow(
         SavedItemType.AUDIO -> R.drawable.ic_custom_voice
     }
 
+    Box {
     Surface(
-        onClick = onClick,
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
         modifier = Modifier
             .fillMaxWidth()
             .bounceClick(interactionSource)
+            .combinedClickable(
+                interactionSource = interactionSource,
+                indication = androidx.compose.foundation.LocalIndication.current,
+                onClick = onClick,
+                onLongClick = onLongClick ?: { showContextMenu = true }
+            )
     ) {
         Row(
             modifier = Modifier
@@ -755,6 +769,15 @@ fun FolderBrowseItemRow(
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.size(20.dp)
+            )
+        }
+        DropdownMenu(
+            expanded = showContextMenu,
+            onDismissRequest = { showContextMenu = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Open") },
+                onClick = { showContextMenu = false; onClick() }
             )
         }
     }
