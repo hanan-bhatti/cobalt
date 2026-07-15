@@ -266,6 +266,9 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     private val _isOcrLoading = MutableStateFlow(false)
     val isOcrLoading: StateFlow<Boolean> = _isOcrLoading.asStateFlow()
 
+    private val _isSaving = MutableStateFlow(false)
+    val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
+
     private val _ocrError = MutableStateFlow<String?>(null)
     val ocrError: StateFlow<String?> = _ocrError.asStateFlow()
 
@@ -285,6 +288,35 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
 
     fun clearUiToast() {
         _uiToast.value = null
+    }
+
+    fun syncData() {
+        if (_isSyncing.value) return
+        _isSyncing.value = true
+        
+        viewModelScope.launch {
+            val auth = repository.firebaseAuth
+            if (auth?.currentUser == null) {
+                kotlinx.coroutines.delay(500)
+                showToast("Please sign in to sync your data.")
+                _isSyncing.value = false
+                return@launch
+            }
+            
+            try {
+                // Background operations to restore and sync
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    repository.restoreUserDataFromCloud()
+                    repository.syncUnsyncedItems()
+                }
+                showToast("Data synced successfully.")
+            } catch (e: Exception) {
+                android.util.Log.e("SecondBrainVM", "Sync failed: ${e.message}")
+                showToast("Failed to sync data: ${e.localizedMessage}")
+            } finally {
+                _isSyncing.value = false
+            }
+        }
     }
 
     private val _extractedLinksToReview = MutableStateFlow<List<ExtractedLinkReview>>(emptyList())
@@ -336,6 +368,9 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     private val _isInitialLoading = MutableStateFlow(true)
     val isInitialLoading: StateFlow<Boolean> = _isInitialLoading.asStateFlow()
 
+    private val _isSyncing = MutableStateFlow(false)
+    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
     val maxStorageBytes = 512L * 1024 * 1024 // 512 MB default
 
     val usedStorageBytes: StateFlow<Long> = allItems.map { items: List<com.example.data.model.SavedItem> ->
@@ -358,6 +393,9 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _authError = MutableStateFlow<String?>(null)
     val authError: StateFlow<String?> = _authError.asStateFlow()
+
+    private val _authLoading = MutableStateFlow(false)
+    val authLoading: StateFlow<Boolean> = _authLoading.asStateFlow()
 
     private val _authSuccess = MutableStateFlow<String?>(null)
     val authSuccess: StateFlow<String?> = _authSuccess.asStateFlow()
@@ -444,13 +482,25 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             return
         }
         _authError.value = null
+        _authLoading.value = true
         auth.createUserWithEmailAndPassword(email, password)
             .addOnSuccessListener {
                 val userMail = it.user?.email ?: email
                 _userEmail.value = userMail
-                showToast("Successfully registered and logged in as $userMail.")
+                viewModelScope.launch {
+                    try {
+                        repository.restoreUserDataFromCloud()
+                        repository.syncUnsyncedItems()
+                        showToast("Successfully registered and synced as $userMail.")
+                    } catch (e: Exception) {
+                        Log.e("SecondBrainVM", "Post sign-up sync failed: ${e.message}")
+                    } finally {
+                        _authLoading.value = false
+                    }
+                }
             }
             .addOnFailureListener {
+                _authLoading.value = false
                 _authError.value = it.localizedMessage ?: "Sign up failed."
             }
     }
@@ -470,13 +520,25 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             return
         }
         _authError.value = null
+        _authLoading.value = true
         auth.signInWithEmailAndPassword(email, password)
             .addOnSuccessListener {
                 val userMail = it.user?.email ?: email
                 _userEmail.value = userMail
-                showToast("Successfully logged in as $userMail.")
+                viewModelScope.launch {
+                    try {
+                        repository.restoreUserDataFromCloud()
+                        repository.syncUnsyncedItems()
+                        showToast("Successfully logged in and synced as $userMail.")
+                    } catch (e: Exception) {
+                        Log.e("SecondBrainVM", "Post sign-in sync failed: ${e.message}")
+                    } finally {
+                        _authLoading.value = false
+                    }
+                }
             }
             .addOnFailureListener {
+                _authLoading.value = false
                 _authError.value = it.localizedMessage ?: "Sign in failed."
             }
     }
@@ -492,6 +554,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             return
         }
         _authError.value = null
+        _authLoading.value = true
 
         viewModelScope.launch {
             try {
@@ -524,9 +587,9 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     val authResult = auth.signInWithCredential(authCredential).await()
                     val userMail = authResult.user?.email ?: "Google User"
                     _userEmail.value = userMail
-                    showToast("Successfully logged in as $userMail.")
-                    // Sync items automatically upon success
+                    repository.restoreUserDataFromCloud()
                     repository.syncUnsyncedItems()
+                    showToast("Successfully logged in and synced as $userMail.")
                     onCompletion(true)
                 } else {
                     _authError.value = "Unexpected credential type: ${credential.type}"
@@ -541,6 +604,8 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     "Google Sign-In is currently unavailable. Please try using your Email & Password instead."
                 }
                 onCompletion(false)
+            } finally {
+                _authLoading.value = false
             }
         }
     }
@@ -570,6 +635,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             return
         }
         _authError.value = null
+        _authLoading.value = true
         
         val actionCodeSettings = com.google.firebase.auth.ActionCodeSettings.newBuilder()
             .setUrl("https://second-brain-11.firebaseapp.com")
@@ -583,11 +649,13 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
 
         auth.sendSignInLinkToEmail(email, actionCodeSettings)
             .addOnSuccessListener {
+                _authLoading.value = false
                 prefs.edit().putString("email_link_address", email).apply()
                 _emailLinkSent.value = true
                 _authSuccess.value = "Sign-in link sent to $email! Please click the link in your email to sign in."
             }
             .addOnFailureListener {
+                _authLoading.value = false
                 _authError.value = it.localizedMessage ?: "Failed to send sign-in link."
             }
     }
@@ -604,11 +672,14 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             _authSuccess.value = "(Sandbox Simulation) Password reset link sent to $email."
             return
         }
+        _authLoading.value = true
         auth.sendPasswordResetEmail(email)
             .addOnSuccessListener {
+                _authLoading.value = false
                 _authSuccess.value = "Password reset email sent to $email! Please check your inbox."
             }
             .addOnFailureListener {
+                _authLoading.value = false
                 _authError.value = it.localizedMessage ?: "Failed to send password reset email."
             }
     }
@@ -638,6 +709,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         }
         val auth = repository.firebaseAuth ?: return
         _authError.value = null
+        _authLoading.value = true
         
         auth.signInWithEmailLink(email, emailLink)
             .addOnSuccessListener { result ->
@@ -646,13 +718,20 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 _pendingEmailLink.value = null
                 prefs.edit().remove("email_link_address").apply()
                 _emailLinkSent.value = false
-                showToast("Successfully logged in as $userMail.")
                 viewModelScope.launch {
-                    repository.restoreUserDataFromCloud()
-                    repository.syncUnsyncedItems()
+                    try {
+                        repository.restoreUserDataFromCloud()
+                        repository.syncUnsyncedItems()
+                        showToast("Successfully logged in and synced as $userMail.")
+                    } catch (e: Exception) {
+                        Log.e("SecondBrainVM", "Post link sign-in sync failed: ${e.message}")
+                    } finally {
+                        _authLoading.value = false
+                    }
                 }
             }
             .addOnFailureListener {
+                _authLoading.value = false
                 _authError.value = it.localizedMessage ?: "Failed to sign in with link."
             }
     }
@@ -1152,6 +1231,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
 
     fun saveLocalTextItem(title: String, content: String, type: SavedItemType, selectedFolders: List<String>) {
         viewModelScope.launch {
+            _isSaving.value = true
             try {
                 val newItem = SavedItem(
                     title = title,
@@ -1161,8 +1241,16 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     timestamp = System.currentTimeMillis()
                 )
                 val savedItem = repository.saveItem(newItem, null)
-                repository.syncUnsyncedItems()
                 showToast("Item saved successfully.")
+                
+                // Sync to Firestore and Storage in background
+                launch(kotlinx.coroutines.Dispatchers.IO) {
+                    try {
+                        repository.syncUnsyncedItems()
+                    } catch (e: Exception) {
+                        Log.e("SecondBrainVM", "Background sync failed: ${e.message}")
+                    }
+                }
                 
                 if (type == SavedItemType.LINK && content.isNotBlank()) {
                     launch(kotlinx.coroutines.Dispatchers.IO) {
@@ -1182,6 +1270,8 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 }
             } catch (e: Exception) {
                 Log.e("SecondBrainVM", "Failed to save quick note: ${e.message}")
+            } finally {
+                _isSaving.value = false
             }
         }
     }
@@ -1189,6 +1279,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     fun saveActiveItem() {
         val item = _activeCaptureItem.value ?: return
         viewModelScope.launch {
+            _isSaving.value = true
             try {
                 var finalItem = item
                 if (finalItem.type == SavedItemType.LINK && finalItem.linkTitle.isNullOrBlank()) {
@@ -1204,10 +1295,19 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 repository.saveItem(finalItem, pendingMediaBytes)
                 cancelCapture()
                 showToast(if (isEdit) "Item updated successfully." else "Item saved successfully.")
+                
                 // Sync to Firestore and Storage in background
-                repository.syncUnsyncedItems()
+                launch(kotlinx.coroutines.Dispatchers.IO) {
+                    try {
+                        repository.syncUnsyncedItems()
+                    } catch (e: Exception) {
+                        Log.e("SecondBrainVM", "Background sync failed: ${e.message}")
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("SecondBrainVM", "Failed to save item: ${e.message}")
+            } finally {
+                _isSaving.value = false
             }
         }
     }
@@ -1222,7 +1322,13 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             repository.saveItem(item)
             // Sync to Firebase in the background if configured
-            repository.syncUnsyncedItems()
+            launch(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    repository.syncUnsyncedItems()
+                } catch (e: Exception) {
+                    Log.e("SecondBrainVM", "Background sync failed: ${e.message}")
+                }
+            }
         }
     }
 
@@ -1250,18 +1356,21 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         if (name.isBlank()) return
         viewModelScope.launch {
             repository.addCustomFolder(name.trim())
+            repository.syncUnsyncedItems()
         }
     }
 
     fun deleteFolder(name: String) {
         viewModelScope.launch {
             repository.deleteCustomFolder(name)
+            repository.syncUnsyncedItems()
         }
     }
 
     fun updateFolder(folder: com.example.data.local.CustomFolderEntity) {
         viewModelScope.launch {
             repository.updateCustomFolder(folder)
+            repository.syncUnsyncedItems()
         }
     }
 
@@ -1269,6 +1378,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         if (newName.isBlank() || oldName == newName) return
         viewModelScope.launch {
             repository.renameCustomFolder(oldName, newName.trim())
+            repository.syncUnsyncedItems()
             showToast("Folder renamed to '${newName.trim()}' successfully.")
         }
     }

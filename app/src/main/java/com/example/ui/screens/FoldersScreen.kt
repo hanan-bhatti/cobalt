@@ -314,7 +314,7 @@ fun FoldersScreen(
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.testTag("fab_create_folder").size(64.dp)
                 ) {
-                    Icon(painter = painterResource(id = R.drawable.ic_custom_add_folder), contentDescription = "New Folder", modifier = Modifier.size(24.dp))
+                    Icon(painter = painterResource(id = R.drawable.ic_custom_plus), contentDescription = "New Folder", modifier = Modifier.size(24.dp))
                 }
             }
         }
@@ -333,7 +333,7 @@ fun FoldersScreen(
                 OutlinedTextField(
                     value = newFolderName,
                     onValueChange = { newFolderName = it },
-                    placeholder = { Text("e.g. Work, Inspiration, Recipes...") },
+                    placeholder = { Text("e.g. Work, Inspiration....") },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth().testTag("add_folder_name_field")

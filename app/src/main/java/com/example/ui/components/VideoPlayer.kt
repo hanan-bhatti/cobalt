@@ -39,6 +39,7 @@ fun VideoPlayer(
         factory = {
             PlayerView(context).apply {
                 player = exoPlayer
+                setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
             }
         },
         modifier = modifier

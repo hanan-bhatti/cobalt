@@ -63,6 +63,7 @@ fun CaptureScreen(
     BackHandler { viewModel.cancelCapture() }
     val capturedBitmap by viewModel.capturedBitmap.collectAsState()
     val isOcrLoading by viewModel.isOcrLoading.collectAsState()
+    val isSaving by viewModel.isSaving.collectAsState()
     val ocrError by viewModel.ocrError.collectAsState()
     val customFolders by viewModel.customFolders.collectAsState()
     val extractedLinks by viewModel.extractedLinksToReview.collectAsState()
@@ -106,6 +107,7 @@ fun CaptureScreen(
                 actions = {
                     Button(
                         onClick = { viewModel.saveActiveItem() },
+                        enabled = !isSaving,
                         shape = RoundedCornerShape(20.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary,
@@ -113,7 +115,15 @@ fun CaptureScreen(
                         ),
                         modifier = Modifier.bounceClick().testTag("save_capture_button")
                     ) {
-                        Text("Save", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
+                        if (isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Save", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

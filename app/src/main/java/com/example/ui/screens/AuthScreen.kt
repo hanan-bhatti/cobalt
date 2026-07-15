@@ -3,6 +3,8 @@ package com.example.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -38,6 +40,7 @@ fun AuthScreen(
     val userEmail by viewModel.userEmail.collectAsState()
     val authError by viewModel.authError.collectAsState()
     val authSuccess by viewModel.authSuccess.collectAsState()
+    val authLoading by viewModel.authLoading.collectAsState()
     val emailLinkSent by viewModel.emailLinkSent.collectAsState()
     val pendingEmailLink by viewModel.pendingEmailLink.collectAsState()
 
@@ -63,12 +66,13 @@ fun AuthScreen(
         containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier.fillMaxSize()
     ) { innerPadding ->
-        Box(
+        Column(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(24.dp),
-            contentAlignment = Alignment.TopCenter
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (userEmail != null) {
                 // SIGNED IN / USER PROFILE STATE
@@ -357,7 +361,7 @@ fun AuthScreen(
                                         viewModel.signIn(email, password)
                                     }
                                 },
-                                enabled = !isSignUp || termsAccepted,
+                                enabled = (!isSignUp || termsAccepted) && !authLoading,
                                 shape = RoundedCornerShape(20.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary,
@@ -368,11 +372,19 @@ fun AuthScreen(
                                     .height(48.dp)
                                     .testTag("submit_auth_button")
                             ) {
-                                Text(
-                                    text = if (isSignUp) "Register Account" else "Sign In",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.labelLarge
-                                )
+                                if (authLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Text(
+                                        text = if (isSignUp) "Register Account" else "Sign In",
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
                             }
                         } else {
                             // Email Link passwordless submit
@@ -380,6 +392,7 @@ fun AuthScreen(
                                 onClick = {
                                     viewModel.sendSignInLink(email)
                                 },
+                                enabled = !authLoading,
                                 shape = RoundedCornerShape(20.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary,
@@ -390,11 +403,19 @@ fun AuthScreen(
                                     .height(48.dp)
                                     .testTag("submit_email_link_button")
                             ) {
-                                Text(
-                                    text = "Send Sign-In Link",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.labelLarge
-                                )
+                                if (authLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Send Sign-In Link",
+                                        fontWeight = FontWeight.Bold,
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
                             }
                         }
                     }
@@ -432,6 +453,7 @@ fun AuthScreen(
                                 }
                             }
                         },
+                        enabled = !authLoading,
                         shape = RoundedCornerShape(20.dp),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                         modifier = Modifier
@@ -439,22 +461,30 @@ fun AuthScreen(
                             .height(48.dp)
                             .testTag("google_sign_in_button")
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_google),
-                                contentDescription = "Google Logo",
-                                tint = Color.Unspecified,
-                                modifier = Modifier.size(20.dp)
+                        if (authLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                strokeWidth = 2.dp
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Continue with Google",
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
+                        } else {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_google),
+                                    contentDescription = "Google Logo",
+                                    tint = Color.Unspecified,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Continue with Google",
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                            }
                         }
                     }
 

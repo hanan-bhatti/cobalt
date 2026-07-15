@@ -330,7 +330,10 @@ class SecondBrainRepository(private val context: Context) {
                         val uploadTask = storageRef.putBytes(bytes)
                         val snapshot = uploadTask.await()
                         val downloadUrl = (snapshot.metadata?.reference?.downloadUrl ?: throw Exception("No reference URL")).await()
-                        finalItem = finalItem.copy(content = downloadUrl.toString())
+                        finalItem = finalItem.copy(
+                            content = downloadUrl.toString(),
+                            thumbnailPath = downloadUrl.toString()
+                        )
                         savedItemDao.insertItem(finalItem.toEntity())
                     }
                 }
@@ -364,6 +367,30 @@ class SecondBrainRepository(private val context: Context) {
                 Log.e("SecondBrainRepo", "Failed to sync item ${entity.id}: ${e.message}")
             }
         }
+
+        val folders = customFolderDao.getAllFolders()
+        val unsyncedFolders = folders.filter { !it.isSynced }
+        for (folder in unsyncedFolders) {
+            try {
+                if (firestore != null) {
+                    val folderMap = mapOf(
+                        "name" to folder.name,
+                        "colorHex" to folder.colorHex,
+                        "iconName" to folder.iconName,
+                        "isPinned" to folder.isPinned,
+                        "isSynced" to true
+                    )
+                    firestore.collection("users").document(currentUser.uid)
+                        .collection("folders").document(folder.name)
+                        .set(folderMap).await()
+                    
+                    customFolderDao.insertFolder(folder.copy(isSynced = true))
+                    Log.d("SecondBrainRepo", "Successfully synced folder: ${folder.name}")
+                }
+            } catch (e: Exception) {
+                Log.e("SecondBrainRepo", "Failed to sync folder ${folder.name}: ${e.message}")
+            }
+        }
     }
 
     suspend fun deleteItem(item: SavedItem) = withContext(Dispatchers.IO) {
@@ -395,14 +422,19 @@ class SecondBrainRepository(private val context: Context) {
     }
 
     suspend fun addCustomFolder(folderName: String) = withContext(Dispatchers.IO) {
-        customFolderDao.insertFolder(CustomFolderEntity(folderName))
+        val newFolder = CustomFolderEntity(folderName, isSynced = false)
+        customFolderDao.insertFolder(newFolder)
 
         val currentUser = firebaseAuth?.currentUser
         if (currentUser != null && firestore != null) {
             try {
                 firestore.collection("users").document(currentUser.uid)
                     .collection("folders").document(folderName)
-                    .set(mapOf("name" to folderName))
+                    .set(mapOf(
+                        "name" to folderName,
+                        "isSynced" to true
+                    ))
+                customFolderDao.insertFolder(newFolder.copy(isSynced = true))
             } catch (e: Exception) {
                 Log.e("SecondBrainRepo", "Failed to sync folder to Firestore: ${e.message}")
             }
@@ -425,19 +457,22 @@ class SecondBrainRepository(private val context: Context) {
     }
 
     suspend fun updateCustomFolder(folder: CustomFolderEntity) = withContext(Dispatchers.IO) {
-        customFolderDao.insertFolder(folder)
+        val updatedFolder = folder.copy(isSynced = false)
+        customFolderDao.insertFolder(updatedFolder)
 
         val currentUser = firebaseAuth?.currentUser
         if (currentUser != null && firestore != null) {
             try {
                 firestore.collection("users").document(currentUser.uid)
-                    .collection("folders").document(folder.name)
+                    .collection("folders").document(updatedFolder.name)
                     .set(mapOf(
-                        "name" to folder.name,
-                        "colorHex" to folder.colorHex,
-                        "iconName" to folder.iconName,
-                        "isPinned" to folder.isPinned
+                        "name" to updatedFolder.name,
+                        "colorHex" to updatedFolder.colorHex,
+                        "iconName" to updatedFolder.iconName,
+                        "isPinned" to updatedFolder.isPinned,
+                        "isSynced" to true
                     ))
+                customFolderDao.insertFolder(updatedFolder.copy(isSynced = true))
             } catch (e: Exception) {
                 Log.e("SecondBrainRepo", "Failed to sync updated folder to Firestore: ${e.message}")
             }
@@ -529,7 +564,10 @@ class SecondBrainRepository(private val context: Context) {
                 .collection("folders").get().await()
             folderSnap.documents.forEach { doc ->
                 val name = doc.id
-                customFolderDao.insertFolder(CustomFolderEntity(name, isSynced = true))
+                val colorHex = doc.getString("colorHex")
+                val iconName = doc.getString("iconName")
+                val isPinned = doc.getBoolean("isPinned") ?: false
+                customFolderDao.insertFolder(CustomFolderEntity(name, colorHex, iconName, isPinned, isSynced = true))
             }
 
             // Restore items

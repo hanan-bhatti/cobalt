@@ -32,6 +32,7 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel) {
     var captureContent by remember { mutableStateOf("") }
 
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
+    val isSaving by viewModel.isSaving.collectAsState()
 
     if (isSelectionMode) return
 
@@ -230,9 +231,18 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel) {
                         showQuickNoteOverlay = false
                         captureTitle = ""
                         captureContent = ""
-                    }
+                    },
+                    enabled = !isSaving
                 ) {
-                    Text("Save", color = MaterialTheme.colorScheme.primary)
+                    if (isSaving) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("Save", color = MaterialTheme.colorScheme.primary)
+                    }
                 }
             },
             dismissButton = {

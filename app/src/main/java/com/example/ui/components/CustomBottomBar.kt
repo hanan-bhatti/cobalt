@@ -48,17 +48,18 @@ fun CustomBottomBar(
 ) {
     Box(
         modifier = Modifier
-            .padding(start = 16.dp, bottom = 16.dp, end = 96.dp),
+            .padding(start = 16.dp, bottom = 16.dp, end = 80.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         Row(
             modifier = Modifier
+                .fillMaxWidth()
                 .background(
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
                     shape = RoundedCornerShape(32.dp)
                 )
-                .padding(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                .padding(horizontal = 4.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             items.forEach { item ->
@@ -88,14 +89,15 @@ fun CustomBottomBar(
                 )
                 
                 val horizontalPadding by animateDpAsState(
-                    targetValue = if (isSelected) 16.dp else 12.dp,
+                    targetValue = if (isSelected) 12.dp else 8.dp,
                     animationSpec = spring(
                         dampingRatio = Spring.DampingRatioNoBouncy,
                         stiffness = Spring.StiffnessMedium
                     ),
                     label = "horizontalPadding"
                 )
-                                Row(
+                
+                Row(
                     modifier = Modifier
                         .scale(scale)
                         .clip(CircleShape)
@@ -114,7 +116,7 @@ fun CustomBottomBar(
                                 stiffness = Spring.StiffnessLow
                             )
                         )
-                        .padding(horizontal = horizontalPadding, vertical = 12.dp),
+                        .padding(horizontal = horizontalPadding, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
@@ -122,16 +124,16 @@ fun CustomBottomBar(
                         painter = painterResource(id = item.iconResId),
                         contentDescription = item.label,
                         tint = iconColor,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                     
                     if (isSelected) {
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = item.label,
                             color = MaterialTheme.colorScheme.onPrimary,
                             fontWeight = FontWeight.SemiBold,
-                            style = MaterialTheme.typography.labelLarge,
+                            style = MaterialTheme.typography.labelMedium,
                             maxLines = 1
                         )
                     }

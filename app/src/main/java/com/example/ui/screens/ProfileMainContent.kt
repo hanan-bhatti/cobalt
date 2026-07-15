@@ -181,18 +181,32 @@ fun ProfileMainContent(
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                 
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    ArchiveStatCard(iconResId = R.drawable.ic_custom_link, count = totalLinks, label = "Links")
-                    ArchiveStatCard(iconResId = R.drawable.ic_custom_image, count = totalImages, label = "Images")
-                    ArchiveStatCard(iconResId = R.drawable.ic_custom_video, count = totalVideos, label = "Videos")
-                    ArchiveStatCard(iconResId = R.drawable.ic_custom_text, count = totalText, label = "Text")
-                    ArchiveStatCard(iconResId = R.drawable.ic_custom_code, count = totalCode, label = "Code")
+                    ArchiveStatRow(
+                        iconResId = R.drawable.ic_custom_link, count = totalLinks, label = "Links",
+                        baseColor = Color(0xFF42A5F5)
+                    )
+                    ArchiveStatRow(
+                        iconResId = R.drawable.ic_custom_image, count = totalImages, label = "Images",
+                        baseColor = Color(0xFFAB47BC)
+                    )
+                    ArchiveStatRow(
+                        iconResId = R.drawable.ic_custom_video, count = totalVideos, label = "Videos",
+                        baseColor = Color(0xFFEF5350)
+                    )
+                    ArchiveStatRow(
+                        iconResId = R.drawable.ic_custom_text, count = totalText, label = "Text",
+                        baseColor = Color(0xFFFFA726)
+                    )
+                    ArchiveStatRow(
+                        iconResId = R.drawable.ic_custom_code, count = totalCode, label = "Code",
+                        baseColor = Color(0xFF66BB6A)
+                    )
                 }
             }
         }
@@ -275,25 +289,47 @@ fun SectionContainer(title: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-fun ArchiveStatCard(iconResId: Int, count: Int, label: String, modifier: Modifier = Modifier) {
-    Column(
+fun ArchiveStatRow(
+    iconResId: Int, 
+    count: Int, 
+    label: String, 
+    baseColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Row(
         modifier = modifier
-            .width(100.dp)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-            .padding(16.dp),
-        horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .fillMaxWidth()
+            .background(baseColor.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            painter = painterResource(id = iconResId),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(24.dp)
-        )
-        Column {
-            Text(text = "$count", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-            Text(text = label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .background(baseColor.copy(alpha = 0.25f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(id = iconResId),
+                contentDescription = null,
+                tint = baseColor,
+                modifier = Modifier.size(18.dp)
+            )
         }
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = label, 
+            fontSize = 16.sp, 
+            color = MaterialTheme.colorScheme.onSurface, 
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = "$count", 
+            fontSize = 18.sp, 
+            fontWeight = FontWeight.Bold, 
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 
