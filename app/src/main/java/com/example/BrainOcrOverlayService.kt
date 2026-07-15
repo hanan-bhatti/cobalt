@@ -31,6 +31,7 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import android.animation.Animator
@@ -557,15 +558,22 @@ class BrainOcrOverlayService : Service() {
         }
         panel.addView(recentTitle)
 
+        val scrollView = ScrollView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dpToPx(200) // Limit height
+            )
+        }
         val recentContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
         }
-        panel.addView(recentContainer)
+        scrollView.addView(recentContainer)
+        panel.addView(scrollView)
 
         // Populate recent notes
         serviceScope.launch {
             repository.getAllItemsFlow().collect { list ->
-                val recent = list.sortedByDescending { it.timestamp }.take(3)
+                val recent = list.sortedByDescending { it.timestamp }.take(5)
                 withContext(Dispatchers.Main) {
                     recentContainer.removeAllViews()
                     if (recent.isEmpty()) {
@@ -598,18 +606,29 @@ class BrainOcrOverlayService : Service() {
                                 layoutParams = lp
                                 isClickable = true
                                 setOnClickListener {
-                                    val intent = Intent(applicationContext, MainActivity::class.java).apply {
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                                        putExtra("OPEN_ITEM_ID", item.id)
+                                    if (item.type == SavedItemType.LINK) {
+                                        val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(item.content)).apply {
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        try {
+                                            startActivity(intent)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(applicationContext, "Cannot open link", Toast.LENGTH_SHORT).show()
+                                        }
+                                    } else {
+                                        val intent = Intent(applicationContext, MainActivity::class.java).apply {
+                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                            putExtra("OPEN_ITEM_ID", item.id)
+                                        }
+                                        startActivity(intent)
                                     }
-                                    startActivity(intent)
                                     collapsePanel()
                                 }
                             }
 
                             val iv = ImageView(applicationContext).apply {
                                 val drawable = when (item.type) {
-                                    SavedItemType.LINK -> android.R.drawable.ic_menu_share
+                                    SavedItemType.LINK -> android.R.drawable.ic_menu_view
                                     SavedItemType.IMAGE -> android.R.drawable.ic_menu_gallery
                                     else -> android.R.drawable.ic_menu_edit
                                 }

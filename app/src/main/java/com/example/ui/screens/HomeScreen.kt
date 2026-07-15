@@ -37,6 +37,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
@@ -98,7 +99,7 @@ fun HomeScreen(
     var showBulkTagDialog by remember { mutableStateOf(false) }
     var showAddFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
-    var isListView by remember { mutableStateOf(true) }
+    val isListView by viewModel.settingsRepository.isListView.collectAsState()
     var itemToManageFolders by remember { mutableStateOf<SavedItem?>(null) }
     var showManualCaptureOverlay by remember { mutableStateOf(false) }
     var captureType by remember { mutableStateOf(SavedItemType.TEXT) }
@@ -247,7 +248,7 @@ fun HomeScreen(
                     },
                     actions = {
                         IconButton(
-                            onClick = { isListView = !isListView },
+                            onClick = { viewModel.settingsRepository.setIsListView(!isListView) },
                             modifier = Modifier.testTag("toggle_view_button")
                         ) {
                             Icon(

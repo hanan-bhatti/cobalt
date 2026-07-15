@@ -183,7 +183,10 @@ class SecondBrainRepository(private val context: Context) {
             isSynced = isSynced,
             linkTitle = linkTitle,
             linkDescription = linkDescription,
-            linkImage = linkImage
+            linkImage = linkImage,
+            isBackedUp = isBackedUp,
+            sizeBytes = sizeBytes,
+            isPendingBackup = isPendingBackup
         )
     }
 
@@ -202,7 +205,10 @@ class SecondBrainRepository(private val context: Context) {
             isSynced = isSynced,
             linkTitle = linkTitle,
             linkDescription = linkDescription,
-            linkImage = linkImage
+            linkImage = linkImage,
+            isBackedUp = isBackedUp,
+            sizeBytes = sizeBytes,
+            isPendingBackup = isPendingBackup
         )
     }
 

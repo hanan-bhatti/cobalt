@@ -14,36 +14,6 @@ object PermissionUtils {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             return true
         }
-
-        try {
-            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager
-            if (appOps != null) {
-                val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    appOps.unsafeCheckOpRaw(
-                        AppOpsManager.OPSTR_SYSTEM_ALERT_WINDOW,
-                        android.os.Process.myUid(),
-                        context.packageName
-                    )
-                } else {
-                    val checkOpNoThrowMethod = AppOpsManager::class.java.getMethod(
-                        "checkOpNoThrow",
-                        Int::class.javaPrimitiveType,
-                        Int::class.javaPrimitiveType,
-                        String::class.java
-                    )
-                    checkOpNoThrowMethod.invoke(
-                        appOps,
-                        24, // AppOpsManager.OP_SYSTEM_ALERT_WINDOW / OP_SYSTEM_ALERT_WINDOW constant is 24
-                        android.os.Process.myUid(),
-                        context.packageName
-                    ) as Int
-                }
-                return mode == AppOpsManager.MODE_ALLOWED
-            }
-        } catch (e: Exception) {
-            // Fallback to Settings.canDrawOverlays if AppOps check fails or throws
-        }
-
         return android.provider.Settings.canDrawOverlays(context)
     }
 }

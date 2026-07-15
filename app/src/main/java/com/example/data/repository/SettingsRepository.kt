@@ -12,7 +12,7 @@ class SettingsRepository(context: Context) {
     private val _geminiApiKey = MutableStateFlow(prefs.getString(KEY_GEMINI_API_KEY, "") ?: "")
     val geminiApiKey: StateFlow<String> = _geminiApiKey.asStateFlow()
 
-    private val _selectedModel = MutableStateFlow(prefs.getString(KEY_SELECTED_MODEL, "gemini-flash-lite-latest") ?: "gemini-flash-lite-latest")
+    private val _selectedModel = MutableStateFlow(prefs.getString(KEY_SELECTED_MODEL, "gemini-1.5-flash") ?: "gemini-1.5-flash")
     val selectedModel: StateFlow<String> = _selectedModel.asStateFlow()
 
     private val _ocrSensitivity = MutableStateFlow(prefs.getString(KEY_OCR_SENSITIVITY, "Medium") ?: "Medium")
@@ -44,6 +44,9 @@ class SettingsRepository(context: Context) {
 
     private val _isRecentCapturesExpanded = MutableStateFlow(prefs.getBoolean(KEY_RECENT_CAPTURES_EXPANDED, true))
     val isRecentCapturesExpanded: StateFlow<Boolean> = _isRecentCapturesExpanded.asStateFlow()
+
+    private val _isListView = MutableStateFlow(prefs.getBoolean(KEY_IS_LIST_VIEW, true))
+    val isListView: StateFlow<Boolean> = _isListView.asStateFlow()
 
     fun setGeminiApiKey(key: String) {
         prefs.edit().putString(KEY_GEMINI_API_KEY, key).apply()
@@ -105,10 +108,15 @@ class SettingsRepository(context: Context) {
         _isRecentCapturesExpanded.value = expanded
     }
 
+    fun setIsListView(isList: Boolean) {
+        prefs.edit().putBoolean(KEY_IS_LIST_VIEW, isList).apply()
+        _isListView.value = isList
+    }
+
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
             KEY_GEMINI_API_KEY -> _geminiApiKey.value = prefs.getString(KEY_GEMINI_API_KEY, "") ?: ""
-            KEY_SELECTED_MODEL -> _selectedModel.value = prefs.getString(KEY_SELECTED_MODEL, "gemini-flash-lite-latest") ?: "gemini-flash-lite-latest"
+            KEY_SELECTED_MODEL -> _selectedModel.value = prefs.getString(KEY_SELECTED_MODEL, "gemini-1.5-flash") ?: "gemini-1.5-flash"
             KEY_OCR_SENSITIVITY -> _ocrSensitivity.value = prefs.getString(KEY_OCR_SENSITIVITY, "Medium") ?: "Medium"
             KEY_THEME_MODE -> _themeMode.value = prefs.getString(KEY_THEME_MODE, "System Default") ?: "System Default"
             KEY_FLOATING_OCR -> _isFloatingOcrEnabled.value = prefs.getBoolean(KEY_FLOATING_OCR, false)
@@ -119,6 +127,7 @@ class SettingsRepository(context: Context) {
             KEY_EDGE_Y_PERCENT -> _edgePanelYPercent.value = prefs.getFloat(KEY_EDGE_Y_PERCENT, 0.4f)
             KEY_HAS_DISMISSED_ONBOARDING -> _hasDismissedOnboarding.value = prefs.getBoolean(KEY_HAS_DISMISSED_ONBOARDING, false)
             KEY_RECENT_CAPTURES_EXPANDED -> _isRecentCapturesExpanded.value = prefs.getBoolean(KEY_RECENT_CAPTURES_EXPANDED, true)
+            KEY_IS_LIST_VIEW -> _isListView.value = prefs.getBoolean(KEY_IS_LIST_VIEW, true)
         }
     }
 
@@ -139,5 +148,6 @@ class SettingsRepository(context: Context) {
         private const val KEY_EDGE_Y_PERCENT = "edge_panel_y_percent"
         private const val KEY_HAS_DISMISSED_ONBOARDING = "has_dismissed_onboarding"
         private const val KEY_RECENT_CAPTURES_EXPANDED = "recent_captures_expanded"
+        private const val KEY_IS_LIST_VIEW = "is_list_view"
     }
 }

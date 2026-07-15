@@ -58,7 +58,7 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun MyApplicationTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false,
     dynamicColor: Boolean = false, // Disabled dynamic to enforce Superr theme
     content: @Composable () -> Unit,
 ) {

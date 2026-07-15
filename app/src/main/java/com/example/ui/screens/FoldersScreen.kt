@@ -62,7 +62,8 @@ val folderPresetIcons = listOf(
     "school",
     "home",
     "shopping",
-    "music"
+    "music",
+    "tools"
 )
 
 fun parseHexColor(hex: String?, defaultColor: Color = Color(0xFF6750A4)): Color {
@@ -91,6 +92,7 @@ fun FolderIcon(
         "home" -> R.drawable.ic_custom_home
         "shopping" -> R.drawable.ic_custom_shopping
         "music" -> R.drawable.ic_custom_music
+        "tools" -> R.drawable.ic_custom_tools
         else -> R.drawable.ic_custom_folder
     }
     Icon(
@@ -584,8 +586,8 @@ fun FolderContentsBrowser(
     onBack: () -> Unit
 ) {
     val items by viewModel.allItems.collectAsState()
-    val isInitialLoading by viewModel.isInitialLoading.collectAsState()
-
+    val isSyncing by viewModel.isSyncing.collectAsState()
+    
     // Filter items matching current browsing folder (either custom tag or system type)
     val folderItems = remember(items, folderName) {
         val systemCategory = SavedItemType.entries.find { it.displayName == folderName }
@@ -629,50 +631,54 @@ fun FolderContentsBrowser(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        if (folderItems.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_custom_folder_open),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(64.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "This Folder is Empty",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Save links or files, then assign them to this folder to organize.",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.secondary,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
+        androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+            isRefreshing = isSyncing,
+            onRefresh = { viewModel.syncData() },
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+        ) {
+            if (folderItems.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_folder_open),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "This Folder is Empty",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Save links or files, then assign them to this folder to organize.",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.secondary,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
                 }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize(),
-                contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 100.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(folderItems, key = { it.id }) { item ->
-                    // Direct standard Item card layout
-                    FolderBrowseItemRow(
-                        item = item,
-                        onClick = { viewModel.showDetailItem(item) }
-                    )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 100.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(folderItems, key = { it.id }) { item ->
+                        // Direct standard Item card layout
+                        FolderBrowseItemRow(
+                            item = item,
+                            onClick = { viewModel.showDetailItem(item) }
+                        )
+                    }
                 }
             }
         }

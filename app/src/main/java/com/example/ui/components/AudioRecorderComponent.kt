@@ -3,6 +3,11 @@ import androidx.compose.ui.res.painterResource
 import com.example.R
 
 import android.media.MediaRecorder
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -29,6 +34,40 @@ fun AudioRecorderComponent(
     var mediaRecorder by remember { mutableStateOf<MediaRecorder?>(null) }
     var outputFile by remember { mutableStateOf<File?>(null) }
     val context = LocalContext.current
+
+    val startRecording = {
+        val file = File(context.cacheDir, "memo_${System.currentTimeMillis()}.mp4")
+        outputFile = file
+        val recorder = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            MediaRecorder(context)
+        } else {
+            MediaRecorder()
+        }
+        try {
+            recorder.apply {
+                setAudioSource(MediaRecorder.AudioSource.MIC)
+                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                setOutputFile(file.absolutePath)
+                prepare()
+                start()
+            }
+            mediaRecorder = recorder
+            isRecording = true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            recorder.release()
+            mediaRecorder = null
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            startRecording()
+        }
+    }
 
     Row(
         modifier = modifier
@@ -67,28 +106,10 @@ fun AudioRecorderComponent(
                     isRecording = false
                     outputFile?.let { onRecordComplete(it) }
                 } else {
-                    val file = File(context.cacheDir, "memo_${System.currentTimeMillis()}.mp4")
-                    outputFile = file
-                    val recorder = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                        MediaRecorder(context)
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                        startRecording()
                     } else {
-                        MediaRecorder()
-                    }
-                    try {
-                        recorder.apply {
-                            setAudioSource(MediaRecorder.AudioSource.MIC)
-                            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-                            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-                            setOutputFile(file.absolutePath)
-                            prepare()
-                            start()
-                        }
-                        mediaRecorder = recorder
-                        isRecording = true
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        recorder.release()
-                        mediaRecorder = null
+                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                     }
                 }
             },

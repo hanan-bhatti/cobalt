@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -62,6 +63,7 @@ fun SearchScreen(
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("draft_prefs", android.content.Context.MODE_PRIVATE) }
     var historyList by remember { mutableStateOf(getSearchHistory(prefs)) }
+    var selectedFilter by remember { mutableStateOf<SavedItemType?>(null) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
 
@@ -104,8 +106,9 @@ fun SearchScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .height(44.dp)
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                                .padding(horizontal = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
@@ -115,7 +118,7 @@ fun SearchScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Box(modifier = Modifier.weight(1f)) {
+                            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                                 if (searchQuery.isEmpty()) {
                                     Text(
                                         text = "Search...",
@@ -125,7 +128,9 @@ fun SearchScreen(
                                         overflow = TextOverflow.Ellipsis
                                     )
                                 }
-                                innerTextField()
+                                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
+                                    innerTextField()
+                                }
                             }
                             if (searchQuery.isNotEmpty()) {
                                 IconButton(
@@ -167,6 +172,37 @@ fun SearchScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    FilterChip(
+                        selected = selectedFilter == null,
+                        onClick = { selectedFilter = null },
+                        label = { Text("All") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    )
+                }
+                items(SavedItemType.values()) { type ->
+                    FilterChip(
+                        selected = selectedFilter == type,
+                        onClick = { selectedFilter = type },
+                        label = { Text(type.displayName) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    )
+                }
+            }
+
+            val displayItems = items.filter { selectedFilter == null || it.type == selectedFilter }
+
             if (searchQuery.isEmpty()) {
                 if (historyList.isNotEmpty()) {
                     Text(
@@ -217,7 +253,7 @@ fun SearchScreen(
                 }
             } else {
                 Text(
-                    text = "${items.size} RESULTS",
+                    text = "${displayItems.size} RESULTS",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
@@ -225,17 +261,45 @@ fun SearchScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
 
-                LazyColumn(
-                    contentPadding = PaddingValues(bottom = 100.dp), // For bottom nav spacing
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(items, key = { it.id }) { item ->
-                        SearchItemRow(item = item, onClick = { onItemClick(item) })
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 76.dp, end = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                            thickness = 0.5.dp
-                        )
+                if (displayItems.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_search),
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "No results found",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Try adjusting your search or filters",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(bottom = 100.dp), // For bottom nav spacing
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(displayItems, key = { it.id }) { item ->
+                            SearchItemRow(item = item, onClick = { onItemClick(item) })
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 76.dp, end = 16.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                                thickness = 0.5.dp
+                            )
+                        }
                     }
                 }
             }

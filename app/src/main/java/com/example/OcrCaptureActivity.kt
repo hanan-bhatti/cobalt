@@ -74,7 +74,12 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
             com.example.utils.MediaProjectionCache.resultCode = result.resultCode
             com.example.utils.MediaProjectionCache.resultData = result.data
             isCapturingState.value = true
-            startCaptureService(result.resultCode, result.data!!)
+            
+            // Wait for the system consent dialog to fully dismiss before capturing,
+            // otherwise the screenshot includes the dialog/transition itself.
+            handler.postDelayed({
+                startCaptureService(result.resultCode, result.data!!)
+            }, 400) 
         } else {
             Toast.makeText(this, "Screen capture permission denied", Toast.LENGTH_SHORT).show()
             finish()

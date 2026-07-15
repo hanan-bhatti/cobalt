@@ -179,15 +179,23 @@ fun SettingsScreen(
                     var keyVisibility by remember { mutableStateOf(false) }
                     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
 
-                    OutlinedTextField(
+                    TextField(
                         value = apiKey,
                         onValueChange = { 
                             apiKey = it
                             viewModel.settingsRepository.setGeminiApiKey(it) 
                         },
-                        label = { Text("API Key") },
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                        placeholder = { Text("Enter your API Key") },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
                         singleLine = true,
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent
+                        ),
+                        textStyle = MaterialTheme.typography.bodyLarge,
                         visualTransformation = if (keyVisibility) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
                             val iconResId = if (keyVisibility) R.drawable.ic_custom_eye else R.drawable.ic_custom_eye_off
@@ -207,6 +215,17 @@ fun SettingsScreen(
                                 focusManager.clearFocus()
                             }
                         )
+                    )
+                    Text(
+                        text = "Get your API Key here",
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .clickable {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://aistudio.google.com/apikey"))
+                                context.startActivity(intent)
+                            },
+                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
 
@@ -337,7 +356,9 @@ fun SettingsRow(title: String, value: String? = null, showChevron: Boolean = tru
             text = title, 
             style = MaterialTheme.typography.bodyLarge, 
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(2f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
         if (value != null || (onClick != null && showChevron)) {
             Spacer(modifier = Modifier.width(16.dp))

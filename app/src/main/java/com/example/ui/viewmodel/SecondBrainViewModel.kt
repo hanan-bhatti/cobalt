@@ -69,6 +69,11 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         settingsRepository.setRecentCapturesExpanded(expanded)
     }
 
+    fun isApiKeySet(): Boolean {
+        val apiKey = settingsRepository.geminiApiKey.value
+        return apiKey.isNotEmpty() || com.example.BuildConfig.GEMINI_API_KEY.isNotEmpty()
+    }
+
     // ----------------------------------------------------
     // STATE FLOWS
     // ----------------------------------------------------
@@ -546,11 +551,8 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     fun signInWithGoogle(activityContext: android.content.Context, onCompletion: (Boolean) -> Unit) {
         val auth = repository.firebaseAuth
         if (auth == null) {
-            _authError.value = null
-            prefs.edit().putString("simulated_email", "google.sandbox@example.com").apply()
-            _userEmail.value = "google.sandbox@example.com"
-            showToast("Successfully logged in as google.sandbox@example.com.")
-            onCompletion(true)
+            _authError.value = "Authentication not initialized."
+            onCompletion(false)
             return
         }
         _authError.value = null
@@ -560,13 +562,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             try {
                 val credentialManager = CredentialManager.create(activityContext)
                 
-                // Fetch default_web_client_id from resources if available, or fall back to a placeholder
-                val clientIdResId = activityContext.resources.getIdentifier("default_web_client_id", "string", activityContext.packageName)
-                val clientId = if (clientIdResId != 0) {
-                    activityContext.getString(clientIdResId)
-                } else {
-                    "YOUR_WEB_CLIENT_ID_PLACEHOLDER.apps.googleusercontent.com"
-                }
+                val clientId = activityContext.getString(com.example.R.string.default_web_client_id)
 
                 val googleIdOption = GetGoogleIdOption.Builder()
                     .setFilterByAuthorizedAccounts(false)
@@ -598,11 +594,8 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             } catch (e: Exception) {
                 Log.e("SecondBrainVM", "Google Sign-In failed: ${e.message}")
                 val msg = e.localizedMessage ?: ""
-                _authError.value = if (msg.contains("No credentials available", ignoreCase = true) || msg.contains("NoCredentialException", ignoreCase = true)) {
-                    "Google Sign-In is temporarily unavailable. Please sign in with your Email & Password instead."
-                } else {
-                    "Google Sign-In is currently unavailable. Please try using your Email & Password instead."
-                }
+                
+                _authError.value = "Google Sign-In failed: $msg"
                 onCompletion(false)
             } finally {
                 _authLoading.value = false

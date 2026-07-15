@@ -24,10 +24,13 @@ data class SavedItem(
     val isSynced: Boolean = false,
     val linkTitle: String? = null,
     val linkDescription: String? = null,
-    val linkImage: String? = null
+    val linkImage: String? = null,
+    val isBackedUp: Boolean = false,
+    val sizeBytes: Long = 0,
+    val isPendingBackup: Boolean = false
 )
 
-fun SavedItem.getBestImagePath(): Any {
+fun SavedItem.getBestImagePath(): String? {
     val thumb = this.thumbnailPath
     if (!thumb.isNullOrBlank()) {
         if (thumb.startsWith("http://") || thumb.startsWith("https://") || thumb.startsWith("content://")) {
@@ -35,16 +38,26 @@ fun SavedItem.getBestImagePath(): Any {
         }
         val file = java.io.File(thumb)
         if (file.exists()) {
-            return file
+            return thumb
         }
     }
-    val content = this.content
-    if (content.startsWith("http://") || content.startsWith("https://") || content.startsWith("content://")) {
-        return content
+    
+    // For images, the content itself might be the path
+    if (this.type == SavedItemType.IMAGE) {
+        val content = this.content
+        if (content.startsWith("http://") || content.startsWith("https://") || content.startsWith("content://")) {
+            return content
+        }
+        val contentFile = java.io.File(content)
+        if (contentFile.exists()) {
+            return content
+        }
     }
-    val contentFile = java.io.File(content)
-    if (contentFile.exists()) {
-        return contentFile
+    
+    // For links, use linkImage
+    if (this.type == SavedItemType.LINK && !this.linkImage.isNullOrBlank()) {
+        return this.linkImage
     }
-    return content
+    
+    return null
 }

@@ -14,6 +14,8 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -154,15 +156,39 @@ fun ArchiveItemCard(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Title
-                Text(
-                    text = item.title.ifBlank { "Untitled Note" },
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    lineHeight = 20.sp,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = item.title.ifBlank { "Untitled Note" },
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        lineHeight = 20.sp,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    
+                    if (item.type == SavedItemType.LINK) {
+                        val context = LocalContext.current
+                        IconButton(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(item.content))
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.OpenInBrowser,
+                                contentDescription = "Open in browser",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
 
                 // Sub-description
                 val cDesc = item.linkDescription?.trim() ?: item.content.trim()
@@ -179,7 +205,7 @@ fun ArchiveItemCard(
                 }
 
                 // Media Preview (if applicable)
-                val displayImage = item.getBestImagePath() ?: item.linkImage
+                val displayImage = item.getBestImagePath()
                 if (displayImage.isNotNullOrBlank() || item.type == SavedItemType.CODE) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Box(
@@ -357,7 +383,7 @@ fun ArchiveItemRow(
         ) {
             Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 // Left thumbnail
-                val displayImage = item.getBestImagePath() ?: item.linkImage
+                val displayImage = item.getBestImagePath()
                 if (displayImage.isNotNullOrBlank() || item.type == SavedItemType.CODE) {
                     Box(
                         modifier = Modifier

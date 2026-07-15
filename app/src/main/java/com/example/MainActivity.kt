@@ -167,7 +167,8 @@ BackHandler(enabled = activeDetailItem != null) {
                                             viewModel = viewModel,
                                             onNavigateBack = { navController.popBackStack() },
                                             onNavigateToAuth = { navController.navigate("auth") },
-                                            onNavigateToLegal = { route -> navController.navigate(route) }
+                                            onNavigateToLegal = { route -> navController.navigate(route) },
+                                            onNavigateToManageStorage = { navController.navigate("manage_storage") }
                                         )
                                     }
                                     composable("auth") {
@@ -196,6 +197,12 @@ BackHandler(enabled = activeDetailItem != null) {
                                             title = "FAQ",
                                             markdownContent = com.example.ui.screens.LegalDocs.faq,
                                             onBack = { navController.popBackStack() }
+                                        )
+                                    }
+                                    composable("manage_storage") {
+                                        com.example.ui.screens.ManageStorageScreen(
+                                            onNavigateBack = { navController.popBackStack() },
+                                            viewModel = viewModel
                                         )
                                     }
                                     composable("about") {

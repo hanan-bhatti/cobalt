@@ -7,6 +7,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
+import androidx.glance.GlanceTheme
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
@@ -37,6 +38,7 @@ import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.data.repository.SecondBrainRepository
 import androidx.glance.appwidget.cornerRadius
+import androidx.glance.unit.ColorProvider
 
 class SecondBrainWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = SecondBrainWidget()
@@ -78,14 +80,15 @@ class SecondBrainWidget : GlanceAppWidget() {
         }
 
         provideContent {
-            // Elegant premium dark obsidian card design with vibrant neon accent highlights
-            Box(
-                modifier = GlanceModifier
-                    .fillMaxSize()
-                    .background(Color(0xFF121212)) // Dark sleek Obsidian base
-                    .cornerRadius(18.dp)
-                    .padding(12.dp)
-            ) {
+            GlanceTheme {
+                // Elegant premium dark obsidian card design with vibrant neon accent highlights
+                Box(
+                    modifier = GlanceModifier
+                        .fillMaxSize()
+                        .background(GlanceTheme.colors.surface)
+                        .cornerRadius(18.dp)
+                        .padding(12.dp)
+                ) {
                 Column(modifier = GlanceModifier.fillMaxSize()) {
                     WidgetHeader(isFromCache = isFromCache, isTimeout = isTimeout)
                     
@@ -104,7 +107,7 @@ class SecondBrainWidget : GlanceAppWidget() {
                             Text(
                                 text = emptyText,
                                 style = TextStyle(
-                                    color = androidx.glance.color.ColorProvider(day = Color(0xFF9E9E9E), night = Color(0xFF9E9E9E)),
+                                    color = GlanceTheme.colors.onSurfaceVariant,
                                     fontSize = 11.sp,
                                     textAlign = androidx.glance.text.TextAlign.Center
                                 )
@@ -127,6 +130,7 @@ class SecondBrainWidget : GlanceAppWidget() {
                 }
             }
         }
+    }
     }
 }
 
@@ -152,7 +156,7 @@ fun WidgetHeader(isFromCache: Boolean = false, isTimeout: Boolean = false) {
                 style = TextStyle(
                     fontWeight = FontWeight.Bold,
                     fontSize = 9.sp,
-                    color = androidx.glance.color.ColorProvider(day = Color.White, night = Color.White)
+                    color = GlanceTheme.colors.onSurface
                 )
             )
         }
@@ -164,7 +168,7 @@ fun WidgetHeader(isFromCache: Boolean = false, isTimeout: Boolean = false) {
             style = TextStyle(
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
-                color = androidx.glance.color.ColorProvider(day = Color.White, night = Color.White)
+                color = GlanceTheme.colors.onSurface
             )
         )
         
@@ -196,24 +200,30 @@ fun WidgetHeader(isFromCache: Boolean = false, isTimeout: Boolean = false) {
 @androidx.compose.runtime.Composable
 fun ItemRow(item: SavedItem) {
     val context = LocalContext.current
-    val openIntent = Intent(context, MainActivity::class.java).apply {
-        action = Intent.ACTION_VIEW
-        data = android.net.Uri.parse("secondbrain://item/${item.id}")
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    val openIntent = if (item.type == SavedItemType.LINK) {
+        Intent(Intent.ACTION_VIEW, android.net.Uri.parse(item.content)).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+    } else {
+        Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            data = android.net.Uri.parse("secondbrain://item/${item.id}")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
     }
     
     // Choose beautiful color accents and icons based on type
     val (iconRes, iconTintBg) = when (item.type) {
-        SavedItemType.LINK -> Pair(R.drawable.ic_widget_link, Color(0x1A3B82F6)) // Sky Sticker Blue
-        SavedItemType.IMAGE, SavedItemType.VIDEO -> Pair(R.drawable.ic_widget_image, Color(0x1AFF66CF)) // Bubblegum Pink
-        SavedItemType.CODE -> Pair(R.drawable.ic_widget_code, Color(0x1A22C55E)) // Sprout Green
-        else -> Pair(R.drawable.ic_widget_text, Color(0x1AFF6F1E)) // Marker Orange
+        SavedItemType.LINK -> Pair(R.drawable.ic_widget_link, GlanceTheme.colors.primaryContainer)
+        SavedItemType.IMAGE, SavedItemType.VIDEO -> Pair(R.drawable.ic_widget_image, GlanceTheme.colors.tertiaryContainer)
+        SavedItemType.CODE -> Pair(R.drawable.ic_widget_code, GlanceTheme.colors.secondaryContainer)
+        else -> Pair(R.drawable.ic_widget_text, GlanceTheme.colors.primaryContainer)
     }
     
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
-            .background(Color(0xFF1E1E1E)) // Obsidian card background
+            .background(GlanceTheme.colors.surface) // Adaptive background
             .cornerRadius(10.dp)
             .clickable(actionStartActivity(openIntent))
             .padding(horizontal = 10.dp, vertical = 6.dp),
@@ -223,7 +233,7 @@ fun ItemRow(item: SavedItem) {
         Box(
             modifier = GlanceModifier
                 .size(24.dp)
-                .background(iconTintBg)
+                .background(iconTintBg) // Adaptive tint
                 .cornerRadius(12.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -242,7 +252,7 @@ fun ItemRow(item: SavedItem) {
                 maxLines = 1,
                 style = TextStyle(
                     fontWeight = FontWeight.Medium,
-                    color = androidx.glance.color.ColorProvider(day = Color.White, night = Color.White),
+                    color = GlanceTheme.colors.onSurface,
                     fontSize = 11.sp
                 )
             )
@@ -252,7 +262,7 @@ fun ItemRow(item: SavedItem) {
                     text = subText,
                     maxLines = 1,
                     style = TextStyle(
-                        color = androidx.glance.color.ColorProvider(day = Color(0xFF9A9A9A), night = Color(0xFF9A9A9A)),
+                        color = GlanceTheme.colors.onSurfaceVariant,
                         fontSize = 9.sp
                     )
                 )
@@ -265,7 +275,7 @@ fun ItemRow(item: SavedItem) {
         Text(
             text = "→",
             style = TextStyle(
-                color = androidx.glance.color.ColorProvider(day = Color(0xFF6F6F6F), night = Color(0xFF6F6F6F)),
+                color = GlanceTheme.colors.onSurfaceVariant,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -289,8 +299,8 @@ fun QuickActionRow() {
         QuickActionButton(
             iconRes = R.drawable.ic_widget_link,
             intent = linkIntent,
-            bgColor = Color(0xFF102A43), // Deep blue surface
-            iconTintGlow = Color(0xFF3B82F6), // Glowing neon blue
+            bgColor = GlanceTheme.colors.primaryContainer,
+            iconTintGlow = GlanceTheme.colors.onPrimaryContainer,
             label = "Link"
         )
         
@@ -304,8 +314,8 @@ fun QuickActionRow() {
         QuickActionButton(
             iconRes = R.drawable.ic_widget_image,
             intent = imageIntent,
-            bgColor = Color(0xFF3B102F), // Deep pink surface
-            iconTintGlow = Color(0xFFFF66CF), // Glowing neon pink
+            bgColor = GlanceTheme.colors.tertiaryContainer,
+            iconTintGlow = GlanceTheme.colors.onTertiaryContainer,
             label = "Media"
         )
         
@@ -319,8 +329,8 @@ fun QuickActionRow() {
         QuickActionButton(
             iconRes = R.drawable.ic_widget_code,
             intent = codeIntent,
-            bgColor = Color(0xFF103A24), // Deep green surface
-            iconTintGlow = Color(0xFF22C55E), // Glowing neon green
+            bgColor = GlanceTheme.colors.secondaryContainer,
+            iconTintGlow = GlanceTheme.colors.onSecondaryContainer,
             label = "Code"
         )
     }
@@ -328,10 +338,10 @@ fun QuickActionRow() {
 
 @androidx.compose.runtime.Composable
 fun QuickActionButton(
-    iconRes: Int, 
-    intent: Intent, 
-    bgColor: Color, 
-    iconTintGlow: Color, 
+    iconRes: Int,
+    intent: Intent,
+    bgColor: androidx.glance.unit.ColorProvider,
+    iconTintGlow: androidx.glance.unit.ColorProvider,
     label: String
 ) {
     Column(
@@ -356,7 +366,7 @@ fun QuickActionButton(
         Text(
             text = label,
             style = TextStyle(
-                color = androidx.glance.color.ColorProvider(day = iconTintGlow, night = iconTintGlow),
+                color = iconTintGlow,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Medium
             )

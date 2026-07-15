@@ -17,5 +17,8 @@ data class SavedItemEntity(
     val isSynced: Boolean = false,
     val linkTitle: String? = null,
     val linkDescription: String? = null,
-    val linkImage: String? = null
+    val linkImage: String? = null,
+    val isBackedUp: Boolean = false,
+    val sizeBytes: Long = 0,
+    val isPendingBackup: Boolean = false
 )

@@ -31,7 +31,8 @@ fun ProfileScreen(
     viewModel: SecondBrainViewModel,
     onNavigateBack: () -> Unit,
     onNavigateToAuth: () -> Unit,
-    onNavigateToLegal: (String) -> Unit = {}
+    onNavigateToLegal: (String) -> Unit = {},
+    onNavigateToManageStorage: () -> Unit = {}
 ) {
     var showSettings by remember { mutableStateOf(false) }
 
@@ -45,7 +46,8 @@ fun ProfileScreen(
             onNavigateBack = onNavigateBack,
             onNavigateToAuth = onNavigateToAuth,
             onNavigateToLegal = onNavigateToLegal,
-            onNavigateToSettings = { showSettings = true }
+            onNavigateToSettings = { showSettings = true },
+            onNavigateToManageStorage = onNavigateToManageStorage
         )
     } else {
         SettingsScreen(
