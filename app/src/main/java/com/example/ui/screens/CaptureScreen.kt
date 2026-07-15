@@ -13,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
@@ -52,6 +53,8 @@ fun CaptureScreen(
 ) {
     val context = LocalContext.current
     val activeItem by viewModel.activeCaptureItem.collectAsState()
+
+    BackHandler { viewModel.cancelCapture() }
     val capturedBitmap by viewModel.capturedBitmap.collectAsState()
     val isOcrLoading by viewModel.isOcrLoading.collectAsState()
     val ocrError by viewModel.ocrError.collectAsState()
@@ -115,6 +118,40 @@ fun CaptureScreen(
                 .verticalScroll(scrollState)
                 .padding(16.dp)
         ) {
+            // TYPE SELECTOR
+            Text(
+                text = "Item Type",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
+            androidx.compose.foundation.lazy.LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+            ) {
+                items(SavedItemType.entries.size) { index ->
+                    val t = SavedItemType.entries[index]
+                    val isSelected = item.type == t
+                    androidx.compose.material3.Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                        border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent),
+                        modifier = Modifier.clickable { 
+                            viewModel.updateActiveCaptureItem { it.copy(type = t) }
+                        }
+                    ) {
+                        Text(
+                            text = t.displayName,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+            }
+
             // TITLE FIELD
             Text(
                 text = "Title",
@@ -311,6 +348,8 @@ fun CaptureScreen(
                 text = when (item.type) {
                     SavedItemType.LINK -> "URL / Link"
                     SavedItemType.CODE -> "Code Snippet Source"
+                    SavedItemType.IMAGE, SavedItemType.VIDEO -> "Media File"
+                    SavedItemType.AUDIO -> "Voice Memo"
                     else -> "Note Content"
                 },
                 fontSize = 12.sp,
@@ -319,9 +358,85 @@ fun CaptureScreen(
                 modifier = Modifier.padding(bottom = 6.dp)
             )
 
+            val mediaPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+                androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
+            ) { uri ->
+                if (uri != null) {
+                    viewModel.updateActiveCaptureItem { it.copy(content = uri.toString()) }
+                }
+            }
+
             val editorFont = if (item.type == SavedItemType.CODE) FontFamily.Monospace else FontFamily.SansSerif
-            val isMultiLine = item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE || item.type == SavedItemType.AUDIO
-            if (item.type == SavedItemType.TEXT) {
+            val isMultiLine = item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE
+
+            if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO) {
+                // native media picker
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = {
+                            mediaPicker.launch(androidx.activity.result.PickVisualMediaRequest(
+                                if (item.type == SavedItemType.IMAGE) androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                                else androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.VideoOnly
+                            ))
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
+                    ) {
+                        Icon(if (item.type == SavedItemType.IMAGE) Icons.Outlined.Image else Icons.Outlined.VideoLibrary, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (item.content.isBlank()) "Select Media" else "Change Media")
+                    }
+                    if (item.content.isNotBlank() && item.type == SavedItemType.IMAGE) {
+                        Button(
+                            onClick = { 
+                                val uri = android.net.Uri.parse(item.content)
+                                viewModel.performFullImageOcr(uri, context)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
+                        ) {
+                            Icon(Icons.Outlined.DocumentScanner, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Extract Links (OCR)")
+                        }
+                    }
+                }
+                if (item.content.isNotBlank()) {
+                    if (item.type == SavedItemType.IMAGE) {
+                        AsyncImage(
+                            model = item.content,
+                            contentDescription = "Selected Image",
+                            modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Text("Video selected: ${item.content}", style = MaterialTheme.typography.bodySmall)
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
+            } else if (item.type == SavedItemType.AUDIO) {
+                // Audio Recorder
+                com.example.ui.components.AudioRecorderComponent(
+                    onRecordComplete = { file ->
+                        viewModel.updateActiveCaptureItem { it.copy(thumbnailPath = file.absolutePath) }
+                        viewModel.transcribeAudioMemo(file)
+                    }
+                )
+                Spacer(Modifier.height(16.dp))
+                if (item.content.isNotBlank()) {
+                    Text("Transcription:", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.height(4.dp))
+                    RichTextEditor(
+                        value = item.content,
+                        onValueChange = { newContent -> viewModel.updateActiveCaptureItem { it.copy(content = newContent) } },
+                        placeholder = { Text("Audio transcription will appear here...") },
+                        minLines = 5,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                    )
+                }
+            } else if (item.type == SavedItemType.TEXT) {
                 RichTextEditor(
                     value = item.content,
                     onValueChange = { newContent -> viewModel.updateActiveCaptureItem { captured -> captured.copy(content = newContent) } },
@@ -342,10 +457,7 @@ fun CaptureScreen(
                             when (item.type) {
                                 SavedItemType.LINK -> "https://example.com/shared-resource"
                                 SavedItemType.CODE -> "Write or paste source code..."
-                                SavedItemType.IMAGE -> "Screenshot path"
-                                SavedItemType.VIDEO -> "Video file path"
-                                SavedItemType.TEXT -> "Capture your thoughts or paste clipboard contents..."
-                                SavedItemType.AUDIO -> "Voice transcription..."
+                                else -> ""
                             }
                         )
                     },
@@ -652,7 +764,7 @@ fun ImageMarkingCanvas(
     }
 }
 
-// FlowRow implementation (Since FlowRow wasn't included in early Compose, standard wrapping Row is perfect)
+// FlowRow implementation (Since FlowRow wasn't included in early Compose, standard wrapping Row with horizontal scroll is perfect)
 @Composable
 fun FlowRow(
     modifier: Modifier = Modifier,
@@ -660,10 +772,12 @@ fun FlowRow(
     verticalArrangement: Arrangement.Vertical = Arrangement.Top,
     content: @Composable () -> Unit
 ) {
-    // Basic Layout fallback for wrapping items in rows
+    // Basic Layout fallback that supports beautiful horizontal scrolling for folder chips
     Box(modifier = modifier) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = horizontalArrangement,
             verticalAlignment = Alignment.CenterVertically
         ) {

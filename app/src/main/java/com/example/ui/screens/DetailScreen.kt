@@ -282,6 +282,13 @@ fun DetailScreen(
                 )
             }
 
+            if (item.type == SavedItemType.AUDIO && !item.thumbnailPath.isNullOrBlank()) {
+                com.example.ui.components.AudioPlayerComponent(
+                    audioUri = item.thumbnailPath
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             // DESCRIPTION / LINK META
             val descriptionToShow = if (item.type == SavedItemType.LINK) {
                 item.linkDescription
@@ -290,7 +297,7 @@ fun DetailScreen(
             } else null
 
             if (!descriptionToShow.isNullOrBlank()) {
-                if (item.type == SavedItemType.TEXT) {
+                if (item.type == SavedItemType.TEXT || item.type == SavedItemType.AUDIO) {
                     MarkdownText(
                         markdown = descriptionToShow,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)

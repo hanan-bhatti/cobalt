@@ -24,6 +24,7 @@ import android.text.TextUtils
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.EditText
@@ -53,6 +54,8 @@ class BrainOcrOverlayService : Service() {
     private var handleView: View? = null
     private var panelView: View? = null
     private var isExpanded = false
+    private val EXTRA_TOUCH_WIDTH_DP = 16
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     private lateinit var repository: SecondBrainRepository
     private lateinit var settingsRepo: SettingsRepository
@@ -115,6 +118,24 @@ class BrainOcrOverlayService : Service() {
         return START_STICKY
     }
 
+    private fun updateSystemGestureExclusions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val root = containerView ?: return
+            if (isExpanded || handleView?.visibility != View.VISIBLE) {
+                root.systemGestureExclusionRects = emptyList()
+                return
+            }
+            val w = root.width
+            val h = root.height
+            if (w > 0 && h > 0) {
+                // OPPO / ColorOS edge workaround: Declare the exclusion rect starting from x=0
+                // at the screen edge covering the entire declared width and height of the container.
+                val rect = android.graphics.Rect(0, 0, w, h)
+                root.systemGestureExclusionRects = listOf(rect)
+            }
+        }
+    }
+
     private fun createOverlayViews() {
         val side = getEdgePanelSide()
         val yPercent = getEdgePanelYPercent()
@@ -122,8 +143,12 @@ class BrainOcrOverlayService : Service() {
         val height = getEdgePanelHeight()
         val opacity = getEdgePanelOpacity()
 
+        // ColorOS edge quirk workaround: Make window 16dp wider than the handle thickness.
+        // This ensures the window extends slightly inset from the edge so ColorOS's native gesture
+        // zone does not eat our swipe. The handle is aligned to the extreme edge, but swipe-detection
+        // covers the whole window, capturing touches started slightly inset (e.g. ~8dp to 28dp).
         val params = WindowManager.LayoutParams(
-            dpToPx(thickness),
+            dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP),
             dpToPx(height),
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -143,18 +168,6 @@ class BrainOcrOverlayService : Service() {
             clipChildren = false
             clipToPadding = false
         }
-        
-        // Touch outside observer
-        rootContainer.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_OUTSIDE) {
-                if (isExpanded) {
-                    collapsePanel()
-                }
-                true
-            } else {
-                false
-            }
-        }
 
         // 1. Collapsed state: Draggable thin vertical handle (like Samsung edge)
         val handle = FrameLayout(this).apply {
@@ -172,62 +185,160 @@ class BrainOcrOverlayService : Service() {
             elevation = dpToPx(4).toFloat()
         }
 
-        // Drag & click listener for handle
+        // Gesture state variables
         var initialY = 0
+        var initialTouchX = 0f
         var initialTouchY = 0f
-        var isDragging = false
+        var isDraggingY = false
+        var isSwipingX = false
+        var isLongPressDetected = false
+        var touchActive = false
+        var downTime = 0L
 
-        handle.setOnTouchListener { _, event ->
-            val layoutParams = rootContainer.layoutParams as WindowManager.LayoutParams
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    initialY = layoutParams.y
-                    initialTouchY = event.rawY
-                    isDragging = false
-                    true
+        val longPressRunnable = Runnable {
+            if (touchActive && !isSwipingX) {
+                isLongPressDetected = true
+                try {
+                    rootContainer.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                } catch (e: Exception) {
+                    // Ignore haptic feedback errors
                 }
-                MotionEvent.ACTION_MOVE -> {
-                    val deltaY = (event.rawY - initialTouchY).toInt()
-                    if (Math.abs(deltaY) > 8) {
-                        isDragging = true
-                        layoutParams.y = initialY + deltaY
-                        
-                        // Clamp vertical position
-                        val usableHeight = resources.displayMetrics.heightPixels - dpToPx(160)
-                        val halfHeight = usableHeight / 2
-                        if (layoutParams.y < -halfHeight) layoutParams.y = -halfHeight
-                        if (layoutParams.y > halfHeight) layoutParams.y = halfHeight
-                        
-                        windowManager.updateViewLayout(rootContainer, layoutParams)
-                    }
-                    true
-                }
-                MotionEvent.ACTION_UP -> {
-                    if (isDragging) {
-                        val usableHeight = resources.displayMetrics.heightPixels - dpToPx(160)
-                        val halfHeight = usableHeight / 2
-                        val finalY = layoutParams.y
-                        val newPercent = (finalY + halfHeight).toFloat() / usableHeight.toFloat()
-                        val clampedPercent = newPercent.coerceIn(0.0f, 1.0f)
-                        settingsRepo.setEdgePanelYPercent(clampedPercent)
-                    } else {
-                        toggleExpand()
-                    }
-                    true
-                }
-                else -> false
             }
         }
 
-        rootContainer.addView(handle, FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
+        rootContainer.setOnTouchListener { _, event ->
+            if (isExpanded) {
+                if (event.action == MotionEvent.ACTION_OUTSIDE) {
+                    collapsePanel()
+                    true
+                } else {
+                    false
+                }
+            } else {
+                val layoutParams = rootContainer.layoutParams as WindowManager.LayoutParams
+                val currentSide = getEdgePanelSide()
+                val touchSlopPx = ViewConfiguration.get(this@BrainOcrOverlayService).scaledTouchSlop
+                val swipeThresholdPx = dpToPx(16) // Deliberate swipe distance threshold
+
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        touchActive = true
+                        downTime = System.currentTimeMillis()
+                        initialY = layoutParams.y
+                        initialTouchX = event.rawX
+                        initialTouchY = event.rawY
+                        isDraggingY = false
+                        isSwipingX = false
+                        isLongPressDetected = false
+                        
+                        mainHandler.postDelayed(longPressRunnable, 500)
+                        true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        if (!touchActive) return@setOnTouchListener false
+                        val deltaX = event.rawX - initialTouchX
+                        val deltaY = event.rawY - initialTouchY
+                        
+                        // 1. If actively dragging to vertically reposition:
+                        if (isDraggingY) {
+                            layoutParams.y = (initialY + deltaY).toInt()
+                            
+                            val usableHeight = resources.displayMetrics.heightPixels - dpToPx(160)
+                            val halfHeight = usableHeight / 2
+                            if (layoutParams.y < -halfHeight) layoutParams.y = -halfHeight
+                            if (layoutParams.y > halfHeight) layoutParams.y = halfHeight
+                            
+                            windowManager.updateViewLayout(rootContainer, layoutParams)
+                            return@setOnTouchListener true
+                        }
+                        
+                        // 2. If actively swiping horizontally:
+                        if (isSwipingX) {
+                            return@setOnTouchListener true
+                        }
+                        
+                        // 3. Disambiguate gestures
+                        val absDeltaX = Math.abs(deltaX)
+                        val absDeltaY = Math.abs(deltaY)
+                        
+                        if (absDeltaX > touchSlopPx || absDeltaY > touchSlopPx) {
+                            if (absDeltaX > absDeltaY * 1.5f) {
+                                // Horizontal movement - determine if swiping correct direction (inward)
+                                val isSwipeDirectionCorrect = if (currentSide == "Right") deltaX < 0 else deltaX > 0
+                                if (isSwipeDirectionCorrect) {
+                                    mainHandler.removeCallbacks(longPressRunnable)
+                                    isSwipingX = true
+                                }
+                            } else if (absDeltaY > touchSlopPx) {
+                                // Vertical movement - only drag if long press has fired first!
+                                if (isLongPressDetected) {
+                                    isDraggingY = true
+                                } else {
+                                    mainHandler.removeCallbacks(longPressRunnable)
+                                }
+                            }
+                        }
+                        true
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        touchActive = false
+                        mainHandler.removeCallbacks(longPressRunnable)
+                        
+                        if (event.action == MotionEvent.ACTION_UP) {
+                            val deltaX = event.rawX - initialTouchX
+                            val deltaY = event.rawY - initialTouchY
+                            val absDeltaX = Math.abs(deltaX)
+                            val absDeltaY = Math.abs(deltaY)
+                            
+                            if (isDraggingY) {
+                                val usableHeight = resources.displayMetrics.heightPixels - dpToPx(160)
+                                val halfHeight = usableHeight / 2
+                                val finalY = layoutParams.y
+                                val newPercent = (finalY + halfHeight).toFloat() / usableHeight.toFloat()
+                                val clampedPercent = newPercent.coerceIn(0.0f, 1.0f)
+                                settingsRepo.setEdgePanelYPercent(clampedPercent)
+                            } else if (isSwipingX || (absDeltaX > swipeThresholdPx && absDeltaX > absDeltaY * 1.5f)) {
+                                val isSwipeDirectionCorrect = if (currentSide == "Right") deltaX < 0 else deltaX > 0
+                                if (isSwipeDirectionCorrect) {
+                                    expandPanel()
+                                }
+                            } else {
+                                val duration = System.currentTimeMillis() - downTime
+                                if (absDeltaX < touchSlopPx && absDeltaY < touchSlopPx && duration < 500) {
+                                    toggleExpand()
+                                }
+                            }
+                        }
+                        
+                        isDraggingY = false
+                        isSwipingX = false
+                        isLongPressDetected = false
+                        true
+                    }
+                    else -> false
+                }
+            }
+        }
+
+        // Align the visible handle perfectly to the edge within the wider touchable window container
+        val handleParams = FrameLayout.LayoutParams(
+            dpToPx(thickness),
             FrameLayout.LayoutParams.MATCH_PARENT
-        ))
+        ).apply {
+            gravity = if (side == "Right") Gravity.END else Gravity.START
+        }
+        rootContainer.addView(handle, handleParams)
 
         containerView = rootContainer
         handleView = handle
         
+        // Dynamic system gesture exclusion tracking
+        rootContainer.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            updateSystemGestureExclusions()
+        }
+        
         windowManager.addView(rootContainer, params)
+        updateSystemGestureExclusions()
     }
 
     private fun expandPanel() {
@@ -515,6 +626,7 @@ class BrainOcrOverlayService : Service() {
                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         params.y = calculateYPosition(yPercent)
         windowManager.updateViewLayout(root, params)
+        updateSystemGestureExclusions()
     }
 
     private fun collapsePanel() {
@@ -532,13 +644,21 @@ class BrainOcrOverlayService : Service() {
         }
 
         handleView?.visibility = View.VISIBLE
+        // Restore handle parameters inside layout
+        handleView?.layoutParams = FrameLayout.LayoutParams(
+            dpToPx(thickness),
+            FrameLayout.LayoutParams.MATCH_PARENT
+        ).apply {
+            gravity = if (side == "Right") Gravity.END else Gravity.START
+        }
 
         val params = root.layoutParams as WindowManager.LayoutParams
-        params.width = dpToPx(thickness)
+        params.width = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
         params.height = dpToPx(height)
         params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         params.y = calculateYPosition(yPercent)
         windowManager.updateViewLayout(root, params)
+        updateSystemGestureExclusions()
     }
 
     private fun toggleExpand() {
@@ -570,6 +690,13 @@ class BrainOcrOverlayService : Service() {
             }
             h.background = bgShape
             h.alpha = opacity
+            
+            h.layoutParams = FrameLayout.LayoutParams(
+                dpToPx(thickness),
+                FrameLayout.LayoutParams.MATCH_PARENT
+            ).apply {
+                gravity = if (side == "Right") Gravity.END else Gravity.START
+            }
         }
 
         val params = root.layoutParams as WindowManager.LayoutParams
@@ -577,11 +704,12 @@ class BrainOcrOverlayService : Service() {
         params.y = calculateYPosition(yPercent)
         
         if (!isExpanded) {
-            params.width = dpToPx(thickness)
+            params.width = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
             params.height = dpToPx(height)
         }
         
         windowManager.updateViewLayout(root, params)
+        updateSystemGestureExclusions()
     }
 
     private fun launchOcrCapture() {

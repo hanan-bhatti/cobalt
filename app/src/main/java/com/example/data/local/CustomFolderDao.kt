@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CustomFolderDao {
-    @Query("SELECT * FROM custom_folders ORDER BY name ASC")
+    @Query("SELECT * FROM custom_folders ORDER BY isPinned DESC, name ASC")
     fun getAllFoldersFlow(): Flow<List<CustomFolderEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -14,6 +14,6 @@ interface CustomFolderDao {
     @Delete
     suspend fun deleteFolder(folder: CustomFolderEntity)
 
-    @Query("SELECT * FROM custom_folders ORDER BY name ASC")
+    @Query("SELECT * FROM custom_folders ORDER BY isPinned DESC, name ASC")
     suspend fun getAllFolders(): List<CustomFolderEntity>
 }

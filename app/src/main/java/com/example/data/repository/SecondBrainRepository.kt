@@ -56,6 +56,37 @@ class SecondBrainRepository(private val context: Context) {
         null
     }
 
+    
+    suspend fun extractTextFromAudio(
+        base64Audio: String,
+        apiKey: String,
+        model: String
+    ): String? = withContext(Dispatchers.IO) {
+        if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
+            return@withContext "API Key Missing. Enter your key in the AI Studio Secrets panel or the Profile page."
+        }
+
+        val promptText = "Transcribe this audio memo and format it as clear markdown notes. Give it a nice title as an H1, and format the rest appropriately."
+        val request = com.example.data.remote.GenerateContentRequest(
+            contents = listOf(
+                com.example.data.remote.Content(
+                    parts = listOf(
+                        com.example.data.remote.Part(text = promptText),
+                        com.example.data.remote.Part(inlineData = com.example.data.remote.InlineData(mimeType = "audio/mp4", data = base64Audio))
+                    )
+                )
+            )
+        )
+
+        try {
+            val response = com.example.data.remote.RetrofitClient.geminiService.generateContent("models/$model", apiKey, request)
+            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
+        } catch (e: Exception) {
+            Log.e("SecondBrainRepo", "Gemini Audio call failed: ${e.message}")
+            "Error: ${e.localizedMessage ?: "Transcription failed"}"
+        }
+    }
+
     // ----------------------------------------------------
     // LOCAL ROOM DATABASE FLOWS
     // ----------------------------------------------------
@@ -66,9 +97,22 @@ class SecondBrainRepository(private val context: Context) {
             .flowOn(Dispatchers.IO)
     }
 
+    suspend fun getAllItems(): List<SavedItem> = withContext(Dispatchers.IO) {
+        try {
+            savedItemDao.getAllItems().map { it.toDomain() }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     fun getAllFoldersFlow(): Flow<List<String>> {
         return customFolderDao.getAllFoldersFlow()
             .map { list -> list.map { it.name } }
+            .flowOn(Dispatchers.IO)
+    }
+
+    fun getAllFolderEntitiesFlow(): Flow<List<CustomFolderEntity>> {
+        return customFolderDao.getAllFoldersFlow()
             .flowOn(Dispatchers.IO)
     }
 
@@ -335,6 +379,97 @@ class SecondBrainRepository(private val context: Context) {
                     .delete()
             } catch (e: Exception) {
                 Log.e("SecondBrainRepo", "Failed to delete folder from Firestore: ${e.message}")
+            }
+        }
+    }
+
+    suspend fun updateCustomFolder(folder: CustomFolderEntity) = withContext(Dispatchers.IO) {
+        customFolderDao.insertFolder(folder)
+
+        val currentUser = firebaseAuth?.currentUser
+        if (currentUser != null && firestore != null) {
+            try {
+                firestore.collection("users").document(currentUser.uid)
+                    .collection("folders").document(folder.name)
+                    .set(mapOf(
+                        "name" to folder.name,
+                        "colorHex" to folder.colorHex,
+                        "iconName" to folder.iconName,
+                        "isPinned" to folder.isPinned
+                    ))
+            } catch (e: Exception) {
+                Log.e("SecondBrainRepo", "Failed to sync updated folder to Firestore: ${e.message}")
+            }
+        }
+    }
+
+    suspend fun renameCustomFolder(oldName: String, newName: String) = withContext(Dispatchers.IO) {
+        val folders = customFolderDao.getAllFolders()
+        val oldFolder = folders.find { it.name == oldName } ?: CustomFolderEntity(oldName)
+
+        // 1. Save new folder with same settings
+        val newFolder = CustomFolderEntity(
+            name = newName,
+            colorHex = oldFolder.colorHex,
+            iconName = oldFolder.iconName,
+            isPinned = oldFolder.isPinned,
+            isSynced = false
+        )
+        customFolderDao.insertFolder(newFolder)
+
+        // 2. Fetch all saved items and update their foldersJson if they contain oldName
+        val allItemsList = savedItemDao.getAllItems()
+        allItemsList.forEach { entity ->
+            val domain = entity.toDomain()
+            if (domain.folders.contains(oldName)) {
+                val updatedFolders = domain.folders.map { if (it == oldName) newName else it }
+                savedItemDao.insertItem(domain.copy(folders = updatedFolders).toEntity())
+            }
+        }
+
+        // 3. Delete old folder
+        customFolderDao.deleteFolder(oldFolder)
+
+        // 4. Update in Firestore if signed in
+        val currentUser = firebaseAuth?.currentUser
+        if (currentUser != null && firestore != null) {
+            try {
+                val userDocRef = firestore.collection("users").document(currentUser.uid)
+                
+                // Add new folder in firestore
+                userDocRef.collection("folders").document(newName).set(mapOf(
+                    "name" to newName,
+                    "colorHex" to oldFolder.colorHex,
+                    "iconName" to oldFolder.iconName,
+                    "isPinned" to oldFolder.isPinned
+                )).await()
+                
+                // Delete old folder in firestore
+                userDocRef.collection("folders").document(oldName).delete().await()
+
+                // Update items online
+                allItemsList.filter { it.foldersJson.contains(oldName) }.forEach { entity ->
+                    val domain = entity.toDomain()
+                    val updatedFolders = domain.folders.map { if (it == oldName) newName else it }
+                    val finalItem = domain.copy(folders = updatedFolders)
+                    val itemMap = mapOf(
+                        "id" to finalItem.id,
+                        "type" to finalItem.type.name,
+                        "title" to finalItem.title,
+                        "content" to finalItem.content,
+                        "timestamp" to finalItem.timestamp,
+                        "folders" to finalItem.folders,
+                        "extractedText" to finalItem.extractedText,
+                        "thumbnailPath" to finalItem.thumbnailPath,
+                        "isSynced" to true,
+                        "linkTitle" to finalItem.linkTitle,
+                        "linkDescription" to finalItem.linkDescription,
+                        "linkImage" to finalItem.linkImage
+                    )
+                    userDocRef.collection("items").document(finalItem.id).set(itemMap).await()
+                }
+            } catch (e: Exception) {
+                Log.e("SecondBrainRepo", "Failed to sync folder rename to Firestore: ${e.message}")
             }
         }
     }

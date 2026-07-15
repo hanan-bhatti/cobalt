@@ -74,6 +74,9 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     val customFolders: StateFlow<List<String>> = repository.getAllFoldersFlow()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+    val customFolderEntities: StateFlow<List<com.example.data.local.CustomFolderEntity>> = repository.getAllFolderEntitiesFlow()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
     private val _selectedFolder = MutableStateFlow("All")
     val selectedFolder: StateFlow<String> = _selectedFolder.asStateFlow()
 
@@ -327,6 +330,26 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _isInitialLoading = MutableStateFlow(true)
     val isInitialLoading: StateFlow<Boolean> = _isInitialLoading.asStateFlow()
+
+    val maxStorageBytes = 512L * 1024 * 1024 // 512 MB default
+
+    val usedStorageBytes: StateFlow<Long> = allItems.map { items: List<com.example.data.model.SavedItem> ->
+        var total = 0L
+        items.forEach { item ->
+            // Try to get file size if it's a local file
+            val path = item.thumbnailPath ?: item.content
+            if (path.startsWith("/")) {
+                val file = java.io.File(path)
+                if (file.exists()) {
+                    total += file.length()
+                }
+            } else {
+                total += path.toByteArray().size
+            }
+        }
+        total
+    }.stateIn(viewModelScope, SharingStarted.Lazily, 0L)
+
 
     private val _authError = MutableStateFlow<String?>(null)
     val authError: StateFlow<String?> = _authError.asStateFlow()
@@ -755,6 +778,121 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         _ocrError.value = null
     }
 
+    
+    fun transcribeAudioMemo(file: java.io.File) {
+        val currentItem = _activeCaptureItem.value ?: return
+        _isOcrLoading.value = true
+        _ocrError.value = null
+
+        viewModelScope.launch {
+            try {
+                val bytes = file.readBytes()
+                val base64Data = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                val apiKey = settingsRepository.geminiApiKey.value.ifEmpty { com.example.BuildConfig.GEMINI_API_KEY }
+                
+                if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
+                    _ocrError.value = "Please save a valid Gemini API Key first."
+                    _isOcrLoading.value = false
+                    return@launch
+                }
+
+                val result = repository.extractTextFromAudio(
+                    base64Audio = base64Data,
+                    apiKey = apiKey,
+                    model = settingsRepository.selectedModel.value
+                )
+
+                if (result != null && !result.startsWith("Error")) {
+                    _activeCaptureItem.value = _activeCaptureItem.value?.copy(content = result)
+                } else {
+                    _ocrError.value = result ?: "Failed to transcribe audio."
+                }
+            } catch (e: Exception) {
+                _ocrError.value = e.localizedMessage ?: "Unknown error"
+            } finally {
+                _isOcrLoading.value = false
+            }
+        }
+    }
+
+    
+    fun performFullImageOcr(uri: android.net.Uri, context: android.content.Context) {
+        val currentItem = _activeCaptureItem.value ?: return
+        _isOcrLoading.value = true
+        _ocrError.value = null
+        _activeCaptureItem.value = currentItem.copy(extractedText = null)
+        _extractedLinksToReview.value = emptyList()
+
+        viewModelScope.launch {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+                inputStream?.close()
+                if (bitmap == null) {
+                    _ocrError.value = "Failed to decode image for OCR."
+                    _isOcrLoading.value = false
+                    return@launch
+                }
+                
+                val apiKey = settingsRepository.geminiApiKey.value.ifEmpty { com.example.BuildConfig.GEMINI_API_KEY }
+                if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
+                    _ocrError.value = "Please save a valid Gemini API Key first."
+                    _isOcrLoading.value = false
+                    return@launch
+                }
+
+                val result = repository.extractTextFromRegion(
+                    bitmap = bitmap,
+                    x = 0, y = 0, width = bitmap.width, height = bitmap.height,
+                    apiKey = apiKey,
+                    model = settingsRepository.selectedModel.value,
+                    sensitivity = "High"
+                )
+
+                if (result != null) {
+                    var parsedExtractedText = result
+                    val urlsList = mutableListOf<Pair<String, String>>()
+                    try {
+                        val jsonText = result.trim().removePrefix("```json").removeSuffix("```").trim()
+                        val jsonObject = org.json.JSONObject(jsonText)
+                        parsedExtractedText = jsonObject.optString("extractedText", jsonText)
+                        val urlsArray = jsonObject.optJSONArray("urls")
+                        if (urlsArray != null) {
+                            for (i in 0 until urlsArray.length()) {
+                                val urlObj = urlsArray.getJSONObject(i)
+                                val url = urlObj.optString("url", "")
+                                val desc = urlObj.optString("description", "")
+                                if (url.isNotBlank()) urlsList.add(Pair(url, desc))
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.w("SecondBrainVM", "Failed to parse OCR JSON in full image, falling back to raw text.")
+                    }
+
+                    _activeCaptureItem.value = _activeCaptureItem.value?.copy(
+                        extractedText = parsedExtractedText
+                    )
+                    
+                    val reviews = urlsList.map { (urlStr, desc) ->
+                        ExtractedLinkReview(
+                            originalUrl = urlStr,
+                            url = urlStr,
+                            description = desc,
+                            isSelected = true
+                        )
+                    }
+                    _extractedLinksToReview.value = reviews
+                } else {
+                    _ocrError.value = "Gemini OCR returned an empty result."
+                }
+            } catch (e: Exception) {
+                _ocrError.value = "OCR Failed: ${e.localizedMessage}"
+            } finally {
+                _isOcrLoading.value = false
+            }
+        }
+    }
+
     fun performRegionOcr(x: Int, y: Int, width: Int, height: Int) {
         val bitmap = _capturedBitmap.value ?: return
         val currentItem = _activeCaptureItem.value ?: return
@@ -834,7 +972,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun confirmAndSaveExtractedLinks() {
+    fun confirmAndSaveExtractedLinks(selectedFolders: List<String> = emptyList()) {
         val linksToSave = _extractedLinksToReview.value.filter { it.isSelected && it.url.isNotBlank() }
         _extractedLinksToReview.value = emptyList() // Clear review list
         linksToSave.forEach { reviewItem ->
@@ -847,7 +985,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                         type = com.example.data.model.SavedItemType.LINK,
                         title = meta.title ?: "Extracted URL",
                         content = reviewItem.url,
-                        folders = listOf("AI Extracted"),
+                        folders = if (selectedFolders.isNotEmpty()) selectedFolders else listOf("AI Extracted"),
                         linkTitle = meta.title,
                         linkDescription = reviewItem.description.ifBlank { meta.description },
                         linkImage = meta.imageUrl
@@ -998,6 +1136,20 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     fun deleteFolder(name: String) {
         viewModelScope.launch {
             repository.deleteCustomFolder(name)
+        }
+    }
+
+    fun updateFolder(folder: com.example.data.local.CustomFolderEntity) {
+        viewModelScope.launch {
+            repository.updateCustomFolder(folder)
+        }
+    }
+
+    fun renameFolder(oldName: String, newName: String) {
+        if (newName.isBlank() || oldName == newName) return
+        viewModelScope.launch {
+            repository.renameCustomFolder(oldName, newName.trim())
+            showToast("Folder renamed to '${newName.trim()}' successfully.")
         }
     }
 

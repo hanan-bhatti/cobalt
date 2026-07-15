@@ -20,8 +20,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -51,7 +54,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
     // Activity state
     private var capturedBitmapState = mutableStateOf<Bitmap?>(null)
     private var errorMessageState = mutableStateOf<String?>(null)
-    private var isCapturingState = mutableStateOf(true)
+    private var isCapturingState = mutableStateOf(false)
 
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private val timeoutRunnable = Runnable {
@@ -68,6 +71,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
         if (result.resultCode == Activity.RESULT_OK && result.data != null) {
             com.example.utils.MediaProjectionCache.resultCode = result.resultCode
             com.example.utils.MediaProjectionCache.resultData = result.data
+            isCapturingState.value = true
             startCaptureService(result.resultCode, result.data!!)
         } else {
             Toast.makeText(this, "Screen capture permission denied", Toast.LENGTH_SHORT).show()
@@ -85,22 +89,15 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
         // Safety timeout: 5 seconds
         handler.postDelayed(timeoutRunnable, 5000)
 
-        if (com.example.utils.MediaProjectionCache.resultData != null) {
-            isCapturingState.value = true
-            startCaptureService(
-                com.example.utils.MediaProjectionCache.resultCode,
-                com.example.utils.MediaProjectionCache.resultData!!
-            )
-        } else {
-            // Trigger projection system dialog
-            isCapturingState.value = true
-            val captureIntent = mediaProjectionManager.createScreenCaptureIntent()
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                val config = android.media.projection.MediaProjectionConfig.createConfigForDefaultDisplay()
-                captureIntent.putExtra("android.media.projection.extra.EXTRA_MEDIA_PROJECTION_CONFIG", config)
-            }
-            projectionLauncher.launch(captureIntent)
+        // Always trigger a fresh projection system dialog on launch on Android 14+ to prevent SecurityException (no token reuse)
+        com.example.utils.MediaProjectionCache.clear()
+        isCapturingState.value = false
+        val captureIntent = mediaProjectionManager.createScreenCaptureIntent()
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val config = android.media.projection.MediaProjectionConfig.createConfigForDefaultDisplay()
+            captureIntent.putExtra("android.media.projection.extra.EXTRA_MEDIA_PROJECTION_CONFIG", config)
         }
+        projectionLauncher.launch(captureIntent)
 
         setContent {
             val themeMode by viewModel.settingsRepository.themeMode.collectAsState()
@@ -257,6 +254,30 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                     }
 
                     // Extracted Results bottom review panel
+                    var activeTab by remember { mutableStateOf("Note") }
+                    var noteTitle by remember { mutableStateOf("Extracted Note") }
+                    var isPreviewMode by remember { mutableStateOf(false) }
+                    val customFolders by viewModel.customFolders.collectAsState()
+                    var selectedFolders by remember { mutableStateOf(setOf("AI Extracted")) }
+                    var showNewFolderDialog by remember { mutableStateOf(false) }
+                    var newFolderName by remember { mutableStateOf("") }
+
+                    LaunchedEffect(extractedLinks) {
+                        if (extractedLinks.isNotEmpty()) {
+                            activeTab = "Links"
+                        } else {
+                            activeTab = "Note"
+                        }
+                    }
+
+                    LaunchedEffect(activeItem?.extractedText) {
+                        val text = activeItem?.extractedText
+                        if (!text.isNullOrBlank()) {
+                            val firstLine = text.lineSequence().firstOrNull { it.isNotBlank() } ?: "Extracted Note"
+                            noteTitle = if (firstLine.length > 30) firstLine.take(27) + "..." else firstLine
+                        }
+                    }
+
                     AnimatedVisibility(
                         visible = !isOcrLoading && (activeItem?.extractedText != null || extractedLinks.isNotEmpty() || ocrError != null),
                         enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
@@ -286,13 +307,20 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text(
-                                        text = if (extractedLinks.isNotEmpty()) "Extracted Links" else "Extracted Text",
+                                        text = "OCR Intelligence Hub",
                                         fontWeight = FontWeight.Black,
                                         style = MaterialTheme.typography.titleMedium,
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                     IconButton(
-                                        onClick = { viewModel.cancelCapture() },
+                                        onClick = { 
+                                            // Reset the capture state so they can draw a box again on the current capturedBitmap!
+                                            if (capturedBitmap != null) {
+                                                viewModel.startFloatingOcrCapture(capturedBitmap!!)
+                                            } else {
+                                                viewModel.cancelCapture()
+                                            }
+                                        },
                                         modifier = Modifier.size(28.dp)
                                     ) {
                                         Icon(Icons.Default.Close, contentDescription = "Clear", modifier = Modifier.size(18.dp))
@@ -300,7 +328,58 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                 }
 
                                 if (ocrError == null) {
-                                    if (extractedLinks.isNotEmpty()) {
+                                    // Gorgeous Pill-shaped Tab Selector (Switch between Links and Note)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f), RoundedCornerShape(50))
+                                            .padding(4.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        val tabs = listOf("Links", "Note")
+                                        tabs.forEach { tab ->
+                                            val isSelected = activeTab == tab
+                                            val hasContent = if (tab == "Links") extractedLinks.isNotEmpty() else activeItem?.extractedText != null
+                                            
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .clip(RoundedCornerShape(50))
+                                                    .background(
+                                                        if (isSelected) MaterialTheme.colorScheme.primary 
+                                                        else Color.Transparent
+                                                    )
+                                                    .clickable(enabled = hasContent) { activeTab = tab }
+                                                    .padding(vertical = 10.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = if (tab == "Links") Icons.Outlined.Link else Icons.Outlined.Description,
+                                                        contentDescription = null,
+                                                        tint = if (isSelected) MaterialTheme.colorScheme.onPrimary 
+                                                               else if (hasContent) MaterialTheme.colorScheme.onSurface 
+                                                               else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                    Text(
+                                                        text = if (tab == "Links") "$tab (${extractedLinks.size})" else tab,
+                                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary 
+                                                               else if (hasContent) MaterialTheme.colorScheme.onSurface 
+                                                               else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Content rendering based on selected Tab
+                                    if (activeTab == "Links" && extractedLinks.isNotEmpty()) {
                                         // Editable link listing
                                         Column(
                                             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -311,13 +390,14 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                     colors = CardDefaults.cardColors(
                                                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                                                     ),
+                                                    shape = RoundedCornerShape(16.dp),
                                                     border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                                                     modifier = Modifier.fillMaxWidth()
                                                 ) {
                                                     Row(
-                                                        modifier = Modifier.padding(10.dp),
+                                                        modifier = Modifier.padding(12.dp),
                                                         verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                                                     ) {
                                                         Checkbox(
                                                             checked = reviewItem.isSelected,
@@ -348,69 +428,253 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                     }
                                                 }
                                             }
-
-                                            Spacer(modifier = Modifier.height(6.dp))
-                                            Button(
-                                                onClick = {
-                                                    viewModel.confirmAndSaveExtractedLinks()
-                                                    coroutineScope.launch {
-                                                        snackbarHostState.showSnackbar("Saved to Second Brain!")
-                                                        delay(1200)
-                                                        finish()
-                                                    }
-                                                },
-                                                shape = RoundedCornerShape(20.dp),
-                                                colors = ButtonDefaults.buttonColors(
-                                                    containerColor = Color(0xFF2E7D32), // Direct Success Green M3
-                                                    contentColor = Color.White
-                                                ),
-                                                modifier = Modifier.fillMaxWidth().height(48.dp)
-                                            ) {
-                                                Icon(Icons.Outlined.Link, contentDescription = null)
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                Text("Quick Save Links to Brain", fontWeight = FontWeight.Bold)
-                                            }
                                         }
-                                    } else if (activeItem?.extractedText != null) {
-                                        // Raw note view
+                                    } else if (activeTab == "Note" && activeItem?.extractedText != null) {
+                                        // Beautifully styled note view with optional raw markdown editing and rich text formatting toggle
                                         Column(
                                             verticalArrangement = Arrangement.spacedBy(12.dp),
                                             modifier = Modifier.fillMaxWidth()
                                         ) {
+                                            // Title field
                                             OutlinedTextField(
-                                                value = activeItem?.extractedText ?: "",
-                                                onValueChange = { newValue ->
-                                                    viewModel.updateActiveCaptureItem { it.copy(extractedText = newValue) }
-                                                },
-                                                minLines = 3,
-                                                maxLines = 8,
-                                                shape = RoundedCornerShape(16.dp),
+                                                value = noteTitle,
+                                                onValueChange = { noteTitle = it },
+                                                label = { Text("Note Title") },
+                                                singleLine = true,
+                                                shape = RoundedCornerShape(12.dp),
                                                 modifier = Modifier.fillMaxWidth()
                                             )
 
-                                            Button(
-                                                onClick = {
-                                                    viewModel.updateActiveCaptureItem { item ->
-                                                        item.copy(
-                                                            title = "Floating OCR Note",
-                                                            content = item.extractedText ?: "",
-                                                            type = SavedItemType.TEXT
+                                            // Edit vs. View toggle
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.End,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = if (isPreviewMode) "✨ Styled Preview" else "📝 Edit Markdown",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .clickable { isPreviewMode = !isPreviewMode }
+                                                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
+                                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                                )
+                                            }
+
+                                            if (isPreviewMode) {
+                                                // Styled formatted preview card with rounded edges, beautiful spacing and colors
+                                                Card(
+                                                    colors = CardDefaults.cardColors(
+                                                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
+                                                    ),
+                                                    shape = RoundedCornerShape(16.dp),
+                                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(vertical = 4.dp)
+                                                ) {
+                                                    Column(modifier = Modifier.padding(16.dp)) {
+                                                        Text(
+                                                            text = parseMarkdownToAnnotatedString(
+                                                                activeItem?.extractedText ?: "",
+                                                                MaterialTheme.colorScheme.primary
+                                                            ),
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            color = MaterialTheme.colorScheme.onSurface
                                                         )
                                                     }
-                                                    viewModel.saveActiveItem()
-                                                    coroutineScope.launch {
-                                                        snackbarHostState.showSnackbar("Saved to Second Brain!")
-                                                        delay(1200)
-                                                        finish()
-                                                    }
-                                                },
-                                                shape = RoundedCornerShape(20.dp),
-                                                modifier = Modifier.fillMaxWidth().height(48.dp)
-                                            ) {
-                                                Icon(Icons.Outlined.Description, contentDescription = null)
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                Text("Save as Text Note", fontWeight = FontWeight.Bold)
+                                                }
+                                            } else {
+                                                // Raw markdown editing field
+                                                OutlinedTextField(
+                                                    value = activeItem?.extractedText ?: "",
+                                                    onValueChange = { newValue ->
+                                                        viewModel.updateActiveCaptureItem { it.copy(extractedText = newValue) }
+                                                    },
+                                                    minLines = 3,
+                                                    maxLines = 8,
+                                                    shape = RoundedCornerShape(16.dp),
+                                                    modifier = Modifier.fillMaxWidth()
+                                                )
                                             }
+                                        }
+                                    }
+
+                                    // REDESIGNED FOLDER ASSIGNMENT ZONE (Immediately above Save action buttons)
+                                    Column(
+                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 8.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                                Text(
+                                                    text = "Select Folders / Tags",
+                                                    fontWeight = FontWeight.Bold,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            TextButton(
+                                                onClick = { showNewFolderDialog = true },
+                                                modifier = Modifier.height(32.dp),
+                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                                            ) {
+                                                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("New Folder", style = MaterialTheme.typography.bodySmall)
+                                            }
+                                        }
+
+                                        if (showNewFolderDialog) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                OutlinedTextField(
+                                                    value = newFolderName,
+                                                    onValueChange = { newFolderName = it },
+                                                    placeholder = { Text("Folder name...", fontSize = 12.sp) },
+                                                    singleLine = true,
+                                                    textStyle = MaterialTheme.typography.bodySmall,
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    modifier = Modifier.weight(1f).height(46.dp)
+                                                )
+                                                Button(
+                                                    onClick = {
+                                                        if (newFolderName.isNotBlank()) {
+                                                            viewModel.createFolder(newFolderName.trim())
+                                                            selectedFolders = selectedFolders + newFolderName.trim()
+                                                            newFolderName = ""
+                                                            showNewFolderDialog = false
+                                                        }
+                                                    },
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    modifier = Modifier.height(38.dp)
+                                                ) {
+                                                    Text("Add", style = MaterialTheme.typography.bodySmall)
+                                                }
+                                                TextButton(
+                                                    onClick = { showNewFolderDialog = false },
+                                                    modifier = Modifier.height(38.dp)
+                                                ) {
+                                                    Text("Cancel", style = MaterialTheme.typography.bodySmall)
+                                                }
+                                            }
+                                        }
+
+                                        // Horizontal scroll list of visual folder choice pills
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .horizontalScroll(rememberScrollState()),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            val allFolders = listOf("AI Extracted") + customFolders.filter { it != "All" && it != "Archive" }
+                                            allFolders.distinct().forEach { folder ->
+                                                val isFolderSelected = selectedFolders.contains(folder)
+                                                Surface(
+                                                    onClick = {
+                                                        selectedFolders = if (isFolderSelected) {
+                                                            selectedFolders - folder
+                                                        } else {
+                                                            selectedFolders + folder
+                                                        }
+                                                    },
+                                                    shape = RoundedCornerShape(50),
+                                                    color = if (isFolderSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                                    border = BorderStroke(
+                                                        width = 1.dp,
+                                                        color = if (isFolderSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                                                    ),
+                                                    modifier = Modifier.padding(vertical = 4.dp)
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = if (isFolderSelected) Icons.Default.Check else Icons.Outlined.Folder,
+                                                            contentDescription = null,
+                                                            tint = if (isFolderSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            modifier = Modifier.size(14.dp)
+                                                        )
+                                                        Text(
+                                                            text = folder,
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            fontWeight = if (isFolderSelected) FontWeight.Bold else FontWeight.Normal,
+                                                            color = if (isFolderSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    // Action buttons depending on tab selection
+                                    if (activeTab == "Links") {
+                                        Button(
+                                            onClick = {
+                                                viewModel.confirmAndSaveExtractedLinks(selectedFolders.toList())
+                                                coroutineScope.launch {
+                                                    snackbarHostState.showSnackbar("Saved links to Second Brain!")
+                                                    delay(1200)
+                                                    finish()
+                                                }
+                                            },
+                                            shape = RoundedCornerShape(20.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.primary,
+                                                contentColor = MaterialTheme.colorScheme.onPrimary
+                                            ),
+                                            modifier = Modifier.fillMaxWidth().height(48.dp)
+                                        ) {
+                                            Icon(Icons.Outlined.Link, contentDescription = null)
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text("Save Selected Links to Brain", fontWeight = FontWeight.Bold)
+                                        }
+                                    } else {
+                                        Button(
+                                            onClick = {
+                                                viewModel.updateActiveCaptureItem { item ->
+                                                    item.copy(
+                                                        title = noteTitle.ifBlank { "Extracted Note" },
+                                                        content = item.extractedText ?: "",
+                                                        type = SavedItemType.TEXT,
+                                                        folders = selectedFolders.toList()
+                                                    )
+                                                }
+                                                viewModel.saveActiveItem()
+                                                coroutineScope.launch {
+                                                    snackbarHostState.showSnackbar("Saved formatted note to Second Brain!")
+                                                    delay(1200)
+                                                    finish()
+                                                }
+                                            },
+                                            shape = RoundedCornerShape(20.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.primary,
+                                                contentColor = MaterialTheme.colorScheme.onPrimary
+                                            ),
+                                            modifier = Modifier.fillMaxWidth().height(48.dp)
+                                        ) {
+                                            Icon(Icons.Outlined.Description, contentDescription = null)
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text("Save Formatted Note to Brain", fontWeight = FontWeight.Bold)
                                         }
                                     }
                                 }
@@ -426,6 +690,57 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                     .align(Alignment.BottomCenter)
                     .padding(bottom = 96.dp)
             )
+        }
+    }
+}
+
+fun parseMarkdownToAnnotatedString(text: String, primaryColor: Color): androidx.compose.ui.text.AnnotatedString {
+    val lines = text.split("\n")
+    return androidx.compose.ui.text.buildAnnotatedString {
+        lines.forEachIndexed { i, line ->
+            var processedLine = line
+            if (line.trimStart().startsWith("- ") || line.trimStart().startsWith("* ")) {
+                val firstCharIndex = line.indexOf(line.trimStart().first())
+                val indent = if (firstCharIndex >= 0) line.substring(0, firstCharIndex) else ""
+                processedLine = indent + "•  " + line.trimStart().substring(2)
+            }
+            
+            var index = 0
+            while (index < processedLine.length) {
+                val boldStart = processedLine.indexOf("**", index)
+                if (boldStart != -1) {
+                    append(processedLine.substring(index, boldStart))
+                    val boldEnd = processedLine.indexOf("**", boldStart + 2)
+                    if (boldEnd != -1) {
+                        pushStyle(androidx.compose.ui.text.SpanStyle(fontWeight = FontWeight.Bold))
+                        append(processedLine.substring(boldStart + 2, boldEnd))
+                        pop()
+                        index = boldEnd + 2
+                    } else {
+                        append("**")
+                        index = boldStart + 2
+                    }
+                } else {
+                    val remaining = processedLine.substring(index)
+                    val urlMatch = Regex("https?://[\\w\\d\\-_\\?\\.\\/\\=\\+&%#]+").find(remaining)
+                    if (urlMatch != null) {
+                        append(remaining.substring(0, urlMatch.range.first))
+                        pushStyle(androidx.compose.ui.text.SpanStyle(
+                            color = primaryColor,
+                            textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
+                        ))
+                        append(urlMatch.value)
+                        pop()
+                        index += urlMatch.range.last + 1
+                    } else {
+                        append(remaining)
+                        break
+                    }
+                }
+            }
+            if (i < lines.size - 1) {
+                append("\n")
+            }
         }
     }
 }

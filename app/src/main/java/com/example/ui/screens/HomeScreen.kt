@@ -66,6 +66,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
+    onNavigateToSearch: () -> Unit,
     viewModel: SecondBrainViewModel,
     onNavigateToProfile: () -> Unit,
     modifier: Modifier = Modifier,
@@ -98,6 +99,7 @@ fun HomeScreen(
     var captureTitle by remember { mutableStateOf("") }
     var captureContent by remember { mutableStateOf("") }
     var isFabExpanded by remember { mutableStateOf(false) }
+    var isRecentCapturesExpanded by remember { mutableStateOf(true) }
 
     val speechRecognizerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
@@ -224,17 +226,16 @@ fun HomeScreen(
                         Column {
                             Text(
                                 text = "Second Brain",
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Bold,
                                 fontFamily = FontFamily.SansSerif,
                                 color = MaterialTheme.colorScheme.onBackground
                             )
                             Text(
-                                text = "KNOWLEDGE ARCHIVE",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
+                                text = "${items.size} items captured",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Normal,
                                 color = MaterialTheme.colorScheme.secondary,
-                                letterSpacing = 1.sp
                             )
                         }
                     },
@@ -246,36 +247,8 @@ fun HomeScreen(
                             Icon(
                                 imageVector = if (isListView) Icons.Outlined.GridView else Icons.Outlined.ViewList,
                                 contentDescription = if (isListView) "Switch to Grid View" else "Switch to List View",
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = MaterialTheme.colorScheme.onBackground
                             )
-                        }
-                        IconButton(
-                            onClick = { showSearchPageOverlay = true },
-                            modifier = Modifier.testTag("open_search_button")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Search,
-                                contentDescription = "Open Search",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        IconButton(
-                            onClick = onNavigateToProfile,
-                            modifier = Modifier.testTag("auth_profile_button")
-                        ) {
-                            if (userEmail != null) {
-                                Icon(
-                                    imageVector = Icons.Filled.AccountCircle,
-                                    contentDescription = "Profile",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Outlined.AccountCircle,
-                                    contentDescription = "Profile",
-                                    tint = MaterialTheme.colorScheme.secondary
-                                )
-                            }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -283,9 +256,6 @@ fun HomeScreen(
                     )
                 )
             }
-        },
-        bottomBar = {
-            PersistentCaptureForm(viewModel)
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
@@ -297,6 +267,30 @@ fun HomeScreen(
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
+            
+            // Search Bar
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                    .clickable { onNavigateToSearch() }
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.Search,
+                        contentDescription = "Search",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Search your archive...",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 16.sp
+                    )
+                }
+            }
             
             // Horizontal Filter Chips Row
             val filteredCustomFolders = remember(customFolders) { customFolders.filter { it != "Archive" } }
@@ -353,46 +347,55 @@ fun HomeScreen(
                 }
             }
 
-            // Recent Captures
+            // Recent Captures Redesign (Compact, space-saving, and collapsible)
             if (items.isNotEmpty() && selectedFolder == "All" && searchQuery.isEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Recent Captures",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                val recentItems = remember(items) { items.sortedByDescending { it.timestamp }.take(5) }
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { isRecentCapturesExpanded = !isRecentCapturesExpanded }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    items(recentItems, key = { it.id + "_recent" }) { item ->
-                        Box(modifier = Modifier.width(160.dp).height(120.dp)) {
-                            ArchiveItemCard(
-                                item = item,
-                                onClick = { viewModel.showDetailItem(item) },
-                                onDelete = { itemToDelete = item },
-                                onManageFolders = { itemToManageFolders = item },
-                                onArchive = {
-                                    if (item.folders.contains("Archive")) {
-                                        viewModel.unarchiveItem(item)
-                                    } else {
-                                        viewModel.archiveItem(item)
-                                    }
-                                },
-                                isSelected = false,
-                                isSelectionMode = false,
-                                onLongClick = null
-                            )
+                    Text(
+                        text = "Recent Captures",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                    Icon(
+                        imageVector = if (isRecentCapturesExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = if (isRecentCapturesExpanded) "Collapse" else "Expand",
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                AnimatedVisibility(
+                    visible = isRecentCapturesExpanded,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    val recentItems = remember(items) { items.sortedByDescending { it.timestamp }.take(5) }
+                    Column {
+                        LazyRow(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(recentItems, key = { it.id + "_recent" }) { item ->
+                                RecentCaptureMicroCard(
+                                    item = item,
+                                    onClick = { viewModel.showDetailItem(item) }
+                                )
+                            }
                         }
+                        Divider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             }
 
             // Items Grid list
@@ -478,48 +481,65 @@ fun HomeScreen(
                 }
             } else {
                 if (isInitialLoading) {
-                    if (isListView) {
-                        LazyColumn(
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.weight(1f).fillMaxWidth()
-                        ) {
-                            items(6) {
-                                SkeletonItemCard(isListView = true)
+                    AnimatedContent(
+                        targetState = isListView,
+                        transitionSpec = {
+                            fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+                        },
+                        label = "skeleton_view_toggle",
+                        modifier = Modifier.weight(1f).fillMaxWidth()
+                    ) { targetIsList ->
+                        if (targetIsList) {
+                            LazyColumn(
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(6) {
+                                    SkeletonItemCard(isListView = true)
+                                }
                             }
-                        }
-                    } else {
-                        LazyVerticalGrid(
-                            columns = GridCells.Fixed(2),
-                            contentPadding = PaddingValues(16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.weight(1f).fillMaxWidth()
-                        ) {
-                            items(6) {
-                                SkeletonItemCard(isListView = false)
+                        } else {
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(2),
+                                contentPadding = PaddingValues(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(6) {
+                                    SkeletonItemCard(isListView = false)
+                                }
                             }
                         }
                     }
-                } else if (isListView) {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .dragToReorder(
-                                lazyListState = listState,
-                                onMove = { from, to ->
-                                    isDragging = true
-                                    mutableItems = mutableItems.toMutableList().apply {
-                                        add(to, removeAt(from))
-                                    }
-                                },
-                                onDragEnd = {
-                                    isDragging = false
-                                    viewModel.updateOrderIndices(mutableItems)
-                                }
-                            ),
+                } else {
+                    AnimatedContent(
+                        targetState = isListView,
+                        transitionSpec = {
+                            fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+                        },
+                        label = "content_view_toggle",
+                        modifier = Modifier.weight(1f).fillMaxWidth()
+                    ) { targetIsList ->
+                        if (targetIsList) {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .dragToReorder(
+                                        lazyListState = listState,
+                                        onMove = { from, to ->
+                                            isDragging = true
+                                            mutableItems = mutableItems.toMutableList().apply {
+                                                add(to, removeAt(from))
+                                            }
+                                        },
+                                        onDragEnd = {
+                                            isDragging = false
+                                            viewModel.updateOrderIndices(mutableItems)
+                                        }
+                                    ),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
@@ -604,8 +624,7 @@ fun HomeScreen(
                         columns = GridCells.Fixed(2),
                         state = gridState,
                         modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
+                            .fillMaxSize()
                             .dragToReorderGrid(
                                 lazyGridState = gridState,
                                 onMove = { from, to ->
@@ -685,6 +704,8 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+        }
         }
 
         // Beautiful interactive Undo Toast UI overlay
@@ -1305,42 +1326,15 @@ fun HomeScreen(
         )
     }
 
-    AnimatedVisibility(
-        visible = showSearchPageOverlay,
-            enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
-            exit = fadeOut() + slideOutVertically(targetOffsetY = { it }),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            SearchPageOverlay(
-                viewModel = viewModel,
-                onDismiss = { showSearchPageOverlay = false },
-                prefs = prefs,
-                isListView = isListView,
-                onItemClick = { item ->
-                    viewModel.showDetailItem(item)
-                    showSearchPageOverlay = false
-                },
-                onDelete = { item ->
-                    itemToDelete = item
-                },
-                onManageFolders = { item ->
-                    itemToManageFolders = item
-                },
-                onArchive = { item ->
-                    if (item.folders.contains("Archive")) {
-                        viewModel.unarchiveItem(item)
-                    } else {
-                        viewModel.archiveItem(item)
-                    }
-                }
-            )
-        }
+}
 
-        // 1. Full Screen Overlay (dimming the entire screen including top bar and bottom bar)
-        AnimatedVisibility(
-            visible = isFabExpanded,
+        // 1. Full Screen Overlay (dimming the entire screen)
+        Box(modifier = Modifier.fillMaxSize()) {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = isFabExpanded,
             enter = fadeIn(),
-            exit = fadeOut()
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.Center)
         ) {
             Box(
                 modifier = Modifier
@@ -1355,101 +1349,118 @@ fun HomeScreen(
             )
         }
 
-        // 2. Expanded Actions & Floating Action Button (guaranteed on top of the overlay)
+        // 2. Expanded Actions & Floating Action Button
         if (!isSelectionMode) {
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = 90.dp, end = 16.dp), // positioned beautifully above bottom capture bar
-                contentAlignment = Alignment.BottomEnd
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
             ) {
                 Column(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    AnimatedVisibility(
+                    androidx.compose.animation.AnimatedVisibility(
                         visible = isFabExpanded,
-                        enter = fadeIn() + slideInVertically(initialOffsetY = { 50 }),
-                        exit = fadeOut() + slideOutVertically(targetOffsetY = { 50 })
+                        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
                     ) {
                         Column(
                             horizontalAlignment = Alignment.End,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.padding(bottom = 8.dp)
                         ) {
-                            ExtendedFloatingActionButton(
-                                text = { Text("Archive") },
-                                icon = { Icon(Icons.Outlined.Archive, contentDescription = "View Archive") },
-                                onClick = { 
-                                    viewModel.setFolderFilter("Archive")
-                                    isFabExpanded = false
-                                },
-                                modifier = Modifier.bounceClick(),
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            ExtendedFloatingActionButton(
-                                text = { Text("New Folder") },
-                                icon = { Icon(Icons.Outlined.CreateNewFolder, contentDescription = "New Folder") },
-                                onClick = { 
-                                    showAddFolderDialog = true
-                                    isFabExpanded = false
-                                },
-                                modifier = Modifier.bounceClick(),
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            ExtendedFloatingActionButton(
-                                text = { Text("Voice Memo") },
-                                icon = { Icon(Icons.Filled.Mic, contentDescription = "Voice Memo") },
-                                onClick = {
-                                    isFabExpanded = false
-                                    val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                        putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                        putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Speak your voice memo...")
-                                    }
-                                    try {
-                                        speechRecognizerLauncher.launch(intent)
-                                    } catch (e: Exception) {
-                                        android.widget.Toast.makeText(context, "Speech recognizer not available", android.widget.Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                                modifier = Modifier.bounceClick(),
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            ExtendedFloatingActionButton(
-                                text = { Text("New Item") },
-                                icon = { Icon(Icons.Filled.Add, contentDescription = "New Item") },
-                                onClick = {
-                                    captureType = SavedItemType.TEXT
-                                    captureTitle = ""
-                                    captureContent = ""
-                                    showManualCaptureOverlay = true
-                                    isFabExpanded = false
-                                },
-                                modifier = Modifier.bounceClick(),
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
+                            // Quick Note
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Quick Note", color = Color.White, fontWeight = FontWeight.Medium, modifier = Modifier.padding(end = 8.dp))
+                                SmallFloatingActionButton(
+                                    onClick = { 
+                                        isFabExpanded = false
+                                        captureType = SavedItemType.TEXT
+                                        captureTitle = ""
+                                        captureContent = ""
+                                        showManualCaptureOverlay = true 
+                                    },
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    contentColor = MaterialTheme.colorScheme.primary
+                                ) {
+                                    Icon(Icons.Outlined.Edit, contentDescription = "Quick Note")
+                                }
+                            }
+                            
+                            // Voice Memo
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Voice Memo", color = Color.White, fontWeight = FontWeight.Medium, modifier = Modifier.padding(end = 8.dp))
+                                SmallFloatingActionButton(
+                                    onClick = { 
+                                        isFabExpanded = false
+                                        val intent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                        }
+                                        try {
+                                            speechRecognizerLauncher.launch(intent)
+                                        } catch (e: Exception) {
+                                            // Fallback if no speech recognizer
+                                            viewModel.startManualCapture(SavedItemType.AUDIO)
+                                        }
+                                    },
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    contentColor = MaterialTheme.colorScheme.primary
+                                ) {
+                                    Icon(Icons.Outlined.Mic, contentDescription = "Voice Memo")
+                                }
+                            }
+                            
+                            // New Folder
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("New Folder", color = Color.White, fontWeight = FontWeight.Medium, modifier = Modifier.padding(end = 8.dp))
+                                SmallFloatingActionButton(
+                                    onClick = { 
+                                        isFabExpanded = false
+                                        showAddFolderDialog = true 
+                                    },
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    contentColor = MaterialTheme.colorScheme.primary
+                                ) {
+                                    Icon(Icons.Outlined.CreateNewFolder, contentDescription = "New Folder")
+                                }
+                            }
+                            
+                            // New Item
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("New Item", color = Color.White, fontWeight = FontWeight.Medium, modifier = Modifier.padding(end = 8.dp))
+                                SmallFloatingActionButton(
+                                    onClick = { 
+                                        isFabExpanded = false
+                                        viewModel.startManualCapture(SavedItemType.TEXT) 
+                                    },
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    contentColor = MaterialTheme.colorScheme.primary
+                                ) {
+                                    Icon(Icons.Outlined.AddBox, contentDescription = "New Item")
+                                }
+                            }
                         }
                     }
+
                     FloatingActionButton(
                         onClick = { isFabExpanded = !isFabExpanded },
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier.bounceClick().testTag("add_item_fab")
+                        modifier = Modifier.testTag("fab_expand")
                     ) {
+                        val rotation by animateFloatAsState(targetValue = if (isFabExpanded) 45f else 0f)
                         Icon(
-                            imageVector = if (isFabExpanded) Icons.Filled.Close else Icons.Filled.Add,
-                            contentDescription = "Expand actions",
-                            modifier = Modifier.size(28.dp)
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add options",
+                            modifier = Modifier.graphicsLayer(rotationZ = rotation)
                         )
                     }
                 }
             }
         }
-    }
+        }
+
 }
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class)
@@ -1563,46 +1574,25 @@ fun ArchiveItemCard(
                             }
                         }
                         SavedItemType.CODE -> {
-                            // High fidelity syntax terminal mockup
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .background(Color(0xFF0F172A))
-                                    .padding(8.dp)
+                                    .background(Color(0xFF1E1E1E)),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Column(modifier = Modifier.fillMaxSize()) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Box(modifier = Modifier.size(6.dp).background(Color(0xFFEF4444), CircleShape))
-                                        Box(modifier = Modifier.size(6.dp).background(Color(0xFFF59E0B), CircleShape))
-                                        Box(modifier = Modifier.size(6.dp).background(Color(0xFF10B981), CircleShape))
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = "snippet.kt",
-                                            fontSize = 8.sp,
-                                            fontFamily = FontFamily.Monospace,
-                                            color = Color(0xFF94A3B8)
-                                        )
-                                    }
-                                    Text(
-                                        text = item.content,
-                                        fontSize = 10.sp,
-                                        fontFamily = FontFamily.Monospace,
-                                        color = Color(0xFF38BDF8),
-                                        overflow = TextOverflow.Ellipsis,
-                                        maxLines = 5,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
+                                Icon(
+                                    imageVector = Icons.Default.Code,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(36.dp)
+                                )
                             }
                         }
                         SavedItemType.LINK -> {
-                            if (!item.linkImage.isNullOrBlank()) {
+                            val displayImage = item.linkImage ?: item.thumbnailPath
+                            if (!displayImage.isNullOrBlank()) {
                                 AsyncImage(
-                                    model = item.linkImage,
+                                    model = displayImage,
                                     contentDescription = item.linkTitle,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()
@@ -1622,70 +1612,34 @@ fun ArchiveItemCard(
                                         )
                                 )
                             } else {
-                                // Premium abstract geometric background
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .background(
-                                            androidx.compose.ui.graphics.Brush.linearGradient(
-                                                colors = listOf(
-                                                    MaterialTheme.colorScheme.primaryContainer,
-                                                    MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
-                                                )
-                                            )
-                                        ),
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Outlined.Language,
+                                        imageVector = Icons.Default.Link,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                         modifier = Modifier.size(36.dp)
                                     )
                                 }
                             }
                         }
                         SavedItemType.TEXT, SavedItemType.AUDIO -> {
-                            // Premium notepad style with notebook side line
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .background(
-                                        androidx.compose.ui.graphics.Brush.verticalGradient(
-                                            colors = listOf(
-                                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
-                                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.1f)
-                                            )
-                                        )
-                                    )
-                                    .padding(10.dp)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Row(modifier = Modifier.fillMaxSize()) {
-                                    Box(
-                                        modifier = Modifier
-                                            .width(3.dp)
-                                            .fillMaxHeight()
-                                            .background(
-                                                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                                                    colors = listOf(
-                                                        MaterialTheme.colorScheme.primary,
-                                                        MaterialTheme.colorScheme.secondary
-                                                    )
-                                                ),
-                                                shape = RoundedCornerShape(1.5.dp)
-                                            )
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = parseMarkdown(item.content),
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        overflow = TextOverflow.Ellipsis,
-                                        maxLines = 6,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                }
+                                Icon(
+                                    imageVector = if (item.type == SavedItemType.AUDIO) Icons.Default.Mic else Icons.Default.Notes,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(36.dp)
+                                )
                             }
                         }
                     }
@@ -1811,20 +1765,12 @@ fun ArchiveItemCard(
                     )
 
                     // Sub-description for links/text
+                    val cleanTitle = item.title.trim().lowercase()
                     if (item.type == SavedItemType.LINK) {
-                        if (!item.linkTitle.isNullOrBlank()) {
+                        val cDesc = item.linkDescription?.trim()?.lowercase() ?: ""
+                        if (cDesc.isNotBlank() && cDesc != cleanTitle) {
                             Text(
-                                text = item.linkTitle,
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(top = 2.dp)
-                            )
-                        }
-                        if (!item.linkDescription.isNullOrBlank()) {
-                            Text(
-                                text = item.linkDescription,
+                                text = item.linkDescription!!,
                                 fontSize = 10.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 maxLines = 2,
@@ -1834,18 +1780,21 @@ fun ArchiveItemCard(
                             )
                         }
                     } else if (item.type == SavedItemType.TEXT) {
-                        Text(
-                            text = parseMarkdown(item.content),
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(top = 2.dp)
-                        )
+                        val cContent = item.content.trim().lowercase()
+                        if (cContent.isNotBlank() && cContent != cleanTitle) {
+                            Text(
+                                text = parseMarkdown(item.content),
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
                     }
 
                     // Render custom folders (excluding Archive) as tiny pills if present
-                    val customFoldersList = item.folders.filter { it != "Archive" }
+                    val customFoldersList = item.folders
                     if (customFoldersList.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(6.dp))
                         Row(
@@ -1853,18 +1802,23 @@ fun ArchiveItemCard(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             customFoldersList.take(2).forEach { folder ->
+                                val isArchiveBadge = folder == "Archive"
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
-                                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                                    color = if (isArchiveBadge) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
+                                    border = BorderStroke(0.5.dp, if (isArchiveBadge) MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
                                 ) {
-                                    Text(
-                                        text = folder,
-                                        fontSize = 8.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)) {
+                                        if (isArchiveBadge) {
+                                            Icon(imageVector = Icons.Filled.Archive, contentDescription = null, modifier = Modifier.size(10.dp).padding(end = 2.dp), tint = MaterialTheme.colorScheme.secondary)
+                                        }
+                                        Text(
+                                            text = folder,
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isArchiveBadge) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -1975,6 +1929,7 @@ fun SwipeToDismissWrapper(
 ) {
     val isArchived = remember(item.folders) { item.folders.contains("Archive") }
     val dismissState = rememberSwipeToDismissBoxState(
+        positionalThreshold = { it * 0.5f },
         confirmValueChange = { value ->
             if (!enable) {
                 false
@@ -1982,11 +1937,15 @@ fun SwipeToDismissWrapper(
                 when (value) {
                     SwipeToDismissBoxValue.StartToEnd -> {
                         onDismissToArchive()
-                        true
+                        // Return false so it snaps back. If it's removed from the list (e.g. in 'All' feed), 
+                        // the list will animate its removal before the snap finishes. If it stays (e.g. custom folder),
+                        // it gracefully snaps back and shows the new Archived badge.
+                        false 
                     }
                     SwipeToDismissBoxValue.EndToStart -> {
                         onDismissToDelete()
-                        true
+                        // Return false to snap back immediately since we show a confirmation dialog
+                        false 
                     }
                     SwipeToDismissBoxValue.Settled -> false
                 }
@@ -2157,10 +2116,11 @@ fun ArchiveItemRow(
                     SavedItemType.TEXT -> MaterialTheme.colorScheme.secondary
                     SavedItemType.AUDIO -> Color(0xFF8B5CF6)
                 }
+                val displayImage = item.linkImage ?: item.thumbnailPath
                 Box(
                     modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .size(60.dp)
+                        .clip(RoundedCornerShape(12.dp))
                         .background(typeColor.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
@@ -2171,6 +2131,13 @@ fun ArchiveItemRow(
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .fillMaxSize()
+                        )
+                    } else if (item.type == SavedItemType.LINK && !displayImage.isNullOrBlank()) {
+                        AsyncImage(
+                            model = displayImage,
+                            contentDescription = item.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
                         )
                     } else {
                         val icon = when (item.type) {
@@ -2185,7 +2152,7 @@ fun ArchiveItemRow(
                             imageVector = icon,
                             contentDescription = null,
                             tint = typeColor,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(28.dp)
                         )
                     }
                 }
@@ -2287,47 +2254,49 @@ fun ArchiveItemRow(
                     Spacer(modifier = Modifier.height(2.dp))
 
                     // Short content preview
-                    if (item.type == SavedItemType.LINK && !item.linkTitle.isNullOrBlank()) {
-                        Text(
-                            text = item.linkTitle ?: "",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
                     val previewText = when (item.type) {
                         SavedItemType.LINK -> if (!item.linkDescription.isNullOrBlank()) item.linkDescription else item.content
                         else -> item.content
                     }
-                    Text(
-                        text = parseMarkdown(previewText ?: ""),
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    
+                    val cleanTitle = item.title.trim().lowercase()
+                    val cleanPreview = previewText?.trim()?.lowercase() ?: ""
+                    
+                    if (cleanPreview.isNotBlank() && cleanPreview != cleanTitle && cleanPreview != item.linkTitle?.trim()?.lowercase()) {
+                        Text(
+                            text = parseMarkdown(previewText ?: ""),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
 
                     // Folders Display (excluding Archive)
-                    val customFoldersList = item.folders.filter { it != "Archive" }
+                    val customFoldersList = item.folders
                     if (customFoldersList.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             customFoldersList.take(3).forEach { folder ->
+                                val isArchiveBadge = folder == "Archive"
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
-                                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                                    color = if (isArchiveBadge) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
+                                    border = BorderStroke(0.5.dp, if (isArchiveBadge) MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
                                 ) {
-                                    Text(
-                                        text = folder,
-                                        fontSize = 8.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)) {
+                                        if (isArchiveBadge) {
+                                            Icon(imageVector = Icons.Filled.Archive, contentDescription = null, modifier = Modifier.size(10.dp).padding(end = 2.dp), tint = MaterialTheme.colorScheme.secondary)
+                                        }
+                                        Text(
+                                            text = folder,
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isArchiveBadge) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -2885,284 +2854,8 @@ fun PersistentCaptureForm(viewModel: SecondBrainViewModel) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class)
-@Composable
-fun SearchPageOverlay(
-    viewModel: SecondBrainViewModel,
-    onDismiss: () -> Unit,
-    prefs: android.content.SharedPreferences,
-    isListView: Boolean,
-    onItemClick: (SavedItem) -> Unit,
-    onDelete: (SavedItem) -> Unit,
-    onManageFolders: (SavedItem) -> Unit,
-    onArchive: (SavedItem) -> Unit
-) {
-    val searchQuery by viewModel.searchQuery.collectAsState()
-    val items by viewModel.filteredItems.collectAsState()
-    var historyList by remember { mutableStateOf(getSearchHistory(prefs)) }
-    val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
-    val focusManager = LocalFocusManager.current
 
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Header Search Row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = {
-                        viewModel.setSearchQuery("")
-                        onDismiss()
-                    },
-                    modifier = Modifier.testTag("search_back_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = MaterialTheme.colorScheme.onBackground
-                    )
-                }
-                
-                Spacer(modifier = Modifier.width(8.dp))
-                
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { 
-                        viewModel.setSearchQuery(it)
-                    },
-                    placeholder = { 
-                        Text(
-                            text = "Search...", 
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        ) 
-                    },
-                    leadingIcon = { 
-                        Icon(Icons.Filled.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary) 
-                    },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { 
-                                viewModel.setSearchQuery("") 
-                            }) {
-                                Icon(Icons.Filled.Close, contentDescription = "Clear search", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    maxLines = 1,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = {
-                        if (searchQuery.isNotBlank()) {
-                            addQueryToHistory(prefs, searchQuery)
-                            historyList = getSearchHistory(prefs)
-                        }
-                        focusManager.clearFocus()
-                    }),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    modifier = Modifier
-                        .weight(1f)
-                        .focusRequester(focusRequester)
-                        .testTag("search_input_overlay")
-                )
-            }
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
-            if (searchQuery.isEmpty()) {
-                // Show History Section
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp)
-                ) {
-                    if (historyList.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Recent Searches",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            TextButton(onClick = {
-                                clearSearchHistory(prefs)
-                                historyList = emptyList()
-                            }) {
-                                Text("Clear All", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(12.dp))
-                        
-                        LazyColumn(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            items(historyList) { query ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            viewModel.setSearchQuery(query)
-                                            addQueryToHistory(prefs, query)
-                                            historyList = getSearchHistory(prefs)
-                                        }
-                                        .padding(vertical = 12.dp, horizontal = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Schedule,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Text(
-                                        text = query,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    IconButton(
-                                        onClick = {
-                                            removeQueryFromHistory(prefs, query)
-                                            historyList = getSearchHistory(prefs)
-                                        },
-                                        modifier = Modifier.size(24.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Close,
-                                            contentDescription = "Remove from history",
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        // Empty Search State Guide
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    imageVector = Icons.Filled.Search,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
-                                    modifier = Modifier.size(64.dp)
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    text = "Search your Brain",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Type keywords, folder tags, or urls to locate any capture.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                )
-                            }
-                        }
-                    }
-                }
-            } else {
-                // Show Live Search Results
-                if (items.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Search,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                modifier = Modifier.size(64.dp)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "No results found",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "We couldn't find any matches for \"$searchQuery\"",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
-                        }
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        item {
-                            Text(
-                                text = "Search Results (${items.size})",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                        }
-                        items(items, key = { it.id }) { item ->
-                            ArchiveItemRow(
-                                item = item,
-                                onClick = {
-                                    addQueryToHistory(prefs, searchQuery)
-                                    onItemClick(item)
-                                },
-                                onDelete = { onDelete(item) },
-                                onManageFolders = { onManageFolders(item) },
-                                onArchive = { onArchive(item) }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-private fun getSearchHistory(prefs: android.content.SharedPreferences): List<String> {
+fun getSearchHistory(prefs: android.content.SharedPreferences): List<String> {
     val historyStr = prefs.getString("search_history", "") ?: ""
     return if (historyStr.isBlank()) emptyList() else historyStr.split(",").map { it.trim() }.filter { it.isNotEmpty() }
 }
@@ -3171,7 +2864,7 @@ private fun saveSearchHistory(prefs: android.content.SharedPreferences, history:
     prefs.edit().putString("search_history", history.joinToString(",")).apply()
 }
 
-private fun addQueryToHistory(prefs: android.content.SharedPreferences, query: String) {
+fun addQueryToHistory(prefs: android.content.SharedPreferences, query: String) {
     if (query.isBlank()) return
     val trimmed = query.trim()
     val current = getSearchHistory(prefs).toMutableList()
@@ -3187,7 +2880,7 @@ private fun removeQueryFromHistory(prefs: android.content.SharedPreferences, que
     saveSearchHistory(prefs, current)
 }
 
-private fun clearSearchHistory(prefs: android.content.SharedPreferences) {
+fun clearSearchHistory(prefs: android.content.SharedPreferences) {
     prefs.edit().remove("search_history").apply()
 }
 
@@ -3294,6 +2987,95 @@ fun SkeletonItemCard(isListView: Boolean) {
                         .background(brush)
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun RecentCaptureMicroCard(
+    item: SavedItem,
+    onClick: () -> Unit
+) {
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+        modifier = Modifier
+            .width(135.dp)
+            .height(50.dp)
+            .bounceClick(interactionSource)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(6.dp)
+                .fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Icon / Thumbnail Box
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
+                contentAlignment = Alignment.Center
+            ) {
+                when (item.type) {
+                    SavedItemType.IMAGE, SavedItemType.VIDEO -> {
+                        AsyncImage(
+                            model = item.getBestImagePath(),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    SavedItemType.LINK -> {
+                        Icon(
+                            imageVector = Icons.Default.Link,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    SavedItemType.CODE -> {
+                        Icon(
+                            imageVector = Icons.Default.Code,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    SavedItemType.AUDIO -> {
+                        Icon(
+                            imageVector = Icons.Default.Mic,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    else -> {
+                        Icon(
+                            imageVector = Icons.Default.Description,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(6.dp))
+
+            // Title
+            Text(
+                text = item.title.ifBlank { "Untitled" },
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }

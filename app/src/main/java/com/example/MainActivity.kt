@@ -34,8 +34,39 @@ import com.example.ui.screens.AuthScreen
 import com.example.ui.screens.CaptureScreen
 import com.example.ui.screens.DetailScreen
 import com.example.ui.screens.HomeScreen
+import com.example.ui.screens.FoldersScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.SecondBrainViewModel
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
+import com.example.ui.components.CustomBottomBar
+import com.example.ui.components.BottomBarItem
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.Person
+
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Search
 
 class MainActivity : ComponentActivity() {
     private val viewModel: SecondBrainViewModel by viewModels()
@@ -65,6 +96,14 @@ class MainActivity : ComponentActivity() {
                 "Light" -> false
                 else -> isSystemInDarkTheme()
             }
+
+            val view = androidx.compose.ui.platform.LocalView.current
+            if (!view.isInEditMode) {
+                androidx.compose.runtime.SideEffect {
+                    val window = (view.context as android.app.Activity).window
+                    androidx.core.view.WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !isDarkTheme
+                }
+            }
             MyApplicationTheme(darkTheme = isDarkTheme) {
                 val navController = rememberNavController()
                 val activeCaptureItem by viewModel.activeCaptureItem.collectAsState()
@@ -79,16 +118,39 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                BackHandler(enabled = activeCaptureItem != null) {
-                    viewModel.cancelCapture()
-                }
-
-                BackHandler(enabled = activeDetailItem != null) {
+BackHandler(enabled = activeDetailItem != null) {
                     viewModel.closeDetailItem()
                 }
 
+                val navBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = navBackStackEntry?.destination?.route
+
                 Scaffold(
                     snackbarHost = { SnackbarHost(snackbarHostState) },
+                    bottomBar = {
+                        val routesWithBottomBar = listOf("home", "search", "folders", "profile")
+                        if (currentRoute in routesWithBottomBar) {
+                            val items = listOf(
+                                BottomBarItem("home", Icons.Filled.Home, Icons.Outlined.Home, "Home"),
+                                BottomBarItem("search", Icons.Filled.Search, Icons.Outlined.Search, "Search"),
+                                BottomBarItem("folders", Icons.Filled.Folder, Icons.Outlined.Folder, "Folders"),
+                                BottomBarItem("profile", Icons.Filled.Person, Icons.Outlined.Person, "Profile")
+                            )
+                            CustomBottomBar(
+                                items = items,
+                                currentRoute = currentRoute,
+                                onNavigate = { route ->
+                                    navController.navigate(route) {
+                                        popUpTo("home") {
+                                            if (route == "home") {
+                                                inclusive = true
+                                            }
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    },
                     modifier = Modifier.fillMaxSize()
                 ) { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
@@ -99,10 +161,23 @@ class MainActivity : ComponentActivity() {
                                 NavHost(navController = navController, startDestination = "home") {
                                     composable("home") {
                                         HomeScreen(
+                                            onNavigateToSearch = { navController.navigate("search") },
                                             viewModel = viewModel,
                                             onNavigateToProfile = { navController.navigate("profile") },
                                             sharedTransitionScope = this@SharedTransitionLayout,
                                             animatedVisibilityScope = this@composable
+                                        )
+                                    }
+                                    composable("search") {
+                                        com.example.ui.screens.SearchScreen(
+                                            viewModel = viewModel,
+                                            onNavigateBack = { navController.popBackStack() },
+                                            onItemClick = { item -> viewModel.showDetailItem(item) }
+                                        )
+                                    }
+                                    composable("folders") {
+                                        FoldersScreen(
+                                            viewModel = viewModel
                                         )
                                     }
                                     composable("profile") {

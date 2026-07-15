@@ -160,7 +160,12 @@ class ScreenCaptureService : Service() {
             virtualDisplay = null
             imageReader?.close()
             imageReader = null
-            // We do NOT stop the mediaProjection itself to keep the session alive/persistent!
+            
+            // Cleanly stop mediaProjection to prevent leaks and release system resources on Android 14
+            mediaProjection?.stop()
+            mediaProjection = null
+            MediaProjectionCache.activeMediaProjection = null
+            MediaProjectionCache.resultData = null
         } catch (e: Exception) {
             // Ignore
         }
