@@ -262,6 +262,11 @@ BackHandler(enabled = activeDetailItem != null) {
                                     }
                                 )
                             }
+                            
+                            val routesWithExpandingFab = listOf("home", "search", "profile")
+                            if (currentRoute in routesWithExpandingFab) {
+                                com.example.ui.components.GlobalExpandingFab(viewModel = viewModel)
+                            }
                         }
                     }
                 }

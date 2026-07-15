@@ -150,7 +150,19 @@ fun SettingsScreen(
                         SettingsToggleRow(
                             title = "Enable Edge Panel",
                             checked = isEnabled,
-                            onCheckedChange = { viewModel.settingsRepository.setFloatingOcrEnabled(it) }
+                            onCheckedChange = { enable -> 
+                                viewModel.settingsRepository.setFloatingOcrEnabled(enable) 
+                                val serviceIntent = Intent(context, com.example.BrainOcrOverlayService::class.java)
+                                if (enable) {
+                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                        context.startForegroundService(serviceIntent)
+                                    } else {
+                                        context.startService(serviceIntent)
+                                    }
+                                } else {
+                                    context.stopService(serviceIntent)
+                                }
+                            }
                         )
                         
                         if (isEnabled) {

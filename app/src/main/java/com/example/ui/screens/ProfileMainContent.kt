@@ -8,6 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccountCircle
@@ -180,22 +181,18 @@ fun ProfileMainContent(
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                 
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        ArchiveStatRow(iconResId = R.drawable.ic_custom_link, count = totalLinks, label = "Links", modifier = Modifier.weight(1f))
-                        ArchiveStatRow(iconResId = R.drawable.ic_custom_image, count = totalImages, label = "Images", modifier = Modifier.weight(1f))
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        ArchiveStatRow(iconResId = R.drawable.ic_custom_video, count = totalVideos, label = "Videos", modifier = Modifier.weight(1f))
-                        ArchiveStatRow(iconResId = R.drawable.ic_custom_text, count = totalText, label = "Text", modifier = Modifier.weight(1f))
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        ArchiveStatRow(iconResId = R.drawable.ic_custom_code, count = totalCode, label = "Code", modifier = Modifier.weight(1f))
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
+                    ArchiveStatCard(iconResId = R.drawable.ic_custom_link, count = totalLinks, label = "Links")
+                    ArchiveStatCard(iconResId = R.drawable.ic_custom_image, count = totalImages, label = "Images")
+                    ArchiveStatCard(iconResId = R.drawable.ic_custom_video, count = totalVideos, label = "Videos")
+                    ArchiveStatCard(iconResId = R.drawable.ic_custom_text, count = totalText, label = "Text")
+                    ArchiveStatCard(iconResId = R.drawable.ic_custom_code, count = totalCode, label = "Code")
                 }
             }
         }
@@ -278,25 +275,25 @@ fun SectionContainer(title: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-fun ArchiveStatRow(iconResId: Int, count: Int, label: String, modifier: Modifier = Modifier) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
+fun ArchiveStatCard(iconResId: Int, count: Int, label: String, modifier: Modifier = Modifier) {
+    Column(
         modifier = modifier
+            .width(100.dp)
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-            .padding(12.dp)
+            .padding(16.dp),
+        horizontalAlignment = Alignment.Start,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                painter = painterResource(id = iconResId),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = label, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+        Icon(
+            painter = painterResource(id = iconResId),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(24.dp)
+        )
+        Column {
+            Text(text = "$count", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Text(text = label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Text(text = "$count", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 

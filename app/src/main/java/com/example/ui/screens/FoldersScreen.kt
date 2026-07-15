@@ -165,18 +165,6 @@ fun FoldersScreen(
                                 )
                             }
                         },
-                        actions = {
-                            IconButton(
-                                onClick = { showAddFolderDialog = true },
-                                modifier = Modifier.testTag("create_folder_button")
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_add_folder),
-                                    contentDescription = "Create Folder",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        },
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = MaterialTheme.colorScheme.background
                         )
@@ -312,21 +300,21 @@ fun FoldersScreen(
                         }
                     }
                 }
-                
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(bottom = 16.dp, end = 16.dp)
+            }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 16.dp, end = 16.dp)
+            ) {
+                FloatingActionButton(
+                    onClick = { showAddFolderDialog = true },
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("fab_create_folder").size(64.dp)
                 ) {
-                    FloatingActionButton(
-                        onClick = { showAddFolderDialog = true },
-                        shape = CircleShape,
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.testTag("fab_create_folder").size(64.dp)
-                    ) {
-                        Icon(painter = painterResource(id = R.drawable.ic_custom_plus), contentDescription = "New Folder", modifier = Modifier.size(24.dp))
-                    }
+                    Icon(painter = painterResource(id = R.drawable.ic_custom_add_folder), contentDescription = "New Folder", modifier = Modifier.size(24.dp))
                 }
             }
         }
@@ -414,7 +402,7 @@ fun SystemCategoryCard(
                 painter = painterResource(id = iconResId),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
+                
             )
             Column {
                 Text(
@@ -470,7 +458,7 @@ fun PinnedFolderCard(
                 )
                 IconButton(
                     onClick = onCustomize,
-                    modifier = Modifier.size(24.dp)
+                    
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_custom_settings),
@@ -630,7 +618,7 @@ fun FolderContentsBrowser(
                         Icon(
                             painter = painterResource(id = R.drawable.ic_custom_back),
                             contentDescription = "Back",
-                            modifier = Modifier.size(24.dp)
+                            
                         )
                     }
                 },

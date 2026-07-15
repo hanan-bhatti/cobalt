@@ -1,4 +1,5 @@
 package com.example.ui.components
+import androidx.compose.animation.animateContentSize
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -47,7 +48,7 @@ fun CustomBottomBar(
 ) {
     Box(
         modifier = Modifier
-            .padding(start = 16.dp, bottom = 16.dp, end = 88.dp),
+            .padding(start = 16.dp, bottom = 16.dp, end = 96.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         Row(
@@ -94,8 +95,7 @@ fun CustomBottomBar(
                     ),
                     label = "horizontalPadding"
                 )
-                
-                Row(
+                                Row(
                     modifier = Modifier
                         .scale(scale)
                         .clip(CircleShape)
@@ -108,6 +108,12 @@ fun CustomBottomBar(
                             }
                         }
                         .background(backgroundColor)
+                        .animateContentSize(
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessLow
+                            )
+                        )
                         .padding(horizontal = horizontalPadding, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
@@ -119,30 +125,15 @@ fun CustomBottomBar(
                         modifier = Modifier.size(24.dp)
                     )
                     
-                    AnimatedVisibility(
-                        visible = isSelected,
-                        enter = expandHorizontally(
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMedium
-                            )
-                        ) + fadeIn(animationSpec = tween(200)),
-                        exit = shrinkHorizontally(
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMedium
-                            )
-                        ) + fadeOut(animationSpec = tween(200))
-                    ) {
-                        Row {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = item.label,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                fontWeight = FontWeight.SemiBold,
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                        }
+                    if (isSelected) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = item.label,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontWeight = FontWeight.SemiBold,
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1
+                        )
                     }
                 }
             }
