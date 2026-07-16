@@ -157,9 +157,11 @@ fun ProfileMainContent(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(8.dp).background(Color(0xFF34A853), CircleShape))
+                                val indicatorColor = if (isSyncing) MaterialTheme.colorScheme.primary else Color(0xFF34A853)
+                                val syncText = if (isSyncing) "Syncing..." else "Synced"
+                                Box(modifier = Modifier.size(8.dp).background(indicatorColor, CircleShape))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Synced just now", style = MaterialTheme.typography.bodySmall, color = Color(0xFF34A853), fontWeight = FontWeight.Medium)
+                                Text(syncText, style = MaterialTheme.typography.bodySmall, color = indicatorColor, fontWeight = FontWeight.Medium)
                             }
                         }
                     }

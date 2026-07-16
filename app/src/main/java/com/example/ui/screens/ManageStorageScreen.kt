@@ -14,6 +14,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.ui.viewmodel.SecondBrainViewModel
 import com.example.data.model.SavedItemType
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import com.example.R
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,9 +107,54 @@ fun ManageStorageScreen(
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
                     categories.forEach { (type, items) ->
+                        val nonSyncedItems = items.filter { !it.isSynced }
+                        val allSelected = nonSyncedItems.isNotEmpty() && nonSyncedItems.all { selectedForBackupIds.contains(it.id) }
+
                         item {
-                            Text(type.displayName, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(vertical = 8.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = type.displayName,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                if (nonSyncedItems.isNotEmpty()) {
+                                    TextButton(
+                                        onClick = {
+                                            if (allSelected) {
+                                                viewModel.deselectItemsForBackup(nonSyncedItems.map { it.id })
+                                            } else {
+                                                val toSelect = mutableListOf<String>()
+                                                var currentPendingSize = totalPendingSize
+                                                for (item in nonSyncedItems) {
+                                                    if (selectedForBackupIds.contains(item.id)) continue
+                                                    val itemSize = if ((item.thumbnailPath ?: item.content).startsWith("/")) {
+                                                        java.io.File(item.thumbnailPath ?: item.content).length()
+                                                    } else {
+                                                        item.content.length.toLong()
+                                                    }
+                                                    if (currentPendingSize + itemSize <= maxStorageBytes) {
+                                                        toSelect.add(item.id)
+                                                        currentPendingSize += itemSize
+                                                    }
+                                                }
+                                                if (toSelect.isNotEmpty()) {
+                                                    viewModel.selectItemsForBackup(toSelect)
+                                                }
+                                            }
+                                        }
+                                    ) {
+                                        Text(if (allSelected) "Deselect All" else "Select All", style = MaterialTheme.typography.labelMedium)
+                                    }
+                                }
+                            }
                         }
+
                         items(items) { item ->
                             val isSelected = selectedForBackupIds.contains(item.id)
                             val isAlreadyBackedUp = item.isSynced
@@ -112,31 +165,93 @@ fun ManageStorageScreen(
                                 item.content.length.toLong()
                             }
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
                             ) {
-                                Checkbox(
-                                    checked = isSelected || isAlreadyBackedUp,
-                                    onCheckedChange = { checked ->
-                                        if (isAlreadyBackedUp && !checked) {
-                                            showDeselectDialog = item.id
-                                        } else if (!isAlreadyBackedUp) {
-                                            // Enforce limit if checking
-                                            if (checked && (totalPendingSize + itemSize) > maxStorageBytes) {
-                                                // Prevent selection visually or via toast handled by UI limitReached text
-                                            } else {
-                                                viewModel.toggleBackupSelection(item.id)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = isSelected || isAlreadyBackedUp,
+                                        onCheckedChange = { checked ->
+                                            if (isAlreadyBackedUp && !checked) {
+                                                showDeselectDialog = item.id
+                                            } else if (!isAlreadyBackedUp) {
+                                                // Enforce limit if checking
+                                                if (checked && (totalPendingSize + itemSize) > maxStorageBytes) {
+                                                    // Prevent selection visually
+                                                } else {
+                                                    viewModel.toggleBackupSelection(item.id)
+                                                }
                                             }
                                         }
+                                    )
+                                    
+                                    val iconResId = when (item.type) {
+                                        SavedItemType.LINK -> R.drawable.ic_custom_link
+                                        SavedItemType.IMAGE -> R.drawable.ic_custom_image
+                                        SavedItemType.VIDEO -> R.drawable.ic_custom_video
+                                        SavedItemType.CODE -> R.drawable.ic_custom_code
+                                        SavedItemType.TEXT -> R.drawable.ic_custom_text
+                                        SavedItemType.AUDIO -> R.drawable.ic_custom_voice
                                     }
-                                )
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(item.title.ifEmpty { "Untitled" }, maxLines = 1)
-                                    Text(String.format(Locale.US, "%.2f MB", itemSize / (1024f * 1024f)), style = MaterialTheme.typography.bodySmall)
-                                }
-                                if (isAlreadyBackedUp) {
-                                    Icon(Icons.Default.CloudQueue, contentDescription = "Backed up", tint = MaterialTheme.colorScheme.primary)
+                                    val baseColor = when (item.type) {
+                                        SavedItemType.LINK -> Color(0xFF42A5F5)
+                                        SavedItemType.IMAGE -> Color(0xFFAB47BC)
+                                        SavedItemType.VIDEO -> Color(0xFFEF5350)
+                                        SavedItemType.TEXT -> Color(0xFFFFA726)
+                                        SavedItemType.CODE -> Color(0xFF66BB6A)
+                                        SavedItemType.AUDIO -> Color(0xFF26A69A)
+                                    }
+                                    
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(baseColor.copy(alpha = 0.15f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = iconResId),
+                                            contentDescription = null,
+                                            tint = baseColor,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = item.title.ifEmpty { "Untitled" },
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 1
+                                        )
+                                        Text(
+                                            text = String.format(Locale.US, "%.2f MB", itemSize / (1024f * 1024f)),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    
+                                    if (isAlreadyBackedUp) {
+                                        Icon(
+                                            imageVector = Icons.Default.CloudQueue,
+                                            contentDescription = "Backed up",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = 8.dp)
+                                        )
+                                    }
                                 }
                             }
                         }

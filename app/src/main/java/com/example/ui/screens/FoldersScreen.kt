@@ -124,6 +124,20 @@ fun FoldersScreen(
 
     var showAddFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
+    
+    var folderSearchQuery by remember { mutableStateOf("") }
+
+    var newFolderColorHex by remember { mutableStateOf(folderPresetColors.first().first) }
+    var newFolderIconName by remember { mutableStateOf("folder") }
+    var newFolderPinned by remember { mutableStateOf(false) }
+
+    val resetNewFolderFields = {
+        showAddFolderDialog = false
+        newFolderName = ""
+        newFolderColorHex = folderPresetColors.first().first
+        newFolderIconName = "folder"
+        newFolderPinned = false
+    }
 
     val context = LocalContext.current
 
@@ -177,11 +191,15 @@ fun FoldersScreen(
                     },
                     containerColor = MaterialTheme.colorScheme.background
                 ) { innerPadding ->
-                    val pinnedFolders = remember(customFolderEntities) {
-                        customFolderEntities.filter { it.isPinned }
+                    val pinnedFolders = remember(customFolderEntities, folderSearchQuery) {
+                        customFolderEntities.filter {
+                            it.isPinned && it.name.contains(folderSearchQuery, ignoreCase = true)
+                        }
                     }
-                    val otherFolders = remember(customFolderEntities) {
-                        customFolderEntities.filter { !it.isPinned }
+                    val otherFolders = remember(customFolderEntities, folderSearchQuery) {
+                        customFolderEntities.filter {
+                            !it.isPinned && it.name.contains(folderSearchQuery, ignoreCase = true)
+                        }
                     }
 
                     androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
@@ -194,18 +212,57 @@ fun FoldersScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // System Built-in Categories Section
+                        // Search bar
                         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-                            Text(
-                                text = "System Categories",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                            OutlinedTextField(
+                                value = folderSearchQuery,
+                                onValueChange = { folderSearchQuery = it },
+                                placeholder = { Text("Search folders...", style = MaterialTheme.typography.bodyMedium) },
+                                leadingIcon = {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_search),
+                                        contentDescription = "Search icon",
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                },
+                                trailingIcon = {
+                                    if (folderSearchQuery.isNotEmpty()) {
+                                        IconButton(onClick = { folderSearchQuery = "" }) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_custom_close),
+                                                contentDescription = "Clear search",
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                },
+                                singleLine = true,
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                    focusedIndicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                    unfocusedIndicatorColor = Color.Transparent
+                                )
                             )
                         }
 
-                        items(SavedItemType.entries.size) { index ->
+                        if (folderSearchQuery.isBlank()) {
+                            // System Built-in Categories Section
+                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                                Text(
+                                    text = "System Categories",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                                )
+                            }
+
+                            items(SavedItemType.entries.size) { index ->
                             val type = SavedItemType.entries[index]
                             val count = remember(allItems) {
                                 allItems.count { it.type == type && !it.folders.contains("Archive") }
@@ -225,6 +282,7 @@ fun FoldersScreen(
                                 onClick = { activeBrowseFolder = type.displayName },
                                 modifier = Modifier.fillMaxWidth()
                             )
+                        }
                         }
 
                         // Pinned Folders Section
@@ -336,45 +394,157 @@ fun FoldersScreen(
     // Add Custom Folder Dialog
     if (showAddFolderDialog) {
         AlertDialog(
-            onDismissRequest = {
-                showAddFolderDialog = false
-                newFolderName = ""
-            },
+            onDismissRequest = { resetNewFolderFields() },
             title = { Text("New Custom Folder", fontWeight = FontWeight.Bold) },
             text = {
-                OutlinedTextField(
-                    value = newFolderName,
-                    onValueChange = { newFolderName = it },
-                    placeholder = { Text("e.g. Work, Inspiration....") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth().testTag("add_folder_name_field")
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    OutlinedTextField(
+                        value = newFolderName,
+                        onValueChange = { newFolderName = it },
+                        placeholder = { Text("e.g. Work, Inspiration....") },
+                        label = { Text("Folder Name") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth().testTag("add_folder_name_field")
+                    )
+
+                    // Pin toggle
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { newFolderPinned = !newFolderPinned }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_pin),
+                                contentDescription = null,
+                                tint = if (newFolderPinned) parseHexColor(newFolderColorHex) else MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Pin to top", fontWeight = FontWeight.Medium)
+                        }
+                        Switch(
+                            checked = newFolderPinned,
+                            onCheckedChange = { newFolderPinned = it }
+                        )
+                    }
+
+                    // Choose Icon
+                    Column {
+                        Text(
+                            text = "Choose Icon",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(vertical = 4.dp)
+                        ) {
+                            items(folderPresetIcons.size) { index ->
+                                val iconName = folderPresetIcons[index]
+                                val isSelected = newFolderIconName == iconName
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (isSelected) parseHexColor(newFolderColorHex).copy(alpha = 0.2f)
+                                            else Color.Transparent
+                                        )
+                                        .border(
+                                            1.5.dp,
+                                            if (isSelected) parseHexColor(newFolderColorHex)
+                                            else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                                            CircleShape
+                                        )
+                                        .clickable { newFolderIconName = iconName },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    FolderIcon(
+                                        iconName = iconName,
+                                        tint = if (isSelected) parseHexColor(newFolderColorHex) else MaterialTheme.colorScheme.secondary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Choose Color
+                    Column {
+                        Text(
+                            text = "Choose Theme Color",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            contentPadding = PaddingValues(vertical = 4.dp)
+                        ) {
+                            items(folderPresetColors) { (hex, name) ->
+                                val color = parseHexColor(hex)
+                                val isSelected = newFolderColorHex == hex
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(color)
+                                        .clickable { newFolderColorHex = hex },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (isSelected) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_custom_check),
+                                            contentDescription = "Selected",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
                         val trimmed = newFolderName.trim()
                         if (trimmed.isNotEmpty()) {
-                            viewModel.createFolder(trimmed)
-                            showAddFolderDialog = false
-                            newFolderName = ""
+                            viewModel.createFolder(
+                                name = trimmed,
+                                colorHex = newFolderColorHex,
+                                iconName = newFolderIconName,
+                                isPinned = newFolderPinned
+                            )
+                            resetNewFolderFields()
                         }
                     },
                     modifier = Modifier.testTag("confirm_add_folder_btn")
                 ) {
-                    Text("Create")
+                    Text("Create", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    showAddFolderDialog = false
-                    newFolderName = ""
-                }) {
+                TextButton(onClick = { resetNewFolderFields() }) {
                     Text("Cancel")
                 }
             },
-            shape = RoundedCornerShape(20.dp)
+            shape = RoundedCornerShape(24.dp)
         )
     }
 

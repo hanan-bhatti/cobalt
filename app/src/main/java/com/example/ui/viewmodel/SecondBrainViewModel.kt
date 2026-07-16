@@ -407,6 +407,18 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         _selectedForBackupIds.value = emptySet()
     }
 
+    fun selectItemsForBackup(ids: List<String>) {
+        _selectedForBackupIds.update { current ->
+            current + ids
+        }
+    }
+
+    fun deselectItemsForBackup(ids: List<String>) {
+        _selectedForBackupIds.update { current ->
+            current - ids.toSet()
+        }
+    }
+
     fun backupSelectedItems() {
         val ids = _selectedForBackupIds.value.toList()
         if (ids.isEmpty()) return
@@ -1404,10 +1416,10 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun createFolder(name: String) {
+    fun createFolder(name: String, colorHex: String? = null, iconName: String? = null, isPinned: Boolean = false) {
         if (name.isBlank()) return
         viewModelScope.launch {
-            repository.addCustomFolder(name.trim())
+            repository.addCustomFolder(name.trim(), colorHex, iconName, isPinned)
             repository.syncUnsyncedItems()
         }
     }

@@ -510,8 +510,19 @@ class SecondBrainRepository(private val context: Context) {
         com.example.widget.WidgetUpdater.update(context)
     }
 
-    suspend fun addCustomFolder(folderName: String) = withContext(Dispatchers.IO) {
-        val newFolder = CustomFolderEntity(folderName, isSynced = false)
+    suspend fun addCustomFolder(
+        folderName: String,
+        colorHex: String? = null,
+        iconName: String? = null,
+        isPinned: Boolean = false
+    ) = withContext(Dispatchers.IO) {
+        val newFolder = CustomFolderEntity(
+            name = folderName,
+            colorHex = colorHex,
+            iconName = iconName,
+            isPinned = isPinned,
+            isSynced = false
+        )
         customFolderDao.insertFolder(newFolder)
 
         val currentUser = firebaseAuth?.currentUser
@@ -521,6 +532,9 @@ class SecondBrainRepository(private val context: Context) {
                     .collection("folders").document(folderName)
                     .set(mapOf(
                         "name" to folderName,
+                        "colorHex" to colorHex,
+                        "iconName" to iconName,
+                        "isPinned" to isPinned,
                         "isSynced" to true
                     ))
                 customFolderDao.insertFolder(newFolder.copy(isSynced = true))
