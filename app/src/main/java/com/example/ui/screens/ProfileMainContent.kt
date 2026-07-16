@@ -337,7 +337,7 @@ fun ProfileMainContent(
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(
-                                imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.Logout,
+                                painter = painterResource(id = R.drawable.ic_custom_logout),
                                 contentDescription = "Sign Out",
                                 modifier = Modifier.size(18.dp)
                             )
