@@ -144,7 +144,7 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel) {
                     shape = CircleShape,
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testTag("fab_expand").size(64.dp)
+                    modifier = Modifier.testTag("fab_expand").size(56.dp)
                 ) {
                     val rotation by animateFloatAsState(targetValue = if (isFabExpanded) 45f else 0f)
                     Icon(

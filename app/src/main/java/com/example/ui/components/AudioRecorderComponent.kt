@@ -11,9 +11,6 @@ import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +21,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.io.File
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.animation.core.*
 
 @Composable
 fun AudioRecorderComponent(
@@ -34,6 +36,9 @@ fun AudioRecorderComponent(
     var mediaRecorder by remember { mutableStateOf<MediaRecorder?>(null) }
     var outputFile by remember { mutableStateOf<File?>(null) }
     val context = LocalContext.current
+
+    val amplitudes = remember { mutableStateListOf<Float>() }
+    var recordingDurationSeconds by remember { mutableStateOf(0) }
 
     val startRecording = {
         val file = File(context.cacheDir, "memo_${System.currentTimeMillis()}.mp4")
@@ -70,29 +75,120 @@ fun AudioRecorderComponent(
         }
     }
 
+    // Polling maxAmplitude and duration loop
+    LaunchedEffect(isRecording) {
+        if (isRecording) {
+            amplitudes.clear()
+            repeat(40) { amplitudes.add(0.05f) }
+            recordingDurationSeconds = 0
+            var ticker = 0
+            while (isRecording) {
+                kotlinx.coroutines.delay(100)
+                ticker++
+                if (ticker % 10 == 0) {
+                    recordingDurationSeconds++
+                }
+                val amp = try {
+                    mediaRecorder?.maxAmplitude ?: 0
+                } catch (e: Exception) {
+                    0
+                }
+                // Normalize to a pleasant range (0.05f to 1.0f)
+                val rawNormalized = (amp.toFloat() / 32767f)
+                // Boost normal/low voices so the wave is nice and active
+                val normalized = (rawNormalized * 2.5f).coerceIn(0.05f, 1.0f)
+                
+                amplitudes.removeAt(0)
+                amplitudes.add(normalized)
+            }
+        } else {
+            amplitudes.clear()
+        }
+    }
+
+    // Pulsing indicator dot animation
+    val pulseAlpha by rememberInfiniteTransition(label = "pulse").animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alpha"
+    )
+
     Row(
         modifier = modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), MaterialTheme.shapes.medium)
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
             Box(
                 modifier = Modifier
-                    .size(12.dp)
+                    .size(10.dp)
                     .clip(CircleShape)
-                    .background(if (isRecording) Color.Red else Color.Gray)
+                    .background(if (isRecording) Color.Red.copy(alpha = pulseAlpha) else Color.Gray)
             )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = if (isRecording) "Recording..." else "Tap mic to record memo",
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            if (isRecording) {
+                // Timer
+                val mins = recordingDurationSeconds / 60
+                val secs = recordingDurationSeconds % 60
+                val timeStr = "${mins}:${if (secs < 10) "0" else ""}$secs"
+                Text(
+                    text = timeStr,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Red,
+                    modifier = Modifier.width(42.dp)
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Real-time Waveform Canvas
+                Canvas(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(32.dp)
+                ) {
+                    val barWidth = 3.dp.toPx()
+                    val gap = 3.dp.toPx()
+                    val count = amplitudes.size
+                    
+                    for (i in 0 until count) {
+                        val amp = amplitudes[count - 1 - i]
+                        val x = size.width - (i * (barWidth + gap)) - barWidth
+                        if (x < 0) break
+                        
+                        val barHeight = (size.height * amp).coerceAtLeast(3.dp.toPx())
+                        val y = (size.height - barHeight) / 2f
+                        
+                        drawRoundRect(
+                            color = Color.Red.copy(alpha = 0.8f),
+                            topLeft = Offset(x, y),
+                            size = Size(barWidth, barHeight),
+                            cornerRadius = CornerRadius(barWidth / 2f, barWidth / 2f)
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = "Tap mic to record memo",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
+
+        Spacer(modifier = Modifier.width(16.dp))
 
         IconButton(
             onClick = {

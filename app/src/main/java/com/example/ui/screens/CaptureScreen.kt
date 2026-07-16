@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -103,25 +104,46 @@ fun CaptureScreen(
                     }
                 },
                 actions = {
+                    val saveProgress by viewModel.saveProgress.collectAsState()
+                    val isSavingActive = saveProgress != null
+                    val animatedProgress by animateFloatAsState(
+                        targetValue = saveProgress ?: 0f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        ),
+                        label = "saveProgress"
+                    )
+                    val primaryColor = MaterialTheme.colorScheme.primary
+                    val onPrimaryColor = MaterialTheme.colorScheme.onPrimary
+
                     Button(
                         onClick = { viewModel.saveActiveItem() },
-                        enabled = !isSaving,
+                        enabled = !isSavingActive,
                         shape = RoundedCornerShape(20.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
+                            containerColor = if (isSavingActive) primaryColor.copy(alpha = 0.35f) else primaryColor,
+                            contentColor = onPrimaryColor
                         ),
-                        modifier = Modifier.bounceClick().testTag("save_capture_button")
+                        modifier = Modifier
+                            .bounceClick()
+                            .testTag("save_capture_button")
+                            .clip(RoundedCornerShape(20.dp))
+                            .drawWithContent {
+                                if (isSavingActive) {
+                                    drawRect(
+                                        color = primaryColor,
+                                        size = size.copy(width = size.width * animatedProgress)
+                                    )
+                                }
+                                drawContent()
+                            }
                     ) {
-                        if (isSaving) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Text("Save", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelLarge)
-                        }
+                        Text(
+                            text = if (isSavingActive) "Saving..." else "Save",
+                            fontWeight = FontWeight.SemiBold,
+                            style = MaterialTheme.typography.labelLarge
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

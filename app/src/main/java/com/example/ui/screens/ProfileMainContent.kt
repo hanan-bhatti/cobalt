@@ -9,6 +9,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.*
 import androidx.compose.animation.core.*
 import androidx.compose.ui.Alignment
@@ -28,7 +31,9 @@ import androidx.compose.ui.res.painterResource
 import java.util.Locale
 import com.example.ui.viewmodel.SecondBrainViewModel
 import androidx.compose.runtime.collectAsState
+import com.example.ui.components.bounceClick
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ProfileMainContent(
     viewModel: SecondBrainViewModel,
@@ -50,14 +55,23 @@ fun ProfileMainContent(
     val totalVideos = allItems.count { it.type == SavedItemType.VIDEO }
     val totalText = allItems.count { it.type == SavedItemType.TEXT }
     val totalCode = allItems.count { it.type == SavedItemType.CODE }
+    val totalAudio = allItems.count { it.type == SavedItemType.AUDIO }
     
     val isSyncing by viewModel.isSyncing.collectAsState()
     
-    @OptIn(ExperimentalMaterial3Api::class)
+    val pullToRefreshState = rememberPullToRefreshState()
     androidx.compose.material3.pulltorefresh.PullToRefreshBox(
         isRefreshing = isSyncing,
         onRefresh = { viewModel.syncData() },
-        modifier = Modifier.fillMaxSize()
+        state = pullToRefreshState,
+        modifier = Modifier.fillMaxSize(),
+        indicator = {
+            PullToRefreshDefaults.LoadingIndicator(
+                state = pullToRefreshState,
+                isRefreshing = isSyncing,
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
+        }
     ) {
         Column(
             modifier = Modifier
@@ -204,6 +218,10 @@ fun ProfileMainContent(
                             iconResId = R.drawable.ic_custom_code, count = totalCode, label = "Code",
                             baseColor = Color(0xFF66BB6A)
                         )
+                        ArchiveStatRow(
+                            iconResId = R.drawable.ic_custom_voice, count = totalAudio, label = "Audio",
+                            baseColor = Color(0xFF26A69A)
+                        )
                     }
                 }
             }
@@ -218,56 +236,148 @@ fun ProfileMainContent(
                 Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
                     val usedMb = usedStorageBytes / (1024f * 1024f)
                     val cloudUsedStorageBytes by viewModel.cloudUsedStorageBytes.collectAsState()
+                    val cloudUsedMb = cloudUsedStorageBytes / (1024f * 1024f)
+                    val maxMb = 512f
                     
-                    Text(text = "Storage Summary", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    Spacer(modifier = Modifier.height(16.dp))
+                    // Calculate fractions
+                    val cloudFraction = (cloudUsedMb / maxMb).coerceIn(0f, 1f)
+                    val localOnlyMb = (usedMb - cloudUsedMb).coerceAtLeast(0f)
+                    val localFraction = (localOnlyMb / maxMb).coerceIn(0f, 1f - cloudFraction)
+                    val freeFraction = (1f - cloudFraction - localFraction).coerceAtLeast(0f)
 
-                    if (userEmail == null) {
-                        Text(text = String.format(Locale.US, "%.1f MB Used locally", usedMb), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(text = "Sign in to back up your content to the cloud.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
-                        Spacer(modifier = Modifier.height(16.dp))
-                    } else {
-                        Text(text = String.format(Locale.US, "%.1f MB Used locally", usedMb), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Cloud Backup Progress
-                        val maxMb = 512f
-                        val cloudUsedMb = cloudUsedStorageBytes / (1024f * 1024f)
-                        val cloudProgress = (cloudUsedMb / maxMb).coerceIn(0f, 1f)
-
-                        LinearProgressIndicator(
-                            progress = { cloudProgress },
-                            modifier = Modifier.fillMaxWidth().height(12.dp).clip(CircleShape),
-                            color = MaterialTheme.colorScheme.tertiary,
-                            trackColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Storage Space",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(text = String.format(Locale.US, "%.1f MB / 512 MB backed up", cloudUsedMb), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = String.format(Locale.US, "%.1f MB of 512 MB", usedMb.coerceAtLeast(cloudUsedMb)),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     
-                    // Pill-shaped button with tactile spinning animation
-                    var clicked by remember { mutableStateOf(false) }
-                    val rotation by animateFloatAsState(
-                        targetValue = if (clicked) 360f else 0f,
-                        animationSpec = spring(dampingRatio = 0.5f, stiffness = 500f),
-                        label = "rotate"
-                    )
-                    
-                    Button(
-                        onClick = { 
-                            clicked = !clicked
-                            onNavigateToManageStorage()
-                        },
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Thick Segmented Progress Bar
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .graphicsLayer { rotationZ = rotation }
-                            .height(56.dp),
-                        shape = MaterialTheme.shapes.extraLarge,
+                            .height(16.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Row(modifier = Modifier.fillMaxSize()) {
+                            // Cloud backed up segment (Primary/Blue Accent)
+                            if (cloudFraction > 0.001f) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .weight(cloudFraction)
+                                        .background(Color(0xFF42A5F5)) // Cloud blue color
+                                )
+                            }
+                            // Local-only segment (Secondary/Green Accent)
+                            if (localFraction > 0.001f) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .weight(localFraction)
+                                        .background(Color(0xFF66BB6A)) // Local green color
+                                )
+                            }
+                            // Free segment
+                            if (freeFraction > 0.001f) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .weight(freeFraction)
+                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Details Legend (Cloud vs Local Only)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(24.dp)
+                    ) {
+                        // Cloud backed up detail
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF42A5F5))
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Column {
+                                Text(
+                                    text = "Cloud Backup",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = String.format(Locale.US, "%.1f MB", cloudUsedMb),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        // Local only detail
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF66BB6A))
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Column {
+                                Text(
+                                    text = "Local Only",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = String.format(Locale.US, "%.1f MB", localOnlyMb),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    if (userEmail == null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(text = "Sign in to back up your content to the cloud.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+                    
+                    // Manage Storage Button with bounce effect animation (jelly click scale down)
+                    Button(
+                        onClick = onNavigateToManageStorage,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bounceClick()
+                            .height(50.dp),
+                        shape = MaterialTheme.shapes.large,
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                     ) {
-                        Text("Manage Storage", color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.SemiBold)
+                        Text("Manage Storage", color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
                     }
                 }
             }

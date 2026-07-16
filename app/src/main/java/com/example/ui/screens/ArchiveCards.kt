@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.OpenInBrowser
@@ -206,7 +207,12 @@ fun ArchiveItemCard(
 
                 // Media Preview (if applicable)
                 val displayImage = item.getBestImagePath()
-                if (displayImage.isNotNullOrBlank() || item.type == SavedItemType.CODE) {
+                val showMediaPreview = displayImage.isNotNullOrBlank() || 
+                        item.type == SavedItemType.VIDEO || 
+                        item.type == SavedItemType.AUDIO || 
+                        item.type == SavedItemType.CODE
+                
+                if (showMediaPreview) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Box(
                         modifier = Modifier
@@ -215,7 +221,10 @@ fun ArchiveItemCard(
                             .clip(RoundedCornerShape(16.dp))
                             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                     ) {
-                        if (displayImage.isNotNullOrBlank()) {
+                        val hasImage = displayImage.isNotNullOrBlank() && 
+                                (item.type != SavedItemType.AUDIO && item.type != SavedItemType.VIDEO || displayImage?.endsWith(".mp4") == false)
+
+                        if (hasImage) {
                             AsyncImage(
                                 model = displayImage,
                                 contentDescription = item.title,
@@ -223,24 +232,115 @@ fun ArchiveItemCard(
                                 modifier = Modifier.fillMaxSize()
                             )
                             if (item.type == SavedItemType.VIDEO) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_play),
-                                    contentDescription = "Video",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(36.dp).align(Alignment.Center)
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                        .align(Alignment.Center),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_play),
+                                        contentDescription = "Video",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                             }
-                        } else if (item.type == SavedItemType.CODE) {
-                            Box(
-                                modifier = Modifier.fillMaxSize().background(Color(0xFF1E1E1E)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_code),
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(36.dp)
-                                )
+                        } else {
+                            when (item.type) {
+                                SavedItemType.VIDEO -> {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(
+                                                brush = Brush.verticalGradient(
+                                                    colors = listOf(
+                                                        Color(0xFFFF9800).copy(alpha = 0.15f),
+                                                        Color(0xFFFF5722).copy(alpha = 0.25f)
+                                                    )
+                                                )
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_custom_video),
+                                                contentDescription = "Video",
+                                                tint = Color(0xFFFF9800),
+                                                modifier = Modifier.size(32.dp)
+                                            )
+                                            Text(
+                                                text = "Video Media",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFFFF9800)
+                                            )
+                                        }
+                                    }
+                                }
+                                SavedItemType.AUDIO -> {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(
+                                                brush = Brush.verticalGradient(
+                                                    colors = listOf(
+                                                        Color(0xFFE91E63).copy(alpha = 0.15f),
+                                                        Color(0xFF9C27B0).copy(alpha = 0.25f)
+                                                    )
+                                                )
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_custom_voice),
+                                                contentDescription = "Audio",
+                                                tint = Color(0xFFE91E63),
+                                                modifier = Modifier.size(32.dp)
+                                            )
+                                            Text(
+                                                text = "Audio Recording",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFFE91E63)
+                                            )
+                                        }
+                                    }
+                                }
+                                SavedItemType.CODE -> {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize().background(Color(0xFF1E1E1E)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_custom_code),
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                    }
+                                }
+                                else -> {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_custom_link),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -384,45 +484,73 @@ fun ArchiveItemRow(
             Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 // Left thumbnail
                 val displayImage = item.getBestImagePath()
-                if (displayImage.isNotNullOrBlank() || item.type == SavedItemType.CODE) {
+                val hasImage = displayImage.isNotNullOrBlank() && 
+                        (item.type != SavedItemType.AUDIO && item.type != SavedItemType.VIDEO || displayImage?.endsWith(".mp4") == false)
+
+                if (hasImage) {
                     Box(
                         modifier = Modifier
                             .size(72.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                     ) {
-                        if (displayImage.isNotNullOrBlank()) {
-                            AsyncImage(
-                                model = displayImage,
-                                contentDescription = item.title,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        } else if (item.type == SavedItemType.CODE) {
+                        AsyncImage(
+                            model = displayImage,
+                            contentDescription = item.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        if (item.type == SavedItemType.VIDEO) {
                             Box(
-                                modifier = Modifier.fillMaxSize().background(Color(0xFF1E1E1E)),
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                    .align(Alignment.Center),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(painterResource(id = R.drawable.ic_custom_code), null, tint = Color.White, modifier = Modifier.size(24.dp))
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_play),
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(10.dp)
+                                )
                             }
                         }
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                 } else {
+                    val iconResId = when (item.type) {
+                        SavedItemType.LINK -> R.drawable.ic_custom_link
+                        SavedItemType.TEXT -> R.drawable.ic_custom_text
+                        SavedItemType.AUDIO -> R.drawable.ic_custom_voice
+                        SavedItemType.VIDEO -> R.drawable.ic_custom_video
+                        SavedItemType.CODE -> R.drawable.ic_custom_code
+                        SavedItemType.IMAGE -> R.drawable.ic_custom_image
+                    }
+                    val placeholderBg = if (item.type == SavedItemType.CODE) {
+                        Color(0xFF1E1E1E)
+                    } else {
+                        typeColor.copy(alpha = 0.15f)
+                    }
+                    val placeholderTint = if (item.type == SavedItemType.CODE) {
+                        Color.White
+                    } else {
+                        typeColor
+                    }
+
                     Box(
                         modifier = Modifier
                             .size(72.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(typeColor.copy(alpha = 0.15f)),
+                            .background(placeholderBg),
                         contentAlignment = Alignment.Center
                     ) {
-                        val iconResId = when (item.type) {
-                            SavedItemType.LINK -> R.drawable.ic_custom_link
-                            SavedItemType.TEXT -> R.drawable.ic_custom_text
-                            SavedItemType.AUDIO -> R.drawable.ic_custom_voice
-                            else -> R.drawable.ic_custom_text
-                        }
-                        Icon(painterResource(id = iconResId), null, tint = typeColor, modifier = Modifier.size(28.dp))
+                        Icon(
+                            painter = painterResource(id = iconResId),
+                            contentDescription = null,
+                            tint = placeholderTint,
+                            modifier = Modifier.size(28.dp)
+                        )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                 }

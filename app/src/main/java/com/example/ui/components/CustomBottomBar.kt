@@ -48,7 +48,7 @@ fun CustomBottomBar(
 ) {
     Box(
         modifier = Modifier
-            .padding(start = 16.dp, bottom = 16.dp, end = 80.dp),
+            .padding(start = 16.dp, bottom = 16.dp, end = 92.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         Row(

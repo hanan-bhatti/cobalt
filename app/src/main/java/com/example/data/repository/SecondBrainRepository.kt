@@ -239,24 +239,30 @@ class SecondBrainRepository(private val context: Context) {
         }
     }
 
-    suspend fun saveItem(item: SavedItem, mediaBytes: ByteArray? = null): SavedItem = withContext(Dispatchers.IO) {
+    suspend fun saveItem(
+        item: SavedItem,
+        mediaBytes: ByteArray? = null,
+        onProgress: (Float) -> Unit = {}
+    ): SavedItem = withContext(Dispatchers.IO) {
         var finalItem = item.copy(isSynced = false)
 
         // 1. Save locally first to keep the interface fast & offline-ready
         savedItemDao.insertItem(finalItem.toEntity())
+        onProgress(0.1f)
 
         // 2. Perform background sync if signed in
         val currentUser = firebaseAuth?.currentUser
         if (currentUser == null && prefs.getString("simulated_email", null) != null) {
             finalItem = finalItem.copy(isSynced = true)
             savedItemDao.insertItem(finalItem.toEntity())
+            onProgress(1.0f)
         }
 
         if (currentUser != null) {
             try {
                 var actualBytes = mediaBytes
                 // If mediaBytes are not provided (e.g., queued/offline item), read them from the local cache file
-                if (actualBytes == null && (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO)) {
+                if (actualBytes == null && (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO)) {
                     val localPath = item.thumbnailPath ?: item.content
                     if (!localPath.startsWith("http://") && !localPath.startsWith("https://")) {
                         actualBytes = readFileBytes(localPath)
@@ -265,17 +271,37 @@ class SecondBrainRepository(private val context: Context) {
 
                 // Upload to Firebase Storage if we have bytes and storage is available
                 if (storage != null && actualBytes != null) {
-                    val fileExtension = if (item.type == SavedItemType.VIDEO) "mp4" else "jpg"
+                    val fileExtension = when (item.type) {
+                        SavedItemType.VIDEO -> "mp4"
+                        SavedItemType.AUDIO -> "mp4"
+                        else -> "jpg"
+                    }
                     val storageRef = storage.reference.child("users/${currentUser.uid}/media/${item.id}.$fileExtension")
                     
                     val uploadTask = storageRef.putBytes(actualBytes)
+                    uploadTask.addOnProgressListener { taskSnapshot ->
+                        val progress = if (taskSnapshot.totalByteCount > 0) {
+                            taskSnapshot.bytesTransferred.toFloat() / taskSnapshot.totalByteCount
+                        } else {
+                            0f
+                        }
+                        // Scale progress to 10% - 85% range
+                        onProgress(0.1f + progress * 0.75f)
+                    }
                     val snapshot = uploadTask.await()
                     val downloadUrl = (snapshot.metadata?.reference?.downloadUrl ?: throw Exception("No reference URL")).await()
                     
-                    // Update item content with the cloud storage URL
-                    finalItem = finalItem.copy(content = downloadUrl.toString())
+                    // Update item thumbnailPath (for audio) or content (for image/video) with the cloud storage URL
+                    finalItem = if (item.type == SavedItemType.AUDIO) {
+                        finalItem.copy(thumbnailPath = downloadUrl.toString())
+                    } else {
+                        finalItem.copy(content = downloadUrl.toString())
+                    }
                     // Save locally again with the new remote URL
                     savedItemDao.insertItem(finalItem.toEntity())
+                    onProgress(0.9f)
+                } else {
+                    onProgress(0.5f)
                 }
 
                 // Sync metadata to Firestore
@@ -302,6 +328,7 @@ class SecondBrainRepository(private val context: Context) {
                     finalItem = finalItem.copy(isSynced = true)
                     savedItemDao.insertItem(finalItem.toEntity())
                 }
+                onProgress(1.0f)
             } catch (e: Exception) {
                 Log.e("SecondBrainRepo", "Background Firebase sync failed for item ${item.id}: ${e.message}")
             }

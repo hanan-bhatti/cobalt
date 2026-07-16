@@ -274,6 +274,9 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
 
+    private val _saveProgress = MutableStateFlow<Float?>(null)
+    val saveProgress: StateFlow<Float?> = _saveProgress.asStateFlow()
+
     private val _ocrError = MutableStateFlow<String?>(null)
     val ocrError: StateFlow<String?> = _ocrError.asStateFlow()
 
@@ -808,14 +811,15 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     // CAPTURE FLOW
     // ----------------------------------------------------
 
-    fun startManualCapture(type: SavedItemType) {
+    fun startManualCapture(type: SavedItemType, initialFolders: List<String> = emptyList()) {
         _capturedBitmap.value = null
         pendingMediaBytes = null
         _extractedLinksToReview.value = emptyList()
         _activeCaptureItem.value = SavedItem(
             type = type,
             title = "",
-            content = if (type == SavedItemType.CODE) "```kotlin\n// Code snippet\n```" else ""
+            content = if (type == SavedItemType.CODE) "```kotlin\n// Code snippet\n```" else "",
+            folders = initialFolders
         )
     }
 
@@ -935,6 +939,9 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             try {
                 val bytes = file.readBytes()
+                pendingMediaBytes = bytes
+                val localPath = repository.saveToLocalCache("audio_${java.util.UUID.randomUUID()}.mp4", bytes)
+
                 val base64Data = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
                 val apiKey = settingsRepository.geminiApiKey.value.ifEmpty { com.example.BuildConfig.GEMINI_API_KEY }
                 
@@ -951,7 +958,12 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 )
 
                 if (result != null && !result.startsWith("Error")) {
-                    _activeCaptureItem.value = _activeCaptureItem.value?.copy(content = result)
+                    val extractedTitle = extractTitleFromMarkdown(result)
+                    _activeCaptureItem.value = _activeCaptureItem.value?.copy(
+                        content = result,
+                        title = extractedTitle ?: _activeCaptureItem.value?.title ?: "Voice Memo Transcription",
+                        thumbnailPath = localPath
+                    )
                 } else {
                     _ocrError.value = result ?: "Failed to transcribe audio."
                 }
@@ -1344,6 +1356,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         val item = _activeCaptureItem.value ?: return
         viewModelScope.launch {
             _isSaving.value = true
+            _saveProgress.value = 0f
             try {
                 var finalItem = item
                 if (finalItem.type == SavedItemType.LINK && finalItem.linkTitle.isNullOrBlank()) {
@@ -1356,7 +1369,11 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     )
                 }
                 val isEdit = allItems.value.any { it.id == finalItem.id }
-                repository.saveItem(finalItem, pendingMediaBytes)
+                repository.saveItem(finalItem, pendingMediaBytes) { progress ->
+                    _saveProgress.value = progress
+                }
+                _saveProgress.value = 1.0f
+                kotlinx.coroutines.delay(200) // slight delay to show 100% progress state
                 cancelCapture()
                 showToast(if (isEdit) "Item updated successfully." else "Item saved successfully.")
                 
@@ -1372,6 +1389,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 Log.e("SecondBrainVM", "Failed to save item: ${e.message}")
             } finally {
                 _isSaving.value = false
+                _saveProgress.value = null
             }
         }
     }
@@ -1455,6 +1473,19 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 item.folders + folderName
             }
             repository.saveItem(item.copy(folders = updatedFolders))
+        }
+    }
+
+    fun updateSavedItem(item: SavedItem) {
+        viewModelScope.launch {
+            repository.saveItem(item, null)
+            launch(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    repository.syncUnsyncedItems()
+                } catch (e: Exception) {
+                    Log.e("SecondBrainVM", "Background sync failed: ${e.message}")
+                }
+            }
         }
     }
 

@@ -36,6 +36,8 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshState
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -64,11 +66,20 @@ import com.example.ui.viewmodel.SecondBrainViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.scale
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun HomeScreen(
     onNavigateToSearch: () -> Unit,
@@ -266,12 +277,21 @@ fun HomeScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
+        val pullToRefreshState = rememberPullToRefreshState()
         PullToRefreshBox(
             isRefreshing = isSyncing,
             onRefresh = { viewModel.syncData() },
+            state = pullToRefreshState,
             modifier = Modifier
                 .padding(innerPadding)
-                .fillMaxSize()
+                .fillMaxSize(),
+            indicator = {
+                PullToRefreshDefaults.LoadingIndicator(
+                    state = pullToRefreshState,
+                    isRefreshing = isSyncing,
+                    modifier = Modifier.align(Alignment.TopCenter)
+                )
+            }
         ) {
             Column(
                 modifier = Modifier.fillMaxSize()
@@ -576,6 +596,7 @@ fun HomeScreen(
                             SwipeToDismissWrapper(
                                 item = item,
                                 enable = !isSelectionMode,
+                                isScrolling = listState.isScrollInProgress,
                                 onDismissToDelete = {
                                     itemToDelete = item
                                 },
@@ -1351,7 +1372,9 @@ fun HomeScreen(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+
+
+
 @Composable
 fun SwipeToDismissWrapper(
     item: SavedItem,
@@ -1359,103 +1382,164 @@ fun SwipeToDismissWrapper(
     onDismissToArchive: () -> Unit,
     modifier: Modifier = Modifier,
     enable: Boolean = true,
+    isScrolling: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val isArchived = remember(item.folders) { item.folders.contains("Archive") }
-    val dismissState = rememberSwipeToDismissBoxState(
-        positionalThreshold = { it * 0.5f },
-        confirmValueChange = { value ->
-            if (!enable) {
-                false
-            } else {
-                when (value) {
-                    SwipeToDismissBoxValue.StartToEnd -> {
-                        onDismissToArchive()
-                        // Return false so it snaps back. If it's removed from the list (e.g. in 'All' feed), 
-                        // the list will animate its removal before the snap finishes. If it stays (e.g. custom folder),
-                        // it gracefully snaps back and shows the new Archived badge.
-                        false 
-                    }
-                    SwipeToDismissBoxValue.EndToStart -> {
-                        onDismissToDelete()
-                        // Return false to snap back immediately since we show a confirmation dialog
-                        false 
-                    }
-                    SwipeToDismissBoxValue.Settled -> false
+    val offsetX = remember { Animatable(0f) }
+    var cardWidth by remember { mutableFloatStateOf(1f) }
+    val scope = rememberCoroutineScope()
+    val enableState = rememberUpdatedState(enable)
+
+    // Calculate how far swipe has progressed (-1..1 range)
+    val swipeProgress = if (cardWidth > 0f) (offsetX.value / cardWidth).coerceIn(-1f, 1f) else 0f
+    val absProgress = kotlin.math.abs(swipeProgress)
+    val isPastThreshold = absProgress >= 0.5f
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .layout { measurable, constraints ->
+                val placeable = measurable.measure(constraints)
+                cardWidth = placeable.width.toFloat()
+                layout(placeable.width, placeable.height) {
+                    placeable.placeRelative(0, 0)
                 }
             }
-        }
-    )
+    ) {
+        // Background layer — only visible while dragging
+        if (absProgress > 0.02f) {
+            val isArchiveDirection = offsetX.value > 0
+            val bgColor by animateColorAsState(
+                targetValue = if (isArchiveDirection) {
+                    if (isPastThreshold) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    if (isPastThreshold) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.errorContainer
+                },
+                animationSpec = tween(200),
+                label = "swipe_bg"
+            )
+            val iconTint = if (isArchiveDirection) {
+                if (isPastThreshold) MaterialTheme.colorScheme.onPrimary
+                else MaterialTheme.colorScheme.onPrimaryContainer
+            } else {
+                if (isPastThreshold) MaterialTheme.colorScheme.onError
+                else MaterialTheme.colorScheme.onErrorContainer
+            }
+            val iconResId = if (isArchiveDirection) {
+                if (isArchived) R.drawable.ic_custom_unarchive else R.drawable.ic_custom_archive
+            } else {
+                R.drawable.ic_custom_delete
+            }
+            val text = if (isArchiveDirection) {
+                if (isArchived) "Restore" else "Archive"
+            } else {
+                "Delete"
+            }
+            val alignment = if (isArchiveDirection) Alignment.CenterStart else Alignment.CenterEnd
 
-    SwipeToDismissBox(
-        state = dismissState,
-        backgroundContent = {
-            val direction = dismissState.dismissDirection
-            val color = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.primaryContainer
-                SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
-                SwipeToDismissBoxValue.Settled -> Color.Transparent
-            }
-            val alignment = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
-                SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
-                SwipeToDismissBoxValue.Settled -> Alignment.Center
-            }
-            val iconResId = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> if (isArchived) R.drawable.ic_custom_unarchive else R.drawable.ic_custom_archive
-                SwipeToDismissBoxValue.EndToStart -> R.drawable.ic_custom_delete
-                SwipeToDismissBoxValue.Settled -> R.drawable.ic_custom_delete
-            }
-            val text = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> if (isArchived) "Restore" else "Archive"
-                SwipeToDismissBoxValue.EndToStart -> "Delete"
-                SwipeToDismissBoxValue.Settled -> ""
-            }
+            // Scale icon based on progress for satisfying feedback
+            val iconScale by animateFloatAsState(
+                targetValue = if (isPastThreshold) 1.2f else 0.8f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                label = "icon_scale"
+            )
 
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(color, RoundedCornerShape(20.dp))
+                    .matchParentSize()
+                    .background(bgColor, RoundedCornerShape(20.dp))
                     .padding(horizontal = 20.dp),
                 contentAlignment = alignment
             ) {
-                if (direction != SwipeToDismissBoxValue.Settled) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        if (direction == SwipeToDismissBoxValue.StartToEnd) {
-                            Icon(
-                                painter = painterResource(id = iconResId),
-                                contentDescription = text,
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            Text(
-                                text = text,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        } else {
-                            Text(
-                                text = text,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                            Icon(
-                                painter = painterResource(id = iconResId),
-                                contentDescription = text,
-                                tint = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                        }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.graphicsLayer {
+                        scaleX = iconScale
+                        scaleY = iconScale
+                    }
+                ) {
+                    if (isArchiveDirection) {
+                        Icon(
+                            painter = painterResource(id = iconResId),
+                            contentDescription = text,
+                            tint = iconTint
+                        )
+                        Text(
+                            text = text,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = iconTint
+                        )
+                    } else {
+                        Text(
+                            text = text,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = iconTint
+                        )
+                        Icon(
+                            painter = painterResource(id = iconResId),
+                            contentDescription = text,
+                            tint = iconTint
+                        )
                     }
                 }
             }
-        },
-        modifier = modifier.fillMaxWidth(),
-        content = {
+        }
+
+        // Foreground content with horizontal drag
+        Box(
+            modifier = Modifier
+                .offset { androidx.compose.ui.unit.IntOffset(offsetX.value.toInt(), 0) }
+                .pointerInput(Unit) {
+                    if (!enableState.value) return@pointerInput
+                    detectHorizontalDragGestures(
+                        onDragStart = { /* nothing */ },
+                        onDragCancel = {
+                            scope.launch {
+                                offsetX.animateTo(
+                                    0f,
+                                    spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
+                                )
+                            }
+                        },
+                        onDragEnd = {
+                            val progress = if (cardWidth > 0f) kotlin.math.abs(offsetX.value / cardWidth) else 0f
+                            if (progress >= 0.5f) {
+                                // Only trigger action if dragged past 50%
+                                if (offsetX.value > 0) {
+                                    onDismissToArchive()
+                                } else {
+                                    onDismissToDelete()
+                                }
+                            }
+                            // Always snap back
+                            scope.launch {
+                                offsetX.animateTo(
+                                    0f,
+                                    spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
+                                )
+                            }
+                        },
+                        onHorizontalDrag = { change, dragAmount ->
+                            if (!enableState.value) return@detectHorizontalDragGestures
+                            change.consume()
+                            scope.launch {
+                                val newValue = (offsetX.value + dragAmount)
+                                    .coerceIn(-cardWidth, cardWidth)
+                                offsetX.snapTo(newValue)
+                            }
+                        }
+                    )
+                }
+        ) {
             content()
         }
-    )
+    }
 }
 
 @Composable
