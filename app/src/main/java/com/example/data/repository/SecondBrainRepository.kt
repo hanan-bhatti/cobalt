@@ -244,7 +244,26 @@ class SecondBrainRepository(private val context: Context) {
         mediaBytes: ByteArray? = null,
         onProgress: (Float) -> Unit = {}
     ): SavedItem = withContext(Dispatchers.IO) {
-        var finalItem = item.copy(isSynced = false)
+        // Calculate item size dynamically
+        var itemSize = 0L
+        if (mediaBytes != null) {
+            itemSize = mediaBytes.size.toLong()
+        } else {
+            val localPath = item.thumbnailPath ?: item.content
+            if (localPath.startsWith("/")) {
+                val file = java.io.File(localPath)
+                if (file.exists()) {
+                    itemSize = file.length()
+                }
+            } else if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO) {
+                // Keep existing sizeBytes for remote media items loaded from cloud
+                itemSize = if (item.sizeBytes > 0L) item.sizeBytes else 0L
+            } else {
+                itemSize = item.content.toByteArray().size.toLong()
+            }
+        }
+
+        var finalItem = item.copy(isSynced = false, sizeBytes = itemSize)
 
         // 1. Save locally first to keep the interface fast & offline-ready
         savedItemDao.insertItem(finalItem.toEntity())
@@ -293,9 +312,9 @@ class SecondBrainRepository(private val context: Context) {
                     
                     // Update item thumbnailPath (for audio) or content (for image/video) with the cloud storage URL
                     finalItem = if (item.type == SavedItemType.AUDIO) {
-                        finalItem.copy(thumbnailPath = downloadUrl.toString())
+                        finalItem.copy(thumbnailPath = downloadUrl.toString(), sizeBytes = actualBytes.size.toLong())
                     } else {
-                        finalItem.copy(content = downloadUrl.toString())
+                        finalItem.copy(content = downloadUrl.toString(), sizeBytes = actualBytes.size.toLong())
                     }
                     // Save locally again with the new remote URL
                     savedItemDao.insertItem(finalItem.toEntity())
@@ -318,7 +337,8 @@ class SecondBrainRepository(private val context: Context) {
                         "isSynced" to true,
                         "linkTitle" to finalItem.linkTitle,
                         "linkDescription" to finalItem.linkDescription,
-                        "linkImage" to finalItem.linkImage
+                        "linkImage" to finalItem.linkImage,
+                        "sizeBytes" to finalItem.sizeBytes
                     )
                     firestore.collection("users").document(currentUser.uid)
                         .collection("items").document(finalItem.id)
@@ -366,7 +386,8 @@ class SecondBrainRepository(private val context: Context) {
                         val downloadUrl = (snapshot.metadata?.reference?.downloadUrl ?: throw Exception("No reference URL")).await()
                         finalItem = finalItem.copy(
                             content = downloadUrl.toString(),
-                            thumbnailPath = downloadUrl.toString()
+                            thumbnailPath = downloadUrl.toString(),
+                            sizeBytes = bytes.size.toLong()
                         )
                         savedItemDao.insertItem(finalItem.toEntity())
                     }
@@ -385,7 +406,8 @@ class SecondBrainRepository(private val context: Context) {
                         "isSynced" to true,
                         "linkTitle" to finalItem.linkTitle,
                         "linkDescription" to finalItem.linkDescription,
-                        "linkImage" to finalItem.linkImage
+                        "linkImage" to finalItem.linkImage,
+                        "sizeBytes" to finalItem.sizeBytes
                     )
                     firestore.collection("users").document(currentUser.uid)
                         .collection("items").document(finalItem.id)
@@ -448,7 +470,8 @@ class SecondBrainRepository(private val context: Context) {
                         val downloadUrl = (snapshot.metadata?.reference?.downloadUrl ?: throw Exception("No reference URL")).await()
                         finalItem = finalItem.copy(
                             content = downloadUrl.toString(),
-                            thumbnailPath = downloadUrl.toString()
+                            thumbnailPath = downloadUrl.toString(),
+                            sizeBytes = bytes.size.toLong()
                         )
                         savedItemDao.insertItem(finalItem.toEntity())
                     }
@@ -468,7 +491,8 @@ class SecondBrainRepository(private val context: Context) {
                         "isSynced" to true,
                         "linkTitle" to finalItem.linkTitle,
                         "linkDescription" to finalItem.linkDescription,
-                        "linkImage" to finalItem.linkImage
+                        "linkImage" to finalItem.linkImage,
+                        "sizeBytes" to finalItem.sizeBytes
                     )
                     firestore.collection("users").document(currentUser.uid)
                         .collection("items").document(finalItem.id)
@@ -670,7 +694,8 @@ class SecondBrainRepository(private val context: Context) {
                         "isSynced" to true,
                         "linkTitle" to finalItem.linkTitle,
                         "linkDescription" to finalItem.linkDescription,
-                        "linkImage" to finalItem.linkImage
+                        "linkImage" to finalItem.linkImage,
+                        "sizeBytes" to finalItem.sizeBytes
                     )
                     userDocRef.collection("items").document(finalItem.id).set(itemMap).await()
                 }
@@ -716,6 +741,7 @@ class SecondBrainRepository(private val context: Context) {
                 val linkTitle = doc.getString("linkTitle")
                 val linkDescription = doc.getString("linkDescription")
                 val linkImage = doc.getString("linkImage")
+                val sizeBytes = doc.getLong("sizeBytes") ?: 0L
 
                 val foldersJsonStr = "[" + foldersList.joinToString(",") { "\"$it\"" } + "]"
                 savedItemDao.insertItem(
@@ -731,7 +757,8 @@ class SecondBrainRepository(private val context: Context) {
                         isSynced = true,
                         linkTitle = linkTitle,
                         linkDescription = linkDescription,
-                        linkImage = linkImage
+                        linkImage = linkImage,
+                        sizeBytes = sizeBytes
                     )
                 )
             }

@@ -211,10 +211,8 @@ fun ProfileMainContent(
                             )
                         }
 
-                        val downloadedMb = downloadProgress.downloadedBytes / (1024f * 1024f)
-                        val totalMb = downloadProgress.totalBytes / (1024f * 1024f)
                         Text(
-                            text = String.format(Locale.US, "Downloaded %.1f MB / %.1f MB", downloadedMb, totalMb),
+                            text = "Downloaded ${formatStorageSize(downloadProgress.downloadedBytes)} / ${formatStorageSize(downloadProgress.totalBytes)}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
                         )
@@ -402,15 +400,13 @@ fun ProfileMainContent(
             // STORAGE SECTION
             SectionContainer(title = "STORAGE") {
                 Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-                    val usedMb = usedStorageBytes / (1024f * 1024f)
                     val cloudUsedStorageBytes by viewModel.cloudUsedStorageBytes.collectAsState()
-                    val cloudUsedMb = cloudUsedStorageBytes / (1024f * 1024f)
-                    val maxMb = 512f
+                    val maxStorageBytes = 512f * 1024f * 1024f
 
                     // Calculate fractions
-                    val cloudFraction = (cloudUsedMb / maxMb).coerceIn(0f, 1f)
-                    val localOnlyMb = (usedMb - cloudUsedMb).coerceAtLeast(0f)
-                    val localFraction = (localOnlyMb / maxMb).coerceIn(0f, 1f - cloudFraction)
+                    val cloudFraction = (cloudUsedStorageBytes.toFloat() / maxStorageBytes).coerceIn(0f, 1f)
+                    val localOnlyBytes = (usedStorageBytes - cloudUsedStorageBytes).coerceAtLeast(0L)
+                    val localFraction = (localOnlyBytes.toFloat() / maxStorageBytes).coerceIn(0f, 1f - cloudFraction)
                     val freeFraction = (1f - cloudFraction - localFraction).coerceAtLeast(0f)
 
                     Row(
@@ -425,7 +421,7 @@ fun ProfileMainContent(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = String.format(Locale.US, "%.1f MB of 512 MB", usedMb.coerceAtLeast(cloudUsedMb)),
+                            text = "${formatStorageSize(usedStorageBytes.coerceAtLeast(cloudUsedStorageBytes))} of 512 MB",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -497,7 +493,7 @@ fun ProfileMainContent(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = String.format(Locale.US, "%.1f MB", cloudUsedMb),
+                                text = formatStorageSize(cloudUsedStorageBytes),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -519,7 +515,7 @@ fun ProfileMainContent(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = String.format(Locale.US, "%.1f MB", localOnlyMb),
+                                text = formatStorageSize(localOnlyBytes),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -747,5 +743,17 @@ fun ClickableRow(title: String, onClick: () -> Unit) {
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp)
         )
+    }
+}
+
+private fun formatStorageSize(bytes: Long): String {
+    if (bytes <= 0L) return "0.0 KB"
+    val kb = bytes / 1024f
+    val mb = kb / 1024f
+    val gb = mb / 1024f
+    return when {
+        gb >= 1.0f -> String.format(Locale.US, "%.1f GB", gb)
+        mb >= 1.0f -> String.format(Locale.US, "%.1f MB", mb)
+        else -> String.format(Locale.US, "%.1f KB", kb)
     }
 }
