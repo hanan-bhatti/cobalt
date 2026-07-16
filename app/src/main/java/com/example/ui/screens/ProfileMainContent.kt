@@ -57,7 +57,7 @@ fun ProfileMainContent(
     val userPhotoUrl by viewModel.userPhotoUrl.collectAsState()
     val allItems by viewModel.allItems.collectAsState()
     val usedStorageBytes by viewModel.usedStorageBytes.collectAsState()
-    
+
     val totalItems = allItems.size
     val totalLinks = allItems.count { it.type == SavedItemType.LINK }
     val totalImages = allItems.count { it.type == SavedItemType.IMAGE }
@@ -65,9 +65,9 @@ fun ProfileMainContent(
     val totalText = allItems.count { it.type == SavedItemType.TEXT }
     val totalCode = allItems.count { it.type == SavedItemType.CODE }
     val totalAudio = allItems.count { it.type == SavedItemType.AUDIO }
-    
+
     val isSyncing by viewModel.isSyncing.collectAsState()
-    
+
     val context = LocalContext.current
     val downloadProgress by DataDownloadManager.progress.collectAsState()
 
@@ -91,7 +91,7 @@ fun ProfileMainContent(
     }
 
     var showSignOutConfirmDialog by remember { mutableStateOf(false) }
-    
+
     val pullToRefreshState = rememberPullToRefreshState()
     androidx.compose.material3.pulltorefresh.PullToRefreshBox(
         isRefreshing = isSyncing,
@@ -148,13 +148,13 @@ fun ProfileMainContent(
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                         }
-                        
+
                         val progressVal = if (downloadProgress.totalBytes > 0) {
                             downloadProgress.downloadedBytes.toFloat() / downloadProgress.totalBytes.toFloat()
                         } else {
                             0.0f
                         }
-                        
+
                         LinearProgressIndicator(
                             progress = { progressVal.coerceIn(0.0f, 1.0f) },
                             modifier = Modifier
@@ -185,7 +185,7 @@ fun ProfileMainContent(
                             } else {
                                 String.format(Locale.US, "%.1f KB/s", downloadProgress.speedBytesPerSec / 1024f)
                             }
-                            
+
                             Text(
                                 text = "Speed: $speedText",
                                 style = MaterialTheme.typography.bodySmall,
@@ -297,9 +297,9 @@ fun ProfileMainContent(
                                     Text(text = initials, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
                                 }
                             }
-                            
+
                             Spacer(modifier = Modifier.width(16.dp))
-                            
+
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = userName ?: userEmail!!.substringBefore("@").replaceFirstChar { it.uppercase() },
@@ -349,7 +349,7 @@ fun ProfileMainContent(
                     }
                 }
             }
-            
+
             // YOUR ARCHIVE
             SectionContainer(title = "YOUR ARCHIVE") {
                 Column(modifier = Modifier.fillMaxWidth()) {
@@ -359,7 +359,7 @@ fun ProfileMainContent(
                         Text(text = "items captured", fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 6.dp))
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                    
+
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -393,12 +393,12 @@ fun ProfileMainContent(
                     }
                 }
             }
-            
+
             // APP
             SectionContainer(title = "APP") {
                 ClickableRow(title = "Settings", onClick = onNavigateToSettings)
             }
-            
+
             // STORAGE SECTION
             SectionContainer(title = "STORAGE") {
                 Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
@@ -406,7 +406,7 @@ fun ProfileMainContent(
                     val cloudUsedStorageBytes by viewModel.cloudUsedStorageBytes.collectAsState()
                     val cloudUsedMb = cloudUsedStorageBytes / (1024f * 1024f)
                     val maxMb = 512f
-                    
+
                     // Calculate fractions
                     val cloudFraction = (cloudUsedMb / maxMb).coerceIn(0f, 1f)
                     val localOnlyMb = (usedMb - cloudUsedMb).coerceAtLeast(0f)
@@ -430,7 +430,7 @@ fun ProfileMainContent(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Thick Segmented Progress Bar
@@ -475,9 +475,10 @@ fun ProfileMainContent(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Details Legend (Cloud vs Local Only)
-                    Row(
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(24.dp)
+                        horizontalArrangement = Arrangement.spacedBy(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         // Cloud backed up detail
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -488,21 +489,19 @@ fun ProfileMainContent(
                                     .background(Color(0xFF42A5F5))
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Column {
-                                Text(
-                                    text = "Cloud Backup",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = String.format(Locale.US, "%.1f MB", cloudUsedMb),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            Text(
+                                text = "Cloud Backup",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = String.format(Locale.US, "%.1f MB", cloudUsedMb),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-
                         // Local only detail
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
@@ -512,19 +511,18 @@ fun ProfileMainContent(
                                     .background(Color(0xFF66BB6A))
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Column {
-                                Text(
-                                    text = "Local Only",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = String.format(Locale.US, "%.1f MB", localOnlyMb),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            Text(
+                                text = "Local Only",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = String.format(Locale.US, "%.1f MB", localOnlyMb),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
 
@@ -534,7 +532,7 @@ fun ProfileMainContent(
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
-                    
+
                     // Manage Storage Button with bounce effect animation (jelly click scale down)
                     Button(
                         onClick = onNavigateToManageStorage,
@@ -549,7 +547,7 @@ fun ProfileMainContent(
                     }
                 }
             }
-            
+
             // INFORMATION & LEGAL
             SectionContainer(title = "INFORMATION & LEGAL") {
                 Column {
@@ -562,7 +560,7 @@ fun ProfileMainContent(
                     ClickableRow(title = "Terms & Conditions", onClick = { onNavigateToLegal("terms") })
                 }
             }
-            
+
             // App Version Info
             Column(
                 modifier = Modifier
@@ -583,7 +581,7 @@ fun ProfileMainContent(
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(40.dp))
         }
 
@@ -689,9 +687,9 @@ fun SectionContainer(title: String, content: @Composable () -> Unit) {
 
 @Composable
 fun ArchiveStatRow(
-    iconResId: Int, 
-    count: Int, 
-    label: String, 
+    iconResId: Int,
+    count: Int,
+    label: String,
     baseColor: Color,
     modifier: Modifier = Modifier
 ) {
@@ -717,16 +715,16 @@ fun ArchiveStatRow(
         }
         Spacer(modifier = Modifier.width(16.dp))
         Text(
-            text = label, 
-            fontSize = 16.sp, 
-            color = MaterialTheme.colorScheme.onSurface, 
+            text = label,
+            fontSize = 16.sp,
+            color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f)
         )
         Text(
-            text = "$count", 
-            fontSize = 18.sp, 
-            fontWeight = FontWeight.Bold, 
+            text = "$count",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
         )
     }

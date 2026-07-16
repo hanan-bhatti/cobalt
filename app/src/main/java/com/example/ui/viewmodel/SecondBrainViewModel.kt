@@ -274,6 +274,12 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
 
+    private val _isMetadataExtracting = MutableStateFlow(false)
+    val isMetadataExtracting: StateFlow<Boolean> = _isMetadataExtracting.asStateFlow()
+
+    private val _metadataError = MutableStateFlow<String?>(null)
+    val metadataError: StateFlow<String?> = _metadataError.asStateFlow()
+
     private val _saveProgress = MutableStateFlow<Float?>(null)
     val saveProgress: StateFlow<Float?> = _saveProgress.asStateFlow()
 
@@ -815,6 +821,8 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         _capturedBitmap.value = null
         pendingMediaBytes = null
         _extractedLinksToReview.value = emptyList()
+        _isMetadataExtracting.value = false
+        _metadataError.value = null
         _activeCaptureItem.value = SavedItem(
             type = type,
             title = "",
@@ -828,6 +836,8 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         _capturedBitmap.value = null
         pendingMediaBytes = null
         _extractedLinksToReview.value = emptyList()
+        _isMetadataExtracting.value = false
+        _metadataError.value = null
     }
 
     /**
@@ -837,6 +847,8 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             _capturedBitmap.value = null
             pendingMediaBytes = null
+            _isMetadataExtracting.value = false
+            _metadataError.value = null
 
             if (mimeType == null) return@launch
 
@@ -1223,6 +1235,9 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         if (url.isBlank()) return
 
         metadataFetchJob?.cancel()
+        _isMetadataExtracting.value = true
+        _metadataError.value = null
+
         metadataFetchJob = viewModelScope.launch {
             try {
                 val metadata = repository.fetchLinkMetadata(url)
@@ -1234,9 +1249,16 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                         linkImage = metadata.imageUrl,
                         title = metadata.title ?: updatedItem.title
                     )
+                    
+                    if (metadata.title.isNullOrBlank() && metadata.description.isNullOrBlank() && metadata.imageUrl.isNullOrBlank()) {
+                        _metadataError.value = "No metadata details could be parsed from this page."
+                    }
                 }
             } catch (e: Exception) {
                 Log.e("SecondBrainVM", "Failed to fetch link preview: ${e.message}")
+                _metadataError.value = "Extraction failed: ${e.localizedMessage ?: "Network error or invalid link"}"
+            } finally {
+                _isMetadataExtracting.value = false
             }
         }
     }
@@ -1245,6 +1267,8 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         _capturedBitmap.value = null
         pendingMediaBytes = null
         _extractedLinksToReview.value = emptyList()
+        _isMetadataExtracting.value = false
+        _metadataError.value = null
         _activeCaptureItem.value = item
 
         if (item.type == SavedItemType.IMAGE && item.content.isNotBlank()) {
