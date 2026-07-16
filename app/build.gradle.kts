@@ -18,9 +18,9 @@ android {
   defaultConfig {
     applicationId = "com.hanan_bhatti.second_brain"
     minSdk = 24
-    targetSdk = 36
+    targetSdk = 37
     versionCode = 1
-    versionName = "1.0"
+    versionName = "0.9.0-beta01"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

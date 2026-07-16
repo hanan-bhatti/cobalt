@@ -780,7 +780,7 @@ fun FolderDirectoryItem(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun FolderContentsBrowser(
     folderName: String,
