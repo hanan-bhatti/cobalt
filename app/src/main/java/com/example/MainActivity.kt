@@ -3,6 +3,7 @@ package com.example
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -193,8 +194,8 @@ BackHandler(enabled = activeDetailItem != null) {
                                         )
                                     }
                                     composable("faq") {
-                                        com.example.ui.screens.LegalScreen(
-                                            title = "FAQ",
+                                        com.example.ui.screens.FaqScreen(
+
                                             markdownContent = com.example.ui.screens.LegalDocs.faq,
                                             onBack = { navController.popBackStack() }
                                         )
@@ -269,7 +270,7 @@ BackHandler(enabled = activeDetailItem != null) {
                                     }
                                 )
                             }
-                            
+
                             val routesWithExpandingFab = listOf("home", "search", "profile")
                             if (currentRoute in routesWithExpandingFab) {
                                 com.example.ui.components.GlobalExpandingFab(viewModel = viewModel)
@@ -289,7 +290,7 @@ BackHandler(enabled = activeDetailItem != null) {
 
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
-        
+
         val openItemId = intent.getStringExtra("OPEN_ITEM_ID")
         if (openItemId != null) {
             viewModel.openItemById(openItemId)
@@ -301,7 +302,12 @@ BackHandler(enabled = activeDetailItem != null) {
         if (Intent.ACTION_SEND == action && type != null) {
             val textContent = intent.getStringExtra(Intent.EXTRA_TEXT)
             val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)
-            val mediaUri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+            val mediaUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(Intent.EXTRA_STREAM)
+            }
             viewModel.handleSharedIntent(type, textContent, mediaUri, subject)
         } else if (Intent.ACTION_VIEW == action) {
             val data: Uri? = intent.data

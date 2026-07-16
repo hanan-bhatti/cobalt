@@ -3,7 +3,6 @@ package com.example.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import com.example.ui.components.bounceClick
@@ -153,178 +152,185 @@ fun FoldersScreen(
             Box(modifier = Modifier.fillMaxSize()) {
                 Scaffold(
                     topBar = {
-                    TopAppBar(
-                        title = {
-                            Column {
-                                Text(
-                                    text = "Folders",
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                                Text(
-                                    text = "CATEGORIES & DIRECTORIES",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.secondary,
-                                    letterSpacing = 1.sp
-                                )
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.background
+                        TopAppBar(
+                            title = {
+                                Column {
+                                    Text(
+                                        text = "Folders",
+                                        fontSize = 24.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onBackground
+                                    )
+                                    Text(
+                                        text = "CATEGORIES & DIRECTORIES",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.secondary,
+                                        letterSpacing = 1.sp
+                                    )
+                                }
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.background
+                            )
                         )
-                    )
-                },
-                containerColor = MaterialTheme.colorScheme.background
-            ) { innerPadding ->
-                val pinnedFolders = remember(customFolderEntities) {
-                    customFolderEntities.filter { it.isPinned }
-                }
-                val otherFolders = remember(customFolderEntities) {
-                    customFolderEntities.filter { !it.isPinned }
-                }
-
-                androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                    columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(horizontal = 16.dp),
-                    contentPadding = PaddingValues(bottom = 100.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // System Built-in Categories Section
-                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-                        Text(
-                            text = "System Categories",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-                        )
+                    },
+                    containerColor = MaterialTheme.colorScheme.background
+                ) { innerPadding ->
+                    val pinnedFolders = remember(customFolderEntities) {
+                        customFolderEntities.filter { it.isPinned }
+                    }
+                    val otherFolders = remember(customFolderEntities) {
+                        customFolderEntities.filter { !it.isPinned }
                     }
 
-                    items(SavedItemType.entries.size) { index ->
-                        val type = SavedItemType.entries[index]
-                        val count = remember(allItems) {
-                            allItems.count { it.type == type && !it.folders.contains("Archive") }
-                        }
-                        val iconResId = when (type) {
-                            SavedItemType.LINK -> R.drawable.ic_custom_link
-                            SavedItemType.IMAGE -> R.drawable.ic_custom_image
-                            SavedItemType.VIDEO -> R.drawable.ic_custom_video
-                            SavedItemType.CODE -> R.drawable.ic_custom_code
-                            SavedItemType.TEXT -> R.drawable.ic_custom_text
-                            SavedItemType.AUDIO -> R.drawable.ic_custom_voice
-                        }
-                        SystemCategoryCard(
-                            name = type.displayName,
-                            count = count,
-                            iconResId = iconResId,
-                            onClick = { activeBrowseFolder = type.displayName },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    // Pinned Folders Section
-                    if (pinnedFolders.isNotEmpty()) {
+                    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                            .padding(horizontal = 16.dp),
+                        contentPadding = PaddingValues(bottom = 100.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // System Built-in Categories Section
                         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
                             Text(
-                                text = "Pinned Folders",
+                                text = "System Categories",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                            )
+                        }
+
+                        items(SavedItemType.entries.size) { index ->
+                            val type = SavedItemType.entries[index]
+                            val count = remember(allItems) {
+                                allItems.count { it.type == type && !it.folders.contains("Archive") }
+                            }
+                            val iconResId = when (type) {
+                                SavedItemType.LINK -> R.drawable.ic_custom_link
+                                SavedItemType.IMAGE -> R.drawable.ic_custom_image
+                                SavedItemType.VIDEO -> R.drawable.ic_custom_video
+                                SavedItemType.CODE -> R.drawable.ic_custom_code
+                                SavedItemType.TEXT -> R.drawable.ic_custom_text
+                                SavedItemType.AUDIO -> R.drawable.ic_custom_voice
+                            }
+                            SystemCategoryCard(
+                                name = type.displayName,
+                                count = count,
+                                iconResId = iconResId,
+                                onClick = { activeBrowseFolder = type.displayName },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        // Pinned Folders Section
+                        if (pinnedFolders.isNotEmpty()) {
+                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                                Text(
+                                    text = "Pinned Folders",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
+                                )
+                            }
+
+                            items(pinnedFolders.size, key = { "pinned_${pinnedFolders[it].name}" }) { index ->
+                                val folder = pinnedFolders[index]
+                                val count = remember(allItems) {
+                                    allItems.count { it.folders.contains(folder.name) }
+                                }
+                                PinnedFolderCard(
+                                    folder = folder,
+                                    count = count,
+                                    onClick = { activeBrowseFolder = folder.name },
+                                    onCustomize = { folderToCustomize = folder },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+
+                        // Custom Folders Directory Section
+                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                            Text(
+                                text = "Custom Folders",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
                             )
                         }
-                        
-                        items(pinnedFolders.size, key = { "pinned_${pinnedFolders[it].name}" }) { index ->
-                            val folder = pinnedFolders[index]
-                            val count = remember(allItems) {
-                                allItems.count { it.folders.contains(folder.name) }
-                            }
-                            PinnedFolderCard(
-                                folder = folder,
-                                count = count,
-                                onClick = { activeBrowseFolder = folder.name },
-                                onCustomize = { folderToCustomize = folder },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
 
-                    // Custom Folders Directory Section
-                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-                        Text(
-                            text = "Custom Folders",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
-                        )
-                    }
-
-                    if (otherFolders.isEmpty() && pinnedFolders.isEmpty()) {
-                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(32.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_custom_folder_open),
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.secondary,
-                                        modifier = Modifier.size(48.dp)
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = "No custom folders yet",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.secondary
-                                    )
+                        if (otherFolders.isEmpty() && pinnedFolders.isEmpty()) {
+                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_custom_folder_open),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.secondary,
+                                            modifier = Modifier.size(48.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text(
+                                            text = "No custom folders yet",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.secondary
+                                        )
+                                    }
                                 }
                             }
-                        }
-                    } else {
-                        items(otherFolders.size, key = { "other_${otherFolders[it].name}" }, span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) { index ->
-                            val folder = otherFolders[index]
-                            val count = remember(allItems) {
-                                allItems.count { it.folders.contains(folder.name) }
+                        } else {
+                            items(
+                                otherFolders.size,
+                                key = { "other_${otherFolders[it].name}" },
+                                span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) { index ->
+                                val folder = otherFolders[index]
+                                val count = remember(allItems) {
+                                    allItems.count { it.folders.contains(folder.name) }
+                                }
+                                FolderDirectoryItem(
+                                    folder = folder,
+                                    count = count,
+                                    onClick = { activeBrowseFolder = folder.name },
+                                    onCustomize = { folderToCustomize = folder },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
                             }
-                            FolderDirectoryItem(
-                                folder = folder,
-                                count = count,
-                                onClick = { activeBrowseFolder = folder.name },
-                                onCustomize = { folderToCustomize = folder },
-                                modifier = Modifier.fillMaxWidth()
-                            )
                         }
                     }
                 }
-            }
 
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(bottom = 16.dp, end = 16.dp)
-            ) {
-                FloatingActionButton(
-                    onClick = { showAddFolderDialog = true },
-                    shape = CircleShape,
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testTag("fab_create_folder").size(64.dp)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = 16.dp, end = 16.dp)
                 ) {
-                    Icon(painter = painterResource(id = R.drawable.ic_custom_plus), contentDescription = "New Folder", modifier = Modifier.size(24.dp))
+                    FloatingActionButton(
+                        onClick = { showAddFolderDialog = true },
+                        shape = CircleShape,
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testTag("fab_create_folder").size(64.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_plus),
+                            contentDescription = "New Folder",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
         }
-    }
     }
 
     // Add Custom Folder Dialog
@@ -408,8 +414,8 @@ fun SystemCategoryCard(
                 painter = painterResource(id = iconResId),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                
-            )
+
+                )
             Column {
                 Text(
                     text = name,
@@ -464,8 +470,8 @@ fun PinnedFolderCard(
                 )
                 IconButton(
                     onClick = onCustomize,
-                    
-                ) {
+
+                    ) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_custom_settings),
                         contentDescription = "Customize",
@@ -591,7 +597,7 @@ fun FolderContentsBrowser(
 ) {
     val items by viewModel.allItems.collectAsState()
     val isSyncing by viewModel.isSyncing.collectAsState()
-    
+
     // Filter items matching current browsing folder (either custom tag or system type)
     val folderItems = remember(items, folderName) {
         val systemCategory = SavedItemType.entries.find { it.displayName == folderName }
@@ -624,8 +630,8 @@ fun FolderContentsBrowser(
                         Icon(
                             painter = painterResource(id = R.drawable.ic_custom_back),
                             contentDescription = "Back",
-                            
-                        )
+
+                            )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -709,67 +715,68 @@ fun FolderBrowseItemRow(
     }
 
     Box {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-        modifier = Modifier
-            .fillMaxWidth()
-            .bounceClick(interactionSource)
-            .combinedClickable(
-                interactionSource = interactionSource,
-                indication = androidx.compose.foundation.LocalIndication.current,
-                onClick = onClick,
-                onLongClick = onLongClick ?: { showContextMenu = true }
-            )
-    ) {
-        Row(
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
             modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxWidth()
+                .bounceClick(interactionSource)
+                .combinedClickable(
+                    interactionSource = interactionSource,
+                    indication = androidx.compose.foundation.LocalIndication.current,
+                    onClick = onClick,
+                    onLongClick = onLongClick ?: { showContextMenu = true }
+                )
         ) {
-            Box(
+            Row(
                 modifier = Modifier
-                    .size(42.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)),
-                contentAlignment = Alignment.Center
+                    .padding(12.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = iconResId),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = item.title.ifBlank { "Untitled preserving" },
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = item.content.take(60).ifBlank { "No content preview available" },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
                 Icon(
-                    painter = painterResource(id = iconResId),
+                    painter = painterResource(id = R.drawable.ic_custom_chevron_right),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.size(20.dp)
                 )
             }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = item.title.ifBlank { "Untitled preserving" },
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = item.content.take(60).ifBlank { "No content preview available" },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            Icon(
-                painter = painterResource(id = R.drawable.ic_custom_chevron_right),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(20.dp)
-            )
         }
         DropdownMenu(
             expanded = showContextMenu,
@@ -959,7 +966,11 @@ fun FolderCustomizerDialog(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth().testTag("delete_folder_btn")
                     ) {
-                        Icon(painter = painterResource(id = R.drawable.ic_custom_delete), contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_delete),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Delete Folder")
                     }

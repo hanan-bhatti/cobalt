@@ -7,7 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.ClickableText
+import androidx.compose.ui.text.withLink
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -16,7 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -52,8 +53,7 @@ private fun parseBlocks(markdown: String): List<MdBlock> {
 }
 
 @Composable
-private fun buildRichText(raw: String): Pair<AnnotatedString, Map<IntRange, String>> {
-    val links = mutableMapOf<IntRange, String>()
+private fun buildRichText(raw: String): AnnotatedString {
     val builder = AnnotatedString.Builder()
     var cursor = 0
     val combined = Regex("""(\*\*[^*]+\*\*)|(\[[^\]]+]\([^)]+\))""")
@@ -69,32 +69,29 @@ private fun buildRichText(raw: String): Pair<AnnotatedString, Map<IntRange, Stri
             val m = linkRegex.find(token)!!
             val label = m.groupValues[1]
             val url = m.groupValues[2]
-            val start = builder.length
-            builder.withStyle(
-                SpanStyle(
+            val linkStyles = TextLinkStyles(
+                style = SpanStyle(
                     color = MaterialTheme.colorScheme.primary,
                     textDecoration = TextDecoration.Underline,
                     fontWeight = FontWeight.SemiBold
                 )
-            ) { append(label) }
-            links[start until builder.length] = url
+            )
+            builder.withLink(LinkAnnotation.Url(url = url, styles = linkStyles)) {
+                append(label)
+            }
         }
         cursor = match.range.last + 1
     }
     if (cursor < raw.length) builder.append(raw.substring(cursor))
-    return builder.toAnnotatedString() to links
+    return builder.toAnnotatedString()
 }
 
 @Composable
 private fun RichTextLine(raw: String, style: androidx.compose.ui.text.TextStyle) {
-    val uriHandler = LocalUriHandler.current
-    val (text, links) = buildRichText(raw)
-    ClickableText(
+    val text = buildRichText(raw)
+    Text(
         text = text,
-        style = style.copy(color = LocalContentColor.current),
-        onClick = { offset ->
-            links.entries.firstOrNull { offset in it.key }?.let { uriHandler.openUri(it.value) }
-        }
+        style = style.copy(color = LocalContentColor.current)
     )
 }
 

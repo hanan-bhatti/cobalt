@@ -399,7 +399,7 @@ fun HomeScreen(
                                 )
                             }
                         }
-                        Divider(
+                        HorizontalDivider(
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                         )

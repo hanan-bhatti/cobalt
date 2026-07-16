@@ -105,6 +105,7 @@ fun SettingsScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
+                    .padding(bottom = 100.dp)
             ) {
                 
                 SettingsSection(title = "App Theme") {

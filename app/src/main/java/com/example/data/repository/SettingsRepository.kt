@@ -12,13 +12,14 @@ class SettingsRepository(context: Context) {
     private val _geminiApiKey = MutableStateFlow(prefs.getString(KEY_GEMINI_API_KEY, "") ?: "")
     val geminiApiKey: StateFlow<String> = _geminiApiKey.asStateFlow()
 
-    private val _selectedModel = MutableStateFlow(prefs.getString(KEY_SELECTED_MODEL, "gemini-1.5-flash") ?: "gemini-1.5-flash")
+    private val _selectedModel =
+        MutableStateFlow(prefs.getString(KEY_SELECTED_MODEL, "gemini-1.5-flash") ?: "gemini-1.5-flash")
     val selectedModel: StateFlow<String> = _selectedModel.asStateFlow()
 
     private val _ocrSensitivity = MutableStateFlow(prefs.getString(KEY_OCR_SENSITIVITY, "Medium") ?: "Medium")
     val ocrSensitivity: StateFlow<String> = _ocrSensitivity.asStateFlow()
 
-    private val _themeMode = MutableStateFlow(prefs.getString(KEY_THEME_MODE, "System Default") ?: "System Default")
+    private val _themeMode = MutableStateFlow(prefs.getString(KEY_THEME_MODE, "Light") ?: "Light")
     val themeMode: StateFlow<String> = _themeMode.asStateFlow()
 
     private val _isFloatingOcrEnabled = MutableStateFlow(prefs.getBoolean(KEY_FLOATING_OCR, false))
@@ -27,7 +28,7 @@ class SettingsRepository(context: Context) {
     private val _edgePanelHeight = MutableStateFlow(prefs.getInt(KEY_EDGE_HEIGHT, 100))
     val edgePanelHeight: StateFlow<Int> = _edgePanelHeight.asStateFlow()
 
-    private val _edgePanelThickness = MutableStateFlow(prefs.getInt(KEY_EDGE_THICKNESS, 12))
+    private val _edgePanelThickness = MutableStateFlow(prefs.getInt(KEY_EDGE_THICKNESS, 6))
     val edgePanelThickness: StateFlow<Int> = _edgePanelThickness.asStateFlow()
 
     private val _edgePanelOpacity = MutableStateFlow(prefs.getFloat(KEY_EDGE_OPACITY, 0.7f))
@@ -116,7 +117,9 @@ class SettingsRepository(context: Context) {
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
             KEY_GEMINI_API_KEY -> _geminiApiKey.value = prefs.getString(KEY_GEMINI_API_KEY, "") ?: ""
-            KEY_SELECTED_MODEL -> _selectedModel.value = prefs.getString(KEY_SELECTED_MODEL, "gemini-1.5-flash") ?: "gemini-1.5-flash"
+            KEY_SELECTED_MODEL -> _selectedModel.value =
+                prefs.getString(KEY_SELECTED_MODEL, "gemini-1.5-flash") ?: "gemini-1.5-flash"
+
             KEY_OCR_SENSITIVITY -> _ocrSensitivity.value = prefs.getString(KEY_OCR_SENSITIVITY, "Medium") ?: "Medium"
             KEY_THEME_MODE -> _themeMode.value = prefs.getString(KEY_THEME_MODE, "System Default") ?: "System Default"
             KEY_FLOATING_OCR -> _isFloatingOcrEnabled.value = prefs.getBoolean(KEY_FLOATING_OCR, false)
@@ -125,8 +128,12 @@ class SettingsRepository(context: Context) {
             KEY_EDGE_OPACITY -> _edgePanelOpacity.value = prefs.getFloat(KEY_EDGE_OPACITY, 0.7f)
             KEY_EDGE_SIDE -> _edgePanelSide.value = prefs.getString(KEY_EDGE_SIDE, "Right") ?: "Right"
             KEY_EDGE_Y_PERCENT -> _edgePanelYPercent.value = prefs.getFloat(KEY_EDGE_Y_PERCENT, 0.4f)
-            KEY_HAS_DISMISSED_ONBOARDING -> _hasDismissedOnboarding.value = prefs.getBoolean(KEY_HAS_DISMISSED_ONBOARDING, false)
-            KEY_RECENT_CAPTURES_EXPANDED -> _isRecentCapturesExpanded.value = prefs.getBoolean(KEY_RECENT_CAPTURES_EXPANDED, true)
+            KEY_HAS_DISMISSED_ONBOARDING -> _hasDismissedOnboarding.value =
+                prefs.getBoolean(KEY_HAS_DISMISSED_ONBOARDING, false)
+
+            KEY_RECENT_CAPTURES_EXPANDED -> _isRecentCapturesExpanded.value =
+                prefs.getBoolean(KEY_RECENT_CAPTURES_EXPANDED, true)
+
             KEY_IS_LIST_VIEW -> _isListView.value = prefs.getBoolean(KEY_IS_LIST_VIEW, true)
         }
     }

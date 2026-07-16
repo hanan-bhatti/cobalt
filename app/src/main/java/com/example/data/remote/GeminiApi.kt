@@ -16,56 +16,56 @@ import java.util.concurrent.TimeUnit
 
 @JsonClass(generateAdapter = true)
 data class GenerateContentRequest(
-    @Json(name = "contents") val contents: List<Content>,
-    @Json(name = "generationConfig") val generationConfig: GenerationConfig? = null,
-    @Json(name = "systemInstruction") val systemInstruction: Content? = null
+    @param:Json(name = "contents") val contents: List<Content>,
+    @param:Json(name = "generationConfig") val generationConfig: GenerationConfig? = null,
+    @param:Json(name = "systemInstruction") val systemInstruction: Content? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class Content(
-    @Json(name = "parts") val parts: List<Part>
+    @param:Json(name = "parts") val parts: List<Part>
 )
 
 @JsonClass(generateAdapter = true)
 data class Part(
-    @Json(name = "text") val text: String? = null,
-    @Json(name = "inlineData") val inlineData: InlineData? = null
+    @param:Json(name = "text") val text: String? = null,
+    @param:Json(name = "inlineData") val inlineData: InlineData? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class InlineData(
-    @Json(name = "mimeType") val mimeType: String,
-    @Json(name = "data") val data: String
+    @param:Json(name = "mimeType") val mimeType: String,
+    @param:Json(name = "data") val data: String
 )
 
 @JsonClass(generateAdapter = true)
 data class GenerationConfig(
-    @Json(name = "temperature") val temperature: Float? = null,
-    @Json(name = "maxOutputTokens") val maxOutputTokens: Int? = null
+    @param:Json(name = "temperature") val temperature: Float? = null,
+    @param:Json(name = "maxOutputTokens") val maxOutputTokens: Int? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class GenerateContentResponse(
-    @Json(name = "candidates") val candidates: List<Candidate>? = null
+    @param:Json(name = "candidates") val candidates: List<Candidate>? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class Candidate(
-    @Json(name = "content") val content: Content? = null
+    @param:Json(name = "content") val content: Content? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class ModelListResponse(
-    @Json(name = "models") val models: List<ModelItem>? = null
+    @param:Json(name = "models") val models: List<ModelItem>? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class ModelItem(
-    @Json(name = "name") val name: String,
-    @Json(name = "version") val version: String? = null,
-    @Json(name = "displayName") val displayName: String? = null,
-    @Json(name = "description") val description: String? = null,
-    @Json(name = "supportedGenerationMethods") val supportedGenerationMethods: List<String>? = null
+    @param:Json(name = "name") val name: String,
+    @param:Json(name = "version") val version: String? = null,
+    @param:Json(name = "displayName") val displayName: String? = null,
+    @param:Json(name = "description") val description: String? = null,
+    @param:Json(name = "supportedGenerationMethods") val supportedGenerationMethods: List<String>? = null
 )
 
 interface GeminiApiService {

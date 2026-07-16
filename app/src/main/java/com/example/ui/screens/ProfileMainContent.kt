@@ -64,7 +64,7 @@ fun ProfileMainContent(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             // HEADER

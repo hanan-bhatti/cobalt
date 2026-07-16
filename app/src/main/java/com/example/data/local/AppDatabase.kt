@@ -21,7 +21,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "second_brain_db"
                 )
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigration(true)
                 .build()
                 INSTANCE = instance
                 instance

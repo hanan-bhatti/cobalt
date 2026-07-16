@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -120,7 +121,7 @@ fun RichTextEditor(
                     MarkdownAction(Icons.Default.FormatItalic, "Italic", FormatType.Italic),
                     MarkdownAction(Icons.Default.FormatStrikethrough, "Strikethrough", FormatType.Strikethrough),
                     MarkdownAction(Icons.Default.Title, "Heading", FormatType.Heading),
-                    MarkdownAction(Icons.Default.FormatListBulleted, "Bullet List", FormatType.BulletList),
+                    MarkdownAction(Icons.AutoMirrored.Filled.FormatListBulleted, "Bullet List", FormatType.BulletList),
                     MarkdownAction(Icons.Default.FormatListNumbered, "Numbered List", FormatType.NumberedList),
                     MarkdownAction(Icons.Default.Code, "Code Inline", FormatType.CodeInline),
                     MarkdownAction(Icons.Default.Terminal, "Code Block", FormatType.CodeBlock),

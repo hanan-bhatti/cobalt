@@ -41,7 +41,12 @@ class ScreenCaptureService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         var resultCode = intent?.getIntExtra("result_code", 0) ?: 0
-        var resultData = intent?.getParcelableExtra<Intent>("result_data")
+        var resultData = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent?.getParcelableExtra("result_data", Intent::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent?.getParcelableExtra("result_data")
+        }
 
         if (resultCode == 0 || resultData == null) {
             // Retrieve from persistent token cache
