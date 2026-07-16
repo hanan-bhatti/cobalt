@@ -21,10 +21,10 @@ fun Modifier.bounceClick(
 ): Modifier = composed {
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.95f else 1.0f,
+        targetValue = if (isPressed) 0.90f else 1.0f,
         animationSpec = spring(
-            dampingRatio = 0.7f, // Medium bounciness
-            stiffness = 800f     // Fast quick spring
+            dampingRatio = 0.6f, // Smooth bounciness
+            stiffness = 1500f    // Fast quick spring
         ),
         label = "bounceScale"
     )
@@ -56,10 +56,10 @@ fun PressableScale(
 ) {
     val isPressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (isPressed && enabled) 0.95f else 1.0f,
+        targetValue = if (isPressed && enabled) 0.90f else 1.0f,
         animationSpec = spring(
-            dampingRatio = 0.7f,
-            stiffness = 800f
+            dampingRatio = 0.6f,
+            stiffness = 1500f
         ),
         label = "pressScale"
     )

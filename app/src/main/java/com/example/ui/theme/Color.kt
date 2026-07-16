@@ -36,24 +36,24 @@ val SuperrOnSurfaceVariant = Charcoal
 val SuperrOutline = Charcoal
 val SuperrOutlineVariant = Charcoal.copy(alpha = 0.2f)
 
-// Dark equivalents (forced to light since Superr is light only, or mapped)
+// Dark equivalents (mapped from true dark mode values)
 val SuperrPrimaryDark = MarkerOrange
-val SuperrOnPrimaryDark = CreamPaper
-val SuperrPrimaryContainerDark = Charcoal
+val SuperrOnPrimaryDark = TrueBlack
+val SuperrPrimaryContainerDark = Color(0xFF5C2D11)
 val SuperrOnPrimaryContainerDark = DewDrop
 val SuperrSecondaryDark = BurntSienna
-val SuperrOnSecondaryDark = CreamPaper
-val SuperrSecondaryContainerDark = Charcoal
+val SuperrOnSecondaryDark = TrueBlack
+val SuperrSecondaryContainerDark = Color(0xFF4A1C00)
 val SuperrOnSecondaryContainerDark = DewDrop
 val SuperrTertiaryDark = CreamPaper
-val SuperrOnTertiaryDark = Charcoal
-val SuperrTertiaryContainerDark = Charcoal
+val SuperrOnTertiaryDark = TrueBlack
+val SuperrTertiaryContainerDark = Color(0xFF262626)
 val SuperrOnTertiaryContainerDark = DewDrop
-val SuperrBackgroundDark = Charcoal
+val SuperrBackgroundDark = TrueBlack
 val SuperrOnBackgroundDark = CreamPaper
-val SuperrSurfaceDark = Charcoal
+val SuperrSurfaceDark = TrueBlack
 val SuperrOnSurfaceDark = CreamPaper
-val SuperrSurfaceVariantDark = Color(0xFF2B2B2B)
+val SuperrSurfaceVariantDark = Color(0xFF1E1E1E)
 val SuperrOnSurfaceVariantDark = DewDrop
-val SuperrOutlineDark = CreamPaper
-val SuperrOutlineVariantDark = CreamPaper.copy(alpha = 0.2f)
+val SuperrOutlineDark = Color(0xFF424242)
+val SuperrOutlineVariantDark = Color(0xFF2B2B2B)
