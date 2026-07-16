@@ -19,10 +19,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
 
       - name: Setup Gradle
@@ -51,20 +51,13 @@ jobs:
         run: |
           printf '%s' "$KEYSTORE_BASE64" | base64 -di > app/release-key.jks
 
-      - name: Repair and Verify Gradle Wrapper
-        run: |
-          echo "Repairing Gradle Wrapper..."
-          mkdir -p gradle/wrapper
-          curl -sSLo gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v9.3.1/gradle/wrapper/gradle-wrapper.jar
-          chmod +x ./gradlew
-
-      - name: Build Release APK and AAB
+      - name: Build Release APK
         env:
           KEYSTORE_PATH: "release-key.jks"
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleRelease bundleRelease --parallel --build-cache
+        run: ./gradlew assembleRelease --parallel --build-cache
 
       - name: Rename artifacts with version
         id: rename
@@ -72,17 +65,13 @@ jobs:
           VERSION="${{ github.event.inputs.version_name }}"
           BUILD="${{ github.run_number }}"
           APK_SRC=$(find app/build/outputs/apk/release -name "*.apk" | head -n1)
-          AAB_SRC=$(find app/build/outputs/bundle/release -name "*.aab" | head -n1)
 
           APK_NAME="second-brain-v${VERSION}-build${BUILD}.apk"
-          AAB_NAME="second-brain-v${VERSION}-build${BUILD}.aab"
 
           mkdir -p release-artifacts
           cp "$APK_SRC" "release-artifacts/$APK_NAME"
-          cp "$AAB_SRC" "release-artifacts/$AAB_NAME"
 
           echo "apk_name=$APK_NAME" >> "$GITHUB_OUTPUT"
-          echo "aab_name=$AAB_NAME" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Upload Release APK Artifact
@@ -90,13 +79,6 @@ jobs:
         with:
           name: ${{ steps.rename.outputs.apk_name }}
           path: release-artifacts/${{ steps.rename.outputs.apk_name }}
-          retention-days: 90
-
-      - name: Upload Release AAB Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.rename.outputs.aab_name }}
-          path: release-artifacts/${{ steps.rename.outputs.aab_name }}
           retention-days: 90
 
       - name: Create GitHub Release
@@ -109,9 +91,7 @@ jobs:
 
             ### Artifacts
             - `${{ steps.rename.outputs.apk_name }}` — direct install
-            - `${{ steps.rename.outputs.aab_name }}` — Play Store upload
           draft: false
           prerelease: false
           files: |
             release-artifacts/${{ steps.rename.outputs.apk_name }}
-            release-artifacts/${{ steps.rename.outputs.aab_name }}
