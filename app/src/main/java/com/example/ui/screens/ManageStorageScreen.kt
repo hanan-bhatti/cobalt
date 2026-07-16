@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -168,7 +169,7 @@ fun ManageStorageScreen(
                             Text("${formatStorageSize(newSelectionSize)} additional")
                         }
                         if (limitReached) {
-                            Text("You've reached your 512MB free backup limit.", color = MaterialTheme.colorScheme.error, style = Modifier.padding(top = 4.dp))
+                            Text("You've reached your 512MB free backup limit.", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 4.dp))
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(
@@ -190,7 +191,7 @@ fun ManageStorageScreen(
         ) {
             PullToRefreshBox(
                 isRefreshing = isSyncing,
-                onRefresh = { viewModel.syncUnsyncedItems() },
+                onRefresh = { viewModel.syncData() },
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.TopCenter
             ) {
@@ -454,7 +455,7 @@ fun ManageStorageScreen(
                                             Row(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(start = 16.dp, vertical = 4.dp),
+                                                    .padding(start = 16.dp, top = 4.dp, bottom = 4.dp),
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
                                                 Box(
