@@ -378,6 +378,65 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
 
     val maxStorageBytes = 512L * 1024 * 1024 // 512 MB default
 
+    val cloudUsedStorageBytes: StateFlow<Long> = allItems.map { items: List<com.example.data.model.SavedItem> ->
+        var total = 0L
+        items.filter { it.isSynced }.forEach { item ->
+            val path = item.thumbnailPath ?: item.content
+            if (path.startsWith("/")) {
+                val file = java.io.File(path)
+                if (file.exists()) {
+                    total += file.length()
+                }
+            } else {
+                total += item.content.length.toLong()
+            }
+        }
+        total
+    }.stateIn(viewModelScope, SharingStarted.Lazily, 0L)
+
+    private val _selectedForBackupIds = MutableStateFlow<Set<String>>(emptySet())
+    val selectedForBackupIds: StateFlow<Set<String>> = _selectedForBackupIds.asStateFlow()
+
+    fun toggleBackupSelection(itemId: String) {
+        _selectedForBackupIds.update { current ->
+            if (current.contains(itemId)) current - itemId else current + itemId
+        }
+    }
+
+    fun clearBackupSelection() {
+        _selectedForBackupIds.value = emptySet()
+    }
+
+    fun backupSelectedItems() {
+        val ids = _selectedForBackupIds.value.toList()
+        if (ids.isEmpty()) return
+        viewModelScope.launch {
+            _isSyncing.value = true
+            try {
+                repository.backupSelectedItems(ids)
+                clearBackupSelection()
+            } catch (e: Exception) {
+                _uiToast.value = "Backup failed: ${e.message}"
+            } finally {
+                _isSyncing.value = false
+            }
+        }
+    }
+
+    fun removeBackupItems(ids: List<String>) {
+        if (ids.isEmpty()) return
+        viewModelScope.launch {
+            _isSyncing.value = true
+            try {
+                repository.removeBackup(ids)
+            } catch (e: Exception) {
+                _uiToast.value = "Remove backup failed: ${e.message}"
+            } finally {
+                _isSyncing.value = false
+            }
+        }
+    }
+
     val usedStorageBytes: StateFlow<Long> = allItems.map { items: List<com.example.data.model.SavedItem> ->
         var total = 0L
         items.forEach { item ->

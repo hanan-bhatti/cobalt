@@ -215,27 +215,35 @@ fun ProfileMainContent(
             SectionContainer(title = "STORAGE") {
                 Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
                     val usedMb = usedStorageBytes / (1024f * 1024f)
+                    val cloudUsedStorageBytes by viewModel.cloudUsedStorageBytes.collectAsState()
                     
                     Text(text = "Storage Summary", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Text(text = String.format(Locale.US, "%.1f MB Used locally", usedMb), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    // Cloud Backup Progress
-                    val maxMb = 512f
-                    val cloudUsedMb = 0f // Placeholder
-                    val cloudProgress = (cloudUsedMb / maxMb).coerceIn(0f, 1f)
-                    
-                    LinearProgressIndicator(
-                        progress = { cloudProgress },
-                        modifier = Modifier.fillMaxWidth().height(12.dp).clip(CircleShape),
-                        color = MaterialTheme.colorScheme.tertiary,
-                        trackColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = String.format(Locale.US, "%.0f MB / 512 MB backed up", cloudUsedMb), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
-                    Spacer(modifier = Modifier.height(16.dp))
+                    if (userEmail == null) {
+                        Text(text = String.format(Locale.US, "%.1f MB Used locally", usedMb), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(text = "Sign in to back up your content to the cloud.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
+                        Spacer(modifier = Modifier.height(16.dp))
+                    } else {
+                        Text(text = String.format(Locale.US, "%.1f MB Used locally", usedMb), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Cloud Backup Progress
+                        val maxMb = 512f
+                        val cloudUsedMb = cloudUsedStorageBytes / (1024f * 1024f)
+                        val cloudProgress = (cloudUsedMb / maxMb).coerceIn(0f, 1f)
+
+                        LinearProgressIndicator(
+                            progress = { cloudProgress },
+                            modifier = Modifier.fillMaxWidth().height(12.dp).clip(CircleShape),
+                            color = MaterialTheme.colorScheme.tertiary,
+                            trackColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(text = String.format(Locale.US, "%.1f MB / 512 MB backed up", cloudUsedMb), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
                     
                     // Pill-shaped button with tactile spinning animation
                     var clicked by remember { mutableStateOf(false) }
