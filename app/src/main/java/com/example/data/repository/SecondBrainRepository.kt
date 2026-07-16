@@ -312,6 +312,89 @@ class SecondBrainRepository(private val context: Context) {
     }
 
     // Background sync function for uploading all unsynced items
+
+    // Specific targeted sync/backup for selected items
+    suspend fun backupSelectedItems(itemIds: List<String>) = withContext(Dispatchers.IO) {
+        val currentUser = firebaseAuth?.currentUser ?: return@withContext
+        val items = savedItemDao.getAllItems()
+        val toBackup = items.filter { itemIds.contains(it.id) && !it.isSynced }
+        if (toBackup.isEmpty()) return@withContext
+
+        Log.d("SecondBrainRepo", "Starting backup of ${toBackup.size} selected items.")
+        for (entity in toBackup) {
+            try {
+                var domainItem = entity.toDomain()
+                var finalItem = domainItem
+
+                if ((domainItem.type == SavedItemType.IMAGE || domainItem.type == SavedItemType.VIDEO) &&
+                    !domainItem.content.startsWith("http://") && !domainItem.content.startsWith("https://")
+                ) {
+                    val localPath = domainItem.thumbnailPath ?: domainItem.content
+                    val bytes = readFileBytes(localPath)
+                    if (bytes != null && storage != null) {
+                        val fileExtension = if (domainItem.type == SavedItemType.VIDEO) "mp4" else "jpg"
+                        val storageRef = storage.reference.child("users/${currentUser.uid}/media/${domainItem.id}.$fileExtension")
+                        val uploadTask = storageRef.putBytes(bytes)
+                        val snapshot = uploadTask.await()
+                        val downloadUrl = (snapshot.metadata?.reference?.downloadUrl ?: throw Exception("No reference URL")).await()
+                        finalItem = finalItem.copy(
+                            content = downloadUrl.toString(),
+                            thumbnailPath = downloadUrl.toString()
+                        )
+                        savedItemDao.insertItem(finalItem.toEntity())
+                    }
+                }
+
+                if (firestore != null) {
+                    val itemMap = mapOf(
+                        "id" to finalItem.id,
+                        "type" to finalItem.type.name,
+                        "title" to finalItem.title,
+                        "content" to finalItem.content,
+                        "timestamp" to finalItem.timestamp,
+                        "folders" to finalItem.folders,
+                        "extractedText" to finalItem.extractedText,
+                        "thumbnailPath" to finalItem.thumbnailPath,
+                        "isSynced" to true,
+                        "linkTitle" to finalItem.linkTitle,
+                        "linkDescription" to finalItem.linkDescription,
+                        "linkImage" to finalItem.linkImage
+                    )
+                    firestore.collection("users").document(currentUser.uid)
+                        .collection("items").document(finalItem.id)
+                        .set(itemMap).await()
+
+                    finalItem = finalItem.copy(isSynced = true)
+                    savedItemDao.insertItem(finalItem.toEntity())
+                }
+            } catch (e: Exception) {
+                Log.e("SecondBrainRepo", "Background Firebase backup failed for item ${entity.id}: ${e.message}")
+            }
+        }
+        com.example.widget.WidgetUpdater.update(context)
+    }
+
+    suspend fun removeBackup(itemIds: List<String>) = withContext(Dispatchers.IO) {
+        val currentUser = firebaseAuth?.currentUser ?: return@withContext
+        for (id in itemIds) {
+            try {
+                // Remove from Firestore
+                firestore?.collection("users")?.document(currentUser.uid)
+                    ?.collection("items")?.document(id)?.delete()?.await()
+
+                // Note: Deleting media from storage could be added here, but leaving it alone or tracking it
+                // is fine for standard removal of metadata. We can delete it if it's an image.
+                val item = savedItemDao.getItemById(id)?.toDomain()
+                if (item != null) {
+                    val newDomain = item.copy(isSynced = false)
+                    savedItemDao.insertItem(newDomain.toEntity())
+                }
+            } catch (e: Exception) {
+                Log.e("SecondBrainRepo", "Failed to remove backup for item $id: ${e.message}")
+            }
+        }
+    }
+
     suspend fun syncUnsyncedItems() = withContext(Dispatchers.IO) {
         val currentUser = firebaseAuth?.currentUser ?: return@withContext
         val items = savedItemDao.getAllItems()
