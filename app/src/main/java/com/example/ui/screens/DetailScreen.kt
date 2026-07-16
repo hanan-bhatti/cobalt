@@ -60,9 +60,39 @@ fun DetailScreen(
     val activeItem by viewModel.activeDetailItem.collectAsState()
     val item = activeItem ?: return
 
+    val customFolders by viewModel.customFolderEntities.collectAsState()
+    val folderColor = remember(item, customFolders) {
+        val firstFolder = item.folders.firstOrNull()
+        val customFolder = if (firstFolder != null) {
+            customFolders.find { it.name.equals(firstFolder, ignoreCase = true) }
+        } else {
+            null
+        }
+        if (customFolder != null && !customFolder.colorHex.isNullOrBlank()) {
+            try {
+                Color(android.graphics.Color.parseColor(customFolder.colorHex))
+            } catch (e: Exception) {
+                null
+            }
+        } else {
+            null
+        } ?: when (item.type) {
+            SavedItemType.LINK -> Color(0xFF42A5F5)
+            SavedItemType.IMAGE -> Color(0xFFAB47BC)
+            SavedItemType.VIDEO -> Color(0xFFEF5350)
+            SavedItemType.TEXT -> Color(0xFFFFA726)
+            SavedItemType.CODE -> Color(0xFF66BB6A)
+            SavedItemType.AUDIO -> Color(0xFF26A69A)
+        }
+    }
+
     val scrollState = rememberScrollState()
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
+
+    BackHandler {
+        onClose()
+    }
 
     var showLeaveAppDialog by remember { mutableStateOf(false) }
     var urlToOpen by remember { mutableStateOf("") }
@@ -93,13 +123,6 @@ fun DetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { onEdit(item) }, modifier = Modifier.bounceClick().testTag("detail_edit_button")) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_edit),
-                            contentDescription = "Edit memory",
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
                     IconButton(
                         onClick = {
                             val shareIntent = Intent().apply {
@@ -130,6 +153,73 @@ fun DetailScreen(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
+        },
+        bottomBar = {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                tonalElevation = 8.dp,
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 24.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = {
+                            val shareIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                type = "text/plain"
+                                val shareText = buildString {
+                                    appendLine("Title: ${item.title}")
+                                    appendLine("Type: ${item.type.displayName}")
+                                    appendLine("Content: ${item.content}")
+                                    if (item.extractedText != null) {
+                                        appendLine("Extracted Text: ${item.extractedText}")
+                                    }
+                                }
+                                putExtra(Intent.EXTRA_TEXT, shareText)
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "Share Memory"))
+                        },
+                        modifier = Modifier.bounceClick().testTag("detail_bottom_share_button")
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_share),
+                            contentDescription = "Share",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Button(
+                        onClick = { onEdit(item) },
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 24.dp)
+                            .height(48.dp)
+                            .bounceClick()
+                            .testTag("detail_bottom_edit_button"),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = folderColor,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_edit),
+                            contentDescription = "Edit",
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Edit Memory", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
         },
         containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier.fillMaxSize()
