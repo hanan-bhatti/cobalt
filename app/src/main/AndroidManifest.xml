@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -98,6 +99,11 @@
             android:name=".ScreenCaptureService"
             android:foregroundServiceType="mediaProjection"
             tools:targetApi="q"
+            android:exported="false" />
+
+        <service
+            android:name=".service.DataDownloadService"
+            android:foregroundServiceType="dataSync"
             android:exported="false" />
 
         <service

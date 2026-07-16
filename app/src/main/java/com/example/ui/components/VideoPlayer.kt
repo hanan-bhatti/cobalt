@@ -3,11 +3,20 @@ package com.example.ui.components
 import android.net.Uri
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import androidx.compose.animation.core.animateFloatAsState
@@ -22,6 +31,7 @@ fun VideoPlayer(
 ) {
     val context = LocalContext.current
     var aspectWithByHeight by remember { mutableStateOf(16f / 9f) }
+    var isBuffering by remember { mutableStateOf(true) }
 
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
@@ -32,11 +42,15 @@ fun VideoPlayer(
     }
 
     val listener = remember {
-        object : androidx.media3.common.Player.Listener {
+        object : Player.Listener {
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
                 if (videoSize.width > 0 && videoSize.height > 0) {
                     aspectWithByHeight = videoSize.width.toFloat() / videoSize.height.toFloat()
                 }
+            }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                isBuffering = playbackState == Player.STATE_BUFFERING || playbackState == Player.STATE_IDLE
             }
         }
     }
@@ -55,16 +69,31 @@ fun VideoPlayer(
         label = "videoAspect"
     )
 
-    AndroidView(
-        factory = {
-            PlayerView(context).apply {
-                player = exoPlayer
-                setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
-                resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
-            }
-        },
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(animatedAspect)
-    )
+            .aspectRatio(animatedAspect),
+        contentAlignment = Alignment.Center
+    ) {
+        AndroidView(
+            factory = {
+                PlayerView(context).apply {
+                    player = exoPlayer
+                    setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
+                    resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+                }
+            },
+            modifier = Modifier.fillMaxSize()
+        )
+
+        if (isBuffering) {
+            CircularProgressIndicator(
+                color = MaterialTheme.colorScheme.primary,
+                strokeWidth = 4.dp,
+                strokeCap = StrokeCap.Round,
+                modifier = Modifier.size(48.dp)
+            )
+        }
+    }
 }
+

@@ -32,6 +32,15 @@ import java.util.Locale
 import com.example.ui.viewmodel.SecondBrainViewModel
 import androidx.compose.runtime.collectAsState
 import com.example.ui.components.bounceClick
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.Manifest
+import android.content.Intent
+import android.os.Build
+import com.example.service.DataDownloadManager
+import com.example.service.DataDownloadService
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -59,6 +68,30 @@ fun ProfileMainContent(
     
     val isSyncing by viewModel.isSyncing.collectAsState()
     
+    val context = LocalContext.current
+    val downloadProgress by DataDownloadManager.progress.collectAsState()
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        val serviceIntent = Intent(context, DataDownloadService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(serviceIntent)
+        } else {
+            context.startService(serviceIntent)
+        }
+    }
+
+    val hasCloudMedia = remember(allItems) {
+        allItems.any { item ->
+            val hasWebUrl = item.content.startsWith("http://") || item.content.startsWith("https://")
+            val isMedia = item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO
+            isMedia && hasWebUrl
+        }
+    }
+
+    var showSignOutConfirmDialog by remember { mutableStateOf(false) }
+    
     val pullToRefreshState = rememberPullToRefreshState()
     androidx.compose.material3.pulltorefresh.PullToRefreshBox(
         isRefreshing = isSyncing,
@@ -81,6 +114,113 @@ fun ProfileMainContent(
                 .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            // DOWNLOAD PROGRESS
+            if (downloadProgress.isDownloading) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    ),
+                    shape = RoundedCornerShape(20.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Archiving Media Files...",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Text(
+                                text = "${downloadProgress.downloadedFiles}/${downloadProgress.totalFiles}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                        
+                        val progressVal = if (downloadProgress.totalBytes > 0) {
+                            downloadProgress.downloadedBytes.toFloat() / downloadProgress.totalBytes.toFloat()
+                        } else {
+                            0.0f
+                        }
+                        
+                        LinearProgressIndicator(
+                            progress = { progressVal.coerceIn(0.0f, 1.0f) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(4.dp)),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+
+                        if (downloadProgress.currentFileName.isNotEmpty()) {
+                            Text(
+                                text = "File: ${downloadProgress.currentFileName}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
+                                maxLines = 1
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val speedMb = downloadProgress.speedBytesPerSec / (1024f * 1024f)
+                            val speedText = if (speedMb >= 0.1f) {
+                                String.format(Locale.US, "%.1f MB/s", speedMb)
+                            } else {
+                                String.format(Locale.US, "%.1f KB/s", downloadProgress.speedBytesPerSec / 1024f)
+                            }
+                            
+                            Text(
+                                text = "Speed: $speedText",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+
+                            val etaText = if (downloadProgress.estRemainingSeconds >= 0) {
+                                if (downloadProgress.estRemainingSeconds >= 60) {
+                                    "${downloadProgress.estRemainingSeconds / 60}m ${downloadProgress.estRemainingSeconds % 60}s remaining"
+                                } else {
+                                    "${downloadProgress.estRemainingSeconds}s remaining"
+                                }
+                            } else {
+                                "Estimating time..."
+                            }
+
+                            Text(
+                                text = etaText,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+
+                        val downloadedMb = downloadProgress.downloadedBytes / (1024f * 1024f)
+                        val totalMb = downloadProgress.totalBytes / (1024f * 1024f)
+                        Text(
+                            text = String.format(Locale.US, "Downloaded %.1f MB / %.1f MB", downloadedMb, totalMb),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
             // HEADER
             Surface(
                 shape = RoundedCornerShape(24.dp),
@@ -131,52 +271,80 @@ fun ProfileMainContent(
                     }
                 } else {
                     // Signed in
-                    Row(
+                    Column(
                         modifier = Modifier.padding(24.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Avatar
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .background(MaterialTheme.colorScheme.onSurface, CircleShape),
-                            contentAlignment = Alignment.Center
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (!userPhotoUrl.isNullOrBlank()) {
-                                AsyncImage(
-                                    model = userPhotoUrl,
-                                    contentDescription = "Profile Picture",
-                                    modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                    contentScale = ContentScale.Crop
+                            // Avatar
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .background(MaterialTheme.colorScheme.onSurface, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (!userPhotoUrl.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = userPhotoUrl,
+                                        contentDescription = "Profile Picture",
+                                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    val initials = userEmail!!.substringBefore("@").take(1).uppercase()
+                                    Text(text = initials, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+                                }
+                            }
+                            
+                            Spacer(modifier = Modifier.width(16.dp))
+                            
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = userName ?: userEmail!!.substringBefore("@").replaceFirstChar { it.uppercase() },
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
-                            } else {
-                                val initials = userEmail!!.substringBefore("@").take(1).uppercase()
-                                Text(text = initials, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+                                Text(
+                                    text = userEmail ?: "",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    val indicatorColor = if (isSyncing) MaterialTheme.colorScheme.primary else Color(0xFF34A853)
+                                    val syncText = if (isSyncing) "Syncing..." else "Synced"
+                                    Box(modifier = Modifier.size(8.dp).background(indicatorColor, CircleShape))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(syncText, style = MaterialTheme.typography.bodySmall, color = indicatorColor, fontWeight = FontWeight.Medium)
+                                }
                             }
                         }
-                        
-                        Spacer(modifier = Modifier.width(16.dp))
-                        
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = userName ?: userEmail!!.substringBefore("@").replaceFirstChar { it.uppercase() },
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
+
+                        // Sign Out Button
+                        OutlinedButton(
+                            onClick = {
+                                showSignOutConfirmDialog = true
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(44.dp)
+                                .bounceClick(),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.ExitToApp,
+                                contentDescription = "Sign Out",
+                                modifier = Modifier.size(18.dp)
                             )
-                            Text(
-                                text = userEmail ?: "",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                val indicatorColor = if (isSyncing) MaterialTheme.colorScheme.primary else Color(0xFF34A853)
-                                val syncText = if (isSyncing) "Syncing..." else "Synced"
-                                Box(modifier = Modifier.size(8.dp).background(indicatorColor, CircleShape))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(syncText, style = MaterialTheme.typography.bodySmall, color = indicatorColor, fontWeight = FontWeight.Medium)
-                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Sign Out", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -417,6 +585,83 @@ fun ProfileMainContent(
             }
             
             Spacer(modifier = Modifier.height(40.dp))
+        }
+
+        if (showSignOutConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { showSignOutConfirmDialog = false },
+                title = { Text("Sign Out") },
+                text = {
+                    if (hasCloudMedia) {
+                        Text("Would you like to download a backup of your cloud-synced photos, videos, and audios before signing out? This will save them to your local Downloads folder.")
+                    } else {
+                        Text("Are you sure you want to sign out?")
+                    }
+                },
+                confirmButton = {
+                    if (hasCloudMedia) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Button(
+                                onClick = {
+                                    showSignOutConfirmDialog = false
+                                    // Start Service
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                        val permissionCheck = androidx.core.content.ContextCompat.checkSelfPermission(
+                                            context,
+                                            Manifest.permission.POST_NOTIFICATIONS
+                                        )
+                                        if (permissionCheck == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                            val serviceIntent = Intent(context, DataDownloadService::class.java)
+                                            context.startForegroundService(serviceIntent)
+                                        } else {
+                                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        }
+                                    } else {
+                                        val serviceIntent = Intent(context, DataDownloadService::class.java)
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                            context.startForegroundService(serviceIntent)
+                                        } else {
+                                            context.startService(serviceIntent)
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            ) {
+                                Text("Download Backup & Sign Out")
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    showSignOutConfirmDialog = false
+                                    viewModel.signOut()
+                                    onNavigateToAuth()
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Sign Out Only (No Backup)")
+                            }
+                        }
+                    } else {
+                        Button(
+                            onClick = {
+                                showSignOutConfirmDialog = false
+                                viewModel.signOut()
+                                onNavigateToAuth()
+                            }
+                        ) {
+                            Text("Sign Out")
+                        }
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showSignOutConfirmDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }
