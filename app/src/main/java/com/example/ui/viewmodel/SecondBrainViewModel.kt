@@ -337,8 +337,8 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     val extractedLinksToReview: StateFlow<List<ExtractedLinkReview>> = _extractedLinksToReview.asStateFlow()
 
     fun fetchAvailableModels(isUserTriggered: Boolean = false) {
-        val apiKey = settingsRepository.geminiApiKey.value.ifEmpty { com.example.BuildConfig.GEMINI_API_KEY }
-        if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
+        val apiKey = resolveValidApiKeyOrNull()
+        if (apiKey == null) {
             if (isUserTriggered) {
                 showToast("Please save a valid Gemini API Key first.")
             }
@@ -955,9 +955,8 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 val localPath = repository.saveToLocalCache("audio_${java.util.UUID.randomUUID()}.mp4", bytes)
 
                 val base64Data = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
-                val apiKey = settingsRepository.geminiApiKey.value.ifEmpty { com.example.BuildConfig.GEMINI_API_KEY }
-                
-                if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
+                val apiKey = resolveValidApiKeyOrNull()
+                if (apiKey == null) {
                     _ocrError.value = "Please save a valid Gemini API Key first."
                     _isOcrLoading.value = false
                     return@launch
@@ -994,9 +993,8 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
 
         viewModelScope.launch {
             try {
-                val apiKey = settingsRepository.geminiApiKey.value.ifEmpty { com.example.BuildConfig.GEMINI_API_KEY }
-                
-                if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
+                val apiKey = resolveValidApiKeyOrNull()
+                if (apiKey == null) {
                     _ocrError.value = "Please save a valid Gemini API Key first."
                     _isOcrLoading.value = false
                     return@launch
@@ -1027,7 +1025,51 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
 
     private fun extractTitleFromMarkdown(markdown: String): String? {
         val line = markdown.lines().firstOrNull { it.trim().startsWith("# ") }
-        return line?.replace("#", "")?.trim()
+        return line?.trim()?.removePrefix("#")?.trim()
+    }
+
+    private fun resolveValidApiKeyOrNull(): String? {
+        val apiKey = settingsRepository.geminiApiKey.value.ifEmpty { com.example.BuildConfig.GEMINI_API_KEY }
+        return if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") null else apiKey
+    }
+
+    private fun parseGeminiOcrResult(raw: String): Pair<String, List<Pair<String, String>>> {
+        var parsedExtractedText = raw
+        val urlsList = mutableListOf<Pair<String, String>>()
+        try {
+            var cleanText = raw.trim()
+            val startRegex = Regex("^```(?:json)?\\s*")
+            val endRegex = Regex("\\s*```$")
+            cleanText = cleanText.replace(startRegex, "").replace(endRegex, "").trim()
+            
+            val jsonObject = org.json.JSONObject(cleanText)
+            parsedExtractedText = jsonObject.optString("extractedText", raw)
+            val urlsArray = jsonObject.optJSONArray("urls")
+            if (urlsArray != null) {
+                for (i in 0 until urlsArray.length()) {
+                    val urlObj = urlsArray.getJSONObject(i)
+                    val url = urlObj.optString("url", "")
+                    val desc = urlObj.optString("description", "")
+                    if (url.isNotBlank()) {
+                        urlsList.add(Pair(url, desc))
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("SecondBrainVM", "Failed to parse OCR JSON, falling back to raw text.")
+        }
+        return Pair(parsedExtractedText, urlsList)
+    }
+
+    private suspend fun buildItemWithFetchedMetadata(item: SavedItem): SavedItem {
+        if (item.type != SavedItemType.LINK) return item
+        val metadata = repository.fetchLinkMetadata(item.content)
+        return item.copy(
+            linkTitle = metadata.title,
+            linkDescription = metadata.description,
+            linkImage = metadata.imageUrl,
+            title = metadata.title ?: item.title.ifBlank { "Shared Link" }
+        )
     }
 
     
@@ -1059,8 +1101,8 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     return@launch
                 }
                 
-                val apiKey = settingsRepository.geminiApiKey.value.ifEmpty { com.example.BuildConfig.GEMINI_API_KEY }
-                if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
+                val apiKey = resolveValidApiKeyOrNull()
+                if (apiKey == null) {
                     _ocrError.value = "Please save a valid Gemini API Key first."
                     _isOcrLoading.value = false
                     return@launch
@@ -1075,24 +1117,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 )
 
                 if (resultText != null) {
-                    var parsedExtractedText = resultText
-                    val urlsList = mutableListOf<Pair<String, String>>()
-                    try {
-                        val jsonText = resultText.trim().removePrefix("```json").removeSuffix("```").trim()
-                        val jsonObject = org.json.JSONObject(jsonText)
-                        parsedExtractedText = jsonObject.optString("extractedText", jsonText)
-                        val urlsArray = jsonObject.optJSONArray("urls")
-                        if (urlsArray != null) {
-                            for (i in 0 until urlsArray.length()) {
-                                val urlObj = urlsArray.getJSONObject(i)
-                                val url = urlObj.optString("url", "")
-                                val desc = urlObj.optString("description", "")
-                                if (url.isNotBlank()) urlsList.add(Pair(url, desc))
-                            }
-                        }
-                    } catch (e: Exception) {
-                        Log.w("SecondBrainVM", "Failed to parse OCR JSON in full image, falling back to raw text.")
-                    }
+                    val (parsedExtractedText, urlsList) = parseGeminiOcrResult(resultText)
 
                     _activeCaptureItem.value = _activeCaptureItem.value?.copy(
                         extractedText = parsedExtractedText
@@ -1130,37 +1155,25 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         _extractedLinksToReview.value = emptyList()
         viewModelScope.launch {
             try {
-                val apiKey = settingsRepository.geminiApiKey.value.ifEmpty { com.example.BuildConfig.GEMINI_API_KEY }
+                val apiKey = resolveValidApiKeyOrNull()
+                if (apiKey == null) {
+                    _ocrError.value = "Please save a valid Gemini API Key first."
+                    _isOcrLoading.value = false
+                    return@launch
+                }
                 val model = settingsRepository.selectedModel.value
                 val sensitivity = settingsRepository.ocrSensitivity.value
                 val resultText = repository.extractTextFromRegion(bitmap, x, y, width, height, apiKey, model, sensitivity)
                 if (resultText != null) {
-                    var parsedExtractedText = resultText
-                    val urlsList = mutableListOf<Pair<String, String>>()
-                    
-                    try {
-                        val jsonText = resultText.trim().removePrefix("```json").removeSuffix("```").trim()
-                        val jsonObject = org.json.JSONObject(jsonText)
-                        parsedExtractedText = jsonObject.optString("extractedText", jsonText)
-                        val urlsArray = jsonObject.optJSONArray("urls")
-                        if (urlsArray != null) {
-                            for (i in 0 until urlsArray.length()) {
-                                val urlObj = urlsArray.getJSONObject(i)
-                                val url = urlObj.optString("url", "")
-                                val desc = urlObj.optString("description", "")
-                                if (url.isNotBlank()) urlsList.add(Pair(url, desc))
-                            }
-                        }
-                    } catch (e: Exception) {
-                        Log.w("SecondBrainVM", "Failed to parse OCR JSON, falling back to raw text.")
-                    }
+                    val (parsedExtractedText, urlsList) = parseGeminiOcrResult(resultText)
 
+                    val isHttpLink = parsedExtractedText.startsWith("http://") || parsedExtractedText.startsWith("https://")
                     _activeCaptureItem.value = currentItem.copy(
                         extractedText = parsedExtractedText,
                         // If it's a raw URL (fallback case)
-                        title = if (parsedExtractedText.startsWith("http")) "Extracted Shared URL" else currentItem.title,
-                        content = if (parsedExtractedText.startsWith("http")) parsedExtractedText else currentItem.content,
-                        type = if (parsedExtractedText.startsWith("http")) com.example.data.model.SavedItemType.LINK else currentItem.type
+                        title = if (isHttpLink) "Extracted Shared URL" else currentItem.title,
+                        content = if (isHttpLink) parsedExtractedText else currentItem.content,
+                        type = if (isHttpLink) com.example.data.model.SavedItemType.LINK else currentItem.type
                     )
                     
                     // Stage extracted URLs for review instead of auto-saving
@@ -1384,13 +1397,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             try {
                 var finalItem = item
                 if (finalItem.type == SavedItemType.LINK && finalItem.linkTitle.isNullOrBlank()) {
-                    val metadata = repository.fetchLinkMetadata(finalItem.content)
-                    finalItem = finalItem.copy(
-                        linkTitle = metadata.title,
-                        linkDescription = metadata.description,
-                        linkImage = metadata.imageUrl,
-                        title = metadata.title ?: finalItem.title.ifBlank { "Shared Link" }
-                    )
+                    finalItem = buildItemWithFetchedMetadata(finalItem)
                 }
                 val isEdit = allItems.value.any { it.id == finalItem.id }
                 repository.saveItem(finalItem, pendingMediaBytes) { progress ->

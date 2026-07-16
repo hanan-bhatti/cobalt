@@ -28,6 +28,8 @@ class ScreenCaptureService : Service() {
     private var imageReader: ImageReader? = null
     private var handlerThread: HandlerThread? = null
     private var backgroundHandler: Handler? = null
+    private val timeoutHandler = Handler(android.os.Looper.getMainLooper())
+    private var timeoutRunnable: Runnable? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -123,11 +125,22 @@ class ScreenCaptureService : Service() {
             )
 
             var frameCaptured = false
+            timeoutRunnable = Runnable {
+                if (!frameCaptured) {
+                    frameCaptured = true
+                    callback?.onError("Screen capture timed out.")
+                    cleanup()
+                    stopSelf()
+                }
+            }
+            timeoutHandler.postDelayed(timeoutRunnable!!, CAPTURE_TIMEOUT_MS)
+
             imageReader!!.setOnImageAvailableListener({ reader ->
                 if (frameCaptured) return@setOnImageAvailableListener
                 val image = reader.acquireLatestImage()
                 if (image != null) {
                     frameCaptured = true
+                    timeoutRunnable?.let { timeoutHandler.removeCallbacks(it) }
                     val planes = image.planes
                     val buffer = planes[0].buffer
                     val pixelStride = planes[0].pixelStride
@@ -153,6 +166,7 @@ class ScreenCaptureService : Service() {
             }, backgroundHandler)
 
         } catch (e: Exception) {
+            timeoutRunnable?.let { timeoutHandler.removeCallbacks(it) }
             callback?.onError(e.message ?: "Capture failed")
             cleanup()
             stopSelf()
@@ -177,6 +191,7 @@ class ScreenCaptureService : Service() {
     }
 
     override fun onDestroy() {
+        timeoutRunnable?.let { timeoutHandler.removeCallbacks(it) }
         cleanup()
         handlerThread?.quitSafely()
         super.onDestroy()
@@ -211,6 +226,7 @@ class ScreenCaptureService : Service() {
     companion object {
         private const val NOTIFICATION_ID = 9284
         private const val CHANNEL_ID = "screen_capture_service_channel"
+        private const val CAPTURE_TIMEOUT_MS = 4000L
 
         var capturedBitmap: Bitmap? = null
         var callback: CaptureCallback? = null
