@@ -42,6 +42,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.clickable
 import com.example.data.model.getBestImagePath
+import androidx.compose.material.icons.filled.Info
+import kotlinx.coroutines.launch
 import androidx.compose.ui.text.style.TextOverflow
 
 data class StorageBreakdownItem(
@@ -212,35 +214,78 @@ fun ManageStorageScreen(
                         val totalBytes = breakdownItems.sumOf { it.sizeBytes }
                         item(key = "storage_breakdown") {
                             Surface(
-                                shape = RoundedCornerShape(16.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)),
+                                shape = RoundedCornerShape(24.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 8.dp)
                             ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Text(
-                                        text = "${formatStorageSize(totalBytes)} used of 512 MB",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "Only media attachments (images, video, audio) count toward cloud limits. Text entries are always free.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                Column(modifier = Modifier.padding(20.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = "Cloud Backup Space",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = "${formatStorageSize(totalBytes)} of 512.0 MB used",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
+
+                                        val tooltipState = rememberTooltipState()
+                                        val scope = rememberCoroutineScope()
+                                        TooltipBox(
+                                            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                                            tooltip = {
+                                                PlainTooltip(
+                                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                                ) {
+                                                    Text(
+                                                        text = "Only media attachments (images, video, audio) count toward cloud limits. Text entries are always free.",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        modifier = Modifier.padding(8.dp)
+                                                    )
+                                                }
+                                            },
+                                            state = tooltipState
+                                        ) {
+                                            IconButton(
+                                                onClick = {
+                                                    scope.launch {
+                                                        if (tooltipState.isVisible) tooltipState.dismiss() else tooltipState.show()
+                                                    }
+                                                },
+                                                modifier = Modifier.size(32.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Info,
+                                                    contentDescription = "Storage Info",
+                                                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                                )
+                                            }
+                                        }
+                                    }
                                     
                                     Spacer(modifier = Modifier.height(16.dp))
 
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .height(20.dp)
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                                            .height(12.dp)
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
                                     ) {
                                         Row(modifier = Modifier.fillMaxSize()) {
                                             breakdownItems.forEachIndexed { index, breakdownItem ->
@@ -263,48 +308,49 @@ fun ManageStorageScreen(
                                                     modifier = Modifier
                                                         .fillMaxHeight()
                                                         .weight(remainingFraction)
-                                                        .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+                                                        .background(Color.Transparent)
                                                 )
                                             }
                                         }
                                     }
 
-                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Spacer(modifier = Modifier.height(20.dp))
 
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        val columns = 2
-                                        val rows = breakdownItems.chunked(columns)
-                                        rows.forEach { rowItems ->
+                                    Column(
+                                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    ) {
+                                        breakdownItems.forEachIndexed { index, breakdownItem ->
+                                            val color = breakdownColors.getOrElse(index) { Color.Gray }
+                                            val percentage = if (maxStorageBytes > 0) {
+                                                (breakdownItem.sizeBytes.toFloat() / maxStorageBytes * 100).coerceIn(0f, 100f)
+                                            } else 0f
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                                verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                rowItems.forEach { breakdownItem ->
-                                                    val index = breakdownItems.indexOf(breakdownItem)
-                                                    val color = breakdownColors.getOrElse(index) { Color.Gray }
-                                                    Row(
-                                                        modifier = Modifier.weight(1f),
-                                                        verticalAlignment = Alignment.CenterVertically
-                                                    ) {
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .size(10.dp)
-                                                                .clip(CircleShape)
-                                                                .background(color)
-                                                        )
-                                                        Spacer(modifier = Modifier.width(6.dp))
-                                                        Text(
-                                                            text = "${breakdownItem.name} (${formatStorageSize(breakdownItem.sizeBytes)})",
-                                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-                                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                            maxLines = 1,
-                                                            overflow = TextOverflow.Ellipsis
-                                                        )
-                                                    }
-                                                }
-                                                if (rowItems.size < columns) {
-                                                    Spacer(modifier = Modifier.weight(1f))
-                                                }
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(8.dp)
+                                                        .clip(CircleShape)
+                                                        .background(color)
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    text = breakdownItem.name,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = MaterialTheme.colorScheme.onSurface,
+                                                    modifier = Modifier.weight(1f),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Text(
+                                                    text = "${formatStorageSize(breakdownItem.sizeBytes)} (${String.format(Locale.US, "%.1f", percentage)}%)",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    fontWeight = FontWeight.Bold
+                                                )
                                             }
                                         }
                                     }
@@ -313,7 +359,7 @@ fun ManageStorageScreen(
                         }
 
                         categories.forEach { (type, items) ->
-                        // Only media types count toward cloud storage quota
+                            // Only media types count toward cloud storage quota
                             val categoryTotalSize = if (isMediaType(type)) {
                                 items.sumOf { mediaQuotaBytes(it) }
                             } else {
@@ -339,232 +385,247 @@ fun ManageStorageScreen(
 
                             val isExpanded = expandedStates[type] ?: false
 
-                            item(key = "header_${type.name}") {
+                            item(key = "category_${type.name}") {
                                 Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = baseColor.copy(alpha = 0.08f),
-                                    border = BorderStroke(1.5.dp, baseColor.copy(alpha = 0.35f)),
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = baseColor.copy(alpha = 0.05f),
+                                    border = BorderStroke(1.dp, baseColor.copy(alpha = 0.3f)),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(vertical = 6.dp)
-                                        .combinedClickable(
-                                            onClick = { expandedStates[type] = !isExpanded },
-                                            onLongClick = { longClickedCategory = type }
-                                        )
                                 ) {
-                                    Column(modifier = Modifier.padding(12.dp)) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(36.dp)
-                                                    .clip(RoundedCornerShape(8.dp))
-                                                    .background(baseColor.copy(alpha = 0.15f)),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    painter = painterResource(id = iconResId),
-                                                    contentDescription = null,
-                                                    tint = baseColor,
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                            }
-
-                                            Spacer(modifier = Modifier.width(12.dp))
-
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    text = type.displayName,
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSurface
-                                                )
-                                            }
-
-                                            val rotation by animateFloatAsState(targetValue = if (isExpanded) 180f else 0f, label = "chevron")
-                                            Icon(
-                                                painter = painterResource(id = R.drawable.ic_custom_chevron_down),
-                                                contentDescription = if (isExpanded) "Collapse" else "Expand",
-                                                tint = baseColor,
-                                                modifier = Modifier
-                                                    .size(24.dp)
-                                                    .graphicsLayer(rotationZ = rotation)
-                                            )
-                                        }
-
-                                        Spacer(modifier = Modifier.height(10.dp))
-
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            val syncedCount = items.count { it.isSynced }
-                                            val localCount = items.size - syncedCount
-                                            val freeLabel = if (!isMediaType(type)) " • Free (no quota)" else ""
-                                            Text(
-                                                text = "${items.size} items • $syncedCount synced, $localCount local$freeLabel",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            if (isMediaType(type)) {
-                                                Text(
-                                                    text = formatStorageSize(categoryTotalSize),
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            } else {
-                                                Text(
-                                                    text = "Free",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = MaterialTheme.colorScheme.tertiary
-                                                )
-                                            }
-                                        }
-
-                                        Spacer(modifier = Modifier.height(6.dp))
-
-                                        val progress = if (isMediaType(type)) {
-                                            (categoryTotalSize.toFloat() / maxStorageBytes).coerceIn(0f, 1f)
-                                        } else 0f
-                                        LinearProgressIndicator(
-                                            progress = { progress },
-                                            color = baseColor,
-                                            trackColor = baseColor.copy(alpha = 0.1f),
+                                    Column {
+                                        // Header Row (Clickable)
+                                        Column(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .height(4.dp)
-                                                .clip(RoundedCornerShape(2.dp))
-                                        )
-                                    }
-                                }
-                            }
-
-                            item(key = "content_${type.name}") {
-                                AnimatedVisibility(
-                                    visible = isExpanded,
-                                    enter = expandVertically() + fadeIn(),
-                                    exit = shrinkVertically() + fadeOut()
-                                ) {
-                                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)) {
-                                        items.forEach { item ->
-                                            val isSelected = selectedForBackupIds.contains(item.id)
-                                            val isAlreadyBackedUp = item.isSynced
-
-                                            // Non-media items don't use any quota
-                                            val itemSize = mediaQuotaBytes(item)
-
+                                                .combinedClickable(
+                                                    onClick = { expandedStates[type] = !isExpanded },
+                                                    onLongClick = { longClickedCategory = type }
+                                                )
+                                                .padding(14.dp)
+                                        ) {
                                             Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(start = 16.dp, top = 4.dp, bottom = 4.dp),
-                                                verticalAlignment = Alignment.CenterVertically
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.fillMaxWidth()
                                             ) {
                                                 Box(
                                                     modifier = Modifier
-                                                        .width(3.dp)
-                                                        .height(40.dp)
-                                                        .clip(RoundedCornerShape(1.5.dp))
-                                                        .background(baseColor)
+                                                        .size(36.dp)
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .background(baseColor.copy(alpha = 0.15f)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        painter = painterResource(id = iconResId),
+                                                        contentDescription = null,
+                                                        tint = baseColor,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+
+                                                Spacer(modifier = Modifier.width(12.dp))
+
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = type.displayName,
+                                                        style = MaterialTheme.typography.titleMedium,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                }
+
+                                                val rotation by animateFloatAsState(targetValue = if (isExpanded) 180f else 0f, label = "chevron")
+                                                Icon(
+                                                    painter = painterResource(id = R.drawable.ic_custom_chevron_down),
+                                                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                                                    tint = baseColor,
+                                                    modifier = Modifier
+                                                        .size(24.dp)
+                                                        .graphicsLayer(rotationZ = rotation)
+                                                )
+                                            }
+
+                                            Spacer(modifier = Modifier.height(10.dp))
+
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                val syncedCount = items.count { it.isSynced }
+                                                val localCount = items.size - syncedCount
+                                                val freeLabel = if (!isMediaType(type)) " • Free (no quota)" else ""
+                                                Text(
+                                                    text = "${items.size} items • $syncedCount synced, $localCount local$freeLabel",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.weight(1f),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
                                                 )
                                                 Spacer(modifier = Modifier.width(8.dp))
+                                                if (isMediaType(type)) {
+                                                    Text(
+                                                        text = formatStorageSize(categoryTotalSize),
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        maxLines = 1
+                                                    )
+                                                } else {
+                                                    Text(
+                                                        text = "Free",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        color = MaterialTheme.colorScheme.tertiary,
+                                                        maxLines = 1
+                                                    )
+                                                }
+                                            }
 
-                                                Surface(
-                                                    shape = RoundedCornerShape(12.dp),
-                                                    color = if (isSelected) baseColor.copy(alpha = 0.06f) else MaterialTheme.colorScheme.surface,
-                                                    border = BorderStroke(0.5.dp, if (isSelected) baseColor.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                            Spacer(modifier = Modifier.height(8.dp))
+
+                                            val progress = if (isMediaType(type)) {
+                                                (categoryTotalSize.toFloat() / maxStorageBytes).coerceIn(0f, 1f)
+                                            } else 0f
+                                            LinearProgressIndicator(
+                                                progress = { progress },
+                                                color = baseColor,
+                                                trackColor = baseColor.copy(alpha = 0.1f),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(4.dp)
+                                                    .clip(RoundedCornerShape(2.dp))
+                                            )
+                                        }
+
+                                        // Collapsible item contents
+                                        AnimatedVisibility(
+                                            visible = isExpanded,
+                                            enter = expandVertically() + fadeIn(),
+                                            exit = shrinkVertically() + fadeOut()
+                                        ) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
+                                            ) {
+                                                HorizontalDivider(color = baseColor.copy(alpha = 0.15f))
+                                                
+                                                Column(
                                                     modifier = Modifier
-                                                        .weight(1f)
-                                                        .combinedClickable(
-                                                            onClick = { viewModel.showDetailItem(item) },
-                                                            onLongClick = { longClickedItem = item }
-                                                        )
+                                                        .fillMaxWidth()
+                                                        .padding(vertical = 4.dp)
                                                 ) {
-                                                    Row(
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .padding(8.dp),
-                                                        verticalAlignment = Alignment.CenterVertically
-                                                    ) {
-                                                        val bestImagePath = item.getBestImagePath()
-                                                        if (item.type == SavedItemType.LINK && bestImagePath != null) {
-                                                            AsyncImage(
-                                                                model = bestImagePath,
-                                                                contentDescription = null,
-                                                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                                                                modifier = Modifier
-                                                                    .size(36.dp)
-                                                                    .clip(RoundedCornerShape(8.dp))
-                                                            )
-                                                        } else {
-                                                            val itemIconResId = when (item.type) {
-                                                                SavedItemType.LINK -> R.drawable.ic_custom_link
-                                                                SavedItemType.IMAGE -> R.drawable.ic_custom_image
-                                                                SavedItemType.VIDEO -> R.drawable.ic_custom_video
-                                                                SavedItemType.CODE -> R.drawable.ic_custom_code
-                                                                SavedItemType.TEXT -> R.drawable.ic_custom_text
-                                                                SavedItemType.AUDIO -> R.drawable.ic_custom_voice
-                                                            }
-                                                            val itemBaseColor = when (item.type) {
-                                                                SavedItemType.LINK -> Color(0xFF42A5F5)
-                                                                SavedItemType.IMAGE -> Color(0xFFAB47BC)
-                                                                SavedItemType.VIDEO -> Color(0xFFEF5350)
-                                                                SavedItemType.TEXT -> Color(0xFFFFA726)
-                                                                SavedItemType.CODE -> Color(0xFF66BB6A)
-                                                                SavedItemType.AUDIO -> Color(0xFF26A69A)
-                                                            }
-                                                            
-                                                            Box(
-                                                                modifier = Modifier
-                                                                    .size(36.dp)
-                                                                    .clip(RoundedCornerShape(8.dp))
-                                                                    .background(itemBaseColor.copy(alpha = 0.15f)),
-                                                                contentAlignment = Alignment.Center
-                                                            ) {
-                                                                Icon(
-                                                                    painter = painterResource(id = itemIconResId),
+                                                    items.forEachIndexed { itemIndex, item ->
+                                                        val isSelected = selectedForBackupIds.contains(item.id)
+                                                        val isAlreadyBackedUp = item.isSynced
+                                                        val itemSize = mediaQuotaBytes(item)
+
+                                                        Row(
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .clickable { viewModel.showDetailItem(item) }
+                                                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            val bestImagePath = item.getBestImagePath()
+                                                            if (item.type == SavedItemType.LINK && bestImagePath != null) {
+                                                                AsyncImage(
+                                                                    model = bestImagePath,
                                                                     contentDescription = null,
-                                                                    tint = itemBaseColor,
-                                                                    modifier = Modifier.size(18.dp)
+                                                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                                                    modifier = Modifier
+                                                                        .size(36.dp)
+                                                                        .clip(RoundedCornerShape(8.dp))
+                                                                )
+                                                            } else {
+                                                                val itemIconResId = when (item.type) {
+                                                                    SavedItemType.LINK -> R.drawable.ic_custom_link
+                                                                    SavedItemType.IMAGE -> R.drawable.ic_custom_image
+                                                                    SavedItemType.VIDEO -> R.drawable.ic_custom_video
+                                                                    SavedItemType.CODE -> R.drawable.ic_custom_code
+                                                                    SavedItemType.TEXT -> R.drawable.ic_custom_text
+                                                                    SavedItemType.AUDIO -> R.drawable.ic_custom_voice
+                                                                }
+                                                                val itemBaseColor = when (item.type) {
+                                                                    SavedItemType.LINK -> Color(0xFF42A5F5)
+                                                                    SavedItemType.IMAGE -> Color(0xFFAB47BC)
+                                                                    SavedItemType.VIDEO -> Color(0xFFEF5350)
+                                                                    SavedItemType.TEXT -> Color(0xFFFFA726)
+                                                                    SavedItemType.CODE -> Color(0xFF66BB6A)
+                                                                    SavedItemType.AUDIO -> Color(0xFF26A69A)
+                                                                }
+                                                                Box(
+                                                                    modifier = Modifier
+                                                                        .size(36.dp)
+                                                                        .clip(RoundedCornerShape(8.dp))
+                                                                        .background(itemBaseColor.copy(alpha = 0.15f)),
+                                                                    contentAlignment = Alignment.Center
+                                                                ) {
+                                                                    Icon(
+                                                                        painter = painterResource(id = itemIconResId),
+                                                                        contentDescription = null,
+                                                                        tint = itemBaseColor,
+                                                                        modifier = Modifier.size(18.dp)
+                                                                    )
+                                                                }
+                                                            }
+
+                                                            Spacer(modifier = Modifier.width(12.dp))
+
+                                                            Column(modifier = Modifier.weight(1f)) {
+                                                                Text(
+                                                                    text = item.title.ifEmpty { "Untitled" },
+                                                                    style = MaterialTheme.typography.bodyMedium,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    color = MaterialTheme.colorScheme.onSurface,
+                                                                    maxLines = 1,
+                                                                    overflow = TextOverflow.Ellipsis
+                                                                )
+                                                                Spacer(modifier = Modifier.height(2.dp))
+                                                                Text(
+                                                                    text = if (isMediaType(item.type)) formatStorageSize(itemSize) else "Free",
+                                                                    style = MaterialTheme.typography.bodySmall,
+                                                                    color = if (isMediaType(item.type)) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.tertiary
+                                                                )
+                                                            }
+
+                                                            Spacer(modifier = Modifier.width(8.dp))
+
+                                                            if (isAlreadyBackedUp) {
+                                                                Icon(
+                                                                    imageVector = Icons.Default.CloudQueue,
+                                                                    contentDescription = "Backed up",
+                                                                    tint = MaterialTheme.colorScheme.primary,
+                                                                    modifier = Modifier
+                                                                        .padding(horizontal = 8.dp)
+                                                                        .size(24.dp)
+                                                                )
+                                                            } else {
+                                                                Checkbox(
+                                                                    checked = isSelected,
+                                                                    onCheckedChange = { checked ->
+                                                                        if (checked) {
+                                                                            if (isMediaType(item.type) && (totalPendingSize + itemSize) > maxStorageBytes) {
+                                                                                viewModel.showToast("Cannot select: exceeds remaining 512MB cloud storage limit.")
+                                                                            } else {
+                                                                                viewModel.toggleBackupSelection(item.id)
+                                                                            }
+                                                                        } else {
+                                                                            viewModel.toggleBackupSelection(item.id)
+                                                                        }
+                                                                    },
+                                                                    modifier = Modifier.size(24.dp)
                                                                 )
                                                             }
                                                         }
                                                         
-                                                        Spacer(modifier = Modifier.width(12.dp))
-                                                        
-                                                        Column(modifier = Modifier.weight(1f)) {
-                                                            Text(
-                                                                text = item.title.ifEmpty { "Untitled" },
-                                                                style = MaterialTheme.typography.bodyMedium,
-                                                                fontWeight = FontWeight.Bold,
-                                                                color = MaterialTheme.colorScheme.onSurface,
-                                                                maxLines = 1
-                                                            )
-                                                            Text(
-                                                                text = if (isMediaType(item.type)) formatStorageSize(itemSize) else "Free",
-                                                                style = MaterialTheme.typography.bodySmall,
-                                                                color = if (isMediaType(item.type)) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.tertiary
-                                                            )
-                                                        }
-                                                        
-                                                        if (isAlreadyBackedUp) {
-                                                            Icon(
-                                                                imageVector = Icons.Default.CloudQueue,
-                                                                contentDescription = "Backed up",
-                                                                tint = MaterialTheme.colorScheme.primary,
-                                                                modifier = Modifier.padding(horizontal = 8.dp)
-                                                            )
-                                                        } else if (isSelected) {
-                                                            Text(
-                                                                text = "PENDING",
-                                                                style = MaterialTheme.typography.labelSmall,
-                                                                fontWeight = FontWeight.Bold,
-                                                                color = baseColor,
-                                                                modifier = Modifier.padding(horizontal = 8.dp)
+                                                        if (itemIndex < items.size - 1) {
+                                                            HorizontalDivider(
+                                                                color = baseColor.copy(alpha = 0.08f),
+                                                                modifier = Modifier.padding(start = 64.dp, end = 16.dp)
                                                             )
                                                         }
                                                     }
@@ -795,7 +856,7 @@ fun ManageStorageScreen(
 }
 
 private fun formatStorageSize(bytes: Long): String {
-    if (bytes <= 0L) return "Free"
+    if (bytes <= 0L) return "0 B"
     val kb = bytes / 1024f
     val mb = kb / 1024f
     val gb = mb / 1024f

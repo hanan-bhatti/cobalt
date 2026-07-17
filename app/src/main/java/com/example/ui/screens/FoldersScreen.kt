@@ -978,7 +978,8 @@ fun FolderContentsBrowser(
                         FolderBrowseItemRow(
                             item = item,
                             viewModel = viewModel,
-                            onClick = { viewModel.showDetailItem(item) }
+                            onClick = { viewModel.showDetailItem(item) },
+                            modifier = Modifier.animateItem()
                         )
                     }
                 }
@@ -992,7 +993,8 @@ fun FolderContentsBrowser(
 fun FolderBrowseItemRow(
     item: SavedItem,
     viewModel: SecondBrainViewModel,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -1016,7 +1018,7 @@ fun FolderBrowseItemRow(
         )
     }
 
-    Box {
+    Box(modifier = modifier) {
         Surface(
             shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.surface,

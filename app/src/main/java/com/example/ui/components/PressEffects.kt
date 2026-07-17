@@ -2,6 +2,7 @@ package com.example.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -23,8 +24,8 @@ fun Modifier.bounceClick(
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.90f else 1.0f,
         animationSpec = spring(
-            dampingRatio = 0.6f, // Smooth bounciness
-            stiffness = 1500f    // Fast quick spring
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
         ),
         label = "bounceScale"
     )
@@ -58,8 +59,8 @@ fun PressableScale(
     val scale by animateFloatAsState(
         targetValue = if (isPressed && enabled) 0.90f else 1.0f,
         animationSpec = spring(
-            dampingRatio = 0.6f,
-            stiffness = 1500f
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
         ),
         label = "pressScale"
     )

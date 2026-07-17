@@ -293,9 +293,15 @@ fun SearchScreen(
                         modifier = Modifier.fillMaxSize()
                     ) {
                         items(displayItems, key = { it.id }) { item ->
-                            SearchItemRow(item = item, onClick = { onItemClick(item) })
+                            SearchItemRow(
+                                item = item,
+                                onClick = { onItemClick(item) },
+                                modifier = Modifier.animateItem()
+                            )
                             HorizontalDivider(
-                                modifier = Modifier.padding(start = 76.dp, end = 16.dp),
+                                modifier = Modifier
+                                    .padding(start = 76.dp, end = 16.dp)
+                                    .animateItem(),
                                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
                                 thickness = 0.5.dp
                             )
@@ -308,9 +314,13 @@ fun SearchScreen(
 }
 
 @Composable
-fun SearchItemRow(item: SavedItem, onClick: () -> Unit) {
+fun SearchItemRow(
+    item: SavedItem,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),

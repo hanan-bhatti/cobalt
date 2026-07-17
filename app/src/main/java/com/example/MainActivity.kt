@@ -14,6 +14,13 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
@@ -143,8 +150,35 @@ BackHandler(enabled = activeDetailItem != null) {
                         @OptIn(ExperimentalSharedTransitionApi::class)
                         SharedTransitionLayout {
                             Surface(modifier = Modifier.fillMaxSize().haze(hazeState)) {
-                                // Standard Home and Authentication navigation flow
-                                NavHost(navController = navController, startDestination = "home") {
+                                 // Standard Home and Authentication navigation flow
+                                 NavHost(
+                                     navController = navController,
+                                     startDestination = "home",
+                                     enterTransition = {
+                                         slideIntoContainer(
+                                             towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                                             animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                                         ) + fadeIn(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow))
+                                     },
+                                     exitTransition = {
+                                         slideOutOfContainer(
+                                             towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                                             animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                                         ) + fadeOut(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow))
+                                     },
+                                     popEnterTransition = {
+                                         slideIntoContainer(
+                                             towards = AnimatedContentTransitionScope.SlideDirection.End,
+                                             animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                                         ) + fadeIn(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow))
+                                     },
+                                     popExitTransition = {
+                                         slideOutOfContainer(
+                                             towards = AnimatedContentTransitionScope.SlideDirection.End,
+                                             animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                                         ) + fadeOut(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow))
+                                     }
+                                 ) {
                                     composable("home") {
                                         HomeScreen(
                                             onNavigateToSearch = { navController.navigate("search") },
@@ -219,21 +253,53 @@ BackHandler(enabled = activeDetailItem != null) {
                                     }
                                 }
 
-                                // Sliding overlay for the capture screen - mimics Apple's native share action sheet
-                                AnimatedVisibility(
-                                    visible = activeCaptureItem != null,
-                                    enter = slideInVertically(initialOffsetY = { it }),
-                                    exit = slideOutVertically(targetOffsetY = { it })
-                                ) {
-                                    CaptureScreen(viewModel = viewModel)
-                                }
+                                 // Sliding overlay for the capture screen - mimics Apple's native share action sheet
+                                 AnimatedVisibility(
+                                     visible = activeCaptureItem != null,
+                                     enter = slideInVertically(
+                                         initialOffsetY = { it },
+                                         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+                                     ) + scaleIn(
+                                         initialScale = 0.9f,
+                                         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+                                     ) + fadeIn(
+                                         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                                     ),
+                                     exit = slideOutVertically(
+                                         targetOffsetY = { it },
+                                         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                                     ) + scaleOut(
+                                         targetScale = 0.9f,
+                                         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                                     ) + fadeOut(
+                                         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                                     )
+                                 ) {
+                                     CaptureScreen(viewModel = viewModel)
+                                 }
 
-                                // Sliding overlay for the memory detail view screen
-                                AnimatedVisibility(
-                                    visible = activeDetailItem != null,
-                                    enter = slideInVertically(initialOffsetY = { it }),
-                                    exit = slideOutVertically(targetOffsetY = { it })
-                                ) {
+                                 // Sliding overlay for the memory detail view screen
+                                 AnimatedVisibility(
+                                     visible = activeDetailItem != null,
+                                     enter = slideInVertically(
+                                         initialOffsetY = { it },
+                                         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+                                     ) + scaleIn(
+                                         initialScale = 0.9f,
+                                         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+                                     ) + fadeIn(
+                                         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                                     ),
+                                     exit = slideOutVertically(
+                                         targetOffsetY = { it },
+                                         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                                     ) + scaleOut(
+                                         targetScale = 0.9f,
+                                         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                                     ) + fadeOut(
+                                         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                                     )
+                                 ) {
                                      DetailScreen(
                                          viewModel = viewModel,
                                          onClose = { viewModel.closeDetailItem() },
