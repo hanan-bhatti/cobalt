@@ -59,6 +59,7 @@ class BrainOcrOverlayService : Service() {
     
     private var handleView: View? = null
     private var panelView: View? = null
+    private var noteInputRef: EditText? = null
     private var isExpanded = false
     private val EXTRA_TOUCH_WIDTH_DP = 16
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -373,157 +374,221 @@ class BrainOcrOverlayService : Service() {
         isExpanded = true
         handleView?.visibility = View.GONE
 
-        // Build elegant, compact vertical panel
+        // ── Color palette ──
+        val surfaceColor = if (isDark) Color.parseColor("#1A1A1E") else Color.parseColor("#FFFFFF")
+        val cardColor = if (isDark) Color.parseColor("#242428") else Color.parseColor("#F5F5F8")
+        val textPrimary = if (isDark) Color.parseColor("#F0F0F0") else Color.parseColor("#1C1B1F")
+        val textSecondary = if (isDark) Color.parseColor("#8E8E93") else Color.parseColor("#6E6E73")
+        val accent = Color.parseColor("#FF7043")
+        val accentSoft = if (isDark) Color.parseColor("#2C221F") else Color.parseColor("#FFF0EB")
+        val borderColor = if (isDark) Color.parseColor("#2E2E32") else Color.parseColor("#E8E8EC")
+        val accentBorder = Color.parseColor("#33FF7043") // 20% alpha
+
+        // ── Root panel ──
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
+            setPadding(dpToPx(14), dpToPx(14), dpToPx(14), dpToPx(12))
             val bg = GradientDrawable().apply {
-                if (isDark) {
-                    setColors(intArrayOf(Color.parseColor("#1C1B1F"), Color.parseColor("#121113")))
-                } else {
-                    setColors(intArrayOf(Color.parseColor("#FCFCFF"), Color.parseColor("#F4F4F9")))
-                }
-                orientation = GradientDrawable.Orientation.TL_BR
-                cornerRadius = dpToPx(20).toFloat()
-                // Glowing vibrant orange accent rays border
-                setStroke(dpToPx(2), Color.parseColor("#FF7043"))
+                setColor(surfaceColor)
+                cornerRadius = dpToPx(22).toFloat()
+                setStroke(dpToPx(1), borderColor)
             }
             background = bg
-            elevation = dpToPx(16).toFloat()
+            elevation = dpToPx(12).toFloat()
             alpha = 0f
-            scaleX = 0.85f
-            scaleY = 0.85f
+            scaleX = 0.9f
+            scaleY = 0.9f
         }
 
-        // Header Section
+        // ═══════════════════════════════════════════════════
+        // 1. HEADER — brand pill + close button
+        // ═══════════════════════════════════════════════════
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, 0, 0, dpToPx(10))
         }
 
-        val titleContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
+        // Brand pill
+        val brandPill = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dpToPx(10), dpToPx(5), dpToPx(12), dpToPx(5))
+            val pillBg = GradientDrawable().apply {
+                setColor(accentSoft)
+                cornerRadius = dpToPx(20).toFloat()
+            }
+            background = pillBg
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
 
-        val titleTv = TextView(this).apply {
-            text = "SECOND BRAIN"
-            textSize = 13f
-            setTextColor(if (isDark) Color.parseColor("#FFFFFF") else Color.parseColor("#1C1B1F"))
-            typeface = Typeface.create("sans-serif-black", Typeface.BOLD)
+        val brandIcon = ImageView(this).apply {
+            setImageResource(R.drawable.ic_custom_school)
+            imageTintList = ColorStateList.valueOf(accent)
+            layoutParams = LinearLayout.LayoutParams(dpToPx(16), dpToPx(16))
         }
-        titleContainer.addView(titleTv)
+        brandPill.addView(brandIcon)
 
-        val subtitleTv = TextView(this).apply {
-            text = "Edge Assistant"
-            textSize = 9.5f
-            setTextColor(Color.parseColor("#FF7043"))
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        val brandLabel = TextView(this).apply {
+            text = "Second Brain"
+            textSize = 12f
+            setTextColor(accent)
+            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+            setPadding(dpToPx(6), 0, 0, 0)
         }
-        titleContainer.addView(subtitleTv)
+        brandPill.addView(brandLabel)
 
-        header.addView(titleContainer)
+        header.addView(brandPill)
 
-        val closeIv = ImageView(this).apply {
-            setImageResource(android.R.drawable.ic_menu_close_clear_cancel)
-            imageTintList = ColorStateList.valueOf(if (isDark) Color.parseColor("#9E9E9E") else Color.parseColor("#5A5A5E"))
-            setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4))
+        // Close button
+        val closeBtn = FrameLayout(this).apply {
+            val closeBg = GradientDrawable().apply {
+                setColor(cardColor)
+                cornerRadius = dpToPx(14).toFloat()
+            }
+            background = closeBg
+            layoutParams = LinearLayout.LayoutParams(dpToPx(28), dpToPx(28)).apply {
+                setMargins(dpToPx(8), 0, 0, 0)
+            }
             isClickable = true
+            isFocusable = true
             setOnClickListener { collapsePanel() }
         }
-        header.addView(closeIv)
-
+        val closeIcon = ImageView(this).apply {
+            setImageResource(R.drawable.ic_custom_close)
+            imageTintList = ColorStateList.valueOf(textSecondary)
+            layoutParams = FrameLayout.LayoutParams(dpToPx(14), dpToPx(14), Gravity.CENTER)
+        }
+        closeBtn.addView(closeIcon)
+        header.addView(closeBtn)
         panel.addView(header)
 
-        // Divider
-        panel.addView(createDivider())
-
-        // 1. Smart Screen OCR button (Gradient background based on theme)
-        val ocrButton = LinearLayout(this).apply {
+        // ═══════════════════════════════════════════════════
+        // 2. QUICK ACTIONS — 4-column icon grid
+        // ═══════════════════════════════════════════════════
+        val actionsGrid = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dpToPx(14), dpToPx(12), dpToPx(14), dpToPx(12))
-            val shape = GradientDrawable().apply {
-                if (isDark) {
-                    setColors(intArrayOf(Color.parseColor("#2C221F"), Color.parseColor("#221C1A")))
-                } else {
-                    setColors(intArrayOf(Color.parseColor("#FFEBE5"), Color.parseColor("#FFDFD5")))
-                }
-                orientation = GradientDrawable.Orientation.LEFT_RIGHT
-                cornerRadius = dpToPx(12).toFloat()
-                setStroke(dpToPx(1), Color.parseColor("#4DFF7043")) // 30% alpha of FF7043
-            }
-            background = shape
-            isClickable = true
-            setOnClickListener {
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dpToPx(10))
+        }
+
+        data class QuickAction(val iconRes: Int, val label: String, val onClick: () -> Unit)
+
+        val actions = listOf(
+            QuickAction(R.drawable.ic_custom_search, "OCR") {
                 collapsePanel()
                 launchOcrCapture()
+            },
+            QuickAction(R.drawable.ic_custom_text, "Note") {
+                // Focus note input below
+                noteInputRef?.requestFocus()
+            },
+            QuickAction(R.drawable.ic_custom_link, "Link") {
+                collapsePanel()
+                val intent = Intent(applicationContext, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    putExtra("NAVIGATE_TO", "capture")
+                    putExtra("CAPTURE_TYPE", "link")
+                }
+                startActivity(intent)
+            },
+            QuickAction(R.drawable.ic_custom_home, "Open") {
+                collapsePanel()
+                val intent = Intent(applicationContext, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                }
+                startActivity(intent)
+            }
+        )
+
+        actions.forEach { action ->
+            val actionCol = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER_HORIZONTAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                isClickable = true
+                isFocusable = true
+                setPadding(dpToPx(2), dpToPx(6), dpToPx(2), dpToPx(6))
+                setOnClickListener { action.onClick() }
+            }
+
+            val iconContainer = FrameLayout(this).apply {
+                val iconBg = GradientDrawable().apply {
+                    setColor(cardColor)
+                    cornerRadius = dpToPx(14).toFloat()
+                }
+                background = iconBg
+                layoutParams = LinearLayout.LayoutParams(dpToPx(42), dpToPx(42))
+            }
+            val icon = ImageView(this).apply {
+                setImageResource(action.iconRes)
+                imageTintList = ColorStateList.valueOf(accent)
+                layoutParams = FrameLayout.LayoutParams(dpToPx(20), dpToPx(20), Gravity.CENTER)
+            }
+            iconContainer.addView(icon)
+            actionCol.addView(iconContainer)
+
+            val label = TextView(this).apply {
+                text = action.label
+                textSize = 10f
+                setTextColor(textSecondary)
+                gravity = Gravity.CENTER
+                typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                setPadding(0, dpToPx(4), 0, 0)
+            }
+            actionCol.addView(label)
+            actionsGrid.addView(actionCol)
+        }
+
+        panel.addView(actionsGrid)
+
+        // ═══════════════════════════════════════════════════
+        // 3. QUICK NOTE — inline compact input bar
+        // ═══════════════════════════════════════════════════
+        val noteBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dpToPx(10), dpToPx(2), dpToPx(4), dpToPx(2))
+            val noteBg = GradientDrawable().apply {
+                setColor(cardColor)
+                cornerRadius = dpToPx(14).toFloat()
+                setStroke(dpToPx(1), borderColor)
+            }
+            background = noteBg
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dpToPx(42)
+            ).apply {
+                setMargins(0, 0, 0, dpToPx(10))
             }
         }
-
-        val ocrIcon = ImageView(this).apply {
-            setImageResource(android.R.drawable.ic_menu_search)
-            imageTintList = ColorStateList.valueOf(Color.parseColor("#FF7043"))
-        }
-        ocrButton.addView(ocrIcon)
-
-        val ocrText = TextView(this).apply {
-            text = "Smart Screen OCR / Lens"
-            textSize = 11.5f
-            setTextColor(if (isDark) Color.parseColor("#FFFFFF") else Color.parseColor("#1C1B1F"))
-            typeface = Typeface.DEFAULT_BOLD
-            setPadding(dpToPx(10), 0, 0, 0)
-        }
-        ocrButton.addView(ocrText)
-
-        panel.addView(ocrButton)
-
-        // 2. Quick Note Section
-        val noteTitle = TextView(this).apply {
-            text = "QUICK NOTE"
-            textSize = 9f
-            setTextColor(if (isDark) Color.parseColor("#9E9E9E") else Color.parseColor("#505054"))
-            typeface = Typeface.DEFAULT_BOLD
-            setPadding(0, dpToPx(14), 0, dpToPx(6))
-        }
-        panel.addView(noteTitle)
 
         val noteInput = EditText(this).apply {
-            hint = "Capture a quick thought..."
-            setHintTextColor(if (isDark) Color.parseColor("#5A5A5D") else Color.parseColor("#8E8E93"))
-            setTextColor(if (isDark) Color.parseColor("#E0E0E0") else Color.parseColor("#1C1B1F"))
-            textSize = 12f
-            setPadding(dpToPx(10), dpToPx(8), dpToPx(10), dpToPx(8))
-            val shape = GradientDrawable().apply {
-                setColor(if (isDark) Color.parseColor("#161618") else Color.parseColor("#FFFFFF"))
-                cornerRadius = dpToPx(8).toFloat()
-                setStroke(dpToPx(1), if (isDark) Color.parseColor("#303033") else Color.parseColor("#DCDCD1"))
-            }
-            background = shape
-            maxLines = 3
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            hint = "Quick thought..."
+            setHintTextColor(Color.parseColor(if (isDark) "#5A5A5D" else "#AEAEB2"))
+            setTextColor(textPrimary)
+            textSize = 12.5f
+            background = null
+            setPadding(0, 0, 0, 0)
+            maxLines = 1
+            isSingleLine = true
+            inputType = InputType.TYPE_CLASS_TEXT
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
         }
-        panel.addView(noteInput)
+        noteInputRef = noteInput
+        noteBar.addView(noteInput)
 
-        val saveRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.END
-            setPadding(0, dpToPx(6), 0, 0)
-        }
-
-        val saveButton = TextView(this).apply {
-            text = "Save Note"
-            textSize = 11f
-            setTextColor(Color.WHITE)
-            typeface = Typeface.DEFAULT_BOLD
-            setPadding(dpToPx(14), dpToPx(6), dpToPx(14), dpToPx(6))
-            val btnShape = GradientDrawable().apply {
-                setColors(intArrayOf(Color.parseColor("#FF8A65"), Color.parseColor("#FF7043")))
-                orientation = GradientDrawable.Orientation.LEFT_RIGHT
-                cornerRadius = dpToPx(8).toFloat()
+        val sendBtn = FrameLayout(this).apply {
+            val sendBg = GradientDrawable().apply {
+                setColor(accent)
+                cornerRadius = dpToPx(12).toFloat()
             }
-            background = btnShape
+            background = sendBg
+            layoutParams = LinearLayout.LayoutParams(dpToPx(32), dpToPx(32)).apply {
+                setMargins(dpToPx(6), 0, 0, 0)
+            }
             isClickable = true
+            isFocusable = true
             setOnClickListener {
                 val textContent = noteInput.text.toString().trim()
                 if (textContent.isNotBlank()) {
@@ -536,33 +601,40 @@ class BrainOcrOverlayService : Service() {
                         repository.saveItem(newItem)
                         withContext(Dispatchers.Main) {
                             noteInput.setText("")
-                            Toast.makeText(applicationContext, "Saved to Second Brain!", Toast.LENGTH_SHORT).show()
-                            collapsePanel()
+                            Toast.makeText(applicationContext, "✓ Saved to Second Brain", Toast.LENGTH_SHORT).show()
                         }
                     }
-                } else {
-                    Toast.makeText(applicationContext, "Please enter some text", Toast.LENGTH_SHORT).show()
                 }
             }
         }
-        saveRow.addView(saveButton)
-        panel.addView(saveRow)
-
-        // 3. Recent Notes Section
-        val recentTitle = TextView(this).apply {
-            text = "RECENT ARCHIVES"
-            textSize = 9f
-            setTextColor(if (isDark) Color.parseColor("#9E9E9E") else Color.parseColor("#505054"))
-            typeface = Typeface.DEFAULT_BOLD
-            setPadding(0, dpToPx(14), 0, dpToPx(6))
+        val sendIcon = ImageView(this).apply {
+            setImageResource(R.drawable.ic_custom_send)
+            imageTintList = ColorStateList.valueOf(Color.WHITE)
+            layoutParams = FrameLayout.LayoutParams(dpToPx(16), dpToPx(16), Gravity.CENTER)
         }
-        panel.addView(recentTitle)
+        sendBtn.addView(sendIcon)
+        noteBar.addView(sendBtn)
+        panel.addView(noteBar)
+
+        // ═══════════════════════════════════════════════════
+        // 4. RECENTS — section label + slim list
+        // ═══════════════════════════════════════════════════
+        val recentsLabel = TextView(this).apply {
+            text = "RECENTS"
+            textSize = 9.5f
+            setTextColor(textSecondary)
+            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
+            letterSpacing = 0.08f
+            setPadding(dpToPx(2), 0, 0, dpToPx(6))
+        }
+        panel.addView(recentsLabel)
 
         val scrollView = ScrollView(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dpToPx(200) // Limit height
+                dpToPx(170)
             )
+            isVerticalScrollBarEnabled = false
         }
         val recentContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -570,7 +642,7 @@ class BrainOcrOverlayService : Service() {
         scrollView.addView(recentContainer)
         panel.addView(scrollView)
 
-        // Populate recent notes
+        // Populate recent items
         serviceScope.launch {
             repository.getAllItemsFlow().collect { list ->
                 val recent = list.sortedByDescending { it.timestamp }.take(5)
@@ -578,41 +650,38 @@ class BrainOcrOverlayService : Service() {
                     recentContainer.removeAllViews()
                     if (recent.isEmpty()) {
                         val emptyTv = TextView(applicationContext).apply {
-                            text = "No recent archives"
-                            textSize = 10.5f
-                            setTextColor(if (isDark) Color.parseColor("#505054") else Color.parseColor("#8E8E93"))
+                            text = "No recent items yet"
+                            textSize = 11f
+                            setTextColor(textSecondary)
                             gravity = Gravity.CENTER
-                            setPadding(0, dpToPx(8), 0, dpToPx(8))
+                            setPadding(0, dpToPx(20), 0, dpToPx(20))
                         }
                         recentContainer.addView(emptyTv)
                     } else {
                         recent.forEach { item ->
-                            val itemRow = LinearLayout(applicationContext).apply {
+                            val row = LinearLayout(applicationContext).apply {
                                 orientation = LinearLayout.HORIZONTAL
                                 gravity = Gravity.CENTER_VERTICAL
-                                setPadding(dpToPx(8), dpToPx(8), dpToPx(8), dpToPx(8))
-                                val itemShape = GradientDrawable().apply {
-                                    setColor(if (isDark) Color.parseColor("#1C1B1F") else Color.parseColor("#FFFFFF"))
-                                    cornerRadius = dpToPx(8).toFloat()
-                                    setStroke(dpToPx(1), if (isDark) Color.parseColor("#2E2E31") else Color.parseColor("#E2E2E6"))
+                                setPadding(dpToPx(10), dpToPx(9), dpToPx(10), dpToPx(9))
+                                val rowBg = GradientDrawable().apply {
+                                    setColor(cardColor)
+                                    cornerRadius = dpToPx(12).toFloat()
                                 }
-                                background = itemShape
-                                val lp = LinearLayout.LayoutParams(
+                                background = rowBg
+                                layoutParams = LinearLayout.LayoutParams(
                                     LinearLayout.LayoutParams.MATCH_PARENT,
                                     LinearLayout.LayoutParams.WRAP_CONTENT
                                 ).apply {
-                                    setMargins(0, 0, 0, dpToPx(6))
+                                    setMargins(0, 0, 0, dpToPx(5))
                                 }
-                                layoutParams = lp
                                 isClickable = true
+                                isFocusable = true
                                 setOnClickListener {
                                     if (item.type == SavedItemType.LINK) {
                                         val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(item.content)).apply {
                                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                         }
-                                        try {
-                                            startActivity(intent)
-                                        } catch (e: Exception) {
+                                        try { startActivity(intent) } catch (_: Exception) {
                                             Toast.makeText(applicationContext, "Cannot open link", Toast.LENGTH_SHORT).show()
                                         }
                                     } else {
@@ -626,44 +695,77 @@ class BrainOcrOverlayService : Service() {
                                 }
                             }
 
-                            val iv = ImageView(applicationContext).apply {
-                                val drawable = when (item.type) {
-                                    SavedItemType.LINK -> android.R.drawable.ic_menu_view
-                                    SavedItemType.IMAGE -> android.R.drawable.ic_menu_gallery
-                                    else -> android.R.drawable.ic_menu_edit
-                                }
-                                setImageResource(drawable)
-                                imageTintList = ColorStateList.valueOf(Color.parseColor("#FF7043"))
+                            // Type icon — use app's custom icons
+                            val iconRes = when (item.type) {
+                                SavedItemType.LINK -> R.drawable.ic_custom_link
+                                SavedItemType.IMAGE -> R.drawable.ic_custom_image
+                                SavedItemType.VIDEO -> R.drawable.ic_custom_video
+                                SavedItemType.AUDIO -> R.drawable.ic_custom_voice
+                                else -> R.drawable.ic_custom_text
                             }
-                            itemRow.addView(iv)
+                            val iconTint = when (item.type) {
+                                SavedItemType.LINK -> Color.parseColor("#42A5F5")
+                                SavedItemType.IMAGE -> Color.parseColor("#66BB6A")
+                                SavedItemType.VIDEO -> Color.parseColor("#AB47BC")
+                                SavedItemType.AUDIO -> accent
+                                else -> accent
+                            }
 
+                            val iconWrap = FrameLayout(applicationContext).apply {
+                                val iconBg = GradientDrawable().apply {
+                                    setColor(if (isDark) Color.parseColor("#2A2A2E") else Color.parseColor("#F0F0F4"))
+                                    cornerRadius = dpToPx(10).toFloat()
+                                }
+                                background = iconBg
+                                layoutParams = LinearLayout.LayoutParams(dpToPx(32), dpToPx(32))
+                            }
+                            val iv = ImageView(applicationContext).apply {
+                                setImageResource(iconRes)
+                                imageTintList = ColorStateList.valueOf(iconTint)
+                                layoutParams = FrameLayout.LayoutParams(dpToPx(16), dpToPx(16), Gravity.CENTER)
+                            }
+                            iconWrap.addView(iv)
+                            row.addView(iconWrap)
+
+                            // Text column
                             val col = LinearLayout(applicationContext).apply {
                                 orientation = LinearLayout.VERTICAL
-                                setPadding(dpToPx(8), 0, 0, 0)
+                                setPadding(dpToPx(10), 0, 0, 0)
                                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                             }
 
                             val title = TextView(applicationContext).apply {
-                                text = if (item.title.isNotBlank()) item.title else "Untitled Note"
-                                textSize = 11f
-                                setTextColor(if (isDark) Color.parseColor("#E0E0E0") else Color.parseColor("#1C1B1F"))
-                                typeface = Typeface.DEFAULT_BOLD
+                                text = if (item.title.isNotBlank()) item.title else "Untitled"
+                                textSize = 12f
+                                setTextColor(textPrimary)
+                                typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
                                 maxLines = 1
                                 ellipsize = TextUtils.TruncateAt.END
                             }
                             col.addView(title)
 
                             val snippet = TextView(applicationContext).apply {
-                                text = item.content
-                                textSize = 9f
-                                setTextColor(if (isDark) Color.parseColor("#9E9E9E") else Color.parseColor("#5A5A5E"))
+                                text = item.content.take(60)
+                                textSize = 10f
+                                setTextColor(textSecondary)
                                 maxLines = 1
                                 ellipsize = TextUtils.TruncateAt.END
                             }
                             col.addView(snippet)
 
-                            itemRow.addView(col)
-                            recentContainer.addView(itemRow)
+                            row.addView(col)
+
+                            // Arrow chevron
+                            val arrow = ImageView(applicationContext).apply {
+                                setImageResource(R.drawable.ic_custom_chevron_right)
+                                imageTintList = ColorStateList.valueOf(
+                                    if (isDark) Color.parseColor("#4A4A4E") else Color.parseColor("#C8C8CC")
+                                )
+                                layoutParams = LinearLayout.LayoutParams(dpToPx(14), dpToPx(14))
+                            }
+                            row.addView(arrow)
+
+                            recentContainer.addView(row)
                         }
                     }
                 }
@@ -673,13 +775,12 @@ class BrainOcrOverlayService : Service() {
         panelView = panel
         root.addView(panel)
 
-        // Expand layout params
+        // ── Expand animation ──
         val params = root.layoutParams as WindowManager.LayoutParams
         val startWidth = dpToPx(getEdgePanelThickness() + EXTRA_TOUCH_WIDTH_DP)
         val startHeight = dpToPx(getEdgePanelHeight())
-        val endWidth = dpToPx(285)
+        val endWidth = dpToPx(260)
 
-        // Measure panel height dynamically
         panel.measure(
             View.MeasureSpec.makeMeasureSpec(endWidth, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
@@ -691,18 +792,17 @@ class BrainOcrOverlayService : Service() {
                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         params.y = calculateYPosition(yPercent)
 
-        // ValueAnimator for beautiful smooth spring expansion animation
         val animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 320
-            interpolator = OvershootInterpolator(0.9f)
+            duration = 280
+            interpolator = OvershootInterpolator(0.8f)
             addUpdateListener { animation ->
                 val fraction = animation.animatedValue as Float
                 params.width = (startWidth + (endWidth - startWidth) * fraction).toInt()
                 params.height = (startHeight + (endHeight - startHeight) * fraction).toInt()
                 
                 panel.alpha = fraction
-                panel.scaleX = 0.85f + 0.15f * fraction
-                panel.scaleY = 0.85f + 0.15f * fraction
+                panel.scaleX = 0.9f + 0.1f * fraction
+                panel.scaleY = 0.9f + 0.1f * fraction
                 
                 if (containerView != null) {
                     windowManager.updateViewLayout(root, params)
@@ -722,6 +822,7 @@ class BrainOcrOverlayService : Service() {
         val height = getEdgePanelHeight()
 
         isExpanded = false
+        noteInputRef = null
 
         val params = root.layoutParams as WindowManager.LayoutParams
         val startWidth = params.width
@@ -729,9 +830,8 @@ class BrainOcrOverlayService : Service() {
         val endWidth = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
         val endHeight = dpToPx(height)
 
-        // ValueAnimator for beautiful smooth shrink collapse animation
         val animator = ValueAnimator.ofFloat(1f, 0f).apply {
-            duration = 250
+            duration = 220
             interpolator = DecelerateInterpolator()
             addUpdateListener { animation ->
                 val fraction = animation.animatedValue as Float
@@ -739,8 +839,8 @@ class BrainOcrOverlayService : Service() {
                 params.height = (endHeight + (startHeight - endHeight) * fraction).toInt()
                 
                 panel.alpha = fraction
-                panel.scaleX = 0.85f + 0.15f * fraction
-                panel.scaleY = 0.85f + 0.15f * fraction
+                panel.scaleX = 0.9f + 0.1f * fraction
+                panel.scaleY = 0.9f + 0.1f * fraction
 
                 if (containerView != null) {
                     windowManager.updateViewLayout(root, params)
@@ -753,7 +853,6 @@ class BrainOcrOverlayService : Service() {
                         panelView = null
                         handleView?.visibility = View.VISIBLE
                         
-                        // Restore handle parameters inside layout
                         handleView?.layoutParams = FrameLayout.LayoutParams(
                             dpToPx(thickness),
                             FrameLayout.LayoutParams.MATCH_PARENT
@@ -842,6 +941,22 @@ class BrainOcrOverlayService : Service() {
             containerView = null
             handleView = null
             panelView = null
+        }
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        // Re-deliver a start command so the service survives
+        // when the user swipes the app away from recents.
+        val restartIntent = Intent(applicationContext, BrainOcrOverlayService::class.java)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(restartIntent)
+            } else {
+                startService(restartIntent)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("BrainOcrOverlay", "Failed to restart after task removal: ${e.message}", e)
         }
     }
 

@@ -84,11 +84,13 @@
             android:theme="@style/Theme.MyApplication.Transparent"
             android:exported="false"
             android:launchMode="singleTask"
+            android:taskAffinity=".ocr_capture"
             android:excludeFromRecents="true" />
 
         <service
             android:name=".BrainOcrOverlayService"
             android:foregroundServiceType="specialUse"
+            android:stopWithTask="false"
             tools:targetApi="q"
             android:exported="false">
             <property
