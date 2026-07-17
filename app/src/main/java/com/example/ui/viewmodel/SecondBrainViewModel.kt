@@ -125,12 +125,15 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             filtered = filtered.filter { !it.folders.contains("Archive") }
         }
 
-        // 2. Filter by Search Query (title, content, or extracted text)
-        if (query.isNotEmpty()) {
-            filtered = filtered.filter {
-                it.title.contains(query, ignoreCase = true) ||
-                        it.content.contains(query, ignoreCase = true) ||
-                        (it.extractedText?.contains(query, ignoreCase = true) == true)
+        // 2. Filter and rank by Search Query (fuzzy, synonym-aware search)
+        if (query.isNotBlank()) {
+            val queryTerms = query.lowercase().split(Regex("[^a-zA-Z0-9]")).filter { it.isNotBlank() }
+            if (queryTerms.isNotEmpty()) {
+                filtered = filtered
+                    .map { item -> item to calculateSearchScore(item, queryTerms) }
+                    .filter { it.second > 0 }
+                    .sortedByDescending { it.second }
+                    .map { it.first }
             }
         }
 
@@ -1591,6 +1594,160 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             Log.e("SecondBrainVM", "Failed to read URI bytes: ${e.message}")
             null
         }
+    }
+
+    private val synonymGroups = listOf(
+        setOf("image", "photo", "pic", "picture", "screenshot", "camera", "jpg", "png", "jpeg", "gallery"),
+        setOf("link", "web", "url", "website", "http", "www", "href", "bookmark", "internet"),
+        setOf("video", "movie", "clip", "recording", "mp4", "mkv", "mov", "film"),
+        setOf("audio", "music", "voice", "mic", "sound", "recording", "mp3", "m4a", "wav", "transcript", "podcast"),
+        setOf("code", "dev", "program", "kotlin", "java", "script", "json", "xml", "html", "css", "js", "coding", "developer"),
+        setOf("text", "note", "memo", "write", "content", "document", "doc", "pdf", "txt")
+    )
+
+    private fun levenshteinDistance(s1: String, s2: String): Int {
+        if (s1 == s2) return 0
+        if (s1.isEmpty()) return s2.length
+        if (s2.isEmpty()) return s1.length
+
+        var prev = IntArray(s2.length + 1) { it }
+        var curr = IntArray(s2.length + 1)
+
+        for (i in 1..s1.length) {
+            curr[0] = i
+            for (j in 1..s2.length) {
+                val cost = if (s1[i - 1] == s2[j - 1]) 0 else 1
+                curr[j] = minOf(
+                    prev[j] + 1,
+                    curr[j - 1] + 1,
+                    prev[j - 1] + cost
+                )
+            }
+            val temp = prev
+            prev = curr
+            curr = temp
+        }
+        return prev[s2.length]
+    }
+
+    private fun isFuzzyMatch(word1: String, word2: String): Boolean {
+        if (word1 == word2) return true
+        if (word1.contains(word2) || word2.contains(word1)) return true
+
+        val maxDistance = when {
+            word1.length <= 3 -> 0
+            word1.length <= 5 -> 1
+            else -> 2
+        }
+
+        return levenshteinDistance(word1, word2) <= maxDistance
+    }
+
+    private fun calculateSearchScore(item: SavedItem, queryTerms: List<String>): Int {
+        if (queryTerms.isEmpty()) return 0
+
+        var totalScore = 0
+
+        val titleWords = item.title.lowercase().split(Regex("[^a-zA-Z0-9]")).filter { it.isNotBlank() }
+        val contentWords = item.content.lowercase().split(Regex("[^a-zA-Z0-9]")).filter { it.isNotBlank() }
+        val extTextWords = item.extractedText?.lowercase()?.split(Regex("[^a-zA-Z0-9]"))?.filter { it.isNotBlank() } ?: emptyList()
+        val linkTitleWords = item.linkTitle?.lowercase()?.split(Regex("[^a-zA-Z0-9]"))?.filter { it.isNotBlank() } ?: emptyList()
+        val linkDescWords = item.linkDescription?.lowercase()?.split(Regex("[^a-zA-Z0-9]"))?.filter { it.isNotBlank() } ?: emptyList()
+        val folderWords = item.folders.flatMap { it.lowercase().split(Regex("[^a-zA-Z0-9]")) }.filter { it.isNotBlank() }
+        val itemTypeStr = item.type.displayName.lowercase()
+
+        for (term in queryTerms) {
+            var termMatched = false
+
+            val synonyms = synonymGroups.find { term in it } ?: emptySet()
+            val allSearchTerms = synonyms + term
+
+            for (st in allSearchTerms) {
+                // 1. Title match
+                if (item.title.contains(st, ignoreCase = true)) {
+                    totalScore += 20
+                    termMatched = true
+                } else {
+                    val fuzzyTitleMatch = titleWords.any { isFuzzyMatch(it, st) }
+                    if (fuzzyTitleMatch) {
+                        totalScore += 12
+                        termMatched = true
+                    }
+                }
+
+                // 2. Folder match
+                if (item.folders.any { it.contains(st, ignoreCase = true) }) {
+                    totalScore += 15
+                    termMatched = true
+                } else {
+                    val fuzzyFolderMatch = folderWords.any { isFuzzyMatch(it, st) }
+                    if (fuzzyFolderMatch) {
+                        totalScore += 10
+                        termMatched = true
+                    }
+                }
+
+                // 3. Item type match
+                if (itemTypeStr.contains(st) || isFuzzyMatch(itemTypeStr, st)) {
+                    totalScore += 10
+                    termMatched = true
+                }
+
+                // 4. Link title match
+                if (item.linkTitle?.contains(st, ignoreCase = true) == true) {
+                    totalScore += 12
+                    termMatched = true
+                } else {
+                    val fuzzyLinkTitleMatch = linkTitleWords.any { isFuzzyMatch(it, st) }
+                    if (fuzzyLinkTitleMatch) {
+                        totalScore += 8
+                        termMatched = true
+                    }
+                }
+
+                // 5. Main content match
+                if (item.content.contains(st, ignoreCase = true)) {
+                    totalScore += 8
+                    termMatched = true
+                } else {
+                    val fuzzyContentMatch = contentWords.any { isFuzzyMatch(it, st) }
+                    if (fuzzyContentMatch) {
+                        totalScore += 5
+                        termMatched = true
+                    }
+                }
+
+                // 6. Link description match
+                if (item.linkDescription?.contains(st, ignoreCase = true) == true) {
+                    totalScore += 8
+                    termMatched = true
+                } else {
+                    val fuzzyLinkDescMatch = linkDescWords.any { isFuzzyMatch(it, st) }
+                    if (fuzzyLinkDescMatch) {
+                        totalScore += 4
+                        termMatched = true
+                    }
+                }
+
+                // 7. Extracted text match (OCR, transcription, etc.)
+                if (item.extractedText?.contains(st, ignoreCase = true) == true) {
+                    totalScore += 6
+                    termMatched = true
+                } else {
+                    val fuzzyExtTextMatch = extTextWords.any { isFuzzyMatch(it, st) }
+                    if (fuzzyExtTextMatch) {
+                        totalScore += 3
+                        termMatched = true
+                    }
+                }
+            }
+
+            if (!termMatched) {
+                return 0
+            }
+        }
+
+        return totalScore
     }
 }
 
