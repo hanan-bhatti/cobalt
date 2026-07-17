@@ -29,6 +29,15 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     private val repository = SecondBrainRepository(context)
     val settingsRepository = com.example.data.repository.SettingsRepository(context)
 
+    /** Returns true when the device has an active internet-capable network. */
+    private fun isNetworkAvailable(): Boolean {
+        val cm = context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
+        return caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) ||
+               caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) ||
+               caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET)
+    }
+
     val isFloatingOcrEnabled = settingsRepository.isFloatingOcrEnabled
     fun setFloatingOcrEnabled(enabled: Boolean) {
         settingsRepository.setFloatingOcrEnabled(enabled)
@@ -307,16 +316,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     fun syncData() {
         if (_isSyncing.value) return
         
-        val connectivityManager = context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-        val activeNetwork = connectivityManager.activeNetwork
-        val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
-        val isConnected = capabilities != null && (
-            capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) ||
-            capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) ||
-            capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET)
-        )
-        
-        if (!isConnected) {
+        if (!isNetworkAvailable()) {
             showToast("No internet connection. Please check your network and try again.")
             return
         }
@@ -357,6 +357,10 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             if (isUserTriggered) {
                 showToast("Please save a valid Gemini API Key first.")
             }
+            return
+        }
+        if (!isNetworkAvailable()) {
+            if (isUserTriggered) showToast("No internet connection. Cannot refresh models.")
             return
         }
         viewModelScope.launch {
@@ -402,20 +406,26 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
 
     val maxStorageBytes = 512L * 1024 * 1024 // 512 MB default
 
-    val cloudUsedStorageBytes: StateFlow<Long> = allItems.map { items: List<com.example.data.model.SavedItem> ->
-        var total = 0L
-        items.filter { it.isSynced }.forEach { item ->
-            val path = item.thumbnailPath ?: item.content
-            if (path.startsWith("/")) {
-                val file = java.io.File(path)
-                if (file.exists()) {
-                    total += file.length()
-                }
-            } else {
-                total += item.content.length.toLong()
-            }
+    /** Only IMAGE, VIDEO, and AUDIO count toward the cloud storage quota. Text, links, and code are always free. */
+    private fun SavedItem.isMediaType() =
+        type == SavedItemType.IMAGE || type == SavedItemType.VIDEO || type == SavedItemType.AUDIO
+
+    /** Best-effort size in bytes for a media item. Returns 0 for non-media (free) types. */
+    private fun SavedItem.mediaQuotaBytes(): Long {
+        if (!isMediaType()) return 0L
+        // If we stored the size during upload/backup, use it directly
+        if (sizeBytes > 0L) return sizeBytes
+        // Otherwise try reading the local file (will be 0 on a new device after cloud restore)
+        val localPath = (thumbnailPath ?: content).takeIf { it.startsWith("/") }
+        if (localPath != null) {
+            val file = java.io.File(localPath)
+            if (file.exists()) return file.length()
         }
-        total
+        return 0L
+    }
+
+    val cloudUsedStorageBytes: StateFlow<Long> = allItems.map { items: List<com.example.data.model.SavedItem> ->
+        items.filter { it.isSynced && it.isMediaType() }.sumOf { it.mediaQuotaBytes() }
     }.stateIn(viewModelScope, SharingStarted.Lazily, 0L)
 
     private val _selectedForBackupIds = MutableStateFlow<Set<String>>(emptySet())
@@ -581,6 +591,10 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             showToast("Successfully registered and logged in as $email.")
             return
         }
+        if (!isNetworkAvailable()) {
+            _authError.value = "No internet connection. Please check your network and try again."
+            return
+        }
         _authError.value = null
         _authLoading.value = true
         auth.createUserWithEmailAndPassword(email, password)
@@ -619,6 +633,10 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             showToast("Successfully logged in as $email.")
             return
         }
+        if (!isNetworkAvailable()) {
+            _authError.value = "No internet connection. Please check your network and try again."
+            return
+        }
         _authError.value = null
         _authLoading.value = true
         auth.signInWithEmailAndPassword(email, password)
@@ -647,6 +665,11 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         val auth = repository.firebaseAuth
         if (auth == null) {
             _authError.value = "Authentication not initialized."
+            onCompletion(false)
+            return
+        }
+        if (!isNetworkAvailable()) {
+            _authError.value = "No internet connection. Please check your network and try again."
             onCompletion(false)
             return
         }

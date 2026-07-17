@@ -82,18 +82,31 @@ fun ManageStorageScreen(
         )
     }
 
+    // --- Storage helpers (mirrors ViewModel logic) ---
+    // Only IMAGE, VIDEO, and AUDIO use quota. Text / Code / Link are always free.
+    fun isMediaType(type: SavedItemType) =
+        type == SavedItemType.IMAGE || type == SavedItemType.VIDEO || type == SavedItemType.AUDIO
+
+    fun mediaQuotaBytes(item: com.example.data.model.SavedItem): Long {
+        if (!isMediaType(item.type)) return 0L
+        if (item.sizeBytes > 0L) return item.sizeBytes
+        val localPath = (item.thumbnailPath ?: item.content).takeIf { it.startsWith("/") }
+        if (localPath != null) {
+            val file = java.io.File(localPath)
+            if (file.exists()) return file.length()
+        }
+        return 0L
+    }
+    // ---
+
     val breakdownItems = remember(allItems, customFolders) {
         val folderSizes = mutableMapOf<String, Long>()
         val unassignedItems = mutableListOf<com.example.data.model.SavedItem>()
 
         allItems.forEach { item ->
-            val itemSize = if (item.sizeBytes > 0L) {
-                item.sizeBytes
-            } else if ((item.thumbnailPath ?: item.content).startsWith("/")) {
-                java.io.File(item.thumbnailPath ?: item.content).length()
-            } else {
-                item.content.length.toLong()
-            }
+            // Only media bytes count toward storage — skip free items
+            val itemSize = mediaQuotaBytes(item)
+            if (itemSize == 0L) return@forEach
 
             if (item.folders.isEmpty()) {
                 unassignedItems.add(item)
@@ -111,14 +124,7 @@ fun ManageStorageScreen(
             allGroups.add(StorageBreakdownItem(name = folderName, sizeBytes = size, isFolder = true))
         }
         unassignedGroups.forEach { (type, items) ->
-            val size = items.sumOf { item ->
-                if (item.sizeBytes > 0L) {
-                    item.sizeBytes
-                } else {
-                    val path = item.thumbnailPath ?: item.content
-                    if (path.startsWith("/")) java.io.File(path).length() else item.content.length.toLong()
-                }
-            }
+            val size = items.sumOf { mediaQuotaBytes(it) }
             allGroups.add(StorageBreakdownItem(name = type.displayName, sizeBytes = size, isFolder = false))
         }
 
@@ -133,18 +139,8 @@ fun ManageStorageScreen(
         }
     }
 
-    val newSelectionSize = allItems.filter { it.id in selectedForBackupIds && !it.isSynced }.sumOf { item ->
-        if (item.sizeBytes > 0L) {
-            item.sizeBytes
-        } else {
-            val path = item.thumbnailPath ?: item.content
-            if (path.startsWith("/")) {
-                java.io.File(path).length()
-            } else {
-                item.content.length.toLong()
-            }
-        }
-    }
+    // Only media items selected-for-backup count toward the pending quota
+    val newSelectionSize = allItems.filter { it.id in selectedForBackupIds && !it.isSynced && isMediaType(it.type) }.sumOf { mediaQuotaBytes(it) }
 
     val totalPendingSize = cloudUsedStorageBytes + newSelectionSize
     val maxStorageBytes = viewModel.maxStorageBytes
@@ -317,17 +313,11 @@ fun ManageStorageScreen(
                         }
 
                         categories.forEach { (type, items) ->
-                            val categoryTotalSize = items.sumOf { item ->
-                                if (item.sizeBytes > 0L) {
-                                    item.sizeBytes
-                                } else {
-                                    val path = item.thumbnailPath ?: item.content
-                                    if (path.startsWith("/")) {
-                                        java.io.File(path).length()
-                                    } else {
-                                        item.content.length.toLong()
-                                    }
-                                }
+                        // Only media types count toward cloud storage quota
+                            val categoryTotalSize = if (isMediaType(type)) {
+                                items.sumOf { mediaQuotaBytes(it) }
+                            } else {
+                                0L
                             }
                             
                             val baseColor = when (type) {
@@ -413,22 +403,34 @@ fun ManageStorageScreen(
                                         ) {
                                             val syncedCount = items.count { it.isSynced }
                                             val localCount = items.size - syncedCount
+                                            val freeLabel = if (!isMediaType(type)) " • Free (no quota)" else ""
                                             Text(
-                                                text = "${items.size} items • $syncedCount synced, $localCount local",
+                                                text = "${items.size} items • $syncedCount synced, $localCount local$freeLabel",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
-                                            Text(
-                                                text = formatStorageSize(categoryTotalSize),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
+                                            if (isMediaType(type)) {
+                                                Text(
+                                                    text = formatStorageSize(categoryTotalSize),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = "Free",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.tertiary
+                                                )
+                                            }
                                         }
 
                                         Spacer(modifier = Modifier.height(6.dp))
 
-                                        val progress = (categoryTotalSize.toFloat() / maxStorageBytes).coerceIn(0f, 1f)
+                                        val progress = if (isMediaType(type)) {
+                                            (categoryTotalSize.toFloat() / maxStorageBytes).coerceIn(0f, 1f)
+                                        } else 0f
                                         LinearProgressIndicator(
                                             progress = { progress },
                                             color = baseColor,
@@ -453,13 +455,8 @@ fun ManageStorageScreen(
                                             val isSelected = selectedForBackupIds.contains(item.id)
                                             val isAlreadyBackedUp = item.isSynced
 
-                                            val itemSize = if (item.sizeBytes > 0L) {
-                                                item.sizeBytes
-                                            } else if ((item.thumbnailPath ?: item.content).startsWith("/")) {
-                                                java.io.File(item.thumbnailPath ?: item.content).length()
-                                            } else {
-                                                item.content.length.toLong()
-                                            }
+                                            // Non-media items don't use any quota
+                                            val itemSize = mediaQuotaBytes(item)
 
                                             Row(
                                                 modifier = Modifier
@@ -548,9 +545,9 @@ fun ManageStorageScreen(
                                                                 maxLines = 1
                                                             )
                                                             Text(
-                                                                text = formatStorageSize(itemSize),
+                                                                text = if (isMediaType(item.type)) formatStorageSize(itemSize) else "Free",
                                                                 style = MaterialTheme.typography.bodySmall,
-                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                                color = if (isMediaType(item.type)) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.tertiary
                                                             )
                                                         }
                                                         
@@ -640,15 +637,10 @@ fun ManageStorageScreen(
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold
                     )
-                    val itemSize = if (item.sizeBytes > 0L) {
-                        item.sizeBytes
-                    } else if ((item.thumbnailPath ?: item.content).startsWith("/")) {
-                        java.io.File(item.thumbnailPath ?: item.content).length()
-                    } else {
-                        item.content.length.toLong()
-                    }
+                    val itemSize = mediaQuotaBytes(item)
                     Text(
-                        text = "Type: ${item.type.displayName} • Size: ${formatStorageSize(itemSize)}",
+                        text = if (isMediaType(item.type)) "Type: ${item.type.displayName} • Size: ${formatStorageSize(itemSize)}"
+                              else "Type: ${item.type.displayName} • Free (no quota)",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -688,8 +680,8 @@ fun ManageStorageScreen(
                         val isSelected = selectedForBackupIds.contains(item.id)
                         Button(
                             onClick = {
-                                val itemSize = if (item.sizeBytes > 0) item.sizeBytes else if ((item.thumbnailPath ?: item.content).startsWith("/")) java.io.File(item.thumbnailPath ?: item.content).length() else item.content.length.toLong()
-                                if (!isSelected && (totalPendingSize + itemSize) > maxStorageBytes) {
+                                val itemSize = mediaQuotaBytes(item)
+                                if (!isSelected && isMediaType(item.type) && (totalPendingSize + itemSize) > maxStorageBytes) {
                                     viewModel.showToast("Cannot select: exceeds remaining 512MB cloud storage limit.")
                                 } else {
                                     viewModel.toggleBackupSelection(item.id)
@@ -773,12 +765,8 @@ fun ManageStorageScreen(
                                         }
                                     }
                                 } else {
-                                    val categoryUnsyncedSize = nonSyncedItems.sumOf {
-                                        if (it.sizeBytes > 0) it.sizeBytes else if ((it.thumbnailPath ?: it.content).startsWith("/")) java.io.File(it.thumbnailPath ?: it.content).length() else it.content.length.toLong()
-                                    }
-                                    val otherCategoriesSelectionSize = allItems.filter { it.id in selectedForBackupIds && !it.isSynced && it.type != type }.sumOf {
-                                        if (it.sizeBytes > 0) it.sizeBytes else if ((it.thumbnailPath ?: it.content).startsWith("/")) java.io.File(it.thumbnailPath ?: it.content).length() else it.content.length.toLong()
-                                    }
+                                    val categoryUnsyncedSize = nonSyncedItems.sumOf { mediaQuotaBytes(it) }
+                                    val otherCategoriesSelectionSize = allItems.filter { it.id in selectedForBackupIds && !it.isSynced && it.type != type }.sumOf { mediaQuotaBytes(it) }
                                     val totalPendingWithCategory = cloudUsedStorageBytes + otherCategoriesSelectionSize + categoryUnsyncedSize
                                     if (totalPendingWithCategory > maxStorageBytes) {
                                         viewModel.showToast("Exceeds 512MB free backup limit by ${formatStorageSize(totalPendingWithCategory - maxStorageBytes)}.")
@@ -807,7 +795,7 @@ fun ManageStorageScreen(
 }
 
 private fun formatStorageSize(bytes: Long): String {
-    if (bytes <= 0L) return "0.0 KB"
+    if (bytes <= 0L) return "Free"
     val kb = bytes / 1024f
     val mb = kb / 1024f
     val gb = mb / 1024f

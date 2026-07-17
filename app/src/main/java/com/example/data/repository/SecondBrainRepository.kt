@@ -312,12 +312,13 @@ class SecondBrainRepository(private val context: Context) {
                     val snapshot = uploadTask.await()
                     val downloadUrl = (snapshot.metadata?.reference?.downloadUrl ?: throw Exception("No reference URL")).await()
                     
-                    // Update item thumbnailPath (for audio) or content (for image/video) with the cloud storage URL
-                    finalItem = if (item.type == SavedItemType.AUDIO) {
-                        finalItem.copy(thumbnailPath = downloadUrl.toString(), sizeBytes = actualBytes.size.toLong())
-                    } else {
-                        finalItem.copy(content = downloadUrl.toString(), sizeBytes = actualBytes.size.toLong())
-                    }
+                    // Update both content AND thumbnailPath with the cloud storage URL
+                    // For audio, content holds the playback URL; thumbnailPath is optional artwork
+                    finalItem = finalItem.copy(
+                        content = downloadUrl.toString(),
+                        thumbnailPath = downloadUrl.toString(),
+                        sizeBytes = actualBytes.size.toLong()
+                    )
                     // Save locally again with the new remote URL
                     savedItemDao.insertItem(finalItem.toEntity())
                     onProgress(0.9f)
@@ -333,6 +334,7 @@ class SecondBrainRepository(private val context: Context) {
                         "title" to finalItem.title,
                         "content" to finalItem.content,
                         "timestamp" to finalItem.timestamp,
+                        "orderIndex" to finalItem.orderIndex,
                         "folders" to finalItem.folders,
                         "extractedText" to finalItem.extractedText,
                         "thumbnailPath" to finalItem.thumbnailPath,
@@ -375,13 +377,20 @@ class SecondBrainRepository(private val context: Context) {
                 var domainItem = entity.toDomain()
                 var finalItem = domainItem
 
-                if ((domainItem.type == SavedItemType.IMAGE || domainItem.type == SavedItemType.VIDEO) &&
+                if ((domainItem.type == SavedItemType.IMAGE || domainItem.type == SavedItemType.VIDEO || domainItem.type == SavedItemType.AUDIO) &&
                     !domainItem.content.startsWith("http://") && !domainItem.content.startsWith("https://")
                 ) {
-                    val localPath = domainItem.thumbnailPath ?: domainItem.content
+                    val localPath = when (domainItem.type) {
+                        SavedItemType.AUDIO -> domainItem.content.ifEmpty { domainItem.thumbnailPath ?: "" }
+                        else -> domainItem.thumbnailPath ?: domainItem.content
+                    }
                     val bytes = readFileBytes(localPath)
                     if (bytes != null && storage != null) {
-                        val fileExtension = if (domainItem.type == SavedItemType.VIDEO) "mp4" else "jpg"
+                        val fileExtension = when (domainItem.type) {
+                            SavedItemType.VIDEO -> "mp4"
+                            SavedItemType.AUDIO -> "m4a"
+                            else -> "jpg"
+                        }
                         val storageRef = storage.reference.child("users/${currentUser.uid}/media/${domainItem.id}.$fileExtension")
                         val uploadTask = storageRef.putBytes(bytes)
                         val snapshot = uploadTask.await()
@@ -402,6 +411,7 @@ class SecondBrainRepository(private val context: Context) {
                         "title" to finalItem.title,
                         "content" to finalItem.content,
                         "timestamp" to finalItem.timestamp,
+                        "orderIndex" to finalItem.orderIndex,
                         "folders" to finalItem.folders,
                         "extractedText" to finalItem.extractedText,
                         "thumbnailPath" to finalItem.thumbnailPath,
@@ -459,13 +469,20 @@ class SecondBrainRepository(private val context: Context) {
                 var finalItem = domainItem
 
                 // Upload media bytes if it's an image/video and not already uploaded
-                if ((domainItem.type == SavedItemType.IMAGE || domainItem.type == SavedItemType.VIDEO) &&
+                if ((domainItem.type == SavedItemType.IMAGE || domainItem.type == SavedItemType.VIDEO || domainItem.type == SavedItemType.AUDIO) &&
                     !domainItem.content.startsWith("http://") && !domainItem.content.startsWith("https://")
                 ) {
-                    val localPath = domainItem.thumbnailPath ?: domainItem.content
+                    val localPath = when (domainItem.type) {
+                        SavedItemType.AUDIO -> domainItem.content.ifEmpty { domainItem.thumbnailPath ?: "" }
+                        else -> domainItem.thumbnailPath ?: domainItem.content
+                    }
                     val bytes = readFileBytes(localPath)
                     if (bytes != null && storage != null) {
-                        val fileExtension = if (domainItem.type == SavedItemType.VIDEO) "mp4" else "jpg"
+                        val fileExtension = when (domainItem.type) {
+                            SavedItemType.VIDEO -> "mp4"
+                            SavedItemType.AUDIO -> "m4a"
+                            else -> "jpg"
+                        }
                         val storageRef = storage.reference.child("users/${currentUser.uid}/media/${domainItem.id}.$fileExtension")
                         val uploadTask = storageRef.putBytes(bytes)
                         val snapshot = uploadTask.await()
@@ -487,6 +504,7 @@ class SecondBrainRepository(private val context: Context) {
                         "title" to finalItem.title,
                         "content" to finalItem.content,
                         "timestamp" to finalItem.timestamp,
+                        "orderIndex" to finalItem.orderIndex,
                         "folders" to finalItem.folders,
                         "extractedText" to finalItem.extractedText,
                         "thumbnailPath" to finalItem.thumbnailPath,
@@ -736,6 +754,7 @@ class SecondBrainRepository(private val context: Context) {
                 val title = doc.getString("title") ?: ""
                 val content = doc.getString("content") ?: ""
                 val timestamp = doc.getLong("timestamp") ?: System.currentTimeMillis()
+                val orderIndex = doc.getDouble("orderIndex") ?: timestamp.toDouble()
                 @Suppress("UNCHECKED_CAST")
                 val foldersList = doc.get("folders") as? List<String> ?: emptyList()
                 val extractedText = doc.getString("extractedText")
@@ -746,6 +765,14 @@ class SecondBrainRepository(private val context: Context) {
                 val sizeBytes = doc.getLong("sizeBytes") ?: 0L
 
                 val foldersJsonStr = "[" + foldersList.joinToString(",") { "\"$it\"" } + "]"
+
+                // Check if local DB already has a newer version of this item
+                val existing = savedItemDao.getItemById(id)
+                if (existing != null && existing.isSynced && existing.timestamp >= timestamp) {
+                    // Local is already up-to-date; skip to avoid overwriting local edits
+                    return@forEach
+                }
+
                 savedItemDao.insertItem(
                     SavedItemEntity(
                         id = id,
@@ -756,6 +783,7 @@ class SecondBrainRepository(private val context: Context) {
                         foldersJson = foldersJsonStr,
                         extractedText = extractedText,
                         thumbnailPath = thumbnailPath,
+                        orderIndex = orderIndex,
                         isSynced = true,
                         linkTitle = linkTitle,
                         linkDescription = linkDescription,
