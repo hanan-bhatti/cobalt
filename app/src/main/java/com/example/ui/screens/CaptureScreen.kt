@@ -534,7 +534,11 @@ fun CaptureScreen(
                 OutlinedTextField(
                     value = item.content,
                     onValueChange = { viewModel.updateActiveCaptureItem { captured -> captured.copy(content = it) } },
-                    visualTransformation = androidx.compose.ui.text.input.VisualTransformation.None,
+                    visualTransformation = if (item.type == SavedItemType.CODE) {
+                        com.example.ui.components.CodeSyntaxHighlightTransformation(androidx.compose.foundation.isSystemInDarkTheme())
+                    } else {
+                        androidx.compose.ui.text.input.VisualTransformation.None
+                    },
                     keyboardOptions = if (item.type == SavedItemType.LINK) {
                         KeyboardOptions(keyboardType = KeyboardType.Uri)
                     } else {

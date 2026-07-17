@@ -318,15 +318,24 @@ fun ArchiveItemCard(
                                     }
                                 }
                                 SavedItemType.CODE -> {
+                                    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+                                    val codeText = remember(item.content, isDark) {
+                                        com.example.ui.components.CodeHighlighter.highlight(item.content, isDark)
+                                    }
                                     Box(
-                                        modifier = Modifier.fillMaxSize().background(Color(0xFF1E1E1E)),
-                                        contentAlignment = Alignment.Center
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(if (isDark) Color(0xFF1E1E1E) else Color(0xFFF5F5F5))
+                                            .padding(6.dp)
                                     ) {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.ic_custom_code),
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(24.dp)
+                                        Text(
+                                            text = codeText,
+                                            fontSize = 7.sp,
+                                            lineHeight = 9.sp,
+                                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                            maxLines = 8,
+                                            overflow = TextOverflow.Clip,
+                                            modifier = Modifier.fillMaxSize()
                                         )
                                     }
                                 }
@@ -536,25 +545,40 @@ fun ArchiveItemRow(
                         }
                     }
                     Spacer(modifier = Modifier.width(12.dp))
+                } else if (item.type == SavedItemType.CODE) {
+                    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+                    val codeText = remember(item.content, isDark) {
+                        com.example.ui.components.CodeHighlighter.highlight(item.content, isDark)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isDark) Color(0xFF1E1E1E) else Color(0xFFF5F5F5))
+                            .padding(6.dp)
+                    ) {
+                        Text(
+                            text = codeText,
+                            fontSize = 6.sp,
+                            lineHeight = 7.5.sp,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                            maxLines = 7,
+                            overflow = TextOverflow.Clip,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
                 } else {
                     val iconResId = when (item.type) {
                         SavedItemType.LINK -> R.drawable.ic_custom_link
                         SavedItemType.TEXT -> R.drawable.ic_custom_text
                         SavedItemType.AUDIO -> R.drawable.ic_custom_voice
                         SavedItemType.VIDEO -> R.drawable.ic_custom_video
-                        SavedItemType.CODE -> R.drawable.ic_custom_code
                         SavedItemType.IMAGE -> R.drawable.ic_custom_image
+                        SavedItemType.CODE -> R.drawable.ic_custom_code
                     }
-                    val placeholderBg = if (item.type == SavedItemType.CODE) {
-                        Color(0xFF1E1E1E)
-                    } else {
-                        typeColor.copy(alpha = 0.15f)
-                    }
-                    val placeholderTint = if (item.type == SavedItemType.CODE) {
-                        Color.White
-                    } else {
-                        typeColor
-                    }
+                    val placeholderBg = typeColor.copy(alpha = 0.15f)
+                    val placeholderTint = typeColor
 
                     Box(
                         modifier = Modifier

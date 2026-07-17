@@ -494,8 +494,17 @@ fun DetailScreen(
                             }
                         }
                         
+                        val codeText = if (item.type == SavedItemType.CODE) {
+                            val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+                            remember(item.content, isDark) {
+                                com.example.ui.components.CodeHighlighter.highlight(item.content, isDark)
+                            }
+                        } else {
+                            parseMarkdown(item.content)
+                        }
+
                         Text(
-                            text = parseMarkdown(item.content),
+                            text = codeText,
                             style = if (item.type == SavedItemType.CODE) MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace) else MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
