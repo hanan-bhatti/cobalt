@@ -381,36 +381,45 @@ fun FoldersScreen(
                     }
                 }
 
+                val folderFabModifier = if (DevicePerformance.shouldUseBlur(context)) {
+                    Modifier
+                        .testTag("fab_create_folder")
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .hazeChild(state = hazeState, style = HazeStyle(
+                            backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                            tint = HazeTint(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                            blurRadius = 20.dp,
+                            noiseFactor = 0.05f
+                        ))
+                } else {
+                    Modifier
+                        .testTag("fab_create_folder")
+                        .size(56.dp)
+                        .clip(CircleShape)
+                }
+
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(bottom = 16.dp, end = 16.dp)
                 ) {
-                    val newFolderFabModifier = if (DevicePerformance.shouldUseBlur(context)) {
-                        Modifier
-                            .testTag("fab_create_folder")
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .hazeChild(state = hazeState, style = HazeStyle(
-                                backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-                                tint = HazeTint(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
-                                blurRadius = 20.dp,
-                                noiseFactor = 0.05f
-                            ))
-                    } else {
-                        Modifier
-                            .testTag("fab_create_folder")
-                            .size(56.dp)
-                    }
                     FloatingActionButton(
                         onClick = { showAddFolderDialog = true },
                         shape = CircleShape,
-                        containerColor = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+                        elevation = FloatingActionButtonDefaults.elevation(
+                            defaultElevation = 0.dp,
+                            pressedElevation = 0.dp,
+                            focusedElevation = 0.dp,
+                            hoveredElevation = 0.dp
+                        ),
+                        containerColor = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = newFolderFabModifier
+                        modifier = folderFabModifier
+                            .clip(CircleShape)
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_plus),
+                            painter = painterResource(id = R.drawable.ic_custom_add_folder),
                             contentDescription = "New Folder",
                             modifier = Modifier.size(24.dp)
                         )
@@ -881,19 +890,22 @@ fun FolderContentsBrowser(
                 SavedItemType.AUDIO -> Color(0xFF26A69A)
             }
             
-            val fabModifier = if (DevicePerformance.shouldUseBlur(context)) {
+            val detailFabModifier = if (DevicePerformance.shouldUseBlur(context)) {
                 Modifier
                     .size(56.dp)
                     .clip(CircleShape)
                     .hazeChild(state = hazeState, style = HazeStyle(
                         backgroundColor = fabColor,
-                        tint = HazeTint(fabColor.copy(alpha = 0.35f)),
+                        tint = HazeTint(fabColor.copy(alpha = 0.45f)),
                         blurRadius = 20.dp,
                         noiseFactor = 0.05f
                     ))
             } else {
-                Modifier.size(56.dp)
+                Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
             }
+            
             FloatingActionButton(
                 onClick = {
                     if (systemCategory != null) {
@@ -903,9 +915,16 @@ fun FolderContentsBrowser(
                     }
                 },
                 shape = CircleShape,
-                containerColor = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else fabColor,
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = 0.dp,
+                    pressedElevation = 0.dp,
+                    focusedElevation = 0.dp,
+                    hoveredElevation = 0.dp
+                ),
+                containerColor = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else fabColor.copy(alpha = 0.8f),
                 contentColor = Color.White,
-                modifier = fabModifier
+                modifier = detailFabModifier
+                    .clip(CircleShape)
             ) {
                 val iconRes = when (targetType) {
                     SavedItemType.LINK -> R.drawable.ic_custom_link

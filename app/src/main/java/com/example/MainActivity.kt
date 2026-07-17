@@ -62,7 +62,6 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Person
-
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem

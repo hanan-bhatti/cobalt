@@ -18,6 +18,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.shadow
 import com.example.R
 import com.example.data.model.SavedItemType
 import com.example.ui.viewmodel.SecondBrainViewModel
@@ -86,11 +87,11 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel, hazeState: HazeState) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("Quick Note", color = Color.White, fontWeight = FontWeight.Medium, modifier = Modifier.padding(end = 8.dp))
                             SmallFloatingActionButton(
-                                onClick = { 
+                                onClick = {
                                     isFabExpanded = false
                                     captureTitle = ""
                                     captureContent = ""
-                                    showQuickNoteOverlay = true 
+                                    showQuickNoteOverlay = true
                                 },
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 contentColor = MaterialTheme.colorScheme.primary
@@ -98,12 +99,12 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel, hazeState: HazeState) {
                                 Icon(painter = painterResource(id = R.drawable.ic_custom_edit), contentDescription = "Quick Note")
                             }
                         }
-                        
+
                         // Voice Memo
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("Voice Memo", color = Color.White, fontWeight = FontWeight.Medium, modifier = Modifier.padding(end = 8.dp))
                             SmallFloatingActionButton(
-                                onClick = { 
+                                onClick = {
                                     isFabExpanded = false
                                     viewModel.startManualCapture(SavedItemType.AUDIO)
                                 },
@@ -113,14 +114,14 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel, hazeState: HazeState) {
                                 Icon(painter = painterResource(id = R.drawable.ic_custom_voice), contentDescription = "Voice Memo")
                             }
                         }
-                        
+
                         // New Folder
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("New Folder", color = Color.White, fontWeight = FontWeight.Medium, modifier = Modifier.padding(end = 8.dp))
                             SmallFloatingActionButton(
-                                onClick = { 
+                                onClick = {
                                     isFabExpanded = false
-                                    showAddFolderDialog = true 
+                                    showAddFolderDialog = true
                                 },
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 contentColor = MaterialTheme.colorScheme.primary
@@ -128,14 +129,14 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel, hazeState: HazeState) {
                                 Icon(painter = painterResource(id = R.drawable.ic_custom_add_folder), contentDescription = "New Folder")
                             }
                         }
-                        
+
                         // New Item
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("New Item", color = Color.White, fontWeight = FontWeight.Medium, modifier = Modifier.padding(end = 8.dp))
                             SmallFloatingActionButton(
-                                onClick = { 
+                                onClick = {
                                     isFabExpanded = false
-                                    viewModel.startManualCapture(SavedItemType.TEXT) 
+                                    viewModel.startManualCapture(SavedItemType.TEXT)
                                 },
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 contentColor = MaterialTheme.colorScheme.primary
@@ -162,14 +163,22 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel, hazeState: HazeState) {
                     Modifier
                         .testTag("fab_expand")
                         .size(56.dp)
+                        .clip(CircleShape)
                 }
 
                 FloatingActionButton(
                     onClick = { isFabExpanded = !isFabExpanded },
                     shape = CircleShape,
-                    containerColor = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+                    elevation = FloatingActionButtonDefaults.elevation(
+                        defaultElevation = 0.dp,
+                        pressedElevation = 0.dp,
+                        focusedElevation = 0.dp,
+                        hoveredElevation = 0.dp
+                    ),
+                    containerColor = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = fabModifier
+                        .clip(CircleShape)
                 ) {
                     val rotation by animateFloatAsState(targetValue = if (isFabExpanded) 45f else 0f)
                     Icon(
