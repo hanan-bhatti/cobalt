@@ -352,59 +352,49 @@ fun DetailScreen(
                             .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
                     )
                 } else {
-                    Box(
+                    AsyncImage(
+                        model = item.getBestImagePath(),
+                        contentDescription = item.title,
+                        contentScale = ContentScale.Fit,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 400.dp)
                             .clip(RoundedCornerShape(20.dp))
                             .background(Color.Black.copy(alpha = 0.05f))
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(20.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        AsyncImage(
-                            model = item.getBestImagePath(),
-                            contentDescription = item.title,
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 400.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .pointerInput(item.id) {
-                                    detectTransformGestures { _, pan, zoom, _ ->
-                                        val newScale = (scale * zoom).coerceIn(1f, 5f)
-                                        if (newScale > 1f) {
-                                            val maxOffset = (newScale - 1f) * 200f
-                                            val newOffset = offset + pan
-                                            offset = Offset(
-                                                x = newOffset.x.coerceIn(-maxOffset, maxOffset),
-                                                y = newOffset.y.coerceIn(-maxOffset, maxOffset)
-                                            )
-                                        } else {
-                                            offset = Offset.Zero
-                                        }
-                                        scale = newScale
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                            .pointerInput(item.id) {
+                                detectTransformGestures { _, pan, zoom, _ ->
+                                    val newScale = (scale * zoom).coerceIn(1f, 5f)
+                                    if (newScale > 1f) {
+                                        val maxOffset = (newScale - 1f) * 200f
+                                        val newOffset = offset + pan
+                                        offset = Offset(
+                                            x = newOffset.x.coerceIn(-maxOffset, maxOffset),
+                                            y = newOffset.y.coerceIn(-maxOffset, maxOffset)
+                                        )
+                                    } else {
+                                        offset = Offset.Zero
                                     }
+                                    scale = newScale
                                 }
-                                .pointerInput(item.id) {
-                                    detectTapGestures(
-                                        onDoubleTap = {
-                                            if (scale > 1f) {
-                                                scale = 1f
-                                                offset = Offset.Zero
-                                            } else {
-                                                scale = 2.5f
-                                            }
+                            }
+                            .pointerInput(item.id) {
+                                detectTapGestures(
+                                    onDoubleTap = {
+                                        if (scale > 1f) {
+                                            scale = 1f
+                                            offset = Offset.Zero
+                                        } else {
+                                            scale = 2.5f
                                         }
-                                    )
-                                }
-                                .graphicsLayer(
-                                    scaleX = scale,
-                                    scaleY = scale,
-                                    translationX = offset.x,
-                                    translationY = offset.y
+                                    }
                                 )
-                        )
-                    }
+                            }
+                            .graphicsLayer(
+                                scaleX = scale,
+                                scaleY = scale,
+                                translationX = offset.x,
+                                translationY = offset.y
+                            )
+                    )
                 }
             }
 
@@ -413,10 +403,8 @@ fun DetailScreen(
                 AsyncImage(
                     model = item.linkImage,
                     contentDescription = item.linkTitle,
-                    contentScale = ContentScale.Crop,
+                    contentScale = ContentScale.Fit,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
                         .clip(RoundedCornerShape(20.dp))
                         .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
                 )

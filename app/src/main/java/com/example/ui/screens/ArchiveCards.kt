@@ -56,6 +56,7 @@ fun ArchiveItemCard(
     modifier: Modifier = Modifier,
     isSelected: Boolean = false,
     isSelectionMode: Boolean = false,
+    folderColors: Map<String, String> = emptyMap(),
     onLongClick: (() -> Unit)? = null,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null
@@ -88,7 +89,7 @@ fun ArchiveItemCard(
             }
     ) {
         Card(
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(
                 containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             ),
@@ -107,7 +108,7 @@ fun ArchiveItemCard(
                 )
                 .testTag("item_card_${item.id}")
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
+            Column(modifier = Modifier.padding(10.dp)) {
                 // Header: Icon + Type + Date
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -154,7 +155,7 @@ fun ArchiveItemCard(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Title
                 Row(
@@ -163,10 +164,10 @@ fun ArchiveItemCard(
                 ) {
                     Text(
                         text = item.title.ifBlank { "Untitled Note" },
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 2,
-                        lineHeight = 20.sp,
+                        lineHeight = 18.sp,
                         overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
@@ -185,7 +186,8 @@ fun ArchiveItemCard(
                             Icon(
                                 imageVector = Icons.Default.OpenInBrowser,
                                 contentDescription = "Open in browser",
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
@@ -197,10 +199,10 @@ fun ArchiveItemCard(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = parseMarkdown(cDesc),
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                        maxLines = 3,
-                        lineHeight = 16.sp,
+                        maxLines = 2,
+                        lineHeight = 14.sp,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
@@ -213,12 +215,12 @@ fun ArchiveItemCard(
                         item.type == SavedItemType.CODE
                 
                 if (showMediaPreview) {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(120.dp)
-                            .clip(RoundedCornerShape(16.dp))
+                            .height(90.dp)
+                            .clip(RoundedCornerShape(12.dp))
                             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                     ) {
                         val hasImage = displayImage.isNotNullOrBlank() && 
@@ -234,7 +236,7 @@ fun ArchiveItemCard(
                             if (item.type == SavedItemType.VIDEO) {
                                 Box(
                                     modifier = Modifier
-                                        .size(36.dp)
+                                        .size(32.dp)
                                         .background(Color.Black.copy(alpha = 0.5f), CircleShape)
                                         .align(Alignment.Center),
                                     contentAlignment = Alignment.Center
@@ -243,7 +245,7 @@ fun ArchiveItemCard(
                                         painter = painterResource(id = R.drawable.ic_custom_play),
                                         contentDescription = "Video",
                                         tint = Color.White,
-                                        modifier = Modifier.size(16.dp)
+                                        modifier = Modifier.size(14.dp)
                                     )
                                 }
                             }
@@ -271,11 +273,11 @@ fun ArchiveItemCard(
                                                 painter = painterResource(id = R.drawable.ic_custom_video),
                                                 contentDescription = "Video",
                                                 tint = Color(0xFFFF9800),
-                                                modifier = Modifier.size(32.dp)
+                                                modifier = Modifier.size(24.dp)
                                             )
                                             Text(
                                                 text = "Video Media",
-                                                fontSize = 10.sp,
+                                                fontSize = 9.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = Color(0xFFFF9800)
                                             )
@@ -304,11 +306,11 @@ fun ArchiveItemCard(
                                                 painter = painterResource(id = R.drawable.ic_custom_voice),
                                                 contentDescription = "Audio",
                                                 tint = Color(0xFFE91E63),
-                                                modifier = Modifier.size(32.dp)
+                                                modifier = Modifier.size(24.dp)
                                             )
                                             Text(
                                                 text = "Audio Recording",
-                                                fontSize = 10.sp,
+                                                fontSize = 9.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = Color(0xFFE91E63)
                                             )
@@ -324,7 +326,7 @@ fun ArchiveItemCard(
                                             painter = painterResource(id = R.drawable.ic_custom_code),
                                             contentDescription = null,
                                             tint = Color.White,
-                                            modifier = Modifier.size(32.dp)
+                                            modifier = Modifier.size(24.dp)
                                         )
                                     }
                                 }
@@ -337,7 +339,7 @@ fun ArchiveItemCard(
                                             painter = painterResource(id = R.drawable.ic_custom_link),
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(32.dp)
+                                            modifier = Modifier.size(24.dp)
                                         )
                                     }
                                 }
@@ -349,29 +351,44 @@ fun ArchiveItemCard(
                 // Tags / Folders
                 val customFoldersList = item.folders
                 if (customFoldersList.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    // Wrap tags in a generic flow-like layout (or just take 3 elements to avoid horizontal scroll)
+                    Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         customFoldersList.take(3).forEach { folder ->
                             val isArchiveBadge = folder == "Archive"
+                            val folderColor = if (isArchiveBadge) {
+                                MaterialTheme.colorScheme.secondary
+                            } else {
+                                val hex = folderColors[folder]
+                                parseHexColor(hex, MaterialTheme.colorScheme.primary)
+                            }
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (isArchiveBadge) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-                                border = BorderStroke(0.5.dp, if (isArchiveBadge) MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                                shape = RoundedCornerShape(12.dp),
+                                color = folderColor
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
                                     if (isArchiveBadge) {
-                                        Icon(painter = painterResource(id = R.drawable.ic_custom_archive), contentDescription = null, modifier = Modifier.size(12.dp).padding(end = 4.dp), tint = MaterialTheme.colorScheme.secondary)
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_custom_archive),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(10.dp).padding(end = 2.dp),
+                                            tint = Color.White
+                                        )
                                     }
                                     Text(
                                         text = folder,
-                                        fontSize = 10.sp,
+                                        fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isArchiveBadge) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
+                                        color = Color.White,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.widthIn(max = 60.dp)
                                     )
                                 }
                             }
@@ -379,7 +396,7 @@ fun ArchiveItemCard(
                         if (customFoldersList.size > 3) {
                             Text(
                                 text = "+${customFoldersList.size - 3}",
-                                fontSize = 10.sp,
+                                fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -433,6 +450,7 @@ fun ArchiveItemRow(
     modifier: Modifier = Modifier,
     isSelected: Boolean = false,
     isSelectionMode: Boolean = false,
+    folderColors: Map<String, String> = emptyMap(),
     onLongClick: (() -> Unit)? = null,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null

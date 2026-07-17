@@ -94,6 +94,10 @@ fun HomeScreen(
     val isSyncing by viewModel.isSyncing.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
     val customFolders by viewModel.customFolders.collectAsState()
+    val customFolderEntities by viewModel.customFolderEntities.collectAsState()
+    val folderColorsMap = remember(customFolderEntities) {
+        customFolderEntities.associate { it.name to (it.colorHex ?: "") }
+    }
     val selectedFolder by viewModel.selectedFolder.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val userEmail by viewModel.userEmail.collectAsState()
@@ -654,6 +658,7 @@ fun HomeScreen(
                                         },
                                         isSelected = selectedItemIds.contains(item.id),
                                         isSelectionMode = isSelectionMode,
+                                        folderColors = folderColorsMap,
                                         onLongClick = {
                                             if (isSelectionMode) {
                                                 viewModel.toggleSelection(item.id)
@@ -733,6 +738,7 @@ fun HomeScreen(
                                 },
                                 isSelected = selectedItemIds.contains(item.id),
                                 isSelectionMode = isSelectionMode,
+                                folderColors = folderColorsMap,
                                 onLongClick = {
                                     if (isSelectionMode) {
                                         viewModel.toggleSelection(item.id)
