@@ -5,6 +5,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.example.ui.components.bounceClick
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -399,6 +400,7 @@ fun FoldersScreen(
                         .clip(CircleShape)
                 }
 
+                val folderInteractionSource = remember { MutableInteractionSource() }
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
@@ -407,6 +409,7 @@ fun FoldersScreen(
                     FloatingActionButton(
                         onClick = { showAddFolderDialog = true },
                         shape = CircleShape,
+                        interactionSource = folderInteractionSource,
                         elevation = FloatingActionButtonDefaults.elevation(
                             defaultElevation = 0.dp,
                             pressedElevation = 0.dp,
@@ -416,6 +419,7 @@ fun FoldersScreen(
                         containerColor = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = folderFabModifier
+                            .bounceClick(folderInteractionSource)
                             .clip(CircleShape)
                     ) {
                         Icon(
@@ -906,6 +910,7 @@ fun FolderContentsBrowser(
                     .clip(CircleShape)
             }
             
+            val detailInteractionSource = remember { MutableInteractionSource() }
             FloatingActionButton(
                 onClick = {
                     if (systemCategory != null) {
@@ -915,6 +920,7 @@ fun FolderContentsBrowser(
                     }
                 },
                 shape = CircleShape,
+                interactionSource = detailInteractionSource,
                 elevation = FloatingActionButtonDefaults.elevation(
                     defaultElevation = 0.dp,
                     pressedElevation = 0.dp,
@@ -924,6 +930,7 @@ fun FolderContentsBrowser(
                 containerColor = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else fabColor.copy(alpha = 0.8f),
                 contentColor = Color.White,
                 modifier = detailFabModifier
+                    .bounceClick(detailInteractionSource)
                     .clip(CircleShape)
             ) {
                 val iconRes = when (targetType) {

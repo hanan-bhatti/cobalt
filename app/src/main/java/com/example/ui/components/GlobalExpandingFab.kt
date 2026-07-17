@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.shadow
 import com.example.R
 import com.example.data.model.SavedItemType
+import com.example.ui.components.bounceClick
 import com.example.ui.viewmodel.SecondBrainViewModel
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeChild
@@ -166,9 +167,11 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel, hazeState: HazeState) {
                         .clip(CircleShape)
                 }
 
+                val fabInteractionSource = remember { MutableInteractionSource() }
                 FloatingActionButton(
                     onClick = { isFabExpanded = !isFabExpanded },
                     shape = CircleShape,
+                    interactionSource = fabInteractionSource,
                     elevation = FloatingActionButtonDefaults.elevation(
                         defaultElevation = 0.dp,
                         pressedElevation = 0.dp,
@@ -178,6 +181,7 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel, hazeState: HazeState) {
                     containerColor = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = fabModifier
+                        .bounceClick(fabInteractionSource)
                         .clip(CircleShape)
                 ) {
                     val rotation by animateFloatAsState(targetValue = if (isFabExpanded) 45f else 0f)
