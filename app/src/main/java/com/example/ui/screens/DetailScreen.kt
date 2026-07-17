@@ -46,6 +46,11 @@ import com.example.data.model.SavedItemType
 import com.example.data.model.getBestImagePath
 import com.example.ui.viewmodel.SecondBrainViewModel
 import java.text.SimpleDateFormat
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import com.example.utils.DevicePerformance
 import java.util.Date
 import java.util.Locale
 import androidx.compose.ui.res.painterResource
@@ -58,6 +63,7 @@ fun DetailScreen(
     viewModel: SecondBrainViewModel,
     onClose: () -> Unit,
     onEdit: (SavedItem) -> Unit,
+    hazeState: HazeState,
     modifier: Modifier = Modifier
 ) {
     val activeItem by viewModel.activeDetailItem.collectAsState()
@@ -159,10 +165,23 @@ fun DetailScreen(
             )
         },
         bottomBar = {
+            val context = LocalContext.current
+            val bottomBarModifier = if (DevicePerformance.shouldUseBlur(context)) {
+                Modifier
+                    .fillMaxWidth()
+                    .hazeChild(state = hazeState, style = HazeStyle(
+                        backgroundColor = MaterialTheme.colorScheme.background,
+                        tint = HazeTint(MaterialTheme.colorScheme.background.copy(alpha = 0.35f)),
+                        blurRadius = 20.dp,
+                        noiseFactor = 0.05f
+                    ))
+            } else {
+                Modifier.fillMaxWidth()
+            }
             Surface(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = bottomBarModifier,
                 tonalElevation = 0.dp,
-                color = MaterialTheme.colorScheme.background.copy(alpha = 0.85f)
+                color = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else MaterialTheme.colorScheme.background.copy(alpha = 0.85f)
             ) {
                 Row(
                     modifier = Modifier

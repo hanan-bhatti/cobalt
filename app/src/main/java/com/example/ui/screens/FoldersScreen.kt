@@ -42,6 +42,11 @@ import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.ui.components.bounceClick
 import com.example.ui.viewmodel.SecondBrainViewModel
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import com.example.utils.DevicePerformance
 
 // Preset Palette of aesthetic Pastel/Vibrant Colors
 val folderPresetColors = listOf(
@@ -113,6 +118,7 @@ fun FolderIcon(
 @Composable
 fun FoldersScreen(
     viewModel: SecondBrainViewModel,
+    hazeState: HazeState,
     modifier: Modifier = Modifier
 ) {
     val allItems by viewModel.allItems.collectAsState()
@@ -164,7 +170,8 @@ fun FoldersScreen(
             FolderContentsBrowser(
                 folderName = browseFolder,
                 viewModel = viewModel,
-                onBack = { activeBrowseFolder = null }
+                onBack = { activeBrowseFolder = null },
+                hazeState = hazeState
             )
         } else {
             // MAIN FOLDERS DIRECTORY LIST VIEW
@@ -379,12 +386,28 @@ fun FoldersScreen(
                         .align(Alignment.BottomEnd)
                         .padding(bottom = 16.dp, end = 16.dp)
                 ) {
+                    val newFolderFabModifier = if (DevicePerformance.shouldUseBlur(context)) {
+                        Modifier
+                            .testTag("fab_create_folder")
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .hazeChild(state = hazeState, style = HazeStyle(
+                                backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                                tint = HazeTint(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                                blurRadius = 20.dp,
+                                noiseFactor = 0.05f
+                            ))
+                    } else {
+                        Modifier
+                            .testTag("fab_create_folder")
+                            .size(56.dp)
+                    }
                     FloatingActionButton(
                         onClick = { showAddFolderDialog = true },
                         shape = CircleShape,
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+                        containerColor = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.testTag("fab_create_folder").size(56.dp)
+                        modifier = newFolderFabModifier
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_custom_plus),
@@ -796,10 +819,12 @@ fun FolderDirectoryItem(
 fun FolderContentsBrowser(
     folderName: String,
     viewModel: SecondBrainViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    hazeState: HazeState
 ) {
     val items by viewModel.allItems.collectAsState()
     val isSyncing by viewModel.isSyncing.collectAsState()
+    val context = LocalContext.current
 
     // Filter items matching current browsing folder (either custom tag or system type)
     val folderItems = remember(items, folderName) {
@@ -856,6 +881,19 @@ fun FolderContentsBrowser(
                 SavedItemType.AUDIO -> Color(0xFF26A69A)
             }
             
+            val fabModifier = if (DevicePerformance.shouldUseBlur(context)) {
+                Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .hazeChild(state = hazeState, style = HazeStyle(
+                        backgroundColor = fabColor,
+                        tint = HazeTint(fabColor.copy(alpha = 0.35f)),
+                        blurRadius = 20.dp,
+                        noiseFactor = 0.05f
+                    ))
+            } else {
+                Modifier.size(56.dp)
+            }
             FloatingActionButton(
                 onClick = {
                     if (systemCategory != null) {
@@ -865,9 +903,9 @@ fun FolderContentsBrowser(
                     }
                 },
                 shape = CircleShape,
-                containerColor = fabColor,
+                containerColor = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else fabColor,
                 contentColor = Color.White,
-                modifier = Modifier.size(56.dp)
+                modifier = fabModifier
             ) {
                 val iconRes = when (targetType) {
                     SavedItemType.LINK -> R.drawable.ic_custom_link

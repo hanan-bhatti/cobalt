@@ -21,9 +21,16 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.model.SavedItemType
 import com.example.ui.viewmodel.SecondBrainViewModel
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import com.example.utils.DevicePerformance
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.clip
 
 @Composable
-fun GlobalExpandingFab(viewModel: SecondBrainViewModel) {
+fun GlobalExpandingFab(viewModel: SecondBrainViewModel, hazeState: HazeState) {
     var isFabExpanded by remember { mutableStateOf(false) }
     var showAddFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
@@ -139,12 +146,30 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel) {
                     }
                 }
 
+                val context = LocalContext.current
+                val fabModifier = if (DevicePerformance.shouldUseBlur(context)) {
+                    Modifier
+                        .testTag("fab_expand")
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .hazeChild(state = hazeState, style = HazeStyle(
+                            backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                            tint = HazeTint(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                            blurRadius = 20.dp,
+                            noiseFactor = 0.05f
+                        ))
+                } else {
+                    Modifier
+                        .testTag("fab_expand")
+                        .size(56.dp)
+                }
+
                 FloatingActionButton(
                     onClick = { isFabExpanded = !isFabExpanded },
                     shape = CircleShape,
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+                    containerColor = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testTag("fab_expand").size(56.dp)
+                    modifier = fabModifier
                 ) {
                     val rotation by animateFloatAsState(targetValue = if (isFabExpanded) 45f else 0f)
                     Icon(

@@ -161,9 +161,10 @@ BackHandler(enabled = activeDetailItem != null) {
                                             onItemClick = { item -> viewModel.showDetailItem(item) }
                                         )
                                     }
-                                    composable("folders") {
+                                     composable("folders") {
                                         FoldersScreen(
-                                            viewModel = viewModel
+                                            viewModel = viewModel,
+                                            hazeState = hazeState
                                         )
                                     }
                                     composable("profile") {
@@ -233,14 +234,15 @@ BackHandler(enabled = activeDetailItem != null) {
                                     enter = slideInVertically(initialOffsetY = { it }),
                                     exit = slideOutVertically(targetOffsetY = { it })
                                 ) {
-                                    DetailScreen(
-                                        viewModel = viewModel,
-                                        onClose = { viewModel.closeDetailItem() },
-                                        onEdit = { item ->
-                                            viewModel.closeDetailItem()
-                                            viewModel.startEditItem(item)
-                                        }
-                                    )
+                                     DetailScreen(
+                                         viewModel = viewModel,
+                                         onClose = { viewModel.closeDetailItem() },
+                                         onEdit = { item ->
+                                             viewModel.closeDetailItem()
+                                             viewModel.startEditItem(item)
+                                         },
+                                         hazeState = hazeState
+                                     )
                                 }
                             }
                         }
@@ -277,7 +279,7 @@ BackHandler(enabled = activeDetailItem != null) {
 
                             val routesWithExpandingFab = listOf("home", "search", "profile")
                             if (currentRoute in routesWithExpandingFab) {
-                                com.example.ui.components.GlobalExpandingFab(viewModel = viewModel)
+                                com.example.ui.components.GlobalExpandingFab(viewModel = viewModel, hazeState = hazeState)
                             }
                         }
                     }
