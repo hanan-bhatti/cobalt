@@ -361,33 +361,54 @@ fun ProfileMainContent(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        ArchiveStatRow(
-                            iconResId = R.drawable.ic_custom_link, count = totalLinks, label = "Links",
-                            baseColor = Color(0xFF42A5F5)
-                        )
-                        ArchiveStatRow(
-                            iconResId = R.drawable.ic_custom_image, count = totalImages, label = "Images",
-                            baseColor = Color(0xFFAB47BC)
-                        )
-                        ArchiveStatRow(
-                            iconResId = R.drawable.ic_custom_video, count = totalVideos, label = "Videos",
-                            baseColor = Color(0xFFEF5350)
-                        )
-                        ArchiveStatRow(
-                            iconResId = R.drawable.ic_custom_text, count = totalText, label = "Text",
-                            baseColor = Color(0xFFFFA726)
-                        )
-                        ArchiveStatRow(
-                            iconResId = R.drawable.ic_custom_code, count = totalCode, label = "Code",
-                            baseColor = Color(0xFF66BB6A)
-                        )
-                        ArchiveStatRow(
-                            iconResId = R.drawable.ic_custom_voice, count = totalAudio, label = "Audio",
-                            baseColor = Color(0xFF26A69A)
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            ArchiveStatRow(
+                                iconResId = R.drawable.ic_custom_link, count = totalLinks, label = "Links",
+                                baseColor = Color(0xFF42A5F5),
+                                modifier = Modifier.weight(1f)
+                            )
+                            ArchiveStatRow(
+                                iconResId = R.drawable.ic_custom_image, count = totalImages, label = "Images",
+                                baseColor = Color(0xFFAB47BC),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            ArchiveStatRow(
+                                iconResId = R.drawable.ic_custom_video, count = totalVideos, label = "Videos",
+                                baseColor = Color(0xFFEF5350),
+                                modifier = Modifier.weight(1f)
+                            )
+                            ArchiveStatRow(
+                                iconResId = R.drawable.ic_custom_text, count = totalText, label = "Text",
+                                baseColor = Color(0xFFFFA726),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            ArchiveStatRow(
+                                iconResId = R.drawable.ic_custom_code, count = totalCode, label = "Code",
+                                baseColor = Color(0xFF66BB6A),
+                                modifier = Modifier.weight(1f)
+                            )
+                            ArchiveStatRow(
+                                iconResId = R.drawable.ic_custom_voice, count = totalAudio, label = "Audio",
+                                baseColor = Color(0xFF26A69A),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
             }
@@ -471,52 +492,64 @@ fun ProfileMainContent(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Details Legend (Cloud vs Local Only)
-                    FlowRow(
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(24.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         // Cloud backed up detail
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(10.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF42A5F5))
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Cloud Backup",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF42A5F5))
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Cloud Backup",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                             Text(
                                 text = formatStorageSize(cloudUsedStorageBytes),
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        
                         // Local only detail
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(10.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF66BB6A))
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Local Only",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF66BB6A))
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Local Only",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                             Text(
                                 text = formatStorageSize(localOnlyBytes),
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -691,37 +724,38 @@ fun ArchiveStatRow(
 ) {
     Row(
         modifier = modifier
-            .fillMaxWidth()
-            .background(baseColor.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .background(baseColor.copy(alpha = 0.12f), CircleShape)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(36.dp)
-                .background(baseColor.copy(alpha = 0.25f), CircleShape),
+                .size(32.dp)
+                .background(baseColor.copy(alpha = 0.2f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 painter = painterResource(id = iconResId),
                 contentDescription = null,
                 tint = baseColor,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(16.dp)
             )
         }
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = label,
-            fontSize = 16.sp,
+            fontSize = 13.5.sp,
             color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            maxLines = 1
         )
         Text(
             text = "$count",
-            fontSize = 18.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1
         )
     }
 }

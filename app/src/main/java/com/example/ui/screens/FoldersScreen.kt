@@ -441,7 +441,18 @@ fun FoldersScreen(
                         }
                         Switch(
                             checked = newFolderPinned,
-                            onCheckedChange = { newFolderPinned = it }
+                            onCheckedChange = { newFolderPinned = it },
+                            thumbContent = if (newFolderPinned) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                }
+                            } else {
+                                null
+                            }
                         )
                     }
 
@@ -1410,7 +1421,18 @@ fun FolderCustomizerDialog(
                         }
                         Switch(
                             checked = isPinned,
-                            onCheckedChange = { isPinned = it }
+                            onCheckedChange = { isPinned = it },
+                            thumbContent = if (isPinned) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                                    )
+                                }
+                            } else {
+                                null
+                            }
                         )
                     }
 

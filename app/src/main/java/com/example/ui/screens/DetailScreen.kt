@@ -24,7 +24,9 @@ import com.example.ui.components.bounceClick
 import com.example.ui.components.MarkdownText
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.ClipEntry
+import android.content.ClipData
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
@@ -48,6 +50,7 @@ import java.util.Date
 import java.util.Locale
 import androidx.compose.ui.res.painterResource
 import com.example.R
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,7 +91,8 @@ fun DetailScreen(
 
     val scrollState = rememberScrollState()
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val coroutineScope = rememberCoroutineScope()
 
     BackHandler {
         onClose()
@@ -157,9 +161,8 @@ fun DetailScreen(
         bottomBar = {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                tonalElevation = 8.dp,
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                tonalElevation = 0.dp,
+                color = MaterialTheme.colorScheme.background.copy(alpha = 0.85f)
             ) {
                 Row(
                     modifier = Modifier
@@ -226,9 +229,12 @@ fun DetailScreen(
     ) { innerPadding ->
         Column(
             modifier = Modifier
-                .padding(innerPadding)
                 .fillMaxSize()
                 .verticalScroll(scrollState)
+                .padding(
+                    top = innerPadding.calculateTopPadding(),
+                    bottom = 96.dp
+                )
                 .padding(horizontal = 24.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp)
         ) {
@@ -471,7 +477,9 @@ fun DetailScreen(
                                     modifier = Modifier
                                         .size(20.dp)
                                         .clickable {
-                                            clipboardManager.setText(AnnotatedString(item.content))
+                                            coroutineScope.launch {
+                                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Second Brain Content", item.content)))
+                                            }
                                             Toast.makeText(context, "Copied!", Toast.LENGTH_SHORT).show()
                                         },
                                     tint = MaterialTheme.colorScheme.primary
@@ -529,7 +537,9 @@ fun DetailScreen(
                                 modifier = Modifier
                                     .size(20.dp)
                                     .clickable {
-                                        clipboardManager.setText(AnnotatedString(item.extractedText))
+                                        coroutineScope.launch {
+                                            clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Second Brain Extracted Text", item.extractedText ?: "")))
+                                        }
                                         Toast.makeText(context, "Copied!", Toast.LENGTH_SHORT).show()
                                     },
                                 tint = MaterialTheme.colorScheme.primary

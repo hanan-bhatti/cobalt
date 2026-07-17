@@ -56,7 +56,7 @@ class BrainOcrOverlayService : Service() {
 
     private lateinit var windowManager: WindowManager
     private var containerView: FrameLayout? = null
-    
+
     private var handleView: View? = null
     private var panelView: View? = null
     private var noteInputRef: EditText? = null
@@ -71,10 +71,10 @@ class BrainOcrOverlayService : Service() {
 
     private fun getEdgePanelSide(): String = prefs.getString("edge_panel_side", "Right") ?: "Right"
     private fun getEdgePanelYPercent(): Float = prefs.getFloat("edge_panel_y_percent", 0.4f)
-    private fun getEdgePanelThickness(): Int = prefs.getInt("edge_panel_thickness", 12)
+    private fun getEdgePanelThickness(): Int = prefs.getInt("edge_panel_thickness", 6)
     private fun getEdgePanelHeight(): Int = prefs.getInt("edge_panel_height", 100)
     private fun getEdgePanelOpacity(): Float = prefs.getFloat("edge_panel_opacity", 0.7f)
-    
+
     private fun isDarkTheme(): Boolean {
         val theme = prefs.getString("theme_mode", "System Default") ?: "System Default"
         return when (theme) {
@@ -85,11 +85,12 @@ class BrainOcrOverlayService : Service() {
             }
         }
     }
-    
+
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == "edge_panel_height" || key == "edge_panel_thickness" || 
-            key == "edge_panel_opacity" || key == "edge_panel_side" || 
-            key == "edge_panel_y_percent" || key == "floating_ocr_enabled") {
+        if (key == "edge_panel_height" || key == "edge_panel_thickness" ||
+            key == "edge_panel_opacity" || key == "edge_panel_side" ||
+            key == "edge_panel_y_percent" || key == "floating_ocr_enabled"
+        ) {
             Handler(Looper.getMainLooper()).post {
                 updateViewLayoutAndStyle()
             }
@@ -103,12 +104,12 @@ class BrainOcrOverlayService : Service() {
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         repository = SecondBrainRepository(applicationContext)
         settingsRepo = SettingsRepository(applicationContext)
-        
+
         prefs = applicationContext.getSharedPreferences("second_brain_settings", Context.MODE_PRIVATE)
         prefs.registerOnSharedPreferenceChangeListener(prefsListener)
 
         createNotificationChannel()
-        
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
                 NOTIFICATION_ID,
@@ -254,37 +255,38 @@ class BrainOcrOverlayService : Service() {
                         isDraggingY = false
                         isSwipingX = false
                         isLongPressDetected = false
-                        
+
                         mainHandler.postDelayed(longPressRunnable, 500)
                         true
                     }
+
                     MotionEvent.ACTION_MOVE -> {
                         if (!touchActive) return@setOnTouchListener false
                         val deltaX = event.rawX - initialTouchX
                         val deltaY = event.rawY - initialTouchY
-                        
+
                         // 1. If actively dragging to vertically reposition:
                         if (isDraggingY) {
                             layoutParams.y = (initialY + deltaY).toInt()
-                            
+
                             val usableHeight = resources.displayMetrics.heightPixels - dpToPx(160)
                             val halfHeight = usableHeight / 2
                             if (layoutParams.y < -halfHeight) layoutParams.y = -halfHeight
                             if (layoutParams.y > halfHeight) layoutParams.y = halfHeight
-                            
+
                             windowManager.updateViewLayout(rootContainer, layoutParams)
                             return@setOnTouchListener true
                         }
-                        
+
                         // 2. If actively swiping horizontally:
                         if (isSwipingX) {
                             return@setOnTouchListener true
                         }
-                        
+
                         // 3. Disambiguate gestures
                         val absDeltaX = Math.abs(deltaX)
                         val absDeltaY = Math.abs(deltaY)
-                        
+
                         if (absDeltaX > touchSlopPx || absDeltaY > touchSlopPx) {
                             if (absDeltaX > absDeltaY * 1.5f) {
                                 // Horizontal movement - determine if swiping correct direction (inward)
@@ -304,16 +306,17 @@ class BrainOcrOverlayService : Service() {
                         }
                         true
                     }
+
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                         touchActive = false
                         mainHandler.removeCallbacks(longPressRunnable)
-                        
+
                         if (event.action == MotionEvent.ACTION_UP) {
                             val deltaX = event.rawX - initialTouchX
                             val deltaY = event.rawY - initialTouchY
                             val absDeltaX = Math.abs(deltaX)
                             val absDeltaY = Math.abs(deltaY)
-                            
+
                             if (isDraggingY) {
                                 val usableHeight = resources.displayMetrics.heightPixels - dpToPx(160)
                                 val halfHeight = usableHeight / 2
@@ -333,12 +336,13 @@ class BrainOcrOverlayService : Service() {
                                 }
                             }
                         }
-                        
+
                         isDraggingY = false
                         isSwipingX = false
                         isLongPressDetected = false
                         true
                     }
+
                     else -> false
                 }
             }
@@ -355,12 +359,12 @@ class BrainOcrOverlayService : Service() {
 
         containerView = rootContainer
         handleView = handle
-        
+
         // Dynamic system gesture exclusion tracking
         rootContainer.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             updateSystemGestureExclusions()
         }
-        
+
         windowManager.addView(rootContainer, params)
         updateSystemGestureExclusions()
     }
@@ -475,7 +479,7 @@ class BrainOcrOverlayService : Service() {
         data class QuickAction(val iconRes: Int, val label: String, val onClick: () -> Unit)
 
         val actions = listOf(
-            QuickAction(R.drawable.ic_custom_search, "OCR") {
+            QuickAction(R.drawable.ic_custom_ocr, "OCR") {
                 collapsePanel()
                 launchOcrCapture()
             },
@@ -678,11 +682,15 @@ class BrainOcrOverlayService : Service() {
                                 isFocusable = true
                                 setOnClickListener {
                                     if (item.type == SavedItemType.LINK) {
-                                        val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(item.content)).apply {
-                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                        }
-                                        try { startActivity(intent) } catch (_: Exception) {
-                                            Toast.makeText(applicationContext, "Cannot open link", Toast.LENGTH_SHORT).show()
+                                        val intent =
+                                            Intent(Intent.ACTION_VIEW, android.net.Uri.parse(item.content)).apply {
+                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            }
+                                        try {
+                                            startActivity(intent)
+                                        } catch (_: Exception) {
+                                            Toast.makeText(applicationContext, "Cannot open link", Toast.LENGTH_SHORT)
+                                                .show()
                                         }
                                     } else {
                                         val intent = Intent(applicationContext, MainActivity::class.java).apply {
@@ -787,9 +795,9 @@ class BrainOcrOverlayService : Service() {
         )
         val endHeight = panel.measuredHeight
 
-        params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or 
-                       WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or 
-                       WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+        params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         params.y = calculateYPosition(yPercent)
 
         val animator = ValueAnimator.ofFloat(0f, 1f).apply {
@@ -799,11 +807,11 @@ class BrainOcrOverlayService : Service() {
                 val fraction = animation.animatedValue as Float
                 params.width = (startWidth + (endWidth - startWidth) * fraction).toInt()
                 params.height = (startHeight + (endHeight - startHeight) * fraction).toInt()
-                
+
                 panel.alpha = fraction
                 panel.scaleX = 0.9f + 0.1f * fraction
                 panel.scaleY = 0.9f + 0.1f * fraction
-                
+
                 if (containerView != null) {
                     windowManager.updateViewLayout(root, params)
                 }
@@ -837,7 +845,7 @@ class BrainOcrOverlayService : Service() {
                 val fraction = animation.animatedValue as Float
                 params.width = (endWidth + (startWidth - endWidth) * fraction).toInt()
                 params.height = (endHeight + (startHeight - endHeight) * fraction).toInt()
-                
+
                 panel.alpha = fraction
                 panel.scaleX = 0.9f + 0.1f * fraction
                 panel.scaleY = 0.9f + 0.1f * fraction
@@ -852,17 +860,18 @@ class BrainOcrOverlayService : Service() {
                         root.removeView(panel)
                         panelView = null
                         handleView?.visibility = View.VISIBLE
-                        
+
                         handleView?.layoutParams = FrameLayout.LayoutParams(
                             dpToPx(thickness),
                             FrameLayout.LayoutParams.MATCH_PARENT
                         ).apply {
                             gravity = if (side == "Right") Gravity.END else Gravity.START
                         }
-                        
+
                         params.width = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
                         params.height = dpToPx(height)
-                        params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                        params.flags =
+                            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                         params.y = calculateYPosition(yPercent)
                         windowManager.updateViewLayout(root, params)
                         updateSystemGestureExclusions()
@@ -902,7 +911,7 @@ class BrainOcrOverlayService : Service() {
             }
             h.background = bgShape
             h.alpha = opacity
-            
+
             h.layoutParams = FrameLayout.LayoutParams(
                 dpToPx(thickness),
                 FrameLayout.LayoutParams.MATCH_PARENT
@@ -914,12 +923,12 @@ class BrainOcrOverlayService : Service() {
         val params = root.layoutParams as WindowManager.LayoutParams
         params.gravity = Gravity.CENTER_VERTICAL or (if (side == "Right") Gravity.END else Gravity.START)
         params.y = calculateYPosition(yPercent)
-        
+
         if (!isExpanded) {
             params.width = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
             params.height = dpToPx(height)
         }
-        
+
         windowManager.updateViewLayout(root, params)
         updateSystemGestureExclusions()
     }

@@ -72,8 +72,12 @@ class DataDownloadService : Service() {
                 )
                 updateNotificationError(e.localizedMessage ?: "Download failed")
             } finally {
-                // Ensure we clean up and stop service
-                stopForeground(true)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    stopForeground(true)
+                }
                 stopSelf()
             }
         }

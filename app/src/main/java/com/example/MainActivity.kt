@@ -45,6 +45,8 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import com.example.ui.components.CustomBottomBar
 import com.example.ui.components.BottomBarItem
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.filled.Search
@@ -131,6 +133,7 @@ BackHandler(enabled = activeDetailItem != null) {
 
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
+                val hazeState = remember { HazeState() }
 
                 Scaffold(
                     snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -139,7 +142,7 @@ BackHandler(enabled = activeDetailItem != null) {
                     Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
                         @OptIn(ExperimentalSharedTransitionApi::class)
                         SharedTransitionLayout {
-                            Surface(modifier = Modifier.fillMaxSize()) {
+                            Surface(modifier = Modifier.fillMaxSize().haze(hazeState)) {
                                 // Standard Home and Authentication navigation flow
                                 NavHost(navController = navController, startDestination = "home") {
                                     composable("home") {
@@ -259,6 +262,7 @@ BackHandler(enabled = activeDetailItem != null) {
                                 CustomBottomBar(
                                     items = items,
                                     currentRoute = currentRoute,
+                                    hazeState = hazeState,
                                     onNavigate = { route ->
                                         navController.navigate(route) {
                                             popUpTo("home") {

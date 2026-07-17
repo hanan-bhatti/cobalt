@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
@@ -180,24 +181,21 @@ fun SettingsScreen(
                     var keyVisibility by remember { mutableStateOf(false) }
                     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
 
-                    TextField(
+                    OutlinedTextField(
                         value = apiKey,
                         onValueChange = { 
                             apiKey = it
                             viewModel.settingsRepository.setGeminiApiKey(it) 
                         },
-                        placeholder = { Text("Enter your API Key") },
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                        singleLine = true,
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent
-                        ),
-                        textStyle = MaterialTheme.typography.bodyLarge,
-                        visualTransformation = if (keyVisibility) VisualTransformation.None else PasswordVisualTransformation(),
+                        placeholder = { Text("Enter your Gemini API Key") },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_lock),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
                         trailingIcon = {
                             val iconResId = if (keyVisibility) R.drawable.ic_custom_eye else R.drawable.ic_custom_eye_off
                             val description = if (keyVisibility) "Hide API Key" else "Show API Key"
@@ -205,10 +203,23 @@ fun SettingsScreen(
                                 Icon(
                                     painter = painterResource(id = iconResId),
                                     contentDescription = description,
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         },
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyLarge,
+                        visualTransformation = if (keyVisibility) VisualTransformation.None else PasswordVisualTransformation(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.1f)
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                         keyboardActions = KeyboardActions(
                             onDone = {
@@ -217,17 +228,44 @@ fun SettingsScreen(
                             }
                         )
                     )
-                    Text(
-                        text = "Get your API Key here",
-                        color = MaterialTheme.colorScheme.primary,
+                    
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    Row(
                         modifier = Modifier
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .fillMaxWidth()
                             .clickable {
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://aistudio.google.com/apikey"))
                                 context.startActivity(intent)
-                            },
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                            }
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_link_external),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "Get your Gemini API Key here",
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_chevron_right),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
 
                 SettingsSection(title = "OCR Model", subtext = "Select ML model used for image text extraction.") {
@@ -412,12 +450,17 @@ fun SettingsToggleRow(title: String, subtitle: String? = null, checked: Boolean,
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = MaterialTheme.colorScheme.surface,
-                checkedTrackColor = MaterialTheme.colorScheme.onSurface,
-                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+            thumbContent = if (checked) {
+                {
+                    Icon(
+                        imageVector = Icons.Filled.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(SwitchDefaults.IconSize)
+                    )
+                }
+            } else {
+                null
+            }
         )
     }
 }
@@ -448,7 +491,7 @@ fun EdgePanelSettingsScreen(viewModel: SecondBrainViewModel, onNavigateBack: () 
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-        ) {
+                .padding(bottom = 100.dp)
             val side by viewModel.settingsRepository.edgePanelSide.collectAsState()
             val positionY by viewModel.settingsRepository.edgePanelYPercent.collectAsState()
             val opacity by viewModel.settingsRepository.edgePanelOpacity.collectAsState()

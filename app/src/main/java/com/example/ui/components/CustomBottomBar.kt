@@ -1,4 +1,5 @@
 package com.example.ui.components
+
 import androidx.compose.animation.animateContentSize
 
 import androidx.compose.animation.AnimatedVisibility
@@ -33,6 +34,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import com.example.utils.DevicePerformance
 
 data class BottomBarItem(
     val route: String,
@@ -44,21 +51,38 @@ data class BottomBarItem(
 fun CustomBottomBar(
     items: List<BottomBarItem>,
     currentRoute: String?,
+    hazeState: HazeState,
     onNavigate: (String) -> Unit
 ) {
+    val context = LocalContext.current
+    val rowModifier = if (DevicePerformance.shouldUseBlur(context)) {
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(32.dp))
+            .hazeChild(state = hazeState, style = HazeStyle(
+                backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                tint = HazeTint(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                blurRadius = 20.dp,
+                noiseFactor = 0.05f
+            ))
+            .padding(horizontal = 4.dp, vertical = 8.dp)
+    } else {
+        Modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                shape = RoundedCornerShape(32.dp)
+            )
+            .padding(horizontal = 4.dp, vertical = 8.dp)
+    }
+
     Box(
         modifier = Modifier
             .padding(start = 16.dp, bottom = 16.dp, end = 92.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
-                    shape = RoundedCornerShape(32.dp)
-                )
-                .padding(horizontal = 4.dp, vertical = 8.dp),
+            modifier = rowModifier,
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -66,7 +90,7 @@ fun CustomBottomBar(
                 val isSelected = currentRoute == item.route
                 val interactionSource = remember { MutableInteractionSource() }
                 val isPressed by interactionSource.collectIsPressedAsState()
-                
+
                 val scale by animateFloatAsState(
                     targetValue = if (isPressed) 0.9f else 1f,
                     animationSpec = spring(
@@ -75,19 +99,19 @@ fun CustomBottomBar(
                     ),
                     label = "scale"
                 )
-                
+
                 val backgroundColor by animateColorAsState(
                     targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
                     animationSpec = tween(300),
                     label = "backgroundColor"
                 )
-                
+
                 val iconColor by animateColorAsState(
                     targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                     animationSpec = tween(300),
                     label = "iconColor"
                 )
-                
+
                 val horizontalPadding by animateDpAsState(
                     targetValue = if (isSelected) 12.dp else 8.dp,
                     animationSpec = spring(
@@ -96,7 +120,7 @@ fun CustomBottomBar(
                     ),
                     label = "horizontalPadding"
                 )
-                
+
                 Row(
                     modifier = Modifier
                         .scale(scale)
@@ -126,7 +150,7 @@ fun CustomBottomBar(
                         tint = iconColor,
                         modifier = Modifier.size(22.dp)
                     )
-                    
+
                     if (isSelected) {
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(

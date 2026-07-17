@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -46,6 +47,15 @@ import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.SecondBrainViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.animation.core.*
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
+import kotlin.math.cos
+import kotlin.math.sin
 
 @android.annotation.SuppressLint("InvalidFragmentVersionForActivityResult")
 class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCallback {
@@ -161,6 +171,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
         super.onDestroy()
     }
 
+    @OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     fun OcrOverlayUI() {
         val capturedBitmap by capturedBitmapState
@@ -197,17 +208,9 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.45f))
+                .background(Color.Transparent)
         ) {
-            if (isCapturing) {
-                // Elegant, ultra-subtle centered progress indicator so the background remains clean and transparent
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                }
-            } else if (capturedBitmap != null) {
+            if (capturedBitmap != null) {
                 // Show visual screenshot selection interface
                 Box(modifier = Modifier.fillMaxSize()) {
                     // Selection Canvas
@@ -220,44 +223,41 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                         modifier = Modifier.fillMaxSize()
                     )
 
-                    // Subtle, unobtrusive close button in top right
-                    IconButton(
-                        onClick = { finish() },
-                        modifier = Modifier
-                            .statusBarsPadding()
-                            .padding(16.dp)
-                            .size(40.dp)
-                            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(percent = 50))
-                            .align(Alignment.TopEnd)
-                    ) {
-                        Icon(painter = painterResource(id = R.drawable.ic_custom_close), contentDescription = "Close overlay", tint = Color.White)
-                    }
-
                     // OCR Progress Overlay
                     if (isOcrLoading) {
                         Surface(
                             modifier = Modifier
                                 .align(Alignment.Center)
-                                .padding(32.dp),
-                            shape = RoundedCornerShape(24.dp),
+                                .padding(32.dp)
+                                .widthIn(max = 280.dp),
+                            shape = RoundedCornerShape(28.dp),
                             color = MaterialTheme.colorScheme.surface,
-                            tonalElevation = 6.dp
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                            tonalElevation = 8.dp
                         ) {
                             Column(
-                                modifier = Modifier.padding(28.dp),
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 28.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                                verticalArrangement = Arrangement.spacedBy(20.dp)
                             ) {
-                                CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
-                                Text(
-                                    text = "Reading Region with Gemini...",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.titleMedium
+                                CircularWavyProgressIndicator(
+                                    modifier = Modifier.size(48.dp),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    trackColor = MaterialTheme.colorScheme.surfaceVariant
                                 )
                                 Text(
-                                    text = "Analyzing visual layout to locate text and hyperlinks.",
+                                    text = "Reading Region\nwith Gemini...",
+                                    fontWeight = FontWeight.ExtraBold,
+                                    textAlign = TextAlign.Center,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    lineHeight = 22.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Analyzing visual layout\nto locate text and hyperlinks.",
                                     textAlign = TextAlign.Center,
                                     style = MaterialTheme.typography.bodySmall,
+                                    lineHeight = 16.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -535,31 +535,64 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
                                             }
-                                            TextButton(
-                                                onClick = { showNewFolderDialog = true },
-                                                modifier = Modifier.height(32.dp),
-                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .clickable { showNewFolderDialog = true }
+                                                    .padding(horizontal = 8.dp, vertical = 6.dp)
                                             ) {
-                                                Icon(painter = painterResource(id = R.drawable.ic_custom_plus), contentDescription = null, modifier = Modifier.size(16.dp))
+                                                Icon(
+                                                    painter = painterResource(id = R.drawable.ic_custom_plus),
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
                                                 Spacer(modifier = Modifier.width(4.dp))
-                                                Text("New Folder", style = MaterialTheme.typography.bodySmall)
+                                                Text(
+                                                    text = "New Folder",
+                                                    style = MaterialTheme.typography.bodySmall.copy(
+                                                        fontSize = 11.5.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    ),
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    maxLines = 1
+                                                )
                                             }
                                         }
 
                                         if (showNewFolderDialog) {
                                             Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .background(
+                                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                                        RoundedCornerShape(12.dp)
+                                                    )
+                                                    .padding(6.dp),
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                OutlinedTextField(
+                                                BasicTextField(
                                                     value = newFolderName,
                                                     onValueChange = { newFolderName = it },
-                                                    placeholder = { Text("Folder name...", fontSize = 12.sp) },
                                                     singleLine = true,
-                                                    textStyle = MaterialTheme.typography.bodySmall,
-                                                    shape = RoundedCornerShape(12.dp),
-                                                    modifier = Modifier.weight(1f).height(46.dp)
+                                                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                                                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                                                    decorationBox = { innerTextField ->
+                                                        if (newFolderName.isEmpty()) {
+                                                            Text(
+                                                                text = "Folder name...",
+                                                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                                            )
+                                                        }
+                                                        innerTextField()
+                                                    }
                                                 )
                                                 Button(
                                                     onClick = {
@@ -570,16 +603,18 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                             showNewFolderDialog = false
                                                         }
                                                     },
-                                                    shape = RoundedCornerShape(12.dp),
-                                                    modifier = Modifier.height(38.dp)
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    contentPadding = PaddingValues(horizontal = 12.dp),
+                                                    modifier = Modifier.height(34.dp)
                                                 ) {
-                                                    Text("Add", style = MaterialTheme.typography.bodySmall)
+                                                    Text("Add", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
                                                 }
                                                 TextButton(
                                                     onClick = { showNewFolderDialog = false },
-                                                    modifier = Modifier.height(38.dp)
+                                                    contentPadding = PaddingValues(horizontal = 10.dp),
+                                                    modifier = Modifier.height(34.dp)
                                                 ) {
-                                                    Text("Cancel", style = MaterialTheme.typography.bodySmall)
+                                                    Text("Cancel", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
                                                 }
                                             }
                                         }
@@ -755,3 +790,4 @@ fun parseMarkdownToAnnotatedString(text: String, primaryColor: Color): androidx.
         }
     }
 }
+

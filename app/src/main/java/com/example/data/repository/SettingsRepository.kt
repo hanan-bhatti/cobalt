@@ -49,6 +49,9 @@ class SettingsRepository(context: Context) {
     private val _isListView = MutableStateFlow(prefs.getBoolean(KEY_IS_LIST_VIEW, true))
     val isListView: StateFlow<Boolean> = _isListView.asStateFlow()
 
+    private val _forceDisableBlur = MutableStateFlow(prefs.getBoolean(KEY_FORCE_DISABLE_BLUR, false))
+    val forceDisableBlur: StateFlow<Boolean> = _forceDisableBlur.asStateFlow()
+
     fun setGeminiApiKey(key: String) {
         prefs.edit().putString(KEY_GEMINI_API_KEY, key).apply()
         _geminiApiKey.value = key
@@ -114,6 +117,11 @@ class SettingsRepository(context: Context) {
         _isListView.value = isList
     }
 
+    fun setForceDisableBlur(disabled: Boolean) {
+        prefs.edit().putBoolean(KEY_FORCE_DISABLE_BLUR, disabled).apply()
+        _forceDisableBlur.value = disabled
+    }
+
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
             KEY_GEMINI_API_KEY -> _geminiApiKey.value = prefs.getString(KEY_GEMINI_API_KEY, "") ?: ""
@@ -124,7 +132,7 @@ class SettingsRepository(context: Context) {
             KEY_THEME_MODE -> _themeMode.value = prefs.getString(KEY_THEME_MODE, "System Default") ?: "System Default"
             KEY_FLOATING_OCR -> _isFloatingOcrEnabled.value = prefs.getBoolean(KEY_FLOATING_OCR, false)
             KEY_EDGE_HEIGHT -> _edgePanelHeight.value = prefs.getInt(KEY_EDGE_HEIGHT, 100)
-            KEY_EDGE_THICKNESS -> _edgePanelThickness.value = prefs.getInt(KEY_EDGE_THICKNESS, 12)
+            KEY_EDGE_THICKNESS -> _edgePanelThickness.value = prefs.getInt(KEY_EDGE_THICKNESS, 6)
             KEY_EDGE_OPACITY -> _edgePanelOpacity.value = prefs.getFloat(KEY_EDGE_OPACITY, 0.7f)
             KEY_EDGE_SIDE -> _edgePanelSide.value = prefs.getString(KEY_EDGE_SIDE, "Right") ?: "Right"
             KEY_EDGE_Y_PERCENT -> _edgePanelYPercent.value = prefs.getFloat(KEY_EDGE_Y_PERCENT, 0.4f)
@@ -135,6 +143,7 @@ class SettingsRepository(context: Context) {
                 prefs.getBoolean(KEY_RECENT_CAPTURES_EXPANDED, true)
 
             KEY_IS_LIST_VIEW -> _isListView.value = prefs.getBoolean(KEY_IS_LIST_VIEW, true)
+            KEY_FORCE_DISABLE_BLUR -> _forceDisableBlur.value = prefs.getBoolean(KEY_FORCE_DISABLE_BLUR, false)
         }
     }
 
@@ -156,5 +165,6 @@ class SettingsRepository(context: Context) {
         private const val KEY_HAS_DISMISSED_ONBOARDING = "has_dismissed_onboarding"
         private const val KEY_RECENT_CAPTURES_EXPANDED = "recent_captures_expanded"
         private const val KEY_IS_LIST_VIEW = "is_list_view"
+        private const val KEY_FORCE_DISABLE_BLUR = "force_disable_blur"
     }
 }

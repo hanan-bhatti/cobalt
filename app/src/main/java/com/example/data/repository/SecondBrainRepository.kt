@@ -15,6 +15,8 @@ import com.example.data.remote.GenerateContentRequest
 import com.example.data.remote.InlineData
 import com.example.data.remote.Part
 import com.example.data.remote.RetrofitClient
+import com.example.data.remote.GenerationConfig
+import com.example.data.remote.ResponseSchema
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
@@ -771,6 +773,41 @@ class SecondBrainRepository(private val context: Context) {
     // GEMINI VISION OCR (TEXT EXTRACTION)
     // ----------------------------------------------------
 
+    private fun buildOcrResponseSchema(): ResponseSchema {
+        val urlItemSchema = ResponseSchema(
+            type = "OBJECT",
+            properties = mapOf(
+                "url" to ResponseSchema(
+                    type = "STRING",
+                    description = "The exact URL, transcribed character-for-character, with https:// prepended if no scheme was present in the source image."
+                ),
+                "description" to ResponseSchema(
+                    type = "STRING",
+                    description = "A brief factual description of what this URL or its surrounding text indicates, based only on what is visible in the image."
+                )
+            ),
+            required = listOf("url", "description"),
+            propertyOrdering = listOf("url", "description")
+        )
+
+        return ResponseSchema(
+            type = "OBJECT",
+            properties = mapOf(
+                "extractedText" to ResponseSchema(
+                    type = "STRING",
+                    description = "The clean, markdown-formatted text from the image, preserving bold, headings, bullet points, and original script/reading direction (including right-to-left scripts such as Urdu or Arabic)."
+                ),
+                "urls" to ResponseSchema(
+                    type = "ARRAY",
+                    items = urlItemSchema,
+                    description = "All URLs or web addresses found in the image."
+                )
+            ),
+            required = listOf("extractedText", "urls"),
+            propertyOrdering = listOf("extractedText", "urls")
+        )
+    }
+
     suspend fun extractTextFromRegion(
         bitmap: Bitmap,
         x: Int,
@@ -808,18 +845,20 @@ class SecondBrainRepository(private val context: Context) {
 
         // Build prompt: specifically requests OCR text extraction + return as URL if it resembles one
         val basePrompt = """
-            Extract all text cleanly from this image.
-            If there are any URLs or web links found in the text, extract them carefully.
-            Return ONLY a valid JSON object with this exact structure (do not use markdown code blocks, just raw JSON):
-            {
-              "extractedText": "The clean, formatted text from the image...",
-              "urls": [
-                {
-                  "url": "https://...",
-                  "description": "Brief description of what this url is based on context"
-                }
-              ]
-            }
+            You are a precise OCR and formatting engine. Extract all text from this image.
+
+            FORMATTING RULES for extractedText:
+            - Preserve bold text using **bold** markdown syntax.
+            - Preserve headings using # / ## / ### based on visual hierarchy (font size, weight, position).
+            - Preserve bullet points and numbered lists using standard Markdown syntax (- item, 1. item).
+            - If the text is written right-to-left (e.g. Urdu, Arabic), preserve the original script and reading order exactly. Do not transliterate, translate, or reorder the words.
+            - Preserve paragraph breaks and line breaks as they visually appear.
+            - Do not invent formatting that is not visually present in the image.
+
+            URL EXTRACTION RULES for urls:
+            - Transcribe every URL or web address character-for-character with maximum precision, including hyphens, underscores, dots, subdomains, and path segments. Do not guess, simplify, or "clean up" a URL — copy it exactly as it visually appears.
+            - If a URL has no scheme (e.g. "example.com" or "my-site.dev"), prepend "https://" without altering any other character.
+            - If you are not fully confident in a specific character within a URL (e.g. due to blur or small font), re-examine that specific region of the image before finalizing your answer, prioritizing accuracy over speed.
         """.trimIndent()
         val sensitivityPrompt = when (sensitivity) {
             "Low" -> " Extract only the most prominent, large text. Ignore small details, noise, or blurry text."
@@ -836,6 +875,11 @@ class SecondBrainRepository(private val context: Context) {
                         Part(inlineData = InlineData(mimeType = "image/jpeg", data = base64Data))
                     )
                 )
+            ),
+            generationConfig = GenerationConfig(
+                temperature = 0.1f,
+                responseMimeType = "application/json",
+                responseSchema = buildOcrResponseSchema()
             )
         )
 

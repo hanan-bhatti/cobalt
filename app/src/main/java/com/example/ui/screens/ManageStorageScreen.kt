@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.ui.viewmodel.SecondBrainViewModel
 import com.example.data.model.SavedItemType
 import androidx.compose.foundation.BorderStroke
@@ -184,6 +185,7 @@ fun ManageStorageScreen(
             }
         }
     ) { padding ->
+        val pullToRefreshState = rememberPullToRefreshState()
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -192,8 +194,15 @@ fun ManageStorageScreen(
             PullToRefreshBox(
                 isRefreshing = isSyncing,
                 onRefresh = { viewModel.syncData() },
+                state = pullToRefreshState,
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.TopCenter
+                indicator = {
+                    PullToRefreshDefaults.LoadingIndicator(
+                        state = pullToRefreshState,
+                        isRefreshing = isSyncing,
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
+                }
             ) {
                 if (categories.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -290,7 +299,7 @@ fun ManageStorageScreen(
                                                         Spacer(modifier = Modifier.width(6.dp))
                                                         Text(
                                                             text = "${breakdownItem.name} (${formatStorageSize(breakdownItem.sizeBytes)})",
-                                                            style = MaterialTheme.typography.bodySmall,
+                                                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                             maxLines = 1,
                                                             overflow = TextOverflow.Ellipsis

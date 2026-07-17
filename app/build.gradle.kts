@@ -142,6 +142,7 @@ dependencies {
   implementation(libs.androidx.media3.ui)
   implementation(libs.androidx.glance.appwidget)
   implementation(libs.androidx.glance.material3)
+  implementation("dev.chrisbanes.haze:haze:1.0.2")
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)

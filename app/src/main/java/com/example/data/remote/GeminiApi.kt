@@ -39,9 +39,21 @@ data class InlineData(
 )
 
 @JsonClass(generateAdapter = true)
+data class ResponseSchema(
+    @param:Json(name = "type") val type: String,
+    @param:Json(name = "properties") val properties: Map<String, ResponseSchema>? = null,
+    @param:Json(name = "items") val items: ResponseSchema? = null,
+    @param:Json(name = "required") val required: List<String>? = null,
+    @param:Json(name = "propertyOrdering") val propertyOrdering: List<String>? = null,
+    @param:Json(name = "description") val description: String? = null
+)
+
+@JsonClass(generateAdapter = true)
 data class GenerationConfig(
     @param:Json(name = "temperature") val temperature: Float? = null,
-    @param:Json(name = "maxOutputTokens") val maxOutputTokens: Int? = null
+    @param:Json(name = "maxOutputTokens") val maxOutputTokens: Int? = null,
+    @param:Json(name = "responseMimeType") val responseMimeType: String? = null,
+    @param:Json(name = "responseSchema") val responseSchema: ResponseSchema? = null
 )
 
 @JsonClass(generateAdapter = true)
