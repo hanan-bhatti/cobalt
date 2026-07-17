@@ -1,23 +1,76 @@
 name: Build Release
-
 on:
   workflow_dispatch:
     inputs:
-      version_name:
-        description: 'Version name (e.g. 0.9.0-beta01)'
-        required: true
-        default: '0.9.0-beta01'
+      release_notes:
+        description: 'Release notes (leave blank to use auto-generated notes)'
+        required: false
+        default: ''
+  push:
+    branches: [main]
+    paths:
+      - 'app/build.gradle.kts'
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  check-version:
     runs-on: ubuntu-latest
-
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+      version_name: ${{ steps.check.outputs.version_name }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version and compare to last release
+        id: check
+        run: |
+          VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
+          echo "Detected versionName: $VERSION"
+
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not extract versionName from app/build.gradle.kts"
+            exit 1
+          fi
+
+          # Only consider tags that look like our own release tags: v<anything>
+          # Sorted by version so the *highest* tag wins, not just the most recent commit-wise
+          LAST_TAG=$(git tag -l 'v*' | sort -V | tail -n1 || echo "")
+
+          if [ -z "$LAST_TAG" ]; then
+            echo "No previous release tag found — this is the first release"
+            LAST_VERSION=""
+          else
+            LAST_VERSION="${LAST_TAG#v}"
+            echo "Last released version: $LAST_VERSION (tag: $LAST_TAG)"
+          fi
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "Manual trigger — building regardless of version"
+          elif [ "$VERSION" != "$LAST_VERSION" ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "Version changed ($LAST_VERSION -> $VERSION) — building"
+          else
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+            echo "Version unchanged ($VERSION) — skipping build"
+          fi
+
+          echo "version_name=$VERSION" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: check-version
+    if: needs.check-version.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -38,7 +91,7 @@ jobs:
           if [ -z "${{ secrets.KEYSTORE_PASSWORD }}" ]; then MISSING_SECRETS+=("KEYSTORE_PASSWORD"); fi
           if [ -z "${{ secrets.KEY_ALIAS }}" ]; then MISSING_SECRETS+=("KEY_ALIAS"); fi
           if [ -z "${{ secrets.KEY_PASSWORD }}" ]; then MISSING_SECRETS+=("KEY_PASSWORD"); fi
-          
+
           if [ ${#MISSING_SECRETS[@]} -ne 0 ]; then
             echo "::error::Missing required release secrets: ${MISSING_SECRETS[*]}"
             echo "Please set up these secrets in your GitHub repository: Settings -> Secrets and variables -> Actions"
@@ -62,17 +115,12 @@ jobs:
       - name: Rename artifacts with version
         id: rename
         run: |
-          VERSION="${{ github.event.inputs.version_name }}"
-          BUILD="${{ github.run_number }}"
+          VERSION="${{ needs.check-version.outputs.version_name }}"
           APK_SRC=$(find app/build/outputs/apk/release -name "*.apk" | head -n1)
-
-          APK_NAME="second-brain-v${VERSION}-build${BUILD}.apk"
-
+          APK_NAME="second-brain-v${VERSION}.apk"
           mkdir -p release-artifacts
           cp "$APK_SRC" "release-artifacts/$APK_NAME"
-
           echo "apk_name=$APK_NAME" >> "$GITHUB_OUTPUT"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
@@ -84,13 +132,11 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.rename.outputs.version }}-build${{ github.run_number }}
-          name: "Second Brain v${{ steps.rename.outputs.version }} (Build #${{ github.run_number }})"
-          body: |
-            Automated production build for Second Brain.
-
-            ### Artifacts
-            - `${{ steps.rename.outputs.apk_name }}` — direct install
+          tag_name: v${{ needs.check-version.outputs.version_name }}
+          name: "Second Brain v${{ needs.check-version.outputs.version_name }}"
+          generate_release_notes: true
+          append_body: true
+          body: ${{ github.event.inputs.release_notes }}
           draft: false
           prerelease: false
           files: |
