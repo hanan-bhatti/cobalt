@@ -53,6 +53,16 @@ class SecondBrainWidgetReceiver : GlanceAppWidgetReceiver() {
     }
 }
 
+class RefreshCallback : androidx.glance.appwidget.action.ActionCallback {
+    override suspend fun onAction(
+        context: Context,
+        glanceId: GlanceId,
+        parameters: androidx.glance.action.ActionParameters
+    ) {
+        WidgetUpdater.update(context)
+    }
+}
+
 class SecondBrainWidget : GlanceAppWidget() {
     
     override val sizeMode = SizeMode.Single
@@ -63,7 +73,7 @@ class SecondBrainWidget : GlanceAppWidget() {
         var isTimeout = false
         
         val items = try {
-            val fetched = kotlinx.coroutines.withTimeoutOrNull(2000) {
+            val fetched = kotlinx.coroutines.withTimeoutOrNull(3000) {
                 repository.getAllItems()
             }
             if (fetched != null) {
@@ -81,115 +91,163 @@ class SecondBrainWidget : GlanceAppWidget() {
 
         provideContent {
             GlanceTheme {
-                // Elegant premium dark obsidian card design with vibrant neon accent highlights
+                // Modernized card design with rounded corners and adaptive surface colors
                 Box(
                     modifier = GlanceModifier
                         .fillMaxSize()
                         .background(GlanceTheme.colors.surface)
-                        .cornerRadius(18.dp)
+                        .cornerRadius(24.dp)
                         .padding(12.dp)
                 ) {
-                Column(modifier = GlanceModifier.fillMaxSize()) {
-                    WidgetHeader(isFromCache = isFromCache, isTimeout = isTimeout)
-                    
-                    Spacer(modifier = GlanceModifier.height(10.dp))
-                    
-                    if (items.isEmpty()) {
-                        Box(
-                            modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            val emptyText = if (isTimeout) {
-                                "Connection timed out\nTap a quick action to capture"
-                            } else {
-                                "Your second brain is empty\nTap a quick action to capture"
-                            }
-                            Text(
-                                text = emptyText,
-                                style = TextStyle(
-                                    color = GlanceTheme.colors.onSurfaceVariant,
-                                    fontSize = 11.sp,
-                                    textAlign = androidx.glance.text.TextAlign.Center
+                    Column(modifier = GlanceModifier.fillMaxSize()) {
+                        WidgetHeader(isFromCache = isFromCache, isTimeout = isTimeout)
+                        
+                        Spacer(modifier = GlanceModifier.height(10.dp))
+                        
+                        if (items.isEmpty()) {
+                            Box(
+                                modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                val emptyText = if (isTimeout) {
+                                    "Connection timed out\nTap a quick action to capture"
+                                } else {
+                                    "Your second brain is empty\nTap a quick action to capture"
+                                }
+                                Text(
+                                    text = emptyText,
+                                    style = TextStyle(
+                                        color = GlanceTheme.colors.onSurfaceVariant,
+                                        fontSize = 11.sp,
+                                        textAlign = androidx.glance.text.TextAlign.Center
+                                    )
                                 )
-                            )
-                        }
-                    } else {
-                        // Display up to 3 items inside a clean scrollable list
-                        Column(modifier = GlanceModifier.defaultWeight()) {
-                            items.take(3).forEach { item ->
-                                ItemRow(item)
-                                Spacer(modifier = GlanceModifier.height(6.dp))
+                            }
+                        } else {
+                            // Display up to 3 items inside a clean scrollable list
+                            Column(modifier = GlanceModifier.defaultWeight()) {
+                                items.take(3).forEach { item ->
+                                    ItemRow(item)
+                                    Spacer(modifier = GlanceModifier.height(6.dp))
+                                }
                             }
                         }
+                        
+                        Spacer(modifier = GlanceModifier.height(6.dp))
+                        
+                        // Beautifully color-coded round quick action buttons
+                        QuickActionRow()
                     }
-                    
-                    Spacer(modifier = GlanceModifier.height(6.dp))
-                    
-                    // High-contrast, beautifully color-coded quick action panel
-                    QuickActionRow()
                 }
             }
         }
-    }
     }
 }
 
 @androidx.compose.runtime.Composable
 fun WidgetHeader(isFromCache: Boolean = false, isTimeout: Boolean = false) {
     val context = LocalContext.current
+    
+    val userName = try {
+        val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+        auth.currentUser?.displayName?.trim()?.ifBlank { null }
+            ?: auth.currentUser?.email?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
+    } catch (e: Exception) {
+        null
+    } ?: try {
+        val prefs = context.getSharedPreferences("second_brain_prefs", Context.MODE_PRIVATE)
+        prefs.getString("simulated_name", null)?.trim()?.ifBlank { null }
+            ?: prefs.getString("simulated_email", null)?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
+    } catch (e: Exception) {
+        null
+    } ?: "User"
+
+    val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+    val greeting = when (hour) {
+        in 0..11 -> "Good morning"
+        in 12..16 -> "Good afternoon"
+        else -> "Good evening"
+    }
+
     Row(
         modifier = GlanceModifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Glowing brand badge in marker orange or warning colors
-        val badgeColor = if (isTimeout) Color(0xFFD84315) else if (isFromCache) Color(0xFFEF6C00) else Color(0xFFFF6F1E)
-        val badgeText = if (isTimeout) "TIMEOUT" else if (isFromCache) "CACHED" else "BRAIN"
-        
-        Box(
-            modifier = GlanceModifier
-                .background(badgeColor)
-                .cornerRadius(6.dp)
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-        ) {
+        Column(modifier = GlanceModifier.defaultWeight()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "$greeting, $userName",
+                    style = TextStyle(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = GlanceTheme.colors.onSurface
+                    )
+                )
+                if (isFromCache || isTimeout) {
+                    Spacer(modifier = GlanceModifier.width(6.dp))
+                    val badgeColor = if (isTimeout) Color(0xFFD84315) else Color(0xFFEF6C00)
+                    val badgeText = if (isTimeout) "Offline" else "Cached"
+                    Box(
+                        modifier = GlanceModifier
+                            .background(ColorProvider(badgeColor))
+                            .cornerRadius(4.dp)
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = badgeText,
+                            style = TextStyle(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 8.sp,
+                                color = ColorProvider(Color.White)
+                            )
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = GlanceModifier.height(1.dp))
             Text(
-                text = badgeText,
+                text = "Your Second Brain",
                 style = TextStyle(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 9.sp,
-                    color = GlanceTheme.colors.onSurface
+                    fontSize = 10.sp,
+                    color = GlanceTheme.colors.onSurfaceVariant
                 )
             )
         }
         
-        Spacer(modifier = GlanceModifier.width(8.dp))
-        
-        Text(
-            text = "Second Brain",
-            style = TextStyle(
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
-                color = GlanceTheme.colors.onSurface
+        // Refresh / Retry button with a subtle tint background and circular corner radius
+        Box(
+            modifier = GlanceModifier
+                .size(28.dp)
+                .background(GlanceTheme.colors.surfaceVariant)
+                .cornerRadius(14.dp)
+                .clickable(androidx.glance.appwidget.action.actionRunCallback<RefreshCallback>()),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                provider = ImageProvider(R.drawable.ic_custom_sync),
+                contentDescription = "Refresh Widget",
+                modifier = GlanceModifier.size(14.dp)
             )
-        )
+        }
         
-        Spacer(modifier = GlanceModifier.defaultWeight())
+        Spacer(modifier = GlanceModifier.width(8.dp))
         
         val addIntent = Intent(context, MainActivity::class.java).apply {
             action = "com.example.ACTION_QUICK_TEXT"
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         
-        // Plus action with a bright orange background glow
+        // Plus action with a bright orange background glow and circular corner radius
         Box(
             modifier = GlanceModifier
                 .size(28.dp)
-                .background(Color(0x22FF6F1E)) // 15% opacity orange
+                .background(ColorProvider(Color(0x22FF6F1E))) // 15% opacity orange
                 .cornerRadius(14.dp)
                 .clickable(actionStartActivity(addIntent)),
             contentAlignment = Alignment.Center
         ) {
             Image(
-                provider = ImageProvider(R.drawable.ic_widget_add),
+                provider = ImageProvider(R.drawable.ic_custom_plus),
                 contentDescription = "Add Text Notes",
                 modifier = GlanceModifier.size(14.dp)
             )
@@ -214,22 +272,23 @@ fun ItemRow(item: SavedItem) {
     
     // Choose beautiful color accents and icons based on type
     val (iconRes, iconTintBg) = when (item.type) {
-        SavedItemType.LINK -> Pair(R.drawable.ic_widget_link, GlanceTheme.colors.primaryContainer)
-        SavedItemType.IMAGE, SavedItemType.VIDEO -> Pair(R.drawable.ic_widget_image, GlanceTheme.colors.tertiaryContainer)
-        SavedItemType.CODE -> Pair(R.drawable.ic_widget_code, GlanceTheme.colors.secondaryContainer)
-        else -> Pair(R.drawable.ic_widget_text, GlanceTheme.colors.primaryContainer)
+        SavedItemType.LINK -> Pair(R.drawable.ic_custom_link, GlanceTheme.colors.primaryContainer)
+        SavedItemType.IMAGE, SavedItemType.VIDEO -> Pair(R.drawable.ic_custom_image, GlanceTheme.colors.tertiaryContainer)
+        SavedItemType.CODE -> Pair(R.drawable.ic_custom_code, GlanceTheme.colors.secondaryContainer)
+        SavedItemType.AUDIO -> Pair(R.drawable.ic_custom_voice, GlanceTheme.colors.primaryContainer)
+        else -> Pair(R.drawable.ic_custom_text, GlanceTheme.colors.primaryContainer)
     }
     
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
             .background(GlanceTheme.colors.surface) // Adaptive background
-            .cornerRadius(10.dp)
+            .cornerRadius(12.dp)
             .clickable(actionStartActivity(openIntent))
             .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // High contrast colored round icon container
+        // High contrast colored round icon container (circle)
         Box(
             modifier = GlanceModifier
                 .size(24.dp)
@@ -297,7 +356,7 @@ fun QuickActionRow() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         QuickActionButton(
-            iconRes = R.drawable.ic_widget_link,
+            iconRes = R.drawable.ic_custom_link,
             intent = linkIntent,
             bgColor = GlanceTheme.colors.primaryContainer,
             iconTintGlow = GlanceTheme.colors.onPrimaryContainer,
@@ -312,7 +371,7 @@ fun QuickActionRow() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         QuickActionButton(
-            iconRes = R.drawable.ic_widget_image,
+            iconRes = R.drawable.ic_custom_image,
             intent = imageIntent,
             bgColor = GlanceTheme.colors.tertiaryContainer,
             iconTintGlow = GlanceTheme.colors.onTertiaryContainer,
@@ -327,7 +386,7 @@ fun QuickActionRow() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         QuickActionButton(
-            iconRes = R.drawable.ic_widget_code,
+            iconRes = R.drawable.ic_custom_code,
             intent = codeIntent,
             bgColor = GlanceTheme.colors.secondaryContainer,
             iconTintGlow = GlanceTheme.colors.onSecondaryContainer,
@@ -352,7 +411,7 @@ fun QuickActionButton(
             modifier = GlanceModifier
                 .size(40.dp)
                 .background(bgColor)
-                .cornerRadius(12.dp)
+                .cornerRadius(20.dp) // Circular button
                 .clickable(actionStartActivity(intent)),
             contentAlignment = Alignment.Center
         ) {

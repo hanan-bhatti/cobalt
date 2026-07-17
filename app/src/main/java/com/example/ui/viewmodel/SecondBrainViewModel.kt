@@ -306,6 +306,21 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
 
     fun syncData() {
         if (_isSyncing.value) return
+        
+        val connectivityManager = context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val activeNetwork = connectivityManager.activeNetwork
+        val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+        val isConnected = capabilities != null && (
+            capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) ||
+            capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) ||
+            capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET)
+        )
+        
+        if (!isConnected) {
+            showToast("No internet connection. Please check your network and try again.")
+            return
+        }
+
         _isSyncing.value = true
         
         viewModelScope.launch {

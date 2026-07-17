@@ -492,6 +492,7 @@ fun EdgePanelSettingsScreen(viewModel: SecondBrainViewModel, onNavigateBack: () 
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 100.dp)
+        ) {
             val side by viewModel.settingsRepository.edgePanelSide.collectAsState()
             val positionY by viewModel.settingsRepository.edgePanelYPercent.collectAsState()
             val opacity by viewModel.settingsRepository.edgePanelOpacity.collectAsState()
