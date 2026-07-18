@@ -183,10 +183,22 @@ fun DetailScreen(
             )
         },
         bottomBar = {
+            val barModifier = if (DevicePerformance.shouldUseBlur(context)) {
+                Modifier
+                    .fillMaxWidth()
+                    .hazeEffect(state = hazeState, style = HazeStyle(
+                        backgroundColor = MaterialTheme.colorScheme.background,
+                        tint = HazeTint(MaterialTheme.colorScheme.background.copy(alpha = 0.55f)),
+                        blurRadius = 20.dp,
+                        noiseFactor = 0.05f
+                    ))
+            } else {
+                Modifier.fillMaxWidth()
+            }
             Surface(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = barModifier,
                 tonalElevation = 0.dp,
-                color = MaterialTheme.colorScheme.background.copy(alpha = 0.92f),
+                color = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else MaterialTheme.colorScheme.background.copy(alpha = 0.92f),
                 border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
             ) {
                 Row(

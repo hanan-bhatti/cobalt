@@ -79,7 +79,7 @@ fun CustomBottomBar(
             .clip(RoundedCornerShape(32.dp))
             .hazeEffect(state = hazeState, style = HazeStyle(
                 backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-                tint = HazeTint(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                tint = HazeTint(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
                 blurRadius = 20.dp,
                 noiseFactor = 0.05f
             ))
@@ -88,7 +88,7 @@ fun CustomBottomBar(
         Modifier
             .fillMaxWidth()
             .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
                 shape = RoundedCornerShape(32.dp)
             )
             .padding(horizontal = 4.dp, vertical = 8.dp)

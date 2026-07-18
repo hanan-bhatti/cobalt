@@ -174,7 +174,7 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel, hazeState: HazeState) {
                         .clip(CircleShape)
                         .hazeEffect(state = hazeState, style = HazeStyle(
                             backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-                            tint = HazeTint(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                            tint = HazeTint(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
                             blurRadius = 20.dp,
                             noiseFactor = 0.05f
                         ))
@@ -196,7 +196,7 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel, hazeState: HazeState) {
                         focusedElevation = 0.dp,
                         hoveredElevation = 0.dp
                     ),
-                    containerColor = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
+                    containerColor = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = fabModifier
                         .bounceClick(fabInteractionSource)
