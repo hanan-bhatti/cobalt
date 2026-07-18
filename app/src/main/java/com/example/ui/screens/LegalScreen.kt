@@ -18,90 +18,230 @@
 
 package com.example.ui.screens
 
-object LegalDocs {
-    val privacyPolicy = """
-        **Privacy Policy**
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.R
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-        Last updated: 18 July 2026
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LegalScreen(
+    title: String,
+    markdownContent: String,
+    onBack: () -> Unit
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(title, fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_back),
+                            contentDescription = "Back",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 8.dp)
+        ) {
+            ExpressiveMarkdown(markdown = markdownContent)
+            Spacer(modifier = Modifier.height(48.dp))
+        }
+    }
+}
 
-        **1. Data storage**
-        Second Brain stores your data locally on your device by default. If you turn on cloud sync, your data is stored using Firebase. Nothing leaves your device unless you enable sync yourself.
+private data class FaqEntry(val question: String, val answer: String)
 
-        **2. AI features**
-        The OCR and smart-organization features send your images or notes to the Gemini API for processing. Google does not use this data to train its models.
+private fun parseFaq(markdown: String): List<FaqEntry> {
+    val lines = markdown.split("\n").map { it.trim() }.filter { it.isNotBlank() }
+    val entries = mutableListOf<FaqEntry>()
+    var pendingQ: String? = null
+    for (line in lines) {
+        val clean = line.removePrefix("**").let { if (it.endsWith("**")) it.dropLast(2) else it }
+        when {
+            clean.startsWith("Q:") -> pendingQ = clean.removePrefix("Q:").trim()
+            clean.startsWith("A:") && pendingQ != null -> {
+                entries.add(FaqEntry(pendingQ!!, clean.removePrefix("A:").trim()))
+                pendingQ = null
+            }
+        }
+    }
+    return entries
+}
 
-        **3. Analytics**
-        Second Brain uses Firebase Analytics to understand how the app is used, things like which screens are opened, whether a note was created, edited, or deleted, whether a search happened, and whether sign-in succeeded. This helps identify bugs and prioritize what to improve. We do not send the content of your notes or your search text, only that an action occurred. Firebase Analytics also collects standard device and usage data (device model, OS version, country, session length) automatically, as governed by Google's privacy policy.
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FaqScreen(
+    markdownContent: String,
+    onBack: () -> Unit
+) {
+    val entries = remember(markdownContent) { parseFaq(markdownContent) }
 
-        **4. Crash reporting**
-        Second Brain uses Firebase Crashlytics to detect and diagnose app crashes. If the app crashes, technical details (stack trace, device model, OS version, app version) are sent to help fix the bug. No note content is included in crash reports.
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text("FAQ", fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "${entries.size} questions answered",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_back),
+                            contentDescription = "Back",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            entries.forEachIndexed { index, entry ->
+                FaqCard(entry = entry, index = index)
+            }
+            Spacer(modifier = Modifier.height(48.dp))
+        }
+    }
+}
 
-        **5. Third-party services**
-        Firebase handles authentication, database storage, analytics, and crash reporting. Google's privacy policy covers whatever is processed or stored on their servers.
+@Composable
+private fun FaqCard(entry: FaqEntry, index: Int) {
+    var expanded by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
 
-        **6. Open source**
-        Second Brain is free, open-source software licensed under AGPL-3.0-or-later. You can read every line of code, verify these claims yourself, or fork it, at [github.com/hanan-bhatti/second-brain](https://github.com/hanan-bhatti/second-brain).
+    val enterAlpha = remember { androidx.compose.animation.core.Animatable(0f) }
+    val enterOffset = remember { androidx.compose.animation.core.Animatable(20f) }
+    LaunchedEffect(Unit) {
+        delay((index * 45L).coerceAtMost(360))
+        launch { enterAlpha.animateTo(1f, tween(300, easing = LinearOutSlowInEasing)) }
+        launch {
+            enterOffset.animateTo(
+                0f,
+                spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium)
+            )
+        }
+    }
 
-        **7. Deleting your data**
-        Delete your account from the settings panel and your remote data is erased.
-    """.trimIndent()
+    val chevronRotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "chevron_rotation"
+    )
 
-    val termsOfConditions = """
-        **Terms and Conditions**
+    Surface(
+        shape = RoundedCornerShape(if (expanded) 28.dp else 20.dp),
+        color = if (expanded) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+        },
+        border = BorderStroke(
+            width = if (expanded) 1.2.dp else 0.5.dp,
+            color = if (expanded) {
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+            } else {
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+            }
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                alpha = enterAlpha.value
+                translationY = enterOffset.value
+            }
+            .animateContentSize(
+                animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null
+            ) { expanded = !expanded }
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = entry.question,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_custom_chevron_down),
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    tint = if (expanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier
+                        .size(22.dp)
+                        .rotate(chevronRotation)
+                )
+            }
 
-        Last updated: 18 July 2026
-
-        **1. Agreement**
-        Using Second Brain means you agree to these terms.
-
-        **2. Your content**
-        Whatever you save, notes, links, images, stays yours. You're responsible for what you store in the app.
-
-        **3. Fair use**
-        Don't use the app to store illegal content or abuse the AI/API integrations it relies on.
-
-        **4. Uptime**
-        Cloud sync, analytics, crash reporting, and AI features depend on third-party services (Firebase, Gemini), so they're provided as-is. Interruptions can happen and aren't guaranteed against.
-
-        **5. License**
-        The app is licensed under AGPL-3.0-or-later. Source code, issues, and license text are all at [github.com/hanan-bhatti/second-brain](https://github.com/hanan-bhatti/second-brain).
-
-        **6. Termination**
-        Accounts that abuse the service or violate these terms can be suspended.
-    """.trimIndent()
-
-    val faq = """
-        Q: How do I save a link quickly?
-        A: Use the home screen widget, or share directly from your browser using the "Share to" menu.
-
-        Q: Does OCR work offline?
-        A: No. OCR runs through the Gemini API, so it needs an internet connection.
-
-        Q: Is my data backed up?
-        A: Only if you sign in and enable sync. The app works fully offline too, and syncs once you're back online.
-
-        Q: Can I use Markdown in notes?
-        A: Yes, standard syntax works: bold, italics, and links.
-
-        Q: Is this app free?
-        A: Yes, completely. No subscriptions, no ads, no paywalled features.
-
-        Q: Is it open source?
-        A: Yes. The full source is on GitHub at github.com/hanan-bhatti/second-brain under the AGPL-3.0-or-later license. Read the code, report bugs, or contribute.
-
-        Q: Why did you build this?
-        A: I wanted a fast, no-nonsense capture tool without ads, subscriptions, or a bloated feature list I'd never touch.
-    """.trimIndent()
-
-    val about = """
-        **About Second Brain**
-
-        Second Brain is a free, open-source capture app for links, notes, images, and code snippets, built to get things out of your head and into one place with as little friction as possible.
-
-        I built it because I wanted a fast, no-nonsense capture tool that didn't come with ads, subscriptions, or a bloated feature set I'd never touch. Share something from any app, and it lands here, organized automatically.
-
-        The full source is on GitHub at [github.com/hanan-bhatti/second-brain](https://github.com/hanan-bhatti/second-brain), licensed under AGPL-3.0-or-later. Read the code, file an issue, or fork it and make it your own.
-
-        Built with Jetpack Compose.
-    """.trimIndent()
+            if (expanded) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = entry.answer,
+                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 21.sp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
 }

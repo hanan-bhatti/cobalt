@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     
     <!-- Custom OEM Auto-Start / Auto-Launch Permissions -->
     <uses-permission android:name="com.oppo.permission.safe.autostart" />
@@ -89,7 +90,7 @@
         <activity
             android:name=".OcrCaptureActivity"
             android:theme="@style/Theme.MyApplication.Transparent"
-            android:exported="false"
+            android:exported="true"
             android:launchMode="singleTask"
             android:taskAffinity=".ocr_capture"
             android:excludeFromRecents="true" />

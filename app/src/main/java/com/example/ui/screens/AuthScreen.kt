@@ -61,11 +61,14 @@ fun AuthScreen(
     val authLoading by viewModel.authLoading.collectAsState()
     val emailLinkSent by viewModel.emailLinkSent.collectAsState()
     val pendingEmailLink by viewModel.pendingEmailLink.collectAsState()
+    val pendingPasswordResetCode by viewModel.pendingPasswordResetCode.collectAsState()
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var isSignUp by remember { mutableStateOf(false) }
     var isEmailLinkMode by remember { mutableStateOf(false) }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmNewPassword by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -260,33 +263,67 @@ fun AuthScreen(
                         }
                     }
 
-                    // Email Field
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email Address") },
-                        leadingIcon = { Icon(painter = painterResource(id = R.drawable.ic_custom_mail), contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
-                        singleLine = true,
-                        shape = RoundedCornerShape(20.dp),
-                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 16.dp)
-                            .testTag("auth_email_input")
-                    )
+                    val resetCode = pendingPasswordResetCode
+                    if (resetCode != null) {
+                        Text(
+                            text = "Set New Password",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                        
+                        OutlinedTextField(
+                            value = newPassword,
+                            onValueChange = { newPassword = it },
+                            label = { Text("New Password") },
+                            leadingIcon = { Icon(painter = painterResource(id = R.drawable.ic_custom_lock), contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp)
+                                .testTag("reset_new_password_input")
+                        )
 
-                    val activeLink = pendingEmailLink
-                    if (activeLink != null) {
-                        // Confirm Email link complete action
+                        OutlinedTextField(
+                            value = confirmNewPassword,
+                            onValueChange = { confirmNewPassword = it },
+                            label = { Text("Confirm New Password") },
+                            leadingIcon = { Icon(painter = painterResource(id = R.drawable.ic_custom_lock), contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp)
+                                .testTag("reset_confirm_password_input")
+                        )
+
                         Button(
                             onClick = {
-                                viewModel.completeEmailLinkSignIn(email, activeLink)
+                                if (newPassword != confirmNewPassword) {
+                                    viewModel.setAuthError("Passwords do not match.")
+                                } else {
+                                    viewModel.resetPasswordWithCode(resetCode, newPassword)
+                                }
                             },
+                            enabled = !authLoading && newPassword.isNotEmpty() && confirmNewPassword.isNotEmpty(),
                             shape = RoundedCornerShape(20.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
@@ -295,144 +332,197 @@ fun AuthScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(48.dp)
-                                .testTag("confirm_email_link_button")
+                                .testTag("submit_password_reset_button")
                         ) {
-                            Text(
-                                text = "Confirm Email & Complete Sign-In",
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.labelLarge
-                            )
+                            if (authLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text(
+                                    text = "Reset Password",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
                         }
                     } else {
-                        if (!isEmailLinkMode) {
-                            // Password Field
-                            OutlinedTextField(
-                                value = password,
-                                onValueChange = { password = it },
-                                label = { Text("Password") },
-                                leadingIcon = { Icon(painter = painterResource(id = R.drawable.ic_custom_lock), contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
-                                singleLine = true,
-                                visualTransformation = PasswordVisualTransformation(),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        // Email Field
+                        OutlinedTextField(
+                            value = email,
+                            onValueChange = { email = it },
+                            label = { Text("Email Address") },
+                            leadingIcon = { Icon(painter = painterResource(id = R.drawable.ic_custom_mail), contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(20.dp),
+                            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 16.dp)
+                                .testTag("auth_email_input")
+                        )
+
+                        val activeLink = pendingEmailLink
+                        if (activeLink != null) {
+                            // Confirm Email link complete action
+                            Button(
+                                onClick = {
+                                    viewModel.completeEmailLinkSignIn(email, activeLink)
+                                },
                                 shape = RoundedCornerShape(20.dp),
-                                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
                                 ),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(bottom = 8.dp)
-                                    .testTag("auth_password_input")
-                            )
-
-                            // Forgot Password Link
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 12.dp),
-                                horizontalArrangement = Arrangement.End
+                                    .height(48.dp)
+                                    .testTag("confirm_email_link_button")
                             ) {
-                                TextButton(
-                                    onClick = {
-                                        viewModel.sendPasswordResetEmail(email)
-                                    },
-                                    modifier = Modifier.testTag("forgot_password_button")
-                                ) {
-                                    Text(
-                                        text = "Forgot Password?",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
+                                Text(
+                                    text = "Confirm Email & Complete Sign-In",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
                             }
+                        } else {
+                            if (!isEmailLinkMode) {
+                                // Password Field
+                                OutlinedTextField(
+                                    value = password,
+                                    onValueChange = { password = it },
+                                    label = { Text("Password") },
+                                    leadingIcon = { Icon(painter = painterResource(id = R.drawable.ic_custom_lock), contentDescription = null, tint = MaterialTheme.colorScheme.secondary) },
+                                    singleLine = true,
+                                    visualTransformation = PasswordVisualTransformation(),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 8.dp)
+                                        .testTag("auth_password_input")
+                                )
 
-                            var termsAccepted by remember { mutableStateOf(false) }
-
-                            if (isSignUp) {
+                                // Forgot Password Link
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(bottom = 16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .padding(bottom = 12.dp),
+                                    horizontalArrangement = Arrangement.End
                                 ) {
-                                    Checkbox(
-                                        checked = termsAccepted,
-                                        onCheckedChange = { termsAccepted = it }
-                                    )
-                                    Text(
-                                        text = "I agree to the Terms & Conditions and Privacy Policy.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-
-                            // Action Button (Prism blue accent color)
-                            Button(
-                                onClick = {
-                                    if (isSignUp) {
-                                        viewModel.signUp(email, password)
-                                    } else {
-                                        viewModel.signIn(email, password)
+                                    TextButton(
+                                        onClick = {
+                                            viewModel.sendPasswordResetEmail(email)
+                                        },
+                                        modifier = Modifier.testTag("forgot_password_button")
+                                    ) {
+                                        Text(
+                                            text = "Forgot Password?",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
                                     }
-                                },
-                                enabled = (!isSignUp || termsAccepted) && !authLoading,
-                                shape = RoundedCornerShape(20.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp)
-                                    .testTag("submit_auth_button")
-                            ) {
-                                if (authLoading) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(24.dp),
-                                        color = MaterialTheme.colorScheme.onPrimary,
-                                        strokeWidth = 2.dp
-                                    )
-                                } else {
-                                    Text(
-                                        text = if (isSignUp) "Register Account" else "Sign In",
-                                        fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.labelLarge
-                                    )
                                 }
-                            }
-                        } else {
-                            // Email Link passwordless submit
-                            Button(
-                                onClick = {
-                                    viewModel.sendSignInLink(email)
-                                },
-                                enabled = !authLoading,
-                                shape = RoundedCornerShape(20.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp)
-                                    .testTag("submit_email_link_button")
-                            ) {
-                                if (authLoading) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(24.dp),
-                                        color = MaterialTheme.colorScheme.onPrimary,
-                                        strokeWidth = 2.dp
-                                    )
-                                } else {
-                                    Text(
-                                        text = "Send Sign-In Link",
-                                        fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.labelLarge
-                                    )
+
+                                var termsAccepted by remember { mutableStateOf(false) }
+
+                                if (isSignUp) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(bottom = 16.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Checkbox(
+                                            checked = termsAccepted,
+                                            onCheckedChange = { termsAccepted = it }
+                                        )
+                                        Text(
+                                            text = "I agree to the Terms & Conditions and Privacy Policy.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+
+                                // Action Button (Prism blue accent color)
+                                Button(
+                                    onClick = {
+                                        if (isSignUp) {
+                                            viewModel.signUp(email, password)
+                                        } else {
+                                            viewModel.signIn(email, password)
+                                        }
+                                    },
+                                    enabled = (!isSignUp || termsAccepted) && !authLoading,
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp)
+                                        .testTag("submit_auth_button")
+                                ) {
+                                    if (authLoading) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(24.dp),
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            strokeWidth = 2.dp
+                                        )
+                                    } else {
+                                        Text(
+                                            text = if (isSignUp) "Register Account" else "Sign In",
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.labelLarge
+                                        )
+                                    }
+                                }
+                            } else {
+                                // Email Link passwordless submit
+                                Button(
+                                    onClick = {
+                                        viewModel.sendSignInLink(email)
+                                    },
+                                    enabled = !authLoading,
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp)
+                                        .testTag("submit_email_link_button")
+                                ) {
+                                    if (authLoading) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(24.dp),
+                                            color = MaterialTheme.colorScheme.onPrimary,
+                                            strokeWidth = 2.dp
+                                        )
+                                    } else {
+                                        Text(
+                                            text = "Send Sign-In Link",
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.labelLarge
+                                        )
+                                    }
                                 }
                             }
                         }

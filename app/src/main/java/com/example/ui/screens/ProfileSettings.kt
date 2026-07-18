@@ -83,12 +83,16 @@ fun SettingsScreen(
 
     val context = LocalContext.current
     var hasOverlayPermission by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
+    var isIgnoringBattery by remember {
+        mutableStateOf(com.example.utils.BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context))
+    }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 hasOverlayPermission = Settings.canDrawOverlays(context)
+                isIgnoringBattery = com.example.utils.BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -357,6 +361,42 @@ fun SettingsScreen(
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Text(text = level, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                            }
+                        }
+                    }
+                }
+
+                if (!isIgnoringBattery) {
+                    val isColorOS = remember { com.example.utils.BatteryOptimizationHelper.isColorOSDevice() }
+                    val titleText = if (isColorOS) "Fix widget not loading" else "Background activity"
+                    val subtextText = if (isColorOS) {
+                        "OPPO's battery manager can stop the home screen widget from updating. Please allow background activity to keep it updated."
+                    } else {
+                        "Allow background activity to ensure home screen widgets update reliably."
+                    }
+
+                    SettingsSection(
+                        title = titleText,
+                        subtext = subtextText
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Button(
+                                onClick = {
+                                    com.example.utils.BatteryOptimizationHelper.requestIgnoreBatteryOptimizations(context)
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Allow Background Activity")
                             }
                         }
                     }

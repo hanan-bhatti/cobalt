@@ -540,6 +540,9 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     private val _pendingEmailLink = MutableStateFlow<String?>(null)
     val pendingEmailLink: StateFlow<String?> = _pendingEmailLink.asStateFlow()
 
+    private val _pendingPasswordResetCode = MutableStateFlow<String?>(null)
+    val pendingPasswordResetCode: StateFlow<String?> = _pendingPasswordResetCode.asStateFlow()
+
     private val prefs = context.getSharedPreferences("second_brain_prefs", android.content.Context.MODE_PRIVATE)
 
     val isFirebaseAvailable: Boolean = repository.firebaseAuth != null
@@ -780,7 +783,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         _authLoading.value = true
         
         val actionCodeSettings = com.google.firebase.auth.ActionCodeSettings.newBuilder()
-            .setUrl("https://second-brain-11.firebaseapp.com")
+            .setUrl("https://second-brain-11.firebaseapp.com/signin")
             .setHandleCodeInApp(true)
             .setAndroidPackageName(
                 "com.hanan_bhatti.second_brain",
@@ -815,7 +818,18 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             return
         }
         _authLoading.value = true
-        auth.sendPasswordResetEmail(email)
+
+        val actionCodeSettings = com.google.firebase.auth.ActionCodeSettings.newBuilder()
+            .setUrl("https://second-brain-11.firebaseapp.com/resetpassword")
+            .setHandleCodeInApp(true)
+            .setAndroidPackageName(
+                "com.hanan_bhatti.second_brain",
+                true, // installIfNotAvailable
+                "24"  // minimumVersion
+            )
+            .build()
+
+        auth.sendPasswordResetEmail(email, actionCodeSettings)
             .addOnSuccessListener {
                 _authLoading.value = false
                 _authSuccess.value = "Password reset email sent to $email! Please check your inbox."
@@ -841,7 +855,49 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 _pendingEmailLink.value = linkStr
                 _authError.value = "Please confirm the email address you used to request the sign-in link."
             }
+        } else if (linkStr.contains("/resetpassword")) {
+            val uri = android.net.Uri.parse(linkStr)
+            val oobCode = uri.getQueryParameter("oobCode")
+            if (oobCode != null) {
+                _authLoading.value = true
+                _authError.value = null
+                auth.verifyPasswordResetCode(oobCode)
+                    .addOnSuccessListener {
+                        _authLoading.value = false
+                        _pendingPasswordResetCode.value = oobCode
+                    }
+                    .addOnFailureListener {
+                        _authLoading.value = false
+                        _authError.value = it.localizedMessage ?: "Invalid or expired password reset link."
+                    }
+            } else {
+                _authError.value = "Missing password reset code."
+            }
         }
+    }
+
+    fun setAuthError(error: String?) {
+        _authError.value = error
+    }
+
+    fun resetPasswordWithCode(oobCode: String, newPassword: String) {
+        if (newPassword.isBlank()) {
+            _authError.value = "Password cannot be empty."
+            return
+        }
+        val auth = repository.firebaseAuth ?: return
+        _authError.value = null
+        _authLoading.value = true
+        auth.confirmPasswordReset(oobCode, newPassword)
+            .addOnSuccessListener {
+                _authLoading.value = false
+                _pendingPasswordResetCode.value = null
+                _authSuccess.value = "Your password has been successfully reset! You can now log in with your new password."
+            }
+            .addOnFailureListener {
+                _authLoading.value = false
+                _authError.value = it.localizedMessage ?: "Failed to reset password."
+            }
     }
 
     fun completeEmailLinkSignIn(email: String, emailLink: String) {

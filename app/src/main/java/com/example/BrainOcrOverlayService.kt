@@ -94,7 +94,7 @@ class BrainOcrOverlayService : Service() {
     private fun getEdgePanelOpacity(): Float = prefs.getFloat("edge_panel_opacity", 0.7f)
 
     private fun isDarkTheme(): Boolean {
-        val theme = prefs.getString("theme_mode", "System Default") ?: "System Default"
+        val theme = prefs.getString("theme_mode", "Light") ?: "Light"
         return when (theme) {
             "Dark" -> true
             "Light" -> false

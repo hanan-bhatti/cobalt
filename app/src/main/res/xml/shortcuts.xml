@@ -3,7 +3,7 @@
     <shortcut
         android:shortcutId="smart_selection"
         android:enabled="true"
-        android:icon="@android:drawable/ic_menu_camera"
+        android:icon="@drawable/ic_custom_ocr"
         android:shortcutShortLabel="@string/shortcut_smart_selection_short"
         android:shortcutLongLabel="@string/shortcut_smart_selection_long">
         <intent
@@ -14,7 +14,7 @@
     <shortcut
         android:shortcutId="quick_note"
         android:enabled="true"
-        android:icon="@android:drawable/ic_menu_edit"
+        android:icon="@drawable/ic_custom_text"
         android:shortcutShortLabel="@string/shortcut_quick_note_short"
         android:shortcutLongLabel="@string/shortcut_quick_note_long">
         <intent

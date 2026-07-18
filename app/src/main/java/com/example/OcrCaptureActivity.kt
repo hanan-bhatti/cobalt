@@ -148,6 +148,25 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        
+        // Restart safety timeout
+        handler.removeCallbacks(timeoutRunnable)
+        handler.postDelayed(timeoutRunnable, 5000)
+
+        // Trigger a fresh projection screen capture prompt
+        com.example.utils.MediaProjectionCache.clear()
+        isCapturingState.value = false
+        val captureIntent = mediaProjectionManager.createScreenCaptureIntent()
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val config = android.media.projection.MediaProjectionConfig.createConfigForDefaultDisplay()
+            captureIntent.putExtra("android.media.projection.extra.EXTRA_MEDIA_PROJECTION_CONFIG", config)
+        }
+        projectionLauncher.launch(captureIntent)
+    }
+
     private fun startCaptureService(resultCode: Int, data: Intent) {
         val serviceIntent = Intent(this, ScreenCaptureService::class.java).apply {
             putExtra("result_code", resultCode)
