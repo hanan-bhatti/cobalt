@@ -58,6 +58,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.ui.screens.ProfileScreen
+import androidx.compose.runtime.DisposableEffect
+import com.google.firebase.analytics.FirebaseAnalytics
+import androidx.navigation.NavController
 import com.example.ui.screens.AuthScreen
 import com.example.ui.screens.CaptureScreen
 import com.example.ui.screens.DetailScreen
@@ -158,6 +161,42 @@ BackHandler(enabled = activeDetailItem != null) {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
                 val hazeState = remember { HazeState() }
+
+                val context = androidx.compose.ui.platform.LocalContext.current
+                DisposableEffect(navController) {
+                    val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
+                        val route = destination.route ?: return@OnDestinationChangedListener
+                        val bundle = Bundle().apply {
+                            putString(FirebaseAnalytics.Param.SCREEN_NAME, route)
+                            putString(FirebaseAnalytics.Param.SCREEN_CLASS, "MainActivity")
+                        }
+                        FirebaseAnalytics.getInstance(context).logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
+                    }
+                    navController.addOnDestinationChangedListener(listener)
+                    onDispose {
+                        navController.removeOnDestinationChangedListener(listener)
+                    }
+                }
+
+                LaunchedEffect(activeCaptureItem) {
+                    if (activeCaptureItem != null) {
+                        val bundle = Bundle().apply {
+                            putString(FirebaseAnalytics.Param.SCREEN_NAME, "note_editor")
+                            putString(FirebaseAnalytics.Param.SCREEN_CLASS, "MainActivity")
+                        }
+                        FirebaseAnalytics.getInstance(context).logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
+                    }
+                }
+
+                LaunchedEffect(activeDetailItem) {
+                    if (activeDetailItem != null) {
+                        val bundle = Bundle().apply {
+                            putString(FirebaseAnalytics.Param.SCREEN_NAME, "note_detail")
+                            putString(FirebaseAnalytics.Param.SCREEN_CLASS, "MainActivity")
+                        }
+                        FirebaseAnalytics.getInstance(context).logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
+                    }
+                }
 
                 Scaffold(
                     snackbarHost = { SnackbarHost(snackbarHostState) },

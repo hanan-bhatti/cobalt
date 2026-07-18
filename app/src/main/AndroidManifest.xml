@@ -19,6 +19,7 @@
     <uses-permission android:name="com.miui.securitycenter.permission.CLONE_APP_AUTORUN" />
 
     <application
+        android:name=".SecondBrainApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"

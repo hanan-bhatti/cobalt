@@ -58,8 +58,15 @@ import com.example.data.repository.SecondBrainRepository
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.unit.ColorProvider
 
+import com.example.utils.AnalyticsHelper
+
 class SecondBrainWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = SecondBrainWidget()
+
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        AnalyticsHelper.logWidgetAdded(context)
+    }
 
     override fun onUpdate(
         context: Context,

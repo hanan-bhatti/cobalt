@@ -16,56 +16,56 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.example.ui.screens
+ package com.example.ui.screens
 
-object LegalDocs {
-    val privacyPolicy = """
-        **Privacy Policy**
+ object LegalDocs {
+     val privacyPolicy = """
+         **Privacy Policy**
 
-        Last updated: 16 July 2026
+         Last updated: 18 July 2026
 
-        **1. Data storage**
-        Second Brain stores your data locally on your device by default. If you turn on cloud sync, your data is stored using Firebase. Nothing leaves your device unless you enable sync yourself.
+         **1. Data storage**
+         Second Brain stores your data locally on your device by default. If you turn on cloud sync, your data is stored using Firebase. Nothing leaves your device unless you enable sync yourself.
 
-        **2. AI features**
-        The OCR and smart-organization features send your images or notes to the Gemini API for processing. Google does not use this data to train its models.
+         **2. AI features**
+         The OCR and smart-organization features send your images or notes to the Gemini API for processing. Google does not use this data to train its models.
 
-        **3. Analytics**
-        There is no telemetry or usage tracking baked into the app. Nothing is collected without your explicit consent.
+         **3. Analytics**
+         Second Brain uses Firebase Analytics to understand how the app is used, things like which screens are opened, whether a note was created, edited, or deleted, and whether sign-in succeeded. This helps identify bugs and prioritize what to improve. No note content, search queries' full text is not stored beyond what's needed to log that a search happened, and no personally identifying information is sent as part of these events. Firebase Analytics also collects standard device and usage data (device model, OS version, country, session length) automatically, as governed by Google's privacy policy.
 
-        **4. Third-party services**
-        Firebase handles authentication and database storage when sync is enabled. Google's privacy policy covers whatever is stored on their servers.
+         **4. Third-party services**
+         Firebase handles authentication, database storage, and analytics. Google's privacy policy covers whatever is processed or stored on their servers.
 
-        **5. Open source**
-        Second Brain is free, open-source software licensed under AGPL-3.0-or-later. You can read every line of code, verify these claims yourself, or fork it, at [github.com/hanan-bhatti/second-brain](https://github.com/hanan-bhatti/second-brain).
+         **5. Open source**
+         Second Brain is free, open-source software licensed under AGPL-3.0-or-later. You can read every line of code, verify these claims yourself, or fork it, at [github.com/hanan-bhatti/second-brain](https://github.com/hanan-bhatti/second-brain).
 
-        **6. Deleting your data**
-        Delete your account from the settings panel and your remote data is erased.
-    """.trimIndent()
+         **6. Deleting your data**
+         Delete your account from the settings panel and your remote data is erased.
+     """.trimIndent()
 
-    val termsOfConditions = """
-        **Terms and Conditions**
+     val termsOfConditions = """
+         **Terms and Conditions**
 
-        Last updated: 16 July 2026
+         Last updated: 18 July 2026
 
-        **1. Agreement**
-        Using Second Brain means you agree to these terms.
+         **1. Agreement**
+         Using Second Brain means you agree to these terms.
 
-        **2. Your content**
-        Whatever you save, notes, links, images, stays yours. You're responsible for what you store in the app.
+         **2. Your content**
+         Whatever you save, notes, links, images, stays yours. You're responsible for what you store in the app.
 
-        **3. Fair use**
-        Don't use the app to store illegal content or abuse the AI/API integrations it relies on.
+         **3. Fair use**
+         Don't use the app to store illegal content or abuse the AI/API integrations it relies on.
 
-        **4. Uptime**
-        Cloud sync and AI features depend on third-party services (Firebase, Gemini), so they're provided as-is. Interruptions can happen and aren't guaranteed against.
+         **4. Uptime**
+         Cloud sync, analytics, and AI features depend on third-party services (Firebase, Gemini), so they're provided as-is. Interruptions can happen and aren't guaranteed against.
 
-        **5. License**
-        The app is licensed under AGPL-3.0-or-later. Source code, issues, and license text are all at [github.com/hanan-bhatti/second-brain](https://github.com/hanan-bhatti/second-brain).
+         **5. License**
+         The app is licensed under AGPL-3.0-or-later. Source code, issues, and license text are all at [github.com/hanan-bhatti/second-brain](https://github.com/hanan-bhatti/second-brain).
 
-        **6. Termination**
-        Accounts that abuse the service or violate these terms can be suspended.
-    """.trimIndent()
+         **6. Termination**
+         Accounts that abuse the service or violate these terms can be suspended.
+     """.trimIndent()
 
     val faq = """
         Q: How do I save a link quickly?

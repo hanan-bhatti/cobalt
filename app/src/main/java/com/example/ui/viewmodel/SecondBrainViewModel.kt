@@ -40,6 +40,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.io.InputStream
 import java.util.UUID
+import com.example.utils.AnalyticsHelper
+import com.example.utils.AnalyticsEvents
 
 class SecondBrainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -204,6 +206,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             val itemsToDelete = allItems.value.filter { selectedIds.contains(it.id) }
             itemsToDelete.forEach { item ->
                 repository.deleteItem(item)
+                AnalyticsHelper.logNoteDeleted(context, item.id, item.type.name)
             }
             clearSelection()
         }
@@ -651,6 +654,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             _authError.value = null
             prefs.edit().putString("simulated_email", email).apply()
             _userEmail.value = email
+            AnalyticsHelper.logSignInSuccess(context, "Simulated")
             showToast("Successfully logged in as $email.")
             return
         }
@@ -664,6 +668,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             .addOnSuccessListener {
                 val userMail = it.user?.email ?: email
                 _userEmail.value = userMail
+                AnalyticsHelper.logSignInSuccess(context, "Email/Password")
                 viewModelScope.launch {
                     try {
                         repository.restoreUserDataFromCloud()
@@ -678,7 +683,9 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             }
             .addOnFailureListener {
                 _authLoading.value = false
-                _authError.value = it.localizedMessage ?: "Sign in failed."
+                val errorMsg = it.localizedMessage ?: "Sign in failed."
+                _authError.value = errorMsg
+                AnalyticsHelper.logSignInFailed(context, "Email/Password", errorMsg)
             }
     }
 
@@ -722,19 +729,22 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     val authResult = auth.signInWithCredential(authCredential).await()
                     val userMail = authResult.user?.email ?: "Google User"
                     _userEmail.value = userMail
+                    AnalyticsHelper.logSignInSuccess(context, "Google")
                     repository.restoreUserDataFromCloud()
                     repository.syncUnsyncedItems()
                     showToast("Successfully logged in and synced as $userMail.")
                     onCompletion(true)
                 } else {
-                    _authError.value = "Unexpected credential type: ${credential.type}"
+                    val errorMsg = "Unexpected credential type: ${credential.type}"
+                    _authError.value = errorMsg
+                    AnalyticsHelper.logSignInFailed(context, "Google", errorMsg)
                     onCompletion(false)
                 }
             } catch (e: Exception) {
                 Log.e("SecondBrainVM", "Google Sign-In failed: ${e.message}")
                 val msg = e.localizedMessage ?: ""
-                
                 _authError.value = "Google Sign-In failed: $msg"
+                AnalyticsHelper.logSignInFailed(context, "Google", e.localizedMessage ?: "Google Sign-In failed")
                 onCompletion(false)
             } finally {
                 _authLoading.value = false
@@ -1413,6 +1423,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     timestamp = System.currentTimeMillis()
                 )
                 val savedItem = repository.saveItem(newItem, null)
+                AnalyticsHelper.logNoteCreated(context, savedItem.id, savedItem.type.name)
                 showToast("Item saved successfully.")
                 
                 // Sync to Firestore and Storage in background
@@ -1462,6 +1473,11 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 repository.saveItem(finalItem, pendingMediaBytes) { progress ->
                     _saveProgress.value = progress
                 }
+                if (isEdit) {
+                    AnalyticsHelper.logNoteEdited(context, finalItem.id, finalItem.type.name)
+                } else {
+                    AnalyticsHelper.logNoteCreated(context, finalItem.id, finalItem.type.name)
+                }
                 _saveProgress.value = 1.0f
                 kotlinx.coroutines.delay(200) // slight delay to show 100% progress state
                 cancelCapture()
@@ -1487,6 +1503,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     fun deleteSavedItem(item: SavedItem) {
         viewModelScope.launch {
             repository.deleteItem(item)
+            AnalyticsHelper.logNoteDeleted(context, item.id, item.type.name)
         }
     }
 
@@ -1569,6 +1586,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     fun updateSavedItem(item: SavedItem) {
         viewModelScope.launch {
             repository.saveItem(item, null)
+            AnalyticsHelper.logNoteEdited(context, item.id, item.type.name)
             launch(kotlinx.coroutines.Dispatchers.IO) {
                 try {
                     repository.syncUnsyncedItems()

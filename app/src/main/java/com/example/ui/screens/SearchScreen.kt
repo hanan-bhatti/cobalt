@@ -63,6 +63,7 @@ import coil.compose.AsyncImage
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.data.model.getBestImagePath
+import com.example.utils.AnalyticsHelper
 import com.example.ui.viewmodel.SecondBrainViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -113,6 +114,7 @@ fun SearchScreen(
                         if (searchQuery.isNotBlank()) {
                             addQueryToHistory(prefs, searchQuery)
                             historyList = getSearchHistory(prefs)
+                            AnalyticsHelper.logSearchPerformed(context, searchQuery)
                         }
                         focusManager.clearFocus() 
                     }),
@@ -239,6 +241,7 @@ fun SearchScreen(
                                     .clickable {
                                          viewModel.setSearchQuery(query)
                                          focusManager.clearFocus()
+                                         AnalyticsHelper.logSearchPerformed(context, query)
                                     }
                                     .padding(horizontal = 16.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
