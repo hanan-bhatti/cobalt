@@ -63,6 +63,7 @@ import com.example.ui.components.bounceClick
 import com.example.ui.viewmodel.SecondBrainViewModel
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import com.example.utils.DevicePerformance
@@ -975,7 +976,8 @@ fun FolderContentsBrowser(
             state = pullToRefreshState,
             modifier = Modifier
                 .padding(innerPadding)
-                .fillMaxSize(),
+                .fillMaxSize()
+                .hazeSource(state = hazeState),
             indicator = {
                 PullToRefreshDefaults.LoadingIndicator(
                     state = pullToRefreshState,
