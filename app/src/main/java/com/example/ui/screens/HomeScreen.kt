@@ -517,7 +517,10 @@ fun HomeScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Top
                             ) {
-                                OnboardingSharingGuide(onDismiss = { viewModel.dismissOnboarding() })
+                                OnboardingSharingGuide(
+                                    onDismiss = { viewModel.dismissOnboarding() },
+                                    modifier = Modifier.padding(bottom = 96.dp)
+                                )
                             }
                         } else {
                             Column(
@@ -1589,29 +1592,31 @@ fun OnboardingSharingGuide(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        tonalElevation = 2.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
+                .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Header Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(modifier = Modifier.width(24.dp)) // balance close button
+                Spacer(modifier = Modifier.width(24.dp))
                 Text(
-                    text = "💡 Your Second Brain is Ready!",
-                    style = MaterialTheme.typography.titleLarge,
+                    text = "Your Second Brain is Ready!",
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -1619,7 +1624,9 @@ fun OnboardingSharingGuide(
                 )
                 IconButton(
                     onClick = onDismiss,
-                    modifier = Modifier.size(24.dp).testTag("dismiss_onboarding_button")
+                    modifier = Modifier
+                        .size(24.dp)
+                        .testTag("dismiss_onboarding_button")
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_custom_close),
@@ -1629,27 +1636,32 @@ fun OnboardingSharingGuide(
                     )
                 }
             }
-            
-            Spacer(modifier = Modifier.height(10.dp))
-            
+
+            Spacer(modifier = Modifier.height(4.dp))
+
             Text(
-                text = "Capture any web link, photo, code block, or note effortlessly.",
-                style = MaterialTheme.typography.bodyMedium,
+                text = "Capture any web link, photo, code, or note effortlessly.",
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
 
             SharingGuideVisualMockup()
 
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 12.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+            )
+
             Text(
-                text = "HOW TO GET STARTED:",
-                fontSize = 11.sp,
+                text = "HOW TO GET STARTED",
+                style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.sp,
-                color = MaterialTheme.colorScheme.secondary,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .align(Alignment.Start)
-                    .padding(bottom = 12.dp)
+                    .padding(bottom = 10.dp)
             )
 
             // Step 1
@@ -1658,8 +1670,8 @@ fun OnboardingSharingGuide(
                 title = "Share from any app",
                 description = "Open Chrome, YouTube, X, or Gallery. Tap \"Share\" on any webpage, image, or text selection."
             )
-            
-            Spacer(modifier = Modifier.height(14.dp))
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Step 2
             OnboardingStepRow(
@@ -1668,7 +1680,7 @@ fun OnboardingSharingGuide(
                 description = "Choose \"Second Brain\" from the system share sheet to instantly save, parse, and auto-categorize it."
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Step 3
             OnboardingStepRow(
@@ -1685,19 +1697,19 @@ fun SharingGuideVisualMockup() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 16.dp),
+            .padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Source card (e.g. Browser)
         Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
-            modifier = Modifier.size(width = 80.dp, height = 90.dp)
+            shape = RoundedCornerShape(14.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+            modifier = Modifier.size(width = 72.dp, height = 76.dp)
         ) {
             Column(
-                modifier = Modifier.padding(8.dp),
+                modifier = Modifier.padding(6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
@@ -1705,42 +1717,36 @@ fun SharingGuideVisualMockup() {
                     painter = painterResource(id = R.drawable.ic_custom_globe),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(20.dp)
                 )
                 Text(
-                    text = "Any App\nor Site",
+                    text = "Any App",
                     fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
-        // Animated / Dotted connection
-        Box(
+        Icon(
+            painter = painterResource(id = R.drawable.ic_custom_arrow_right),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
             modifier = Modifier
-                .width(60.dp)
-                .height(30.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_custom_arrow_right),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
-            )
-        }
+                .padding(horizontal = 16.dp)
+                .size(18.dp)
+        )
 
         // Destination card (Second Brain)
         Surface(
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(14.dp),
             color = MaterialTheme.colorScheme.primaryContainer,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
-            modifier = Modifier.size(width = 80.dp, height = 90.dp)
+            modifier = Modifier.size(width = 72.dp, height = 76.dp)
         ) {
             Column(
-                modifier = Modifier.padding(8.dp),
+                modifier = Modifier.padding(6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
@@ -1748,12 +1754,12 @@ fun SharingGuideVisualMockup() {
                     painter = painterResource(id = R.drawable.ic_custom_folder_special),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(20.dp)
                 )
                 Text(
-                    text = "Second\nBrain",
+                    text = "Second Brain",
                     fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
