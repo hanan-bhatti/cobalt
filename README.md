@@ -4,9 +4,9 @@ A universal capture and personal knowledge archive with minimalist design and Ge
 
 <p align="center">
   <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Android/android3.svg" alt="Android Platform" height="30">
-  <img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg" alt="License: AGPL v3" height="30">
   <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Github/github3.svg" alt="Get it on GitHub" height="30">
   <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Kotlin/kotlin1.svg" alt="Kotlin" height="30">
+  <img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg" alt="License: AGPL v3" height="30">
 </p>
 
 ---

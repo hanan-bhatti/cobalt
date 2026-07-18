@@ -434,7 +434,7 @@ fun FoldersScreen(
                             focusedElevation = 0.dp,
                             hoveredElevation = 0.dp
                         ),
-                        containerColor = if (DevicePerformance.shouldUseBlur(context)) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
+                        containerColor = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = folderFabModifier
                             .bounceClick(folderInteractionSource)
@@ -945,7 +945,7 @@ fun FolderContentsBrowser(
                     focusedElevation = 0.dp,
                     hoveredElevation = 0.dp
                 ),
-                containerColor = if (DevicePerformance.shouldUseBlur(context)) fabColor.copy(alpha = 0.55f) else fabColor.copy(alpha = 0.92f),
+                containerColor = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else fabColor.copy(alpha = 0.92f),
                 contentColor = Color.White,
                 modifier = detailFabModifier
                     .bounceClick(detailInteractionSource)

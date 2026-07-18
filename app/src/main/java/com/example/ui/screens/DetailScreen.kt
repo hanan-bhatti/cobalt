@@ -269,8 +269,7 @@ fun DetailScreen(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(
-                    top = innerPadding.calculateTopPadding(),
-                    bottom = 96.dp
+                    top = innerPadding.calculateTopPadding()
                 )
                 .padding(horizontal = 24.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(28.dp)
@@ -620,6 +619,7 @@ fun DetailScreen(
                     }
                 )
             }
+            Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding() + 16.dp))
         }
     }
 }
