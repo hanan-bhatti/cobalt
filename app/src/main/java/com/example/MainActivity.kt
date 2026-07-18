@@ -1,3 +1,21 @@
+/*
+ * Second Brain - A universal capture and personal knowledge archive
+ * Copyright (C) 2026 Hanan Bhatti
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package com.example
 
 import android.content.Intent
@@ -53,7 +71,7 @@ import androidx.compose.material.icons.outlined.*
 import com.example.ui.components.CustomBottomBar
 import com.example.ui.components.BottomBarItem
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.haze
+import dev.chrisbanes.haze.hazeSource
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.filled.Search
@@ -148,7 +166,7 @@ BackHandler(enabled = activeDetailItem != null) {
                     Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
                         @OptIn(ExperimentalSharedTransitionApi::class)
                         SharedTransitionLayout {
-                            Surface(modifier = Modifier.fillMaxSize().haze(hazeState)) {
+                            Surface(modifier = Modifier.fillMaxSize().hazeSource(hazeState)) {
                                  // Standard Home and Authentication navigation flow
                                  NavHost(
                                      navController = navController,

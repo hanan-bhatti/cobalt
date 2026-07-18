@@ -1,0 +1,45 @@
+name: Feature Request
+description: Propose a new feature or UX enhancement for Second Brain
+title: "[Feature]: "
+labels: ["enhancement", "feature-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea to make Second Brain even better? Propose it here! Please check existing issues/requests first to prevent duplicates.
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Problem / Motivation
+      placeholder: What need does this feature request address? Describe the pain point or problem you are trying to solve.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      placeholder: Describe the solution or new behavior you'd like to see implemented.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      placeholder: Describe any alternative solutions or workarounds you have considered.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      placeholder: Add any other context, screenshots, or design thoughts about the feature request here.
+
+  - type: checkboxes
+    id: search-confirmation
+    attributes:
+      label: Search Confirmation
+      options:
+        - label: I have searched existing issues and discussions to verify this feature has not already been requested.
+          required: true

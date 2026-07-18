@@ -1,0 +1,85 @@
+name: Bug Report
+description: File a bug report to help us improve Second Brain
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a bug! Please ensure you have searched existing issues first.
+        
+        **Note:** For reporting security issues, please refer directly to our [Security Policy](https://github.com/hanan-bhatti/second-brain/blob/main/SECURITY.md) instead of using this public form.
+
+  - type: dropdown
+    id: app-version
+    attributes:
+      label: App Version
+      description: What version of Second Brain are you running? (Refer to SECURITY.md for supported versions)
+      options:
+        - v0.9.0-beta01
+        - Custom Build / Development Branch
+    validations:
+      required: true
+
+  - type: input
+    id: device-info
+    attributes:
+      label: Android Version & Device Model
+      placeholder: e.g. Android 14, Xiaomi Redmi Note 12 Pro / Oppo Find X5
+      description: |
+        Please specify your Android OS version and device manufacturer/model. 
+        This is critical as Second Brain contains OEM-specific logic for Oppo, Vivo, and Xiaomi background process management.
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description of the Bug
+      placeholder: Provide a clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      placeholder: |
+        1. Open the app
+        2. Go to '...'
+        3. Click '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      placeholder: A clear description of what you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      placeholder: A clear description of what actually happened.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Stack Traces (Optional)
+      description: Attach relevant terminal output or crash reports (e.g. from `adb logcat`).
+      render: bash
+      placeholder: Paste stack traces or logs here.
+
+  - type: checkboxes
+    id: search-confirmation
+    attributes:
+      label: Search Confirmation
+      options:
+        - label: I have searched existing issues to ensure this bug has not already been reported.
+          required: true

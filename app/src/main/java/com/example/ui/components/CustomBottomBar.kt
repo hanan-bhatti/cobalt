@@ -1,3 +1,21 @@
+/*
+ * Second Brain - A universal capture and personal knowledge archive
+ * Copyright (C) 2026 Hanan Bhatti
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package com.example.ui.components
 
 import androidx.compose.animation.animateContentSize
@@ -36,7 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeChild
+import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import com.example.utils.DevicePerformance
@@ -59,7 +77,7 @@ fun CustomBottomBar(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(32.dp))
-            .hazeChild(state = hazeState, style = HazeStyle(
+            .hazeEffect(state = hazeState, style = HazeStyle(
                 backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
                 tint = HazeTint(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
                 blurRadius = 20.dp,
