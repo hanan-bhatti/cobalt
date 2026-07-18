@@ -20,23 +20,32 @@ package com.example.ui.components
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.window.Dialog
 import com.example.R
 import com.example.data.model.SavedItemType
 import com.example.ui.components.bounceClick
@@ -46,8 +55,6 @@ import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import com.example.utils.DevicePerformance
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.draw.clip
 
 @Composable
 fun GlobalExpandingFab(viewModel: SecondBrainViewModel, hazeState: HazeState) {
@@ -60,6 +67,9 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel, hazeState: HazeState) {
 
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
+    val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
+    val blurRadius by viewModel.blurRadius.collectAsState()
+    val blurOpacity by viewModel.blurOpacity.collectAsState()
 
     if (isSelectionMode) return
 
@@ -167,16 +177,17 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel, hazeState: HazeState) {
                 }
 
                 val context = LocalContext.current
-                val fabModifier = if (DevicePerformance.shouldUseBlur(context)) {
+                val useBlur = DevicePerformance.shouldUseBlur(context) && !forceDisableBlur
+                val fabModifier = if (useBlur) {
                     Modifier
                         .testTag("fab_expand")
                         .size(56.dp)
                         .clip(CircleShape)
                         .hazeEffect(state = hazeState, style = HazeStyle(
                             backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-                            tint = HazeTint(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
-                            blurRadius = 20.dp,
-                            noiseFactor = 0.05f
+                            tint = HazeTint(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = blurOpacity)),
+                            blurRadius = blurRadius.dp,
+                            noiseFactor = 0.02f
                         ))
                 } else {
                     Modifier
@@ -196,7 +207,7 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel, hazeState: HazeState) {
                         focusedElevation = 0.dp,
                         hoveredElevation = 0.dp
                     ),
-                    containerColor = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
+                    containerColor = if (useBlur) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = fabModifier
                         .bounceClick(fabInteractionSource)
@@ -214,102 +225,259 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel, hazeState: HazeState) {
     }
 
     if (showAddFolderDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                showAddFolderDialog = false
-                newFolderName = ""
-            },
-            title = { Text("New Custom Folder", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
-            text = {
-                OutlinedTextField(
-                    value = newFolderName,
-                    onValueChange = { newFolderName = it },
-                    label = { Text("Folder Name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.createFolder(newFolderName)
-                        showAddFolderDialog = false
-                        newFolderName = ""
+        val focusManager = LocalFocusManager.current
+        Dialog(onDismissRequest = {
+            showAddFolderDialog = false
+            newFolderName = ""
+        }) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                tonalElevation = 3.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(24.dp)) {
+
+                    // Header
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_folder),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "New Folder",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Organise your captures",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
-                ) {
-                    Text("Create", color = MaterialTheme.colorScheme.primary)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showAddFolderDialog = false
-                    newFolderName = ""
-                }) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.secondary)
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    OutlinedTextField(
+                        value = newFolderName,
+                        onValueChange = { newFolderName = it },
+                        label = { Text("Folder Name") },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_folder),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.1f)
+                        ),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                showAddFolderDialog = false
+                                newFolderName = ""
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Cancel")
+                        }
+                        Button(
+                            onClick = {
+                                if (newFolderName.isNotBlank()) {
+                                    viewModel.createFolder(newFolderName)
+                                    showAddFolderDialog = false
+                                    newFolderName = ""
+                                }
+                            },
+                            enabled = newFolderName.isNotBlank(),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Create")
+                        }
+                    }
                 }
             }
-        )
+        }
     }
 
     if (showQuickNoteOverlay) {
-        AlertDialog(
-            onDismissRequest = {
-                showQuickNoteOverlay = false
-                captureTitle = ""
-                captureContent = ""
-            },
-            title = { Text("Quick Note", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val focusManager = LocalFocusManager.current
+        Dialog(onDismissRequest = {
+            showQuickNoteOverlay = false
+            captureTitle = ""
+            captureContent = ""
+        }) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                tonalElevation = 3.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(24.dp)) {
+
+                    // Header
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_edit),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Quick Note",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Capture a thought instantly",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    val fieldColors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.1f)
+                    )
+
                     OutlinedTextField(
                         value = captureTitle,
                         onValueChange = { captureTitle = it },
-                        label = { Text("Title") },
+                        label = { Text("Title (optional)") },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_text),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
                         singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = fieldColors,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
                     OutlinedTextField(
                         value = captureContent,
                         onValueChange = { captureContent = it },
-                        label = { Text("Content") },
-                        modifier = Modifier.fillMaxWidth().height(150.dp)
+                        label = { Text("Note") },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_edit),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = fieldColors,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp)
                     )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.startManualCapture(SavedItemType.TEXT)
-                        viewModel.updateActiveCaptureItem { item ->
-                            item.copy(title = captureTitle, content = captureContent)
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                showQuickNoteOverlay = false
+                                captureTitle = ""
+                                captureContent = ""
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Cancel")
                         }
-                        viewModel.saveActiveItem()
-                        showQuickNoteOverlay = false
-                        captureTitle = ""
-                        captureContent = ""
-                    },
-                    enabled = !isSaving
-                ) {
-                    if (isSaving) {
-                        androidx.compose.material3.CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Text("Save", color = MaterialTheme.colorScheme.primary)
+                        Button(
+                            onClick = {
+                                viewModel.startManualCapture(SavedItemType.TEXT)
+                                viewModel.updateActiveCaptureItem { item ->
+                                    item.copy(title = captureTitle, content = captureContent)
+                                }
+                                viewModel.saveActiveItem()
+                                showQuickNoteOverlay = false
+                                captureTitle = ""
+                                captureContent = ""
+                            },
+                            enabled = !isSaving && captureContent.isNotBlank(),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            if (isSaving) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text("Save Note")
+                            }
+                        }
                     }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showQuickNoteOverlay = false
-                    captureTitle = ""
-                    captureContent = ""
-                }) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.secondary)
-                }
             }
-        )
+        }
     }
 }

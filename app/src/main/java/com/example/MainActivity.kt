@@ -387,6 +387,7 @@ BackHandler(enabled = activeDetailItem != null) {
                                     items = items,
                                     currentRoute = currentRoute,
                                     hazeState = hazeState,
+                                    viewModel = viewModel,
                                     onNavigate = { route ->
                                         navController.navigate(route) {
                                             popUpTo("home") {

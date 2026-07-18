@@ -58,6 +58,9 @@ import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import com.example.utils.DevicePerformance
+import com.example.ui.viewmodel.SecondBrainViewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 
 data class BottomBarItem(
     val route: String,
@@ -70,18 +73,23 @@ fun CustomBottomBar(
     items: List<BottomBarItem>,
     currentRoute: String?,
     hazeState: HazeState,
+    viewModel: SecondBrainViewModel,
     onNavigate: (String) -> Unit
 ) {
     val context = LocalContext.current
-    val rowModifier = if (DevicePerformance.shouldUseBlur(context)) {
+    val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
+    val blurRadius by viewModel.blurRadius.collectAsState()
+    val blurOpacity by viewModel.blurOpacity.collectAsState()
+    val useBlur = DevicePerformance.shouldUseBlur(context) && !forceDisableBlur
+    val rowModifier = if (useBlur) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(32.dp))
             .hazeEffect(state = hazeState, style = HazeStyle(
                 backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-                tint = HazeTint(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
-                blurRadius = 20.dp,
-                noiseFactor = 0.05f
+                tint = HazeTint(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = blurOpacity)),
+                blurRadius = blurRadius.dp,
+                noiseFactor = 0.02f
             ))
             .padding(horizontal = 4.dp, vertical = 8.dp)
     } else {

@@ -88,6 +88,8 @@ fun DetailScreen(
     val activeItem by viewModel.activeDetailItem.collectAsState()
     val item = activeItem ?: return
 
+    val localHazeState = remember { HazeState() }
+
     val customFolders by viewModel.customFolderEntities.collectAsState()
     val folderColor = remember(item, customFolders) {
         val firstFolder = item.folders.firstOrNull()
@@ -118,6 +120,9 @@ fun DetailScreen(
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val coroutineScope = rememberCoroutineScope()
+    val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
+    val blurRadius by viewModel.blurRadius.collectAsState()
+    val blurOpacity by viewModel.blurOpacity.collectAsState()
 
     BackHandler {
         onClose()
@@ -184,14 +189,15 @@ fun DetailScreen(
             )
         },
         bottomBar = {
-            val barModifier = if (DevicePerformance.shouldUseBlur(context)) {
+            val useBlur = DevicePerformance.shouldUseBlur(context) && !forceDisableBlur
+            val barModifier = if (useBlur) {
                 Modifier
                     .fillMaxWidth()
-                    .hazeEffect(state = hazeState, style = HazeStyle(
+                    .hazeEffect(state = localHazeState, style = HazeStyle(
                         backgroundColor = MaterialTheme.colorScheme.background,
-                        tint = HazeTint(MaterialTheme.colorScheme.background.copy(alpha = 0.55f)),
-                        blurRadius = 20.dp,
-                        noiseFactor = 0.05f
+                        tint = HazeTint(MaterialTheme.colorScheme.background.copy(alpha = blurOpacity)),
+                        blurRadius = blurRadius.dp,
+                        noiseFactor = 0.02f
                     ))
             } else {
                 Modifier.fillMaxWidth()
@@ -199,7 +205,7 @@ fun DetailScreen(
             Surface(
                 modifier = barModifier,
                 tonalElevation = 0.dp,
-                color = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else MaterialTheme.colorScheme.background.copy(alpha = 0.92f),
+                color = if (useBlur) Color.Transparent else MaterialTheme.colorScheme.background.copy(alpha = 0.92f),
                 border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
             ) {
                 Row(
@@ -268,7 +274,7 @@ fun DetailScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .hazeSource(state = hazeState)
+                .hazeSource(state = localHazeState)
                 .verticalScroll(scrollState)
                 .padding(
                     top = innerPadding.calculateTopPadding()

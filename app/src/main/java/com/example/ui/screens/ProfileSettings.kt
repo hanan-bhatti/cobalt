@@ -63,6 +63,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.text.style.TextOverflow
+import com.example.utils.DevicePerformance
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -362,6 +363,45 @@ fun SettingsScreen(
                             ) {
                                 Text(text = level, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
                             }
+                        }
+                    }
+                }
+
+                if (DevicePerformance.shouldUseBlur(context)) {
+                    val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
+                    val blurRadius by viewModel.blurRadius.collectAsState()
+                    val blurOpacity by viewModel.blurOpacity.collectAsState()
+
+                    SettingsSection(
+                        title = "Blur Effects",
+                        subtext = "Frosted glass blur applied to the bottom bar, FAB, and detail toolbar. Requires a capable device."
+                    ) {
+                        SettingsToggleRow(
+                            title = "Enable Blur",
+                            subtitle = "Toggle frosted glass effect app-wide",
+                            checked = !forceDisableBlur,
+                            onCheckedChange = { enabled -> viewModel.setForceDisableBlur(!enabled) }
+                        )
+
+                        if (!forceDisableBlur) {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            SliderRow(
+                                title = "Blur Radius",
+                                value = blurRadius.toFloat(),
+                                valueStr = "${blurRadius}dp",
+                                onValueChange = { viewModel.setBlurRadius(it.toInt()) },
+                                valueRange = 5f..50f
+                            )
+                            SliderRow(
+                                title = "Blur Opacity",
+                                value = blurOpacity,
+                                valueStr = "${(blurOpacity * 100).toInt()}%",
+                                onValueChange = { viewModel.setBlurOpacity(it) },
+                                valueRange = 0.05f..0.80f
+                            )
                         }
                     }
                 }

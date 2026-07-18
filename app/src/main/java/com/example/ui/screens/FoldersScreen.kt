@@ -79,7 +79,17 @@ val folderPresetColors = listOf(
     "#5C6BC0" to "Royal Indigo",
     "#BA68C8" to "Lavender Dream",
     "#D81B60" to "Crimson Berry",
-    "#78909C" to "Slate Silver"
+    "#78909C" to "Slate Silver",
+    "#F06292" to "Flamingo Pink",
+    "#FF8A65" to "Terra Cotta",
+    "#FFD54F" to "Golden Silk",
+    "#AED581" to "Matcha Green",
+    "#4DB6AC" to "Ocean Mist",
+    "#4DD0E1" to "Crystal Cyan",
+    "#7986CB" to "Twilight Blue",
+    "#9FA8DA" to "Periwinkle Sky",
+    "#8D6E63" to "Cocoa Bean",
+    "#BCAAA4" to "Desert Sand"
 )
 
 // Preset Palette of standard premium Icons
@@ -144,6 +154,8 @@ fun FoldersScreen(
     val allItems by viewModel.allItems.collectAsState()
     val customFolderEntities by viewModel.customFolderEntities.collectAsState()
 
+    val gridHazeState = remember { HazeState() }
+
     var activeBrowseFolder by remember { mutableStateOf<String?>(null) }
 
     val activeDetailItem by viewModel.activeDetailItem.collectAsState()
@@ -155,7 +167,7 @@ fun FoldersScreen(
 
     var showAddFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
-    
+
     var folderSearchQuery by remember { mutableStateOf("") }
 
     var newFolderColorHex by remember { mutableStateOf(folderPresetColors.first().first) }
@@ -171,6 +183,9 @@ fun FoldersScreen(
     }
 
     val context = LocalContext.current
+    val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
+    val blurRadius by viewModel.blurRadius.collectAsState()
+    val blurOpacity by viewModel.blurOpacity.collectAsState()
 
     AnimatedContent(
         targetState = activeBrowseFolder,
@@ -238,6 +253,7 @@ fun FoldersScreen(
                         columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
                         modifier = Modifier
                             .fillMaxSize()
+                            .hazeSource(state = gridHazeState)
                             .padding(innerPadding)
                             .padding(horizontal = 16.dp),
                         contentPadding = PaddingValues(bottom = 100.dp),
@@ -401,16 +417,17 @@ fun FoldersScreen(
                     }
                 }
 
-                val folderFabModifier = if (DevicePerformance.shouldUseBlur(context)) {
+                val useBlurGrid = DevicePerformance.shouldUseBlur(context) && !forceDisableBlur
+                val folderFabModifier = if (useBlurGrid) {
                     Modifier
                         .testTag("fab_create_folder")
                         .size(56.dp)
                         .clip(CircleShape)
-                        .hazeEffect(state = hazeState, style = HazeStyle(
+                        .hazeEffect(state = gridHazeState, style = HazeStyle(
                             backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
-                            tint = HazeTint(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
-                            blurRadius = 20.dp,
-                            noiseFactor = 0.05f
+                            tint = HazeTint(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = blurOpacity)),
+                            blurRadius = blurRadius.dp,
+                            noiseFactor = 0.02f
                         ))
                 } else {
                     Modifier
@@ -435,7 +452,7 @@ fun FoldersScreen(
                             focusedElevation = 0.dp,
                             hoveredElevation = 0.dp
                         ),
-                        containerColor = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
+                        containerColor = if (useBlurGrid) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = folderFabModifier
                             .bounceClick(folderInteractionSource)
@@ -858,6 +875,11 @@ fun FolderContentsBrowser(
     val isSyncing by viewModel.isSyncing.collectAsState()
     val context = LocalContext.current
 
+    val detailHazeState = remember { HazeState() }
+    val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
+    val blurRadius by viewModel.blurRadius.collectAsState()
+    val blurOpacity by viewModel.blurOpacity.collectAsState()
+
     // Filter items matching current browsing folder (either custom tag or system type)
     val folderItems = remember(items, folderName) {
         val systemCategory = SavedItemType.entries.find { it.displayName == folderName }
@@ -912,23 +934,24 @@ fun FolderContentsBrowser(
                 SavedItemType.CODE -> Color(0xFF66BB6A)
                 SavedItemType.AUDIO -> Color(0xFF26A69A)
             }
-            
-            val detailFabModifier = if (DevicePerformance.shouldUseBlur(context)) {
+
+            val useBlurDetail = DevicePerformance.shouldUseBlur(context) && !forceDisableBlur
+            val detailFabModifier = if (useBlurDetail) {
                 Modifier
                     .size(56.dp)
                     .clip(CircleShape)
-                    .hazeEffect(state = hazeState, style = HazeStyle(
+                    .hazeEffect(state = detailHazeState, style = HazeStyle(
                         backgroundColor = fabColor,
-                        tint = HazeTint(fabColor.copy(alpha = 0.55f)),
-                        blurRadius = 20.dp,
-                        noiseFactor = 0.05f
+                        tint = HazeTint(fabColor.copy(alpha = blurOpacity)),
+                        blurRadius = blurRadius.dp,
+                        noiseFactor = 0.02f
                     ))
             } else {
                 Modifier
                     .size(56.dp)
                     .clip(CircleShape)
             }
-            
+
             val detailInteractionSource = remember { MutableInteractionSource() }
             FloatingActionButton(
                 onClick = {
@@ -946,7 +969,7 @@ fun FolderContentsBrowser(
                     focusedElevation = 0.dp,
                     hoveredElevation = 0.dp
                 ),
-                containerColor = if (DevicePerformance.shouldUseBlur(context)) Color.Transparent else fabColor.copy(alpha = 0.92f),
+                containerColor = if (useBlurDetail) Color.Transparent else fabColor.copy(alpha = 0.92f),
                 contentColor = Color.White,
                 modifier = detailFabModifier
                     .bounceClick(detailInteractionSource)
@@ -977,7 +1000,7 @@ fun FolderContentsBrowser(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-                .hazeSource(state = hazeState),
+                .hazeSource(state = detailHazeState),
             indicator = {
                 PullToRefreshDefaults.LoadingIndicator(
                     state = pullToRefreshState,
@@ -1129,229 +1152,235 @@ fun FolderBrowseItemRow(
             }
         }
 
-        DropdownMenu(
-            expanded = showContextMenu,
-            onDismissRequest = { showContextMenu = false },
-            modifier = Modifier
-                .width(220.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.surface)
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+        MaterialTheme(
+            colorScheme = MaterialTheme.colorScheme.copy(
+                surfaceContainer = MaterialTheme.colorScheme.surface,
+                surfaceContainerLow = MaterialTheme.colorScheme.surface,
+                surfaceContainerHigh = MaterialTheme.colorScheme.surface,
+                surfaceContainerHighest = MaterialTheme.colorScheme.surface
+            )
         ) {
-            // 1. View Action (For all)
-            DropdownMenuItem(
-                leadingIcon = { 
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_custom_eye), 
-                        contentDescription = null, 
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    ) 
-                },
-                text = { Text("View Detail", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
-                onClick = {
-                    showContextMenu = false
-                    onClick()
-                },
-                colors = MenuDefaults.itemColors(
-                    textColor = MaterialTheme.colorScheme.onSurface,
-                    leadingIconColor = MaterialTheme.colorScheme.primary
+            DropdownMenu(
+                expanded = showContextMenu,
+                onDismissRequest = { showContextMenu = false },
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.width(220.dp)
+            ) {
+                // 1. View Action (For all)
+                DropdownMenuItem(
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_eye),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    text = { Text("View Detail", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
+                    onClick = {
+                        showContextMenu = false
+                        onClick()
+                    },
+                    colors = MenuDefaults.itemColors(
+                        textColor = MaterialTheme.colorScheme.onSurface,
+                        leadingIconColor = MaterialTheme.colorScheme.primary
+                    )
                 )
-            )
 
-            // 2. Content Aware Action
-            when (item.type) {
-                SavedItemType.LINK -> {
-                    DropdownMenuItem(
-                        leadingIcon = { 
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_globe), 
-                                contentDescription = null, 
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            ) 
-                        },
-                        text = { Text("Open in Browser", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
-                        onClick = {
-                            showContextMenu = false
-                            try {
-                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(item.content))
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                android.widget.Toast.makeText(context, "Cannot open browser", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        colors = MenuDefaults.itemColors(
-                            textColor = MaterialTheme.colorScheme.onSurface,
-                            leadingIconColor = MaterialTheme.colorScheme.primary
+                // 2. Content Aware Action
+                when (item.type) {
+                    SavedItemType.LINK -> {
+                        DropdownMenuItem(
+                            leadingIcon = {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_globe),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            text = { Text("Open in Browser", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
+                            onClick = {
+                                showContextMenu = false
+                                try {
+                                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(item.content))
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    android.widget.Toast.makeText(context, "Cannot open browser", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            colors = MenuDefaults.itemColors(
+                                textColor = MaterialTheme.colorScheme.onSurface,
+                                leadingIconColor = MaterialTheme.colorScheme.primary
+                            )
                         )
-                    )
-                }
-                SavedItemType.TEXT, SavedItemType.CODE -> {
-                    DropdownMenuItem(
-                        leadingIcon = { 
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_copy), 
-                                contentDescription = null, 
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            ) 
-                        },
-                        text = { Text("Copy to Clipboard", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
-                        onClick = {
-                            showContextMenu = false
-                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                            val clip = android.content.ClipData.newPlainText("Second Brain Note", item.content)
-                            clipboard.setPrimaryClip(clip)
-                            android.widget.Toast.makeText(context, "Copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
-                        },
-                        colors = MenuDefaults.itemColors(
-                            textColor = MaterialTheme.colorScheme.onSurface,
-                            leadingIconColor = MaterialTheme.colorScheme.primary
-                        )
-                    )
-                }
-                SavedItemType.AUDIO -> {
-                    DropdownMenuItem(
-                        leadingIcon = { 
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_play), 
-                                contentDescription = null, 
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            ) 
-                        },
-                        text = { Text("Listen / Play Audio", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
-                        onClick = {
-                            showContextMenu = false
-                            onClick()
-                        },
-                        colors = MenuDefaults.itemColors(
-                            textColor = MaterialTheme.colorScheme.onSurface,
-                            leadingIconColor = MaterialTheme.colorScheme.primary
-                        )
-                    )
-                }
-                SavedItemType.IMAGE, SavedItemType.VIDEO -> {
-                    DropdownMenuItem(
-                        leadingIcon = { 
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_eye), 
-                                contentDescription = null, 
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            ) 
-                        },
-                        text = { Text("View Fullscreen", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
-                        onClick = {
-                            showContextMenu = false
-                            onClick()
-                        },
-                        colors = MenuDefaults.itemColors(
-                            textColor = MaterialTheme.colorScheme.onSurface,
-                            leadingIconColor = MaterialTheme.colorScheme.primary
-                        )
-                    )
-                }
-            }
-
-            // 3. Move Action (For all)
-            DropdownMenuItem(
-                leadingIcon = { 
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_custom_folder), 
-                        contentDescription = null, 
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    ) 
-                },
-                text = { Text("Move / Assign Folders", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
-                onClick = {
-                    showContextMenu = false
-                    showMoveDialog = true
-                },
-                colors = MenuDefaults.itemColors(
-                    textColor = MaterialTheme.colorScheme.onSurface,
-                    leadingIconColor = MaterialTheme.colorScheme.primary
-                )
-            )
-
-            // 4. Archive Action (For all)
-            val isArchived = item.folders.contains("Archive")
-            DropdownMenuItem(
-                leadingIcon = { 
-                    Icon(
-                        painter = painterResource(id = if (isArchived) R.drawable.ic_custom_unarchive else R.drawable.ic_custom_archive), 
-                        contentDescription = null, 
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    ) 
-                },
-                text = { Text(if (isArchived) "Unarchive" else "Archive", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
-                onClick = {
-                    showContextMenu = false
-                    if (isArchived) {
-                        viewModel.unarchiveItem(item)
-                    } else {
-                        viewModel.archiveItem(item)
                     }
-                },
-                colors = MenuDefaults.itemColors(
-                    textColor = MaterialTheme.colorScheme.onSurface,
-                    leadingIconColor = MaterialTheme.colorScheme.primary
-                )
-            )
+                    SavedItemType.TEXT, SavedItemType.CODE -> {
+                        DropdownMenuItem(
+                            leadingIcon = {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_copy),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            text = { Text("Copy to Clipboard", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
+                            onClick = {
+                                showContextMenu = false
+                                val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                val clip = android.content.ClipData.newPlainText("Second Brain Note", item.content)
+                                clipboard.setPrimaryClip(clip)
+                                android.widget.Toast.makeText(context, "Copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                            colors = MenuDefaults.itemColors(
+                                textColor = MaterialTheme.colorScheme.onSurface,
+                                leadingIconColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                    }
+                    SavedItemType.AUDIO -> {
+                        DropdownMenuItem(
+                            leadingIcon = {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_play),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            text = { Text("Listen / Play Audio", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
+                            onClick = {
+                                showContextMenu = false
+                                onClick()
+                            },
+                            colors = MenuDefaults.itemColors(
+                                textColor = MaterialTheme.colorScheme.onSurface,
+                                leadingIconColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                    }
+                    SavedItemType.IMAGE, SavedItemType.VIDEO -> {
+                        DropdownMenuItem(
+                            leadingIcon = {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_eye),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            },
+                            text = { Text("View Fullscreen", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
+                            onClick = {
+                                showContextMenu = false
+                                onClick()
+                            },
+                            colors = MenuDefaults.itemColors(
+                                textColor = MaterialTheme.colorScheme.onSurface,
+                                leadingIconColor = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                    }
+                }
 
-            // 5. Share Action (For all)
-            DropdownMenuItem(
-                leadingIcon = { 
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_custom_share), 
-                        contentDescription = null, 
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    ) 
-                },
-                text = { Text("Share", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
-                onClick = {
-                    showContextMenu = false
-                    try {
-                        val shareIntent = android.content.Intent().apply {
-                            action = android.content.Intent.ACTION_SEND
-                            type = "text/plain"
-                            putExtra(android.content.Intent.EXTRA_TEXT, item.content)
+                // 3. Move Action (For all)
+                DropdownMenuItem(
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_folder),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    text = { Text("Move / Assign Folders", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
+                    onClick = {
+                        showContextMenu = false
+                        showMoveDialog = true
+                    },
+                    colors = MenuDefaults.itemColors(
+                        textColor = MaterialTheme.colorScheme.onSurface,
+                        leadingIconColor = MaterialTheme.colorScheme.primary
+                    )
+                )
+
+                // 4. Archive Action (For all)
+                val isArchived = item.folders.contains("Archive")
+                DropdownMenuItem(
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(id = if (isArchived) R.drawable.ic_custom_unarchive else R.drawable.ic_custom_archive),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    text = { Text(if (isArchived) "Unarchive" else "Archive", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
+                    onClick = {
+                        showContextMenu = false
+                        if (isArchived) {
+                            viewModel.unarchiveItem(item)
+                        } else {
+                            viewModel.archiveItem(item)
                         }
-                        context.startActivity(android.content.Intent.createChooser(shareIntent, "Share preserve"))
-                    } catch (e: Exception) {
-                        android.widget.Toast.makeText(context, "Cannot share", android.widget.Toast.LENGTH_SHORT).show()
-                    }
-                },
-                colors = MenuDefaults.itemColors(
-                    textColor = MaterialTheme.colorScheme.onSurface,
-                    leadingIconColor = MaterialTheme.colorScheme.primary
+                    },
+                    colors = MenuDefaults.itemColors(
+                        textColor = MaterialTheme.colorScheme.onSurface,
+                        leadingIconColor = MaterialTheme.colorScheme.primary
+                    )
                 )
-            )
 
-            // 6. Delete Action (For all)
-            DropdownMenuItem(
-                leadingIcon = { 
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_custom_delete), 
-                        contentDescription = null, 
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(18.dp)
-                    ) 
-                },
-                text = { Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
-                onClick = {
-                    showContextMenu = false
-                    viewModel.deleteSavedItem(item)
-                },
-                colors = MenuDefaults.itemColors(
-                    textColor = MaterialTheme.colorScheme.error,
-                    leadingIconColor = MaterialTheme.colorScheme.error
+                // 5. Share Action (For all)
+                DropdownMenuItem(
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_share),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    text = { Text("Share", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
+                    onClick = {
+                        showContextMenu = false
+                        try {
+                            val shareIntent = android.content.Intent().apply {
+                                action = android.content.Intent.ACTION_SEND
+                                type = "text/plain"
+                                putExtra(android.content.Intent.EXTRA_TEXT, item.content)
+                            }
+                            context.startActivity(android.content.Intent.createChooser(shareIntent, "Share preserve"))
+                        } catch (e: Exception) {
+                            android.widget.Toast.makeText(context, "Cannot share", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = MenuDefaults.itemColors(
+                        textColor = MaterialTheme.colorScheme.onSurface,
+                        leadingIconColor = MaterialTheme.colorScheme.primary
+                    )
                 )
-            )
+
+                // 6. Delete Action (For all)
+                DropdownMenuItem(
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_delete),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    },
+                    text = { Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
+                    onClick = {
+                        showContextMenu = false
+                        viewModel.deleteSavedItem(item)
+                    },
+                    colors = MenuDefaults.itemColors(
+                        textColor = MaterialTheme.colorScheme.error,
+                        leadingIconColor = MaterialTheme.colorScheme.error
+                    )
+                )
+            }
         }
     }
 }

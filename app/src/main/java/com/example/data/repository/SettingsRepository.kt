@@ -70,6 +70,12 @@ class SettingsRepository(context: Context) {
     private val _forceDisableBlur = MutableStateFlow(prefs.getBoolean(KEY_FORCE_DISABLE_BLUR, false))
     val forceDisableBlur: StateFlow<Boolean> = _forceDisableBlur.asStateFlow()
 
+    private val _blurRadius = MutableStateFlow(prefs.getInt(KEY_BLUR_RADIUS, 25))
+    val blurRadius: StateFlow<Int> = _blurRadius.asStateFlow()
+
+    private val _blurOpacity = MutableStateFlow(prefs.getFloat(KEY_BLUR_OPACITY, 0.30f))
+    val blurOpacity: StateFlow<Float> = _blurOpacity.asStateFlow()
+
     fun setGeminiApiKey(key: String) {
         prefs.edit().putString(KEY_GEMINI_API_KEY, key).apply()
         _geminiApiKey.value = key
@@ -140,6 +146,16 @@ class SettingsRepository(context: Context) {
         _forceDisableBlur.value = disabled
     }
 
+    fun setBlurRadius(radius: Int) {
+        prefs.edit().putInt(KEY_BLUR_RADIUS, radius).apply()
+        _blurRadius.value = radius
+    }
+
+    fun setBlurOpacity(opacity: Float) {
+        prefs.edit().putFloat(KEY_BLUR_OPACITY, opacity).apply()
+        _blurOpacity.value = opacity
+    }
+
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
             KEY_GEMINI_API_KEY -> _geminiApiKey.value = prefs.getString(KEY_GEMINI_API_KEY, "") ?: ""
@@ -162,6 +178,8 @@ class SettingsRepository(context: Context) {
 
             KEY_IS_LIST_VIEW -> _isListView.value = prefs.getBoolean(KEY_IS_LIST_VIEW, true)
             KEY_FORCE_DISABLE_BLUR -> _forceDisableBlur.value = prefs.getBoolean(KEY_FORCE_DISABLE_BLUR, false)
+            KEY_BLUR_RADIUS -> _blurRadius.value = prefs.getInt(KEY_BLUR_RADIUS, 25)
+            KEY_BLUR_OPACITY -> _blurOpacity.value = prefs.getFloat(KEY_BLUR_OPACITY, 0.30f)
         }
     }
 
@@ -184,5 +202,7 @@ class SettingsRepository(context: Context) {
         private const val KEY_RECENT_CAPTURES_EXPANDED = "recent_captures_expanded"
         private const val KEY_IS_LIST_VIEW = "is_list_view"
         private const val KEY_FORCE_DISABLE_BLUR = "force_disable_blur"
+        private const val KEY_BLUR_RADIUS = "blur_radius"
+        private const val KEY_BLUR_OPACITY = "blur_opacity"
     }
 }

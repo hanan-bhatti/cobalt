@@ -93,6 +93,21 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         settingsRepository.setHasDismissedOnboarding(true)
     }
 
+    val forceDisableBlur = settingsRepository.forceDisableBlur
+    fun setForceDisableBlur(disabled: Boolean) {
+        settingsRepository.setForceDisableBlur(disabled)
+    }
+
+    val blurRadius = settingsRepository.blurRadius
+    fun setBlurRadius(radius: Int) {
+        settingsRepository.setBlurRadius(radius)
+    }
+
+    val blurOpacity = settingsRepository.blurOpacity
+    fun setBlurOpacity(opacity: Float) {
+        settingsRepository.setBlurOpacity(opacity)
+    }
+
     val isRecentCapturesExpanded = settingsRepository.isRecentCapturesExpanded
     fun setRecentCapturesExpanded(expanded: Boolean) {
         settingsRepository.setRecentCapturesExpanded(expanded)
