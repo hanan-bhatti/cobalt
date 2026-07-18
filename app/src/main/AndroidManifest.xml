@@ -97,7 +97,7 @@
 
         <service
             android:name=".BrainOcrOverlayService"
-            android:foregroundServiceType="specialUse"
+            android:foregroundServiceType="specialUse|dataSync"
             android:stopWithTask="false"
             tools:targetApi="q"
             android:exported="false">
