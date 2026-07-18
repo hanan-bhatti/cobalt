@@ -9,6 +9,7 @@ plugins {
   alias(libs.plugins.roborazzi)
   alias(libs.plugins.secrets)
   alias(libs.plugins.google.services)
+  alias(libs.plugins.firebase.crashlytics)
 }
 
 android {
@@ -128,6 +129,7 @@ dependencies {
   // firebase-auth.
   implementation(libs.firebase.auth)
   implementation(libs.firebase.analytics)
+  implementation(libs.firebase.crashlytics)
   implementation(libs.androidx.credentials)
   implementation(libs.androidx.credentials.play.services)
   implementation(libs.googleid)
