@@ -114,7 +114,7 @@ fun SearchScreen(
                         if (searchQuery.isNotBlank()) {
                             addQueryToHistory(prefs, searchQuery)
                             historyList = getSearchHistory(prefs)
-                            AnalyticsHelper.logSearchPerformed(context, searchQuery)
+                            AnalyticsHelper.logSearchPerformed(context)
                         }
                         focusManager.clearFocus() 
                     }),
@@ -241,7 +241,7 @@ fun SearchScreen(
                                     .clickable {
                                          viewModel.setSearchQuery(query)
                                          focusManager.clearFocus()
-                                         AnalyticsHelper.logSearchPerformed(context, query)
+                                         AnalyticsHelper.logSearchPerformed(context)
                                     }
                                     .padding(horizontal = 16.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically

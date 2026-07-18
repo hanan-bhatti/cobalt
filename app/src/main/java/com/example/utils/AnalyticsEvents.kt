@@ -18,7 +18,6 @@ object AnalyticsEvents {
     // Custom Parameters
     const val PARAM_ITEM_ID = "item_id"
     const val PARAM_ITEM_TYPE = "item_type"
-    const val PARAM_SEARCH_QUERY = "search_query"
     const val PARAM_SIGN_IN_METHOD = "sign_in_method"
     const val PARAM_ERROR_MESSAGE = "error_message"
 }

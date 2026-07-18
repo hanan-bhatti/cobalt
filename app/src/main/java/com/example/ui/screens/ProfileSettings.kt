@@ -83,7 +83,7 @@ fun SettingsScreen(
 
     val context = LocalContext.current
     var hasOverlayPermission by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
-    
+
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -126,7 +126,7 @@ fun SettingsScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = 100.dp)
             ) {
-                
+
                 SettingsSection(title = "App Theme") {
                     val themeMode by viewModel.settingsRepository.themeMode.collectAsState()
                     val themeOptions = listOf("System Default", "Light", "Dark")
@@ -154,7 +154,7 @@ fun SettingsScreen(
                         }
                     }
                 }
-                
+
                 SettingsSection(title = "Edge Panel", subtext = "Enable a floating panel to quickly capture thoughts from anywhere.") {
                     if (!hasOverlayPermission) {
                         SettingsRow(
@@ -170,8 +170,8 @@ fun SettingsScreen(
                         SettingsToggleRow(
                             title = "Enable Edge Panel",
                             checked = isEnabled,
-                            onCheckedChange = { enable -> 
-                                viewModel.settingsRepository.setFloatingOcrEnabled(enable) 
+                            onCheckedChange = { enable ->
+                                viewModel.settingsRepository.setFloatingOcrEnabled(enable)
                                 val serviceIntent = Intent(context, com.example.BrainOcrOverlayService::class.java)
                                 if (enable) {
                                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
@@ -184,7 +184,7 @@ fun SettingsScreen(
                                 }
                             }
                         )
-                        
+
                         if (isEnabled) {
                             SettingsRow(title = "Edge Panel Settings", onClick = { showEdgePanelSettings = true })
                         }
@@ -195,15 +195,15 @@ fun SettingsScreen(
                     var apiKey by remember { mutableStateOf("") }
                     val currentKey by viewModel.settingsRepository.geminiApiKey.collectAsState()
                     LaunchedEffect(currentKey) { apiKey = currentKey }
-                    
+
                     var keyVisibility by remember { mutableStateOf(false) }
                     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
 
                     OutlinedTextField(
                         value = apiKey,
-                        onValueChange = { 
+                        onValueChange = {
                             apiKey = it
-                            viewModel.settingsRepository.setGeminiApiKey(it) 
+                            viewModel.settingsRepository.setGeminiApiKey(it)
                         },
                         placeholder = { Text("Enter your Gemini API Key") },
                         leadingIcon = {
@@ -246,12 +246,12 @@ fun SettingsScreen(
                             }
                         )
                     )
-                    
+
                     HorizontalDivider(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
                         modifier = Modifier.fillMaxWidth()
                     )
-                    
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -361,7 +361,7 @@ fun SettingsScreen(
                         }
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
@@ -410,8 +410,8 @@ fun SettingsRow(title: String, value: String? = null, showChevron: Boolean = tru
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = title, 
-            style = MaterialTheme.typography.bodyLarge, 
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(2f),
             maxLines = 1,
@@ -426,8 +426,8 @@ fun SettingsRow(title: String, value: String? = null, showChevron: Boolean = tru
             ) {
                 if (value != null) {
                     Text(
-                        text = value, 
-                        style = MaterialTheme.typography.bodyMedium, 
+                        text = value,
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -516,7 +516,7 @@ fun EdgePanelSettingsScreen(viewModel: SecondBrainViewModel, onNavigateBack: () 
             val opacity by viewModel.settingsRepository.edgePanelOpacity.collectAsState()
             val height by viewModel.settingsRepository.edgePanelHeight.collectAsState()
             val thickness by viewModel.settingsRepository.edgePanelThickness.collectAsState()
-            
+
             SettingsSection(title = "Anchor Side", subtext = "Choose which side of the screen the handle sits on.") {
                 Row(
                     modifier = Modifier

@@ -46,11 +46,8 @@ object AnalyticsHelper {
         logEvent(context, AnalyticsEvents.NOTE_EDITED, params)
     }
 
-    fun logSearchPerformed(context: Context, query: String) {
-        val params = Bundle().apply {
-            putString(AnalyticsEvents.PARAM_SEARCH_QUERY, query)
-        }
-        logEvent(context, AnalyticsEvents.SEARCH_PERFORMED, params)
+    fun logSearchPerformed(context: Context) {
+        logEvent(context, AnalyticsEvents.SEARCH_PERFORMED)
     }
 
     fun logWidgetAdded(context: Context) {
