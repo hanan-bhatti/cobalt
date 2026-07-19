@@ -767,7 +767,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                 }
             }
 
-            SnackbarHost(
+            com.example.ui.components.AppSnackbarHost(
                 hostState = snackbarHostState,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)

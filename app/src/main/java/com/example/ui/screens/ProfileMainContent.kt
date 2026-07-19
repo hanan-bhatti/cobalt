@@ -58,6 +58,15 @@ import android.content.Intent
 import android.os.Build
 import com.example.service.DataDownloadManager
 import com.example.service.DataDownloadService
+import com.example.ui.theme.SuccessGreen
+import com.example.ui.theme.CategoryLink
+import com.example.ui.theme.CategoryImage
+import com.example.ui.theme.CategoryVideo
+import com.example.ui.theme.CategoryText
+import com.example.ui.theme.CategoryCode
+import com.example.ui.theme.CategoryAudio
+import com.example.ui.theme.CloudStorageBlue
+import com.example.ui.theme.LocalStorageGreen
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -331,7 +340,7 @@ fun ProfileMainContent(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    val indicatorColor = if (isSyncing) MaterialTheme.colorScheme.primary else Color(0xFF34A853)
+                                    val indicatorColor = if (isSyncing) MaterialTheme.colorScheme.primary else SuccessGreen
                                     val syncText = if (isSyncing) "Syncing..." else "Synced"
                                     Box(modifier = Modifier.size(8.dp).background(indicatorColor, CircleShape))
                                     Spacer(modifier = Modifier.width(6.dp))
@@ -389,12 +398,12 @@ fun ProfileMainContent(
                         ) {
                             ArchiveStatRow(
                                 iconResId = R.drawable.ic_custom_link, count = totalLinks, label = "Links",
-                                baseColor = Color(0xFF42A5F5),
+                                baseColor = CategoryLink,
                                 modifier = Modifier.weight(1f)
                             )
                             ArchiveStatRow(
                                 iconResId = R.drawable.ic_custom_image, count = totalImages, label = "Images",
-                                baseColor = Color(0xFFAB47BC),
+                                baseColor = CategoryImage,
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -404,12 +413,12 @@ fun ProfileMainContent(
                         ) {
                             ArchiveStatRow(
                                 iconResId = R.drawable.ic_custom_video, count = totalVideos, label = "Videos",
-                                baseColor = Color(0xFFEF5350),
+                                baseColor = CategoryVideo,
                                 modifier = Modifier.weight(1f)
                             )
                             ArchiveStatRow(
                                 iconResId = R.drawable.ic_custom_text, count = totalText, label = "Text",
-                                baseColor = Color(0xFFFFA726),
+                                baseColor = CategoryText,
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -419,12 +428,12 @@ fun ProfileMainContent(
                         ) {
                             ArchiveStatRow(
                                 iconResId = R.drawable.ic_custom_code, count = totalCode, label = "Code",
-                                baseColor = Color(0xFF66BB6A),
+                                baseColor = CategoryCode,
                                 modifier = Modifier.weight(1f)
                             )
                             ArchiveStatRow(
                                 iconResId = R.drawable.ic_custom_voice, count = totalAudio, label = "Audio",
-                                baseColor = Color(0xFF26A69A),
+                                baseColor = CategoryAudio,
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -484,7 +493,7 @@ fun ProfileMainContent(
                                     modifier = Modifier
                                         .fillMaxHeight()
                                         .weight(cloudFraction)
-                                        .background(Color(0xFF42A5F5)) // Cloud blue color
+                                        .background(CategoryLink) // Cloud blue color
                                 )
                             }
                             // Local-only segment (Secondary/Green Accent)
@@ -493,7 +502,7 @@ fun ProfileMainContent(
                                     modifier = Modifier
                                         .fillMaxHeight()
                                         .weight(localFraction)
-                                        .background(Color(0xFF66BB6A)) // Local green color
+                                        .background(CategoryCode) // Local green color
                                 )
                             }
                             // Free segment
@@ -526,7 +535,7 @@ fun ProfileMainContent(
                                     modifier = Modifier
                                         .size(10.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFF42A5F5))
+                                        .background(CategoryLink)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
@@ -555,7 +564,7 @@ fun ProfileMainContent(
                                     modifier = Modifier
                                         .size(10.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFF66BB6A))
+                                        .background(CategoryCode)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(

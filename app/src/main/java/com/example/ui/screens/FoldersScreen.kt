@@ -67,6 +67,13 @@ import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import com.example.utils.DevicePerformance
+import com.example.ui.theme.DefaultFolderColor
+import com.example.ui.theme.CategoryLink
+import com.example.ui.theme.CategoryImage
+import com.example.ui.theme.CategoryVideo
+import com.example.ui.theme.CategoryText
+import com.example.ui.theme.CategoryCode
+import com.example.ui.theme.CategoryAudio
 
 // Preset Palette of aesthetic Pastel/Vibrant Colors
 val folderPresetColors = listOf(
@@ -107,7 +114,7 @@ val folderPresetIcons = listOf(
     "tools"
 )
 
-fun parseHexColor(hex: String?, defaultColor: Color = Color(0xFF6750A4)): Color {
+fun parseHexColor(hex: String?, defaultColor: Color = DefaultFolderColor): Color {
     if (hex.isNullOrBlank()) return defaultColor
     return try {
         Color(android.graphics.Color.parseColor(hex))
@@ -599,7 +606,7 @@ fun FoldersScreen(
                                         Icon(
                                             painter = painterResource(id = R.drawable.ic_custom_check),
                                             contentDescription = "Selected",
-                                            tint = Color.White,
+                                            tint = MaterialTheme.colorScheme.background,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -657,12 +664,12 @@ fun SystemCategoryCard(
 ) {
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val baseColor = when (name) {
-        "Links" -> Color(0xFF42A5F5)
-        "Images" -> Color(0xFFAB47BC)
-        "Videos" -> Color(0xFFEF5350)
-        "Text" -> Color(0xFFFFA726)
-        "Code" -> Color(0xFF66BB6A)
-        "Audio" -> Color(0xFF26A69A)
+        "Links" -> CategoryLink
+        "Images" -> CategoryImage
+        "Videos" -> CategoryVideo
+        "Text" -> CategoryText
+        "Code" -> CategoryCode
+        "Audio" -> CategoryAudio
         else -> MaterialTheme.colorScheme.primary
     }
     Surface(
@@ -930,12 +937,12 @@ fun FolderContentsBrowser(
             }
             val targetType = systemCategory ?: SavedItemType.TEXT
             val fabColor = when (targetType) {
-                SavedItemType.LINK -> Color(0xFF42A5F5)
-                SavedItemType.IMAGE -> Color(0xFFAB47BC)
-                SavedItemType.VIDEO -> Color(0xFFEF5350)
-                SavedItemType.TEXT -> Color(0xFFFFA726)
-                SavedItemType.CODE -> Color(0xFF66BB6A)
-                SavedItemType.AUDIO -> Color(0xFF26A69A)
+                SavedItemType.LINK -> CategoryLink
+                SavedItemType.IMAGE -> CategoryImage
+                SavedItemType.VIDEO -> CategoryVideo
+                SavedItemType.TEXT -> CategoryText
+                SavedItemType.CODE -> CategoryCode
+                SavedItemType.AUDIO -> CategoryAudio
             }
 
             val useBlurDetail = DevicePerformance.shouldUseBlur(context) && !forceDisableBlur
@@ -973,7 +980,7 @@ fun FolderContentsBrowser(
                     hoveredElevation = 0.dp
                 ),
                 containerColor = if (useBlurDetail) Color.Transparent else fabColor.copy(alpha = 0.92f),
-                contentColor = Color.White,
+                contentColor = MaterialTheme.colorScheme.background,
                 modifier = detailFabModifier
                     .bounceClick(detailInteractionSource)
                     .clip(CircleShape)
@@ -1626,7 +1633,7 @@ fun FolderCustomizerDialog(
                                         Icon(
                                             painter = painterResource(id = R.drawable.ic_custom_check),
                                             contentDescription = "Selected",
-                                            tint = Color.White,
+                                            tint = MaterialTheme.colorScheme.background,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }

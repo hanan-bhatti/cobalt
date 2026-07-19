@@ -58,6 +58,11 @@ import com.example.R
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.example.ui.theme.ArchiveLinkColor
+import com.example.ui.theme.ArchiveImageVideoColor
+import com.example.ui.theme.ArchiveCodeColor
+import com.example.ui.theme.ArchiveTextColor
+import com.example.ui.theme.ArchiveAudioColor
 
 private fun Any?.isNotNullOrBlank(): Boolean {
     return this != null && this.toString().isNotBlank()
@@ -91,11 +96,11 @@ fun ArchiveItemCard(
 
     // Dynamic coloring based on type
     val typeColor = when (item.type) {
-        SavedItemType.LINK -> Color(0xFF2196F3) // Blue
-        SavedItemType.IMAGE, SavedItemType.VIDEO -> Color(0xFFFF9800) // Orange
-        SavedItemType.CODE -> Color(0xFF4CAF50) // Green
-        SavedItemType.TEXT -> Color(0xFF9C27B0) // Purple
-        SavedItemType.AUDIO -> Color(0xFFE91E63) // Pink
+        SavedItemType.LINK -> ArchiveLinkColor
+        SavedItemType.IMAGE, SavedItemType.VIDEO -> ArchiveImageVideoColor
+        SavedItemType.CODE -> ArchiveCodeColor
+        SavedItemType.TEXT -> ArchiveTextColor
+        SavedItemType.AUDIO -> ArchiveAudioColor
     }
 
     Box(
@@ -275,8 +280,8 @@ fun ArchiveItemCard(
                                             .background(
                                                 brush = Brush.verticalGradient(
                                                     colors = listOf(
-                                                        Color(0xFFFF9800).copy(alpha = 0.15f),
-                                                        Color(0xFFFF5722).copy(alpha = 0.25f)
+                                                        ArchiveImageVideoColor.copy(alpha = 0.15f),
+                                                        MaterialTheme.colorScheme.error.copy(alpha = 0.25f)
                                                     )
                                                 )
                                             ),
@@ -289,14 +294,14 @@ fun ArchiveItemCard(
                                             Icon(
                                                 painter = painterResource(id = R.drawable.ic_custom_video),
                                                 contentDescription = "Video",
-                                                tint = Color(0xFFFF9800),
+                                                tint = ArchiveImageVideoColor,
                                                 modifier = Modifier.size(24.dp)
                                             )
                                             Text(
                                                 text = "Video Media",
                                                 fontSize = 9.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = Color(0xFFFF9800)
+                                                color = ArchiveImageVideoColor
                                             )
                                         }
                                     }
@@ -308,8 +313,8 @@ fun ArchiveItemCard(
                                             .background(
                                                 brush = Brush.verticalGradient(
                                                     colors = listOf(
-                                                        Color(0xFFE91E63).copy(alpha = 0.15f),
-                                                        Color(0xFF9C27B0).copy(alpha = 0.25f)
+                                                        ArchiveAudioColor.copy(alpha = 0.15f),
+                                                        ArchiveTextColor.copy(alpha = 0.25f)
                                                     )
                                                 )
                                             ),
@@ -322,14 +327,14 @@ fun ArchiveItemCard(
                                             Icon(
                                                 painter = painterResource(id = R.drawable.ic_custom_voice),
                                                 contentDescription = "Audio",
-                                                tint = Color(0xFFE91E63),
+                                                tint = ArchiveAudioColor,
                                                 modifier = Modifier.size(24.dp)
                                             )
                                             Text(
                                                 text = "Audio Recording",
                                                 fontSize = 9.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = Color(0xFFE91E63)
+                                                color = ArchiveAudioColor
                                             )
                                         }
                                     }
@@ -342,7 +347,7 @@ fun ArchiveItemCard(
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .background(if (isDark) Color(0xFF1E1E1E) else Color(0xFFF5F5F5))
+                                            .background(if (isDark) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceVariant)
                                             .padding(6.dp)
                                     ) {
                                         Text(
@@ -493,11 +498,11 @@ fun ArchiveItemRow(
     )
 
     val typeColor = when (item.type) {
-        SavedItemType.LINK -> Color(0xFF2196F3)
-        SavedItemType.IMAGE, SavedItemType.VIDEO -> Color(0xFFFF9800)
-        SavedItemType.CODE -> Color(0xFF4CAF50)
-        SavedItemType.TEXT -> Color(0xFF9C27B0)
-        SavedItemType.AUDIO -> Color(0xFFE91E63)
+        SavedItemType.LINK -> ArchiveLinkColor
+        SavedItemType.IMAGE, SavedItemType.VIDEO -> ArchiveImageVideoColor
+        SavedItemType.CODE -> ArchiveCodeColor
+        SavedItemType.TEXT -> ArchiveTextColor
+        SavedItemType.AUDIO -> ArchiveAudioColor
     }
 
     Box(
@@ -570,7 +575,7 @@ fun ArchiveItemRow(
                         modifier = Modifier
                             .size(72.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (isDark) Color(0xFF1E1E1E) else Color(0xFFF5F5F5))
+                            .background(if (isDark) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceVariant)
                             .padding(6.dp)
                     ) {
                         Text(

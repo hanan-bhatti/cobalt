@@ -33,6 +33,55 @@
  val SproutSticker = Color(0xFF22C55E)
  val ShadowMist = Color(0xFFBEBCBB)
 
+ // Category colors (type-specific, not theme-dependent)
+ val CategoryLink = Color(0xFF42A5F5)
+ val CategoryImage = Color(0xFFAB47BC)
+ val CategoryVideo = Color(0xFFEF5350)
+ val CategoryText = Color(0xFFFFA726)
+ val CategoryCode = Color(0xFF66BB6A)
+ val CategoryAudio = Color(0xFF26A69A)
+
+ // Archive card type colors (alternative palette)
+ val ArchiveLinkColor = Color(0xFF2196F3)
+ val ArchiveImageVideoColor = Color(0xFFFF9800)
+ val ArchiveCodeColor = Color(0xFF4CAF50)
+ val ArchiveTextColor = Color(0xFF9C27B0)
+ val ArchiveAudioColor = Color(0xFFE91E63)
+
+ // Code highlighting colors
+ val CodeKeywordDark = Color(0xFFF07178)
+ val CodeKeywordLight = Color(0xFFD32F2F)
+ val CodeTypeDark = Color(0xFF82B1FF)
+ val CodeTypeLight = Color(0xFF0D47A1)
+ val CodeStringDark = Color(0xFFC3E88D)
+ val CodeStringLight = Color(0xFF2E7D32)
+ val CodeCommentDark = Color(0xFF89DDFF)
+ val CodeCommentLight = Color(0xFF00ACC1)
+ val CodeNumberDark = Color(0xFFF78C6C)
+ val CodeNumberLight = Color(0xFFE65100)
+ val CodeAnnotationDark = Color(0xFFFFCB6B)
+ val CodeAnnotationLight = Color(0xFFF57F17)
+
+ // Status/semantic colors
+ val SuccessGreen = Color(0xFF34A853)
+ val SuccessLightGreen = Color(0xFFE8F5E9)
+ val SuccessDarkGreen = Color(0xFF1B5E20)
+ val SuccessBorderGreen = Color(0xFF2E7D32)
+ val LinkPurple = Color(0xFF6B4EFF)
+
+ // Default theme color for unset folders
+ val DefaultFolderColor = Color(0xFF6750A4)
+
+ // Palette colors used in ManageStorageScreen
+ val PaletteColor1 = Color(0xFFEC407A)
+ val PaletteColor2 = Color(0xFF78909C)
+ val PaletteColor3 = Color(0xFF8D6E63)
+ val PaletteColor4 = Color(0xFFD4E157)
+
+ // Storage status indicators (Cloud vs Local)
+ val CloudStorageBlue = Color(0xFF2196F3)
+ val LocalStorageGreen = Color(0xFF4CAF50)
+
  // Light theme colors
  val Primary = MarkerOrange
  val OnPrimary = CreamPaper

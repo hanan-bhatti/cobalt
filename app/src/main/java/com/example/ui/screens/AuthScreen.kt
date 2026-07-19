@@ -46,6 +46,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.theme.SuccessLightGreen
+import com.example.ui.theme.SuccessBorderGreen
+import com.example.ui.theme.SuccessDarkGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -248,15 +251,15 @@ fun AuthScreen(
                     if (authSuccess != null) {
                         Surface(
                             shape = RoundedCornerShape(20.dp),
-                            color = Color(0xFFE8F5E9), // Light green success container
-                            border = BorderStroke(1.dp, Color(0xFF2E7D32).copy(alpha = 0.5f)), // Solid green border
+                            color = SuccessLightGreen,
+                            border = BorderStroke(1.dp, SuccessBorderGreen.copy(alpha = 0.5f)),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(bottom = 16.dp)
                         ) {
                             Text(
                                 text = authSuccess ?: "",
-                                color = Color(0xFF1B5E20), // Deep green success text
+                                color = SuccessDarkGreen,
                                 style = MaterialTheme.typography.bodySmall,
                                 modifier = Modifier.padding(12.dp)
                             )

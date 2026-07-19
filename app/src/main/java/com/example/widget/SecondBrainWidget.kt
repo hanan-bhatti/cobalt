@@ -210,11 +210,11 @@ fun WidgetHeader(isFromCache: Boolean = false, isTimeout: Boolean = false) {
                 )
                 if (isFromCache || isTimeout) {
                     Spacer(modifier = GlanceModifier.width(6.dp))
-                    val badgeColor = if (isTimeout) Color(0xFFD84315) else Color(0xFFEF6C00)
+                    val badgeColor = if (isTimeout) GlanceTheme.colors.error else GlanceTheme.colors.primary
                     val badgeText = if (isTimeout) "Offline" else "Cached"
                     Box(
                         modifier = GlanceModifier
-                            .background(ColorProvider(badgeColor))
+                            .background(badgeColor)
                             .cornerRadius(4.dp)
                             .padding(horizontal = 4.dp, vertical = 2.dp)
                     ) {
@@ -223,7 +223,7 @@ fun WidgetHeader(isFromCache: Boolean = false, isTimeout: Boolean = false) {
                             style = TextStyle(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 8.sp,
-                                color = ColorProvider(Color.White)
+                                color = GlanceTheme.colors.onPrimary
                             )
                         )
                     }
@@ -266,7 +266,7 @@ fun WidgetHeader(isFromCache: Boolean = false, isTimeout: Boolean = false) {
         Box(
             modifier = GlanceModifier
                 .size(28.dp)
-                .background(ColorProvider(Color(0x22FF6F1E))) // 15% opacity orange
+                .background(GlanceTheme.colors.primary)
                 .cornerRadius(14.dp)
                 .clickable(actionStartActivity(addIntent)),
             contentAlignment = Alignment.Center

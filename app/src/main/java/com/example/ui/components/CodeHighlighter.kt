@@ -26,6 +26,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
+import com.example.ui.theme.CodeKeywordDark
+import com.example.ui.theme.CodeKeywordLight
+import com.example.ui.theme.CodeTypeDark
+import com.example.ui.theme.CodeTypeLight
+import com.example.ui.theme.CodeStringDark
+import com.example.ui.theme.CodeStringLight
+import com.example.ui.theme.CodeCommentDark
+import com.example.ui.theme.CodeCommentLight
+import com.example.ui.theme.CodeNumberDark
+import com.example.ui.theme.CodeNumberLight
+import com.example.ui.theme.CodeAnnotationDark
+import com.example.ui.theme.CodeAnnotationLight
 
 object CodeHighlighter {
     private val keywords = setOf(
@@ -56,12 +68,12 @@ object CodeHighlighter {
         val builder = AnnotatedString.Builder(text)
         
         // Custom Dracula / Modern VS Code theme color palettes
-        val keywordColor = if (isDark) Color(0xFFF07178) else Color(0xFFD32F2F) // Coral / Red
-        val typeColor = if (isDark) Color(0xFF82B1FF) else Color(0xFF0D47A1)    // Pale Blue / Navy
-        val stringColor = if (isDark) Color(0xFFC3E88D) else Color(0xFF2E7D32)  // Lime Green / Forest Green
-        val commentColor = if (isDark) Color(0xFF89DDFF) else Color(0xFF00ACC1) // Cyan (Comments / documentation)
-        val numberColor = if (isDark) Color(0xFFF78C6C) else Color(0xFFE65100)  // Peach / Dark Orange
-        val annotationColor = if (isDark) Color(0xFFFFCB6B) else Color(0xFFF57F17) // Gold / Dark Yellow
+        val keywordColor = if (isDark) CodeKeywordDark else CodeKeywordLight
+        val typeColor = if (isDark) CodeTypeDark else CodeTypeLight
+        val stringColor = if (isDark) CodeStringDark else CodeStringLight
+        val commentColor = if (isDark) CodeCommentDark else CodeCommentLight
+        val numberColor = if (isDark) CodeNumberDark else CodeNumberLight
+        val annotationColor = if (isDark) CodeAnnotationDark else CodeAnnotationLight
 
         tokenRegex.findAll(text).forEach { matchResult ->
             val groups = matchResult.groups

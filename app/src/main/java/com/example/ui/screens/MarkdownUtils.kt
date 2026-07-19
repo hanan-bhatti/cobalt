@@ -30,6 +30,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
+import com.example.ui.theme.LinkPurple
 
 fun parseMarkdown(text: String): AnnotatedString {
     return buildAnnotatedString {
@@ -51,7 +52,7 @@ fun parseMarkdown(text: String): AnnotatedString {
                 }
             } else if (match.groups[4] != null && match.groups[5] != null) {
                 // Link
-                withStyle(SpanStyle(color = Color(0xFF6B4EFF), textDecoration = TextDecoration.Underline)) {
+                withStyle(SpanStyle(color = LinkPurple, textDecoration = TextDecoration.Underline)) {
                     append(match.groups[4]!!.value)
                 }
             } else if (match.groups[6] != null) {
@@ -86,7 +87,7 @@ class MarkdownVisualTransformation : VisualTransformation {
                         append(match.value) 
                     }
                 } else if (match.groups[4] != null && match.groups[5] != null) {
-                    withStyle(SpanStyle(color = Color(0xFF6B4EFF), textDecoration = TextDecoration.Underline)) {
+                    withStyle(SpanStyle(color = LinkPurple, textDecoration = TextDecoration.Underline)) {
                         append(match.value)
                     }
                 } else if (match.groups[6] != null) {

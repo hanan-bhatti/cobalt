@@ -202,7 +202,7 @@ BackHandler(enabled = activeDetailItem != null) {
 
                 Scaffold(
                     snackbarHost = {
-                        SnackbarHost(
+                        com.example.ui.components.AppSnackbarHost(
                             hostState = snackbarHostState,
                             modifier = Modifier.padding(bottom = 96.dp)
                         )

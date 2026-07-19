@@ -135,6 +135,10 @@ fun AudioRecorderComponent(
         label = "alpha"
     )
 
+    // Hoist theme colors: MaterialTheme.colorScheme.* are @Composable getters and
+    // cannot be called inside the Canvas DrawScope lambda, which is not @Composable.
+    val waveformBarColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -151,7 +155,7 @@ fun AudioRecorderComponent(
                 modifier = Modifier
                     .size(10.dp)
                     .clip(CircleShape)
-                    .background(if (isRecording) Color.Red.copy(alpha = pulseAlpha) else Color.Gray)
+                    .background(if (isRecording) MaterialTheme.colorScheme.primary.copy(alpha = pulseAlpha) else Color.Gray)
             )
             Spacer(modifier = Modifier.width(8.dp))
             
@@ -164,7 +168,7 @@ fun AudioRecorderComponent(
                     text = timeStr,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Red,
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.width(42.dp)
                 )
 
@@ -189,7 +193,7 @@ fun AudioRecorderComponent(
                         val y = (size.height - barHeight) / 2f
                         
                         drawRoundRect(
-                            color = Color.Red.copy(alpha = 0.8f),
+                            color = waveformBarColor,
                             topLeft = Offset(x, y),
                             size = Size(barWidth, barHeight),
                             cornerRadius = CornerRadius(barWidth / 2f, barWidth / 2f)
@@ -229,12 +233,12 @@ fun AudioRecorderComponent(
                 }
             },
             modifier = Modifier
-                .background(if (isRecording) Color.Red.copy(alpha = 0.1f) else MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                .background(if (isRecording) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else MaterialTheme.colorScheme.primaryContainer, CircleShape)
         ) {
             Icon(
                 painter = painterResource(id = if (isRecording) R.drawable.ic_custom_stop else R.drawable.ic_custom_voice),
                 contentDescription = "Record",
-                tint = if (isRecording) Color.Red else MaterialTheme.colorScheme.onPrimaryContainer
+                tint = if (isRecording) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
     }

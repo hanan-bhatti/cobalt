@@ -17,116 +17,123 @@
  */
 
 package com.example.ui.components
-import androidx.compose.ui.res.painterResource
-import com.example.R
 
+import android.media.MediaPlayer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
+import com.example.R
+import kotlinx.coroutines.delay
 
-@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
 fun AudioPlayerComponent(
     audioUri: String,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val exoPlayer = remember {
-        ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(audioUri))
-            prepare()
-        }
-    }
-    
     var isPlaying by remember { mutableStateOf(false) }
-    var currentPosition by remember { mutableStateOf(0L) }
-    var duration by remember { mutableStateOf(0L) }
+    var durationSeconds by remember { mutableStateOf(0) }
+    var positionSeconds by remember { mutableStateOf(0) }
+    val mediaPlayer = remember { MediaPlayer() }
 
-    DisposableEffect(Unit) {
-        val listener = object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying_: Boolean) {
-                isPlaying = isPlaying_
-            }
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_READY) {
-                    duration = exoPlayer.duration.coerceAtLeast(0L)
-                }
-            }
+    DisposableEffect(audioUri) {
+        try {
+            mediaPlayer.setDataSource(audioUri)
+            mediaPlayer.prepare()
+            durationSeconds = mediaPlayer.duration / 1000
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
-        exoPlayer.addListener(listener)
+        mediaPlayer.setOnCompletionListener {
+            isPlaying = false
+            positionSeconds = 0
+        }
         onDispose {
-            exoPlayer.removeListener(listener)
-            exoPlayer.release()
+            mediaPlayer.release()
         }
     }
 
     LaunchedEffect(isPlaying) {
         while (isPlaying) {
-            currentPosition = exoPlayer.currentPosition
-            kotlinx.coroutines.delay(100)
+            delay(500)
+            positionSeconds = mediaPlayer.currentPosition / 1000
         }
     }
+
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val primaryContainerColor = MaterialTheme.colorScheme.primaryContainer
+    val onPrimaryContainerColor = MaterialTheme.colorScheme.onPrimaryContainer
+    val surfaceVariantColor = MaterialTheme.colorScheme.surfaceVariant
+    val onSurfaceVariantColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val surfaceShape = MaterialTheme.shapes.medium
 
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), MaterialTheme.shapes.medium)
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .background(surfaceVariantColor.copy(alpha = 0.5f), surfaceShape)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        IconButton(
-            onClick = {
-                if (isPlaying) exoPlayer.pause() else exoPlayer.play()
-            },
-            modifier = Modifier.background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
-        ) {
-            Icon(
-                painter = painterResource(id = if (isPlaying) R.drawable.ic_custom_pause else R.drawable.ic_custom_play),
-                contentDescription = if (isPlaying) "Pause" else "Play",
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
-        
-        Spacer(modifier = Modifier.width(12.dp))
-        
         Column(modifier = Modifier.weight(1f)) {
-            Slider(
-                value = if (duration > 0) currentPosition.toFloat() / duration.toFloat() else 0f,
-                onValueChange = { percent ->
-                    val newPos = (percent * duration).toLong()
-                    exoPlayer.seekTo(newPos)
-                    currentPosition = newPos
-                },
-                modifier = Modifier.fillMaxWidth().height(24.dp)
+            val pos = positionSeconds
+            val dur = durationSeconds
+            val posStr = "${pos / 60}:${if (pos % 60 < 10) "0" else ""}${pos % 60}"
+            val durStr = "${dur / 60}:${if (dur % 60 < 10) "0" else ""}${dur % 60}"
+            Text(
+                text = "$posStr / $durStr",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = onSurfaceVariantColor
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(formatTime(currentPosition), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(formatTime(duration), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (durationSeconds > 0) {
+                Slider(
+                    value = positionSeconds.toFloat(),
+                    onValueChange = { newPos ->
+                        positionSeconds = newPos.toInt()
+                        mediaPlayer.seekTo(newPos.toInt() * 1000)
+                    },
+                    valueRange = 0f..durationSeconds.toFloat(),
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
-    }
-}
 
-private fun formatTime(ms: Long): String {
-    val totalSeconds = ms / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return String.format("%02d:%02d", minutes, seconds)
+        Spacer(modifier = Modifier.width(16.dp))
+
+        IconButton(
+            onClick = {
+                if (isPlaying) {
+                    mediaPlayer.pause()
+                    isPlaying = false
+                } else {
+                    try {
+                        if (positionSeconds >= durationSeconds && durationSeconds > 0) {
+                            mediaPlayer.seekTo(0)
+                            positionSeconds = 0
+                        }
+                        mediaPlayer.start()
+                        isPlaying = true
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            },
+            modifier = Modifier
+                .background(primaryContainerColor, CircleShape)
+        ) {
+            Icon(
+                painter = painterResource(id = if (isPlaying) R.drawable.ic_custom_stop else R.drawable.ic_custom_voice),
+                contentDescription = if (isPlaying) "Pause" else "Play",
+                tint = onPrimaryContainerColor
+            )
+        }
+    }
 }

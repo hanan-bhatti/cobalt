@@ -75,6 +75,12 @@ import java.util.Locale
 import androidx.compose.ui.res.painterResource
 import com.example.R
 import kotlinx.coroutines.launch
+import com.example.ui.theme.CategoryLink
+import com.example.ui.theme.CategoryImage
+import com.example.ui.theme.CategoryVideo
+import com.example.ui.theme.CategoryText
+import com.example.ui.theme.CategoryCode
+import com.example.ui.theme.CategoryAudio
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,12 +113,12 @@ fun DetailScreen(
         } else {
             null
         } ?: when (item.type) {
-            SavedItemType.LINK -> Color(0xFF42A5F5)
-            SavedItemType.IMAGE -> Color(0xFFAB47BC)
-            SavedItemType.VIDEO -> Color(0xFFEF5350)
-            SavedItemType.TEXT -> Color(0xFFFFA726)
-            SavedItemType.CODE -> Color(0xFF66BB6A)
-            SavedItemType.AUDIO -> Color(0xFF26A69A)
+            SavedItemType.LINK -> CategoryLink
+            SavedItemType.IMAGE -> CategoryImage
+            SavedItemType.VIDEO -> CategoryVideo
+            SavedItemType.TEXT -> CategoryText
+            SavedItemType.CODE -> CategoryCode
+            SavedItemType.AUDIO -> CategoryAudio
         }
     }
 

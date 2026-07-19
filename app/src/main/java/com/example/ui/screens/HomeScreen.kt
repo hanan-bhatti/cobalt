@@ -124,6 +124,7 @@ fun HomeScreen(
     val hasDismissedOnboarding by viewModel.hasDismissedOnboarding.collectAsState()
 
     var isDragging by remember { mutableStateOf(false) }
+    var draggingItemId by remember { mutableStateOf<String?>(null) }
     var mutableItems by remember { mutableStateOf(items) }
     LaunchedEffect(items) {
         if (!isDragging) mutableItems = items
@@ -200,7 +201,7 @@ fun HomeScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
         modifier = modifier.fillMaxSize(),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { com.example.ui.components.AppSnackbarHost(snackbarHostState) },
         topBar = {
             if (isSelectionMode) {
                 TopAppBar(
@@ -610,7 +611,16 @@ fun HomeScreen(
                                         },
                                         onDragEnd = {
                                             isDragging = false
+                                            draggingItemId = null
                                             viewModel.updateOrderIndices(mutableItems)
+                                        },
+                                        draggingItemId = draggingItemId?.let { mutableItems.indexOfFirst { item -> item.id == draggingItemId } },
+                                        onDraggingItemChange = { newIndex ->
+                                            if (newIndex != null) {
+                                                draggingItemId = mutableItems.getOrNull(newIndex)?.id
+                                            } else {
+                                                draggingItemId = null
+                                            }
                                         }
                                     ),
                         contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 100.dp),
@@ -651,6 +661,10 @@ fun HomeScreen(
                                     }
                                 },
                                 modifier = Modifier
+                                    .draggedItemVisuals(
+                                        isDragging = draggingItemId == item.id,
+                                        reduceMotion = false
+                                    )
                                     .graphicsLayer {
                                         alpha = entryAlpha.value
                                         translationY = entryOffsetY.value
@@ -710,7 +724,16 @@ fun HomeScreen(
                                 },
                                 onDragEnd = {
                                     isDragging = false
+                                    draggingItemId = null
                                     viewModel.updateOrderIndices(mutableItems)
+                                },
+                                draggingItemId = draggingItemId?.let { mutableItems.indexOfFirst { item -> item.id == draggingItemId } },
+                                onDraggingItemChange = { newIndex ->
+                                    if (newIndex != null) {
+                                        draggingItemId = mutableItems.getOrNull(newIndex)?.id
+                                    } else {
+                                        draggingItemId = null
+                                    }
                                 }
                             ),
                         contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 100.dp),
@@ -770,6 +793,10 @@ fun HomeScreen(
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope,
                                 modifier = Modifier
+                                    .draggedItemVisuals(
+                                        isDragging = draggingItemId == item.id,
+                                        reduceMotion = false
+                                    )
                                     .graphicsLayer {
                                         alpha = entryAlpha.value
                                         translationY = entryOffsetY.value

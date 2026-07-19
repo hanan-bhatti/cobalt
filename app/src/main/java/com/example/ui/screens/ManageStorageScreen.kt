@@ -63,6 +63,16 @@ import com.example.data.model.getBestImagePath
 import androidx.compose.material.icons.filled.Info
 import kotlinx.coroutines.launch
 import androidx.compose.ui.text.style.TextOverflow
+import com.example.ui.theme.PaletteColor1
+import com.example.ui.theme.PaletteColor2
+import com.example.ui.theme.PaletteColor3
+import com.example.ui.theme.PaletteColor4
+import com.example.ui.theme.CategoryLink
+import com.example.ui.theme.CategoryImage
+import com.example.ui.theme.CategoryVideo
+import com.example.ui.theme.CategoryText
+import com.example.ui.theme.CategoryCode
+import com.example.ui.theme.CategoryAudio
 
 data class StorageBreakdownItem(
     val name: String,
@@ -95,10 +105,10 @@ fun ManageStorageScreen(
 
     val breakdownColors = remember {
         listOf(
-            Color(0xFF42A5F5), Color(0xFF66BB6A), Color(0xFFAB47BC),
-            Color(0xFFFFA726), Color(0xFFEF5350), Color(0xFF26A69A),
-            Color(0xFFEC407A), Color(0xFF78909C), Color(0xFF8D6E63),
-            Color(0xFFD4E157)
+            CategoryLink, CategoryCode, CategoryImage,
+            CategoryText, CategoryVideo, CategoryAudio,
+            PaletteColor1, PaletteColor2, PaletteColor3,
+            PaletteColor4
         )
     }
 
@@ -385,12 +395,12 @@ fun ManageStorageScreen(
                             }
                             
                             val baseColor = when (type) {
-                                SavedItemType.LINK -> Color(0xFF42A5F5)
-                                SavedItemType.IMAGE -> Color(0xFFAB47BC)
-                                SavedItemType.VIDEO -> Color(0xFFEF5350)
-                                SavedItemType.TEXT -> Color(0xFFFFA726)
-                                SavedItemType.CODE -> Color(0xFF66BB6A)
-                                SavedItemType.AUDIO -> Color(0xFF26A69A)
+                                SavedItemType.LINK -> CategoryLink
+                                SavedItemType.IMAGE -> CategoryImage
+                                SavedItemType.VIDEO -> CategoryVideo
+                                SavedItemType.TEXT -> CategoryText
+                                SavedItemType.CODE -> CategoryCode
+                                SavedItemType.AUDIO -> CategoryAudio
                             }
                             val iconResId = when (type) {
                                 SavedItemType.LINK -> R.drawable.ic_custom_link
@@ -544,7 +554,10 @@ fun ManageStorageScreen(
                                                         Row(
                                                             modifier = Modifier
                                                                 .fillMaxWidth()
-                                                                .clickable { viewModel.showDetailItem(item) }
+                                                                .combinedClickable(
+                                                                    onClick = { viewModel.showDetailItem(item) },
+                                                                    onLongClick = { longClickedItem = item }
+                                                                )
                                                                 .padding(horizontal = 16.dp, vertical = 10.dp),
                                                             verticalAlignment = Alignment.CenterVertically
                                                         ) {
@@ -568,12 +581,12 @@ fun ManageStorageScreen(
                                                                     SavedItemType.AUDIO -> R.drawable.ic_custom_voice
                                                                 }
                                                                 val itemBaseColor = when (item.type) {
-                                                                    SavedItemType.LINK -> Color(0xFF42A5F5)
-                                                                    SavedItemType.IMAGE -> Color(0xFFAB47BC)
-                                                                    SavedItemType.VIDEO -> Color(0xFFEF5350)
-                                                                    SavedItemType.TEXT -> Color(0xFFFFA726)
-                                                                    SavedItemType.CODE -> Color(0xFF66BB6A)
-                                                                    SavedItemType.AUDIO -> Color(0xFF26A69A)
+                                                                    SavedItemType.LINK -> CategoryLink
+                                                                    SavedItemType.IMAGE -> CategoryImage
+                                                                    SavedItemType.VIDEO -> CategoryVideo
+                                                                    SavedItemType.TEXT -> CategoryText
+                                                                    SavedItemType.CODE -> CategoryCode
+                                                                    SavedItemType.AUDIO -> CategoryAudio
                                                                 }
                                                                 Box(
                                                                     modifier = Modifier
@@ -693,12 +706,12 @@ fun ManageStorageScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     val baseColor = when (item.type) {
-                        SavedItemType.LINK -> Color(0xFF42A5F5)
-                        SavedItemType.IMAGE -> Color(0xFFAB47BC)
-                        SavedItemType.VIDEO -> Color(0xFFEF5350)
-                        SavedItemType.TEXT -> Color(0xFFFFA726)
-                        SavedItemType.CODE -> Color(0xFF66BB6A)
-                        SavedItemType.AUDIO -> Color(0xFF26A69A)
+                        SavedItemType.LINK -> CategoryLink
+                        SavedItemType.IMAGE -> CategoryImage
+                        SavedItemType.VIDEO -> CategoryVideo
+                        SavedItemType.TEXT -> CategoryText
+                        SavedItemType.CODE -> CategoryCode
+                        SavedItemType.AUDIO -> CategoryAudio
                     }
                     Box(
                         modifier = Modifier
@@ -801,12 +814,12 @@ fun ManageStorageScreen(
         val allSelected = nonSyncedItems.isNotEmpty() && nonSyncedItems.all { selectedForBackupIds.contains(it.id) }
         
         val baseColor = when (type) {
-            SavedItemType.LINK -> Color(0xFF42A5F5)
-            SavedItemType.IMAGE -> Color(0xFFAB47BC)
-            SavedItemType.VIDEO -> Color(0xFFEF5350)
-            SavedItemType.TEXT -> Color(0xFFFFA726)
-            SavedItemType.CODE -> Color(0xFF66BB6A)
-            SavedItemType.AUDIO -> Color(0xFF26A69A)
+            SavedItemType.LINK -> CategoryLink
+            SavedItemType.IMAGE -> CategoryImage
+            SavedItemType.VIDEO -> CategoryVideo
+            SavedItemType.TEXT -> CategoryText
+            SavedItemType.CODE -> CategoryCode
+            SavedItemType.AUDIO -> CategoryAudio
         }
         
         AlertDialog(

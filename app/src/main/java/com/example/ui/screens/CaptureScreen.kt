@@ -542,7 +542,7 @@ fun CaptureScreen(
                 }
             } else if (item.type == SavedItemType.AUDIO) {
                 AudioRecorderComponent(
-                    onRecordComplete = { file ->
+                    onRecordComplete = { file: java.io.File ->
                         viewModel.transcribeAudioMemo(file)
                     },
                     modifier = Modifier.padding(bottom = 16.dp)
