@@ -21,3 +21,4 @@ debug.keystore
 app/release-key.jks
 release-key.jks
 release-key-base64.txt
+Commit.md
