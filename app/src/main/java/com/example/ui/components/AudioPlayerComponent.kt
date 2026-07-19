@@ -36,8 +36,14 @@ import kotlinx.coroutines.delay
 @Composable
 fun AudioPlayerComponent(
     audioUri: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isUnavailable: Boolean = false
 ) {
+    if (isUnavailable) {
+        UnavailableMediaPlaceholder(modifier = modifier)
+        return
+    }
+
     var isPlaying by remember { mutableStateOf(false) }
     var durationSeconds by remember { mutableStateOf(0) }
     var positionSeconds by remember { mutableStateOf(0) }

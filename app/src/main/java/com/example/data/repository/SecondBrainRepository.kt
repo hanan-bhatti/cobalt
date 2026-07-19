@@ -47,8 +47,15 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 class SecondBrainRepository(private val context: Context) {
+
+    private val httpClient = OkHttpClient.Builder()
+        .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        .build()
 
     private val db = AppDatabase.getDatabase(context)
     private val savedItemDao = db.savedItemDao()
@@ -206,7 +213,8 @@ class SecondBrainRepository(private val context: Context) {
             linkImage = linkImage,
             isBackedUp = isBackedUp,
             sizeBytes = sizeBytes,
-            isPendingBackup = isPendingBackup
+            isPendingBackup = isPendingBackup,
+            isUnavailable = isUnavailable
         )
     }
 
@@ -228,7 +236,8 @@ class SecondBrainRepository(private val context: Context) {
             linkImage = linkImage,
             isBackedUp = isBackedUp,
             sizeBytes = sizeBytes,
-            isPendingBackup = isPendingBackup
+            isPendingBackup = isPendingBackup,
+            isUnavailable = isUnavailable
         )
     }
 
@@ -283,7 +292,7 @@ class SecondBrainRepository(private val context: Context) {
             }
         }
 
-        var finalItem = item.copy(isSynced = false, sizeBytes = itemSize)
+        var finalItem = item.copy(isSynced = false, sizeBytes = itemSize, timestamp = System.currentTimeMillis())
 
         // 1. Save locally first to keep the interface fast & offline-ready
         savedItemDao.insertItem(finalItem.toEntity())
@@ -333,13 +342,15 @@ class SecondBrainRepository(private val context: Context) {
                     finalItem = if (item.type == SavedItemType.AUDIO) {
                         finalItem.copy(
                             thumbnailPath = downloadUrl.toString(),
-                            sizeBytes = actualBytes.size.toLong()
+                            sizeBytes = actualBytes.size.toLong(),
+                            isBackedUp = true
                         )
                     } else {
                         finalItem.copy(
                             content = downloadUrl.toString(),
                             thumbnailPath = downloadUrl.toString(),
-                            sizeBytes = actualBytes.size.toLong()
+                            sizeBytes = actualBytes.size.toLong(),
+                            isBackedUp = true
                         )
                     }
                     // Save locally again with the new remote URL
@@ -365,7 +376,8 @@ class SecondBrainRepository(private val context: Context) {
                         "linkTitle" to finalItem.linkTitle,
                         "linkDescription" to finalItem.linkDescription,
                         "linkImage" to finalItem.linkImage,
-                        "sizeBytes" to finalItem.sizeBytes
+                        "sizeBytes" to finalItem.sizeBytes,
+                        "isBackedUp" to finalItem.isBackedUp
                     )
                     firestore.collection("users").document(currentUser.uid)
                         .collection("items").document(finalItem.id)
@@ -481,17 +493,101 @@ class SecondBrainRepository(private val context: Context) {
         val currentUser = firebaseAuth?.currentUser ?: return@withContext
         for (id in itemIds) {
             try {
-                // Remove from Firestore
-                firestore?.collection("users")?.document(currentUser.uid)
-                    ?.collection("items")?.document(id)?.delete()?.await()
+                val entity = savedItemDao.getItemById(id) ?: continue
+                val item = entity.toDomain()
+                
+                val isMedia = item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO
+                val mediaUrl = if (item.type == SavedItemType.AUDIO) item.thumbnailPath else item.content
+                val hasRemoteUrl = !mediaUrl.isNullOrBlank() && (mediaUrl.startsWith("http://") || mediaUrl.startsWith("https://"))
 
-                // Note: Deleting media from storage could be added here, but leaving it alone or tracking it
-                // is fine for standard removal of metadata. We can delete it if it's an image.
-                val item = savedItemDao.getItemById(id)?.toDomain()
-                if (item != null) {
-                    val newDomain = item.copy(isSynced = false, isPendingBackup = false)
-                    savedItemDao.insertItem(newDomain.toEntity())
+                val localFile = if (isMedia && hasRemoteUrl) {
+                    val extension = when (item.type) {
+                        SavedItemType.VIDEO -> "mp4"
+                        SavedItemType.AUDIO -> "mp4"
+                        else -> "jpg"
+                    }
+                    val fileName = "${item.id}.$extension"
+                    val targetDir = getPermanentMediaDir(item.type)
+                    val destFile = File(targetDir, fileName)
+
+                    // Download step
+                    try {
+                        val request = Request.Builder().url(mediaUrl!!).build()
+                        httpClient.newCall(request).execute().use { response ->
+                            if (!response.isSuccessful) {
+                                throw Exception("Server returned HTTP code ${response.code}")
+                            }
+                            val body = response.body ?: throw Exception("Response body is empty")
+                            body.byteStream().use { inputStream ->
+                                FileOutputStream(destFile).use { outputStream ->
+                                    inputStream.copyTo(outputStream)
+                                }
+                            }
+                        }
+                    } catch (downloadEx: Exception) {
+                        Log.e("SecondBrainRepo", "Failed to download media blob for item $id: ${downloadEx.message}")
+                        // Abort for this item to avoid data loss
+                        continue
+                    }
+                    destFile
+                } else null
+
+                // Update local SavedItemEntity
+                val updatedItem = if (isMedia && localFile != null) {
+                    if (item.type == SavedItemType.AUDIO) {
+                        item.copy(
+                            thumbnailPath = localFile.absolutePath,
+                            isSynced = false,
+                            isPendingBackup = false,
+                            isBackedUp = false
+                        )
+                    } else {
+                        item.copy(
+                            content = localFile.absolutePath,
+                            thumbnailPath = localFile.absolutePath,
+                            isSynced = false,
+                            isPendingBackup = false,
+                            isBackedUp = false
+                        )
+                    }
+                } else {
+                    item.copy(
+                        isSynced = false,
+                        isPendingBackup = false,
+                        isBackedUp = false
+                    )
                 }
+                savedItemDao.insertItem(updatedItem.toEntity())
+
+                // Delete from Storage if it had a remote URL
+                if (storage != null && hasRemoteUrl) {
+                    try {
+                        val storageRef = storage.getReferenceFromUrl(mediaUrl!!)
+                        storageRef.delete().await()
+                    } catch (storageEx: Exception) {
+                        Log.w("SecondBrainRepo", "Failed to delete storage blob for item $id: ${storageEx.message}")
+                    }
+                }
+
+                // Update Firestore document (Tombstone)
+                if (firestore != null) {
+                    val docRef = firestore.collection("users").document(currentUser.uid)
+                        .collection("items").document(id)
+                    
+                    val updateMap = mutableMapOf<String, Any?>(
+                        "isBackedUp" to false,
+                        "timestamp" to System.currentTimeMillis()
+                    )
+                    if (item.type == SavedItemType.AUDIO) {
+                        updateMap["thumbnailPath"] = ""
+                    } else if (isMedia) {
+                        updateMap["content"] = ""
+                        updateMap["thumbnailPath"] = ""
+                    }
+
+                    docRef.update(updateMap).await()
+                }
+
             } catch (e: Exception) {
                 Log.e("SecondBrainRepo", "Failed to remove backup for item $id: ${e.message}")
             }
@@ -549,13 +645,15 @@ class SecondBrainRepository(private val context: Context) {
                         finalItem = if (domainItem.type == SavedItemType.AUDIO) {
                             finalItem.copy(
                                 thumbnailPath = downloadUrl.toString(),
-                                sizeBytes = bytes.size.toLong()
+                                sizeBytes = bytes.size.toLong(),
+                                isBackedUp = true
                             )
                         } else {
                             finalItem.copy(
                                 content = downloadUrl.toString(),
                                 thumbnailPath = downloadUrl.toString(),
-                                sizeBytes = bytes.size.toLong()
+                                sizeBytes = bytes.size.toLong(),
+                                isBackedUp = true
                             )
                         }
                         savedItemDao.insertItem(finalItem.toEntity())
@@ -578,7 +676,8 @@ class SecondBrainRepository(private val context: Context) {
                         "linkTitle" to finalItem.linkTitle,
                         "linkDescription" to finalItem.linkDescription,
                         "linkImage" to finalItem.linkImage,
-                        "sizeBytes" to finalItem.sizeBytes
+                        "sizeBytes" to finalItem.sizeBytes,
+                        "isBackedUp" to finalItem.isBackedUp
                     )
                     firestore.collection("users").document(currentUser.uid)
                         .collection("items").document(finalItem.id)
@@ -835,35 +934,78 @@ class SecondBrainRepository(private val context: Context) {
 
                 val foldersJsonStr = "[" + foldersList.joinToString(",") { "\"$it\"" } + "]"
 
-                // Check if local DB already has a newer version of this item
+                val isBackedUp = doc.getBoolean("isBackedUp") ?: true
+                
+                // Reconcile isBackedUp status
                 val existing = savedItemDao.getItemById(id)
-                if (existing != null && existing.isSynced && existing.timestamp >= timestamp) {
+                val isRemoteUrl = existing != null && (
+                    (type == SavedItemType.AUDIO.name && existing.thumbnailPath != null && (existing.thumbnailPath.startsWith("http://") || existing.thumbnailPath.startsWith("https://"))) ||
+                    (type != SavedItemType.AUDIO.name && existing.content.isNotBlank() && (existing.content.startsWith("http://") || existing.content.startsWith("https://")))
+                )
+                val newIsUnavailable = if (existing != null && !isBackedUp && isRemoteUrl) {
+                    true
+                } else {
+                    existing?.isUnavailable ?: false
+                }
+
+                if (existing != null && (existing.isPendingBackup || existing.isUnavailable != newIsUnavailable)) {
+                    savedItemDao.insertItem(
+                        existing.copy(
+                            isPendingBackup = if (!isBackedUp) false else existing.isPendingBackup,
+                            isSynced = false,
+                            isBackedUp = isBackedUp,
+                            isUnavailable = newIsUnavailable
+                        )
+                    )
+                }
+
+                // If local item doesn't exist yet and isBackedUp is false, skip creation if there's no usable remote URL
+                if (existing == null && !isBackedUp) {
+                    val isMedia = type == SavedItemType.IMAGE.name || type == SavedItemType.VIDEO.name || type == SavedItemType.AUDIO.name
+                    if (isMedia) {
+                        val mediaUrl = if (type == SavedItemType.AUDIO.name) thumbnailPath else content
+                        val hasUsableUrl = !mediaUrl.isNullOrBlank() && (mediaUrl.startsWith("http://") || mediaUrl.startsWith("https://"))
+                        if (!hasUsableUrl) {
+                            return@forEach
+                        }
+                    }
+                }
+
+                // Fetch current version of the local item (might have been updated above)
+                val currentExisting = savedItemDao.getItemById(id)
+
+                // Check if local DB already has a newer version of this item
+                if (currentExisting != null && currentExisting.isSynced && currentExisting.timestamp >= timestamp) {
                     // Local is already up-to-date; skip to avoid overwriting local edits
                     return@forEach
                 }
 
-                // Preserve isPendingBackup from the existing local record if present,
-                // since this flag reflects the user's local backup intent and is not
-                // stored in Firestore.
-                val preservedPendingBackup = existing?.isPendingBackup ?: true
+                // Preserve isPendingBackup from the existing local record if present
+                val preservedPendingBackup = currentExisting?.isPendingBackup ?: true
+                
+                // Do NOT touch or clear the local device's own content/thumbnailPath
+                val finalContent = currentExisting?.content ?: content
+                val finalThumbnailPath = currentExisting?.thumbnailPath ?: thumbnailPath
 
                 savedItemDao.insertItem(
                     SavedItemEntity(
                         id = id,
                         type = type,
                         title = title,
-                        content = content,
+                        content = finalContent,
                         timestamp = timestamp,
                         foldersJson = foldersJsonStr,
                         extractedText = extractedText,
-                        thumbnailPath = thumbnailPath,
+                        thumbnailPath = finalThumbnailPath,
                         orderIndex = orderIndex,
                         isSynced = true,
                         linkTitle = linkTitle,
                         linkDescription = linkDescription,
                         linkImage = linkImage,
                         sizeBytes = sizeBytes,
-                        isPendingBackup = preservedPendingBackup
+                        isPendingBackup = preservedPendingBackup,
+                        isBackedUp = isBackedUp,
+                        isUnavailable = newIsUnavailable
                     )
                 )
             }
@@ -1002,6 +1144,20 @@ class SecondBrainRepository(private val context: Context) {
             fos.write(bytes)
         }
         return@withContext cacheFile.absolutePath
+    }
+
+    fun getPermanentMediaDir(type: SavedItemType): File {
+        val subfolder = when (type) {
+            SavedItemType.IMAGE -> "images"
+            SavedItemType.VIDEO -> "videos"
+            SavedItemType.AUDIO -> "audio"
+            else -> "misc"
+        }
+        val dir = File(context.filesDir, "media/$subfolder")
+        if (!dir.exists()) {
+            dir.mkdirs()
+        }
+        return dir
     }
 
     suspend fun fetchLinkMetadata(urlString: String): LinkMetadata = withContext(Dispatchers.IO) {

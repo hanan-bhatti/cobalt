@@ -45,7 +45,8 @@ data class SavedItem(
     val linkImage: String? = null,
     val isBackedUp: Boolean = false,
     val sizeBytes: Long = 0,
-    val isPendingBackup: Boolean = false
+    val isPendingBackup: Boolean = false,
+    val isUnavailable: Boolean = false
 )
 
 fun SavedItem.getBestImagePath(): String? {

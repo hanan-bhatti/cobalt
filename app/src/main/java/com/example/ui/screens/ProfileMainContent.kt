@@ -552,7 +552,7 @@ fun ProfileMainContent(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        
+
                         // Local only detail
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -648,7 +648,7 @@ fun ProfileMainContent(
                 title = { Text("Sign Out") },
                 text = {
                     if (hasCloudMedia) {
-                        Text("Would you like to download a backup of your cloud-synced photos, videos, and audios before signing out? This will save them to your local Downloads folder.")
+                        Text("Would you like to download a backup of your cloud-synced photos, videos, and audios before signing out? This will save them to your device Storage. If you choose not to download, your cloud-synced media will remain in the cloud and can be accessed when you sign back in.")
                     } else {
                         Text("Are you sure you want to sign out?")
                     }

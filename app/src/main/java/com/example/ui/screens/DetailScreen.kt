@@ -391,7 +391,15 @@ fun DetailScreen(
 
             // VISUAL MEDIA
             if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO) {
-                if (item.type == SavedItemType.VIDEO) {
+                if (item.isUnavailable) {
+                    com.example.ui.components.UnavailableMediaPlaceholder(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                    )
+                } else if (item.type == SavedItemType.VIDEO) {
                     com.example.ui.components.VideoPlayer(
                         videoUri = item.content,
                         modifier = Modifier
@@ -458,9 +466,19 @@ fun DetailScreen(
             }
 
             if (item.type == SavedItemType.AUDIO && !item.thumbnailPath.isNullOrBlank()) {
-                com.example.ui.components.AudioPlayerComponent(
-                    audioUri = item.thumbnailPath
-                )
+                if (item.isUnavailable) {
+                    com.example.ui.components.UnavailableMediaPlaceholder(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                    )
+                } else {
+                    com.example.ui.components.AudioPlayerComponent(
+                        audioUri = item.thumbnailPath
+                    )
+                }
                 Spacer(modifier = Modifier.height(16.dp))
             }
 

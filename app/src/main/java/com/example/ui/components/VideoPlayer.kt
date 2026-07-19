@@ -57,8 +57,14 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 @Composable
 fun VideoPlayer(
     videoUri: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isUnavailable: Boolean = false
 ) {
+    if (isUnavailable) {
+        UnavailableMediaPlaceholder(modifier = modifier)
+        return
+    }
+
     val context = LocalContext.current
     var aspectWithByHeight by remember { mutableStateOf(16f / 9f) }
     var isBuffering by remember { mutableStateOf(true) }

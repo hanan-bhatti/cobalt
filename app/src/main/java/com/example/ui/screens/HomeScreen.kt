@@ -2257,12 +2257,21 @@ fun RecentCaptureMicroCard(
             ) {
                 when (item.type) {
                     SavedItemType.IMAGE, SavedItemType.VIDEO -> {
-                        AsyncImage(
-                            model = item.getBestImagePath(),
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
+                        if (item.isUnavailable) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.CloudOff,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        } else {
+                            AsyncImage(
+                                model = item.getBestImagePath(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                     }
                     SavedItemType.LINK -> {
                         Icon(
