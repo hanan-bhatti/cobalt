@@ -330,13 +330,18 @@ class SecondBrainRepository(private val context: Context) {
                     val snapshot = uploadTask.await()
                     val downloadUrl = (snapshot.metadata?.reference?.downloadUrl ?: throw Exception("No reference URL")).await()
                     
-                    // Update both content AND thumbnailPath with the cloud storage URL
-                    // For audio, content holds the playback URL; thumbnailPath is optional artwork
-                    finalItem = finalItem.copy(
-                        content = downloadUrl.toString(),
-                        thumbnailPath = downloadUrl.toString(),
-                        sizeBytes = actualBytes.size.toLong()
-                    )
+                    finalItem = if (item.type == SavedItemType.AUDIO) {
+                        finalItem.copy(
+                            thumbnailPath = downloadUrl.toString(),
+                            sizeBytes = actualBytes.size.toLong()
+                        )
+                    } else {
+                        finalItem.copy(
+                            content = downloadUrl.toString(),
+                            thumbnailPath = downloadUrl.toString(),
+                            sizeBytes = actualBytes.size.toLong()
+                        )
+                    }
                     // Save locally again with the new remote URL
                     savedItemDao.insertItem(finalItem.toEntity())
                     onProgress(0.9f)
@@ -395,11 +400,12 @@ class SecondBrainRepository(private val context: Context) {
                 var domainItem = entity.toDomain()
                 var finalItem = domainItem
 
+                val mediaUrl = if (domainItem.type == SavedItemType.AUDIO) domainItem.thumbnailPath ?: "" else domainItem.content
                 if ((domainItem.type == SavedItemType.IMAGE || domainItem.type == SavedItemType.VIDEO || domainItem.type == SavedItemType.AUDIO) &&
-                    !domainItem.content.startsWith("http://") && !domainItem.content.startsWith("https://")
+                    !mediaUrl.startsWith("http://") && !mediaUrl.startsWith("https://")
                 ) {
                     val localPath = when (domainItem.type) {
-                        SavedItemType.AUDIO -> domainItem.content.ifEmpty { domainItem.thumbnailPath ?: "" }
+                        SavedItemType.AUDIO -> domainItem.thumbnailPath ?: ""
                         else -> domainItem.thumbnailPath ?: domainItem.content
                     }
                     val bytes = readFileBytes(localPath)
@@ -413,11 +419,18 @@ class SecondBrainRepository(private val context: Context) {
                         val uploadTask = storageRef.putBytes(bytes)
                         val snapshot = uploadTask.await()
                         val downloadUrl = (snapshot.metadata?.reference?.downloadUrl ?: throw Exception("No reference URL")).await()
-                        finalItem = finalItem.copy(
-                            content = downloadUrl.toString(),
-                            thumbnailPath = downloadUrl.toString(),
-                            sizeBytes = bytes.size.toLong()
-                        )
+                        finalItem = if (domainItem.type == SavedItemType.AUDIO) {
+                            finalItem.copy(
+                                thumbnailPath = downloadUrl.toString(),
+                                sizeBytes = bytes.size.toLong()
+                            )
+                        } else {
+                            finalItem.copy(
+                                content = downloadUrl.toString(),
+                                thumbnailPath = downloadUrl.toString(),
+                                sizeBytes = bytes.size.toLong()
+                            )
+                        }
                         savedItemDao.insertItem(finalItem.toEntity())
                     }
                 }
@@ -486,12 +499,12 @@ class SecondBrainRepository(private val context: Context) {
                 var domainItem = entity.toDomain()
                 var finalItem = domainItem
 
-                // Upload media bytes if it's an image/video and not already uploaded
+                val mediaUrl = if (domainItem.type == SavedItemType.AUDIO) domainItem.thumbnailPath ?: "" else domainItem.content
                 if ((domainItem.type == SavedItemType.IMAGE || domainItem.type == SavedItemType.VIDEO || domainItem.type == SavedItemType.AUDIO) &&
-                    !domainItem.content.startsWith("http://") && !domainItem.content.startsWith("https://")
+                    !mediaUrl.startsWith("http://") && !mediaUrl.startsWith("https://")
                 ) {
                     val localPath = when (domainItem.type) {
-                        SavedItemType.AUDIO -> domainItem.content.ifEmpty { domainItem.thumbnailPath ?: "" }
+                        SavedItemType.AUDIO -> domainItem.thumbnailPath ?: ""
                         else -> domainItem.thumbnailPath ?: domainItem.content
                     }
                     val bytes = readFileBytes(localPath)
@@ -505,11 +518,18 @@ class SecondBrainRepository(private val context: Context) {
                         val uploadTask = storageRef.putBytes(bytes)
                         val snapshot = uploadTask.await()
                         val downloadUrl = (snapshot.metadata?.reference?.downloadUrl ?: throw Exception("No reference URL")).await()
-                        finalItem = finalItem.copy(
-                            content = downloadUrl.toString(),
-                            thumbnailPath = downloadUrl.toString(),
-                            sizeBytes = bytes.size.toLong()
-                        )
+                        finalItem = if (domainItem.type == SavedItemType.AUDIO) {
+                            finalItem.copy(
+                                thumbnailPath = downloadUrl.toString(),
+                                sizeBytes = bytes.size.toLong()
+                            )
+                        } else {
+                            finalItem.copy(
+                                content = downloadUrl.toString(),
+                                thumbnailPath = downloadUrl.toString(),
+                                sizeBytes = bytes.size.toLong()
+                            )
+                        }
                         savedItemDao.insertItem(finalItem.toEntity())
                     }
                 }
@@ -588,9 +608,10 @@ class SecondBrainRepository(private val context: Context) {
         }
 
         // Delete from Storage if it's a cloud storage URL
-        if (currentUser != null && storage != null && item.content.startsWith("https://firebasestorage")) {
+        val mediaUrl = if (item.type == SavedItemType.AUDIO) item.thumbnailPath ?: "" else item.content
+        if (currentUser != null && storage != null && mediaUrl.startsWith("https://firebasestorage")) {
             try {
-                val storageRef = storage.getReferenceFromUrl(item.content)
+                val storageRef = storage.getReferenceFromUrl(mediaUrl)
                 storageRef.delete()
             } catch (e: Exception) {
                 Log.e("SecondBrainRepo", "Failed to delete file from Storage: ${e.message}")
