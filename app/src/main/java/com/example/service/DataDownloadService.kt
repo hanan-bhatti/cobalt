@@ -118,7 +118,8 @@ class DataDownloadService : Service() {
         
         // Filter cloud media items (images, videos, audios with web URLs)
         val mediaItems = allItems.filter { item ->
-            val hasWebUrl = item.content.startsWith("http://") || item.content.startsWith("https://")
+            val mediaUrl = if (item.type == SavedItemType.AUDIO) item.thumbnailPath ?: "" else item.content
+            val hasWebUrl = mediaUrl.startsWith("http://") || mediaUrl.startsWith("https://")
             val isMedia = item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO
             isMedia && hasWebUrl
         }
@@ -144,7 +145,8 @@ class DataDownloadService : Service() {
 
         for (i in mediaItems.indices) {
             val item = mediaItems[i]
-            val size = getRemoteFileSize(item.content)
+            val mediaUrl = if (item.type == SavedItemType.AUDIO) item.thumbnailPath ?: "" else item.content
+            val size = getRemoteFileSize(mediaUrl)
             sizes[i] = size
             if (size > 0L) {
                 totalBytesExpected += size
@@ -162,7 +164,8 @@ class DataDownloadService : Service() {
 
         for (index in mediaItems.indices) {
             val item = mediaItems[index]
-            val fileName = getFileNameFromUrl(item.content, item.id, item.type)
+            val mediaUrl = if (item.type == SavedItemType.AUDIO) item.thumbnailPath ?: "" else item.content
+            val fileName = getFileNameFromUrl(mediaUrl, item.id, item.type)
             val mimeType = getMimeTypeFromType(item.type)
 
             var downloadSuccess = false
@@ -171,7 +174,7 @@ class DataDownloadService : Service() {
 
             while (!downloadSuccess && retries > 0) {
                 try {
-                    val request = Request.Builder().url(item.content).build()
+                    val request = Request.Builder().url(mediaUrl).build()
                     httpClient.newCall(request).execute().use { response ->
                         if (!response.isSuccessful) {
                             throw Exception("Server returned HTTP code ${response.code}")
