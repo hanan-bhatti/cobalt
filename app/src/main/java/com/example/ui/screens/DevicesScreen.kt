@@ -289,7 +289,6 @@ fun DeviceSessionRow(
                     DeviceDetailItem(label = "App Version", value = session.appVersion)
                     DeviceDetailItem(label = "First Connected", value = formatSimpleDate(session.firstSeen))
                     DeviceDetailItem(label = "Last Active", value = formatFullDateTime(session.lastActive))
-                    DeviceDetailItem(label = "Device ID", value = session.deviceId)
                 }
             }
         }

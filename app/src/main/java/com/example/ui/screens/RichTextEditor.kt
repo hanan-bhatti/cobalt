@@ -19,8 +19,11 @@
 package com.example.ui.screens
 import com.example.R
 import androidx.compose.ui.res.painterResource
-
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -63,154 +66,191 @@ fun RichTextEditor(
 
     var isPreviewMode by remember { mutableStateOf(false) }
 
-    Column(modifier = modifier) {
-        // Mode selector and Toolbar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            // Mode toggle buttons
-            Row(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                    .padding(2.dp),
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                val editBtnColor = if (!isPreviewMode) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
-                val editTextColor = if (!isPreviewMode) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                val previewBtnColor = if (isPreviewMode) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
-                val previewTextColor = if (isPreviewMode) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-
-                TextButton(
-                    onClick = { isPreviewMode = false },
-                    modifier = Modifier
-                        .height(32.dp)
-                        .bounceClick()
-                        .background(editBtnColor, RoundedCornerShape(10.dp)),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_custom_edit),
-                        contentDescription = "Edit Mode",
-                        tint = editTextColor,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Edit", fontSize = 12.sp, color = editTextColor)
-                }
-
-                TextButton(
-                    onClick = { isPreviewMode = true },
-                    modifier = Modifier
-                        .height(32.dp)
-                        .bounceClick()
-                        .background(previewBtnColor, RoundedCornerShape(10.dp)),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_custom_eye),
-                        contentDescription = "Preview Mode",
-                        tint = previewTextColor,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Preview", fontSize = 12.sp, color = previewTextColor)
-                }
-            }
-        }
-
-        if (!isPreviewMode) {
-            // Formatting Toolbar
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Mode selector Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f))
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+                    )
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start
             ) {
-                val toolbarActions = listOf(
-                    MarkdownAction(Icons.Default.FormatBold, "Bold", FormatType.Bold),
-                    MarkdownAction(Icons.Default.FormatItalic, "Italic", FormatType.Italic),
-                    MarkdownAction(Icons.Default.FormatStrikethrough, "Strikethrough", FormatType.Strikethrough),
-                    MarkdownAction(Icons.Default.Title, "Heading", FormatType.Heading),
-                    MarkdownAction(Icons.AutoMirrored.Filled.FormatListBulleted, "Bullet List", FormatType.BulletList),
-                    MarkdownAction(Icons.Default.FormatListNumbered, "Numbered List", FormatType.NumberedList),
-                    MarkdownAction(Icons.Default.Code, "Code Inline", FormatType.CodeInline),
-                    MarkdownAction(Icons.Default.Terminal, "Code Block", FormatType.CodeBlock),
-                    MarkdownAction(Icons.Default.Link, "Link", FormatType.Link)
-                )
+                // Mode toggle pill
+                Row(
+                    modifier = Modifier
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val editBtnColor = if (!isPreviewMode) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+                    val editTextColor = if (!isPreviewMode) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                    val previewBtnColor = if (isPreviewMode) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+                    val previewTextColor = if (isPreviewMode) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
 
-                toolbarActions.forEach { action ->
-                    IconButton(
-                        onClick = {
-                            applyMarkdownFormat(textFieldValue, action.type) { updated ->
-                                textFieldValue = updated
-                                onValueChange(updated.text)
-                            }
-                        },
+                    Row(
                         modifier = Modifier
-                            .size(36.dp)
-                            .bounceClick()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(editBtnColor)
+                            .clickable { isPreviewMode = false }
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = action.icon,
-                            contentDescription = action.description,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
+                            painter = painterResource(id = R.drawable.ic_custom_edit),
+                            contentDescription = "Edit Mode",
+                            tint = editTextColor,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Edit",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = editTextColor
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(previewBtnColor)
+                            .clickable { isPreviewMode = true }
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_eye),
+                            contentDescription = "Preview Mode",
+                            tint = previewTextColor,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Preview",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = previewTextColor
                         )
                     }
                 }
             }
 
-            OutlinedTextField(
-                value = textFieldValue,
-                onValueChange = {
-                    textFieldValue = it
-                    onValueChange(it.text)
-                },
-                placeholder = placeholder,
-                shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
-                minLines = minLines,
-                maxLines = maxLines,
-                visualTransformation = MarkdownVisualTransformation(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                ),
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
                 modifier = Modifier.fillMaxWidth()
             )
-        } else {
-            // Live Preview Mode
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 160.dp, max = 400.dp)
-                    .background(
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.05f),
-                        RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
+
+            if (!isPreviewMode) {
+                // Formatting Toolbar
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.Transparent)
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val toolbarActions = listOf(
+                        MarkdownAction(Icons.Default.FormatBold, "Bold", FormatType.Bold),
+                        MarkdownAction(Icons.Default.FormatItalic, "Italic", FormatType.Italic),
+                        MarkdownAction(Icons.Default.FormatStrikethrough, "Strikethrough", FormatType.Strikethrough),
+                        MarkdownAction(Icons.Default.Title, "Heading", FormatType.Heading),
+                        MarkdownAction(Icons.AutoMirrored.Filled.FormatListBulleted, "Bullet List", FormatType.BulletList),
+                        MarkdownAction(Icons.Default.FormatListNumbered, "Numbered List", FormatType.NumberedList),
+                        MarkdownAction(Icons.Default.Code, "Code Inline", FormatType.CodeInline),
+                        MarkdownAction(Icons.Default.Terminal, "Code Block", FormatType.CodeBlock),
+                        MarkdownAction(Icons.Default.Link, "Link", FormatType.Link)
                     )
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                if (value.isBlank()) {
-                    Text(
-                        "Nothing to preview yet. Start typing in Edit mode!",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    )
-                } else {
-                    MarkdownText(
-                        markdown = value,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+
+                    toolbarActions.forEach { action ->
+                        IconButton(
+                            onClick = {
+                                applyMarkdownFormat(textFieldValue, action.type) { updated ->
+                                    textFieldValue = updated
+                                    onValueChange(updated.text)
+                                }
+                            },
+                            modifier = Modifier
+                                .size(32.dp)
+                                .bounceClick()
+                        ) {
+                            Icon(
+                                imageVector = action.icon,
+                                contentDescription = action.description,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Input field (borderless standard TextField)
+                TextField(
+                    value = textFieldValue,
+                    onValueChange = {
+                        textFieldValue = it
+                        onValueChange(it.text)
+                    },
+                    placeholder = placeholder,
+                    minLines = minLines,
+                    maxLines = maxLines,
+                    visualTransformation = MarkdownVisualTransformation(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+                )
+            } else {
+                // Live Preview Mode
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 160.dp, max = 400.dp)
+                        .background(Color.Transparent)
+                        .padding(16.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    if (value.isBlank()) {
+                        Text(
+                            "Nothing to preview yet. Start typing in Edit mode!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    } else {
+                        MarkdownText(
+                            markdown = value,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
             }
         }

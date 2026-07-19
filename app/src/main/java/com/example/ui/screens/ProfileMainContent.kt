@@ -940,7 +940,9 @@ fun SectionContainer(title: String, content: @Composable () -> Unit) {
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
             modifier = Modifier.fillMaxWidth()
         ) {
-            content()
+            Column {
+                content()
+            }
         }
     }
 }

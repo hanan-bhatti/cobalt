@@ -519,7 +519,7 @@ fun DetailScreen(
                             Text(
                                 text = when (item.type) {
                                     SavedItemType.TEXT -> "NOTE CONTENT"
-                                    SavedItemType.AUDIO -> "TRANCRIPTION"
+                                    SavedItemType.AUDIO -> "TRANSCRIPTION"
                                     SavedItemType.LINK -> "DESCRIPTION"
                                     else -> "CONTENT"
                                 },
