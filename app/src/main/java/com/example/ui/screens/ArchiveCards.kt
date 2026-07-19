@@ -248,7 +248,11 @@ fun ArchiveItemCard(
                     ) {
                         val hasImage = displayImage.isNotNullOrBlank() && item.type != SavedItemType.AUDIO
 
-                        if (hasImage) {
+                        if (item.isUnavailable) {
+                            com.example.ui.components.UnavailableMediaPlaceholder(
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else if (hasImage) {
                             AsyncImage(
                                 model = displayImage,
                                 contentDescription = item.title,
@@ -535,7 +539,18 @@ fun ArchiveItemRow(
                 val displayImage = item.getBestImagePath()
                 val hasImage = displayImage.isNotNullOrBlank() && item.type != SavedItemType.AUDIO
 
-                if (hasImage) {
+                if (item.isUnavailable) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    ) {
+                        com.example.ui.components.UnavailableMediaPlaceholder(
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                } else if (hasImage) {
                     Box(
                         modifier = Modifier
                             .size(72.dp)

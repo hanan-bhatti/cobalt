@@ -948,15 +948,20 @@ class SecondBrainRepository(private val context: Context) {
                     existing?.isUnavailable ?: false
                 }
 
-                if (existing != null && (existing.isPendingBackup || existing.isUnavailable != newIsUnavailable)) {
-                    savedItemDao.insertItem(
-                        existing.copy(
-                            isPendingBackup = if (!isBackedUp) false else existing.isPendingBackup,
-                            isSynced = false,
-                            isBackedUp = isBackedUp,
-                            isUnavailable = newIsUnavailable
+                if (existing != null) {
+                    val isBackupStatusChanged = existing.isPendingBackup && !isBackedUp
+                    val isUnavailableChanged = existing.isUnavailable != newIsUnavailable
+                    
+                    if (isBackupStatusChanged || isUnavailableChanged) {
+                        savedItemDao.insertItem(
+                            existing.copy(
+                                isPendingBackup = if (isBackupStatusChanged) false else existing.isPendingBackup,
+                                isSynced = if (isBackupStatusChanged) false else existing.isSynced,
+                                isBackedUp = isBackedUp,
+                                isUnavailable = newIsUnavailable
+                            )
                         )
-                    )
+                    }
                 }
 
                 // If local item doesn't exist yet and isBackedUp is false, skip creation if there's no usable remote URL
