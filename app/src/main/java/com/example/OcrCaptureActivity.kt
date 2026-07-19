@@ -102,12 +102,12 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
             com.example.utils.MediaProjectionCache.resultCode = result.resultCode
             com.example.utils.MediaProjectionCache.resultData = result.data
             isCapturingState.value = true
-            
+
             // Wait for the system consent dialog to fully dismiss before capturing,
             // otherwise the screenshot includes the dialog/transition itself.
             handler.postDelayed({
                 startCaptureService(result.resultCode, result.data!!)
-            }, 400) 
+            }, 400)
         } else {
             Toast.makeText(this, "Screen capture permission denied", Toast.LENGTH_SHORT).show()
             finish()
@@ -151,7 +151,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        
+
         // Restart safety timeout
         handler.removeCallbacks(timeoutRunnable)
         handler.postDelayed(timeoutRunnable, 5000)
@@ -361,7 +361,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                     IconButton(
-                                        onClick = { 
+                                        onClick = {
                                             // Reset the capture state so they can draw a box again on the current capturedBitmap!
                                             if (capturedBitmap != null) {
                                                 viewModel.startFloatingOcrCapture(capturedBitmap!!)
@@ -388,13 +388,13 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                         tabs.forEach { tab ->
                                             val isSelected = activeTab == tab
                                             val hasContent = if (tab == "Links") extractedLinks.isNotEmpty() else activeItem?.extractedText != null
-                                            
+
                                             Box(
                                                 modifier = Modifier
                                                     .weight(1f)
                                                     .clip(RoundedCornerShape(50))
                                                     .background(
-                                                        if (isSelected) MaterialTheme.colorScheme.primary 
+                                                        if (isSelected) MaterialTheme.colorScheme.primary
                                                         else Color.Transparent
                                                     )
                                                     .clickable(enabled = hasContent) { activeTab = tab }
@@ -408,8 +408,8 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                     Icon(
                                                         painter = painterResource(id = if (tab == "Links") R.drawable.ic_custom_link else R.drawable.ic_custom_text),
                                                         contentDescription = null,
-                                                        tint = if (isSelected) MaterialTheme.colorScheme.onPrimary 
-                                                               else if (hasContent) MaterialTheme.colorScheme.onSurface 
+                                                        tint = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                                               else if (hasContent) MaterialTheme.colorScheme.onSurface
                                                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                                                         modifier = Modifier.size(16.dp)
                                                     )
@@ -417,8 +417,8 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                         text = if (tab == "Links") "$tab (${extractedLinks.size})" else tab,
                                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                                         style = MaterialTheme.typography.bodyMedium,
-                                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary 
-                                                               else if (hasContent) MaterialTheme.colorScheme.onSurface 
+                                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                                               else if (hasContent) MaterialTheme.colorScheme.onSurface
                                                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                                                     )
                                                 }
@@ -499,17 +499,28 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                 horizontalArrangement = Arrangement.End,
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Text(
-                                                    text = if (isPreviewMode) "✨ Styled Preview" else "📝 Edit Markdown",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                    fontWeight = FontWeight.Bold,
+                                                Row(
                                                     modifier = Modifier
                                                         .clip(RoundedCornerShape(8.dp))
                                                         .clickable { isPreviewMode = !isPreviewMode }
                                                         .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
-                                                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                                                )
+                                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                ) {
+                                                    Icon(
+                                                        painter = painterResource(id = if (isPreviewMode) R.drawable.ic_custom_text else R.drawable.ic_custom_edit),
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                    Text(
+                                                        text = if (isPreviewMode) "Styled Preview" else "Edit Markdown",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.primary,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
                                             }
 
                                             if (isPreviewMode) {
@@ -589,7 +600,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                 Text(
                                                     text = "New Folder",
                                                     style = MaterialTheme.typography.bodySmall.copy(
-                                                        fontSize = 11.5.sp,
+                                                        fontSize = 12.sp,
                                                         fontWeight = FontWeight.Bold
                                                     ),
                                                     color = MaterialTheme.colorScheme.primary,
@@ -728,7 +739,11 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                         ) {
                                             Icon(painter = painterResource(id = R.drawable.ic_custom_link), contentDescription = null)
                                             Spacer(modifier = Modifier.width(8.dp))
-                                            Text("Save Selected Links to Brain", fontWeight = FontWeight.Bold)
+                                            Text(
+                                                text = "Save Selected Links to Brain",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp
+                                            )
                                         }
                                     } else {
                                         Button(
@@ -757,7 +772,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                         ) {
                                             Icon(painter = painterResource(id = R.drawable.ic_custom_text), contentDescription = null)
                                             Spacer(modifier = Modifier.width(8.dp))
-                                            Text("Save Formatted Note to Brain", fontWeight = FontWeight.Bold)
+                                            Text("Save Formatted Note to Brain", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                         }
                                     }
                                 }
@@ -787,7 +802,7 @@ fun parseMarkdownToAnnotatedString(text: String, primaryColor: Color): androidx.
                 val indent = if (firstCharIndex >= 0) line.substring(0, firstCharIndex) else ""
                 processedLine = indent + "•  " + line.trimStart().substring(2)
             }
-            
+
             var index = 0
             while (index < processedLine.length) {
                 val boldStart = processedLine.indexOf("**", index)
@@ -827,4 +842,3 @@ fun parseMarkdownToAnnotatedString(text: String, primaryColor: Color): androidx.
         }
     }
 }
-

@@ -840,7 +840,6 @@ fun ManageStorageScreen(
             },
             text = {
                 Text("Select actions for the entire ${type.displayName} category folder.")
-                Text("Total=${typeItems.size}, unsynced=${nonSyncedItems.size}", style = MaterialTheme.typography.labelSmall)
             },
             confirmButton = {
                 Column(
