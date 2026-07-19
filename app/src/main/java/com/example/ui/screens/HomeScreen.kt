@@ -18,6 +18,7 @@
 
 package com.example.ui.screens
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.activity.compose.BackHandler
 import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
@@ -337,7 +338,7 @@ fun HomeScreen(
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-            
+
             // Search Bar
             Box(
                 modifier = Modifier
@@ -361,7 +362,7 @@ fun HomeScreen(
                     )
                 }
             }
-            
+
             // Horizontal Filter Chips Row
             val filteredCustomFolders = remember(customFolders) { customFolders.filter { it != "Archive" } }
             val systemCategories = remember { SavedItemType.entries.map { it.displayName } }
@@ -680,7 +681,7 @@ fun HomeScreen(
                                                 viewModel.showDetailItem(item)
                                             }
                                         },
-                                        onDelete = { 
+                                        onDelete = {
                                             itemToDelete = item
                                         },
                                         onManageFolders = { itemToManageFolders = item },
@@ -769,7 +770,7 @@ fun HomeScreen(
                                         viewModel.showDetailItem(item)
                                     }
                                 },
-                                onDelete = { 
+                                onDelete = {
                                     itemToDelete = item
                                 },
                                 onManageFolders = { itemToManageFolders = item },
@@ -972,7 +973,7 @@ fun HomeScreen(
     if (itemToManageFolders != null) {
         val item = itemToManageFolders!!
         val liveItem = items.find { it.id == item.id } ?: item
-        
+
         AlertDialog(
             onDismissRequest = { itemToManageFolders = null },
             title = {
@@ -995,20 +996,20 @@ fun HomeScreen(
             },
             text = {
                 var newFolderInDialog by remember { mutableStateOf("") }
-                
+
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                    
+
                     Text(
                         text = "Custom Folders",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    
+
                     if (customFolders.isEmpty()) {
                         Text(
                             text = "No custom folders yet. Create one below!",
@@ -1059,16 +1060,16 @@ fun HomeScreen(
                             }
                         }
                     }
-                    
+
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                    
+
                     Text(
                         text = "Create and Assign Folder",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -1143,20 +1144,20 @@ fun HomeScreen(
             },
             text = {
                 var newFolderInDialog by remember { mutableStateOf("") }
-                
+
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                    
+
                     Text(
                         text = "Select Custom Folder",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    
+
                     if (customFolders.isEmpty()) {
                         Text(
                             text = "No custom folders yet. Create one below!",
@@ -1200,16 +1201,16 @@ fun HomeScreen(
                             }
                         }
                     }
-                    
+
                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                    
+
                     Text(
                         text = "Create and Assign Folder",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -1482,24 +1483,41 @@ fun SwipeToDismissWrapper(
         // Background layer — only visible while dragging
         if (absProgress > 0.02f) {
             val isArchiveDirection = offsetX.value > 0
+            val isDark = isSystemInDarkTheme()
             val bgColor by animateColorAsState(
                 targetValue = if (isArchiveDirection) {
-                    if (isPastThreshold) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.primaryContainer
+                    if (isPastThreshold) {
+                        if (isDark) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primary
+                    } else {
+                        if (isDark) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer
+                    }
                 } else {
-                    if (isPastThreshold) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.errorContainer
+                    if (isPastThreshold) {
+                        if (isDark) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.error
+                    } else {
+                        if (isDark) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.errorContainer
+                    }
                 },
                 animationSpec = tween(200),
                 label = "swipe_bg"
             )
-            val iconTint = if (isArchiveDirection) {
-                if (isPastThreshold) MaterialTheme.colorScheme.onPrimary
-                else MaterialTheme.colorScheme.onPrimaryContainer
-            } else {
-                if (isPastThreshold) MaterialTheme.colorScheme.onError
-                else MaterialTheme.colorScheme.onErrorContainer
-            }
+            val iconTint by animateColorAsState(
+                targetValue = if (isArchiveDirection) {
+                    if (isPastThreshold) {
+                        if (isDark) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        if (isDark) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
+                    }
+                } else {
+                    if (isPastThreshold) {
+                        if (isDark) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onError
+                    } else {
+                        if (isDark) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onErrorContainer
+                    }
+                },
+                animationSpec = tween(200),
+                label = "swipe_tint"
+            )
             val iconResId = if (isArchiveDirection) {
                 if (isArchived) R.drawable.ic_custom_unarchive else R.drawable.ic_custom_archive
             } else {
@@ -1961,7 +1979,7 @@ fun PersistentCaptureForm(viewModel: SecondBrainViewModel) {
                             .padding(start = 12.dp)
                     )
                     IconButton(
-                        onClick = { 
+                        onClick = {
                             if (noteText.isNotBlank()) {
                                 val tagsList = noteTags.split(",").map { it.trim() }.filter { it.isNotEmpty() }
                                 viewModel.saveLocalTextItem(
@@ -1973,7 +1991,7 @@ fun PersistentCaptureForm(viewModel: SecondBrainViewModel) {
                                 noteText = ""
                                 noteTags = ""
                             } else {
-                                isExpanded = true 
+                                isExpanded = true
                             }
                         }
                     ) {
@@ -1995,7 +2013,7 @@ fun PersistentCaptureForm(viewModel: SecondBrainViewModel) {
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                
+
                 OutlinedTextField(
                     value = noteText,
                     onValueChange = { noteText = it },
@@ -2012,7 +2030,7 @@ fun PersistentCaptureForm(viewModel: SecondBrainViewModel) {
                     )
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                
+
                 OutlinedTextField(
                     value = noteTags,
                     onValueChange = { noteTags = it },
@@ -2022,14 +2040,14 @@ fun PersistentCaptureForm(viewModel: SecondBrainViewModel) {
                     shape = RoundedCornerShape(20.dp)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                
+
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(commonTags) { tag ->
                         FilterChip(
                             selected = false,
-                            onClick = { 
+                            onClick = {
                                 val currentTags = noteTags.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
                                 if (!currentTags.contains(tag)) {
                                     currentTags.add(tag)
@@ -2041,7 +2059,7 @@ fun PersistentCaptureForm(viewModel: SecondBrainViewModel) {
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Button(
                     onClick = {
                         if (noteText.isNotBlank()) {

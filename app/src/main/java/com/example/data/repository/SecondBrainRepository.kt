@@ -76,7 +76,7 @@ class SecondBrainRepository(private val context: Context) {
         null
     }
 
-    
+
     suspend fun extractTextFromAudio(
         base64Audio: String,
         apiKey: String,
@@ -124,7 +124,7 @@ class SecondBrainRepository(private val context: Context) {
             2. Add a short, punchy summary of the core message.
             3. Use elegant, structured bullet points, sections, or bold key terms with appropriate emojis to organize action items, key concepts, or reminders.
             4. Make sure it looks clean, uses generous whitespace, and is easy to scan.
-            
+
             Input Speech/Memo:
             $speechText
         """.trimIndent()
@@ -316,7 +316,7 @@ class SecondBrainRepository(private val context: Context) {
                         else -> "jpg"
                     }
                     val storageRef = storage.reference.child("users/${currentUser.uid}/media/${item.id}.$fileExtension")
-                    
+
                     val uploadTask = storageRef.putBytes(actualBytes)
                     uploadTask.addOnProgressListener { taskSnapshot ->
                         val progress = if (taskSnapshot.totalByteCount > 0) {
@@ -329,7 +329,7 @@ class SecondBrainRepository(private val context: Context) {
                     }
                     val snapshot = uploadTask.await()
                     val downloadUrl = (snapshot.metadata?.reference?.downloadUrl ?: throw Exception("No reference URL")).await()
-                    
+
                     finalItem = if (item.type == SavedItemType.AUDIO) {
                         finalItem.copy(
                             thumbnailPath = downloadUrl.toString(),
@@ -370,7 +370,7 @@ class SecondBrainRepository(private val context: Context) {
                     firestore.collection("users").document(currentUser.uid)
                         .collection("items").document(finalItem.id)
                         .set(itemMap).await()
-                    
+
                     // Mark locally as synced
                     finalItem = finalItem.copy(isSynced = true)
                     savedItemDao.insertItem(finalItem.toEntity())
@@ -387,7 +387,11 @@ class SecondBrainRepository(private val context: Context) {
 
     // Background sync function for uploading all unsynced items
 
-    // Specific targeted sync/backup for selected items
+    // Specific targeted sync/backup for selected items.
+    // Sets isPendingBackup = true on success so this item is recognized as
+    // "the user wants this backed up" — this is what lets syncUnsyncedItems()
+    // tell the difference between "never backed up yet" and "explicitly removed
+    // from backup", instead of relying on isSynced alone for both meanings.
     suspend fun backupSelectedItems(itemIds: List<String>) = withContext(Dispatchers.IO) {
         val currentUser = firebaseAuth?.currentUser ?: return@withContext
         val items = savedItemDao.getAllItems()
@@ -456,7 +460,9 @@ class SecondBrainRepository(private val context: Context) {
                         .collection("items").document(finalItem.id)
                         .set(itemMap).await()
 
-                    finalItem = finalItem.copy(isSynced = true)
+                    // isPendingBackup=true records that the user explicitly wants
+                    // this item backed up, distinct from isSynced (current state).
+                    finalItem = finalItem.copy(isSynced = true, isPendingBackup = true)
                     savedItemDao.insertItem(finalItem.toEntity())
                 }
             } catch (e: Exception) {
@@ -466,6 +472,11 @@ class SecondBrainRepository(private val context: Context) {
         com.example.widget.WidgetUpdater.update(context)
     }
 
+    // Removes an item from cloud backup. Clears BOTH isSynced (no longer backed up)
+    // AND isPendingBackup (user no longer wants this auto re-uploaded). Without
+    // clearing isPendingBackup too, syncUnsyncedItems() would see isSynced=false
+    // and re-upload the item on the very next sync/pull-to-refresh, resurrecting
+    // something the user just removed.
     suspend fun removeBackup(itemIds: List<String>) = withContext(Dispatchers.IO) {
         val currentUser = firebaseAuth?.currentUser ?: return@withContext
         for (id in itemIds) {
@@ -478,7 +489,7 @@ class SecondBrainRepository(private val context: Context) {
                 // is fine for standard removal of metadata. We can delete it if it's an image.
                 val item = savedItemDao.getItemById(id)?.toDomain()
                 if (item != null) {
-                    val newDomain = item.copy(isSynced = false)
+                    val newDomain = item.copy(isSynced = false, isPendingBackup = false)
                     savedItemDao.insertItem(newDomain.toEntity())
                 }
             } catch (e: Exception) {
@@ -487,10 +498,27 @@ class SecondBrainRepository(private val context: Context) {
         }
     }
 
+    // Auto-sync used for normal saves/edits and app-open/sign-in flows.
+    // For media items (IMAGE/VIDEO/AUDIO), only re-upload if isPendingBackup is
+    // true — i.e. the user actually selected this for cloud backup at some point
+    // and hasn't removed it since. This prevents pull-to-refresh / auto-sync from
+    // silently re-uploading media the user just removed from backup (isSynced
+    // alone can't distinguish "never backed up" from "explicitly removed").
+    // Non-media items (TEXT/LINK/CODE) are free/unlimited and always auto-synced
+    // as before, since they were never gated by backup selection.
     suspend fun syncUnsyncedItems() = withContext(Dispatchers.IO) {
         val currentUser = firebaseAuth?.currentUser ?: return@withContext
         val items = savedItemDao.getAllItems()
-        val unsynced = items.filter { !it.isSynced }
+        val unsynced = items.filter { entity ->
+            if (!entity.isSynced) {
+                val isMedia = entity.type == SavedItemType.IMAGE.name ||
+                    entity.type == SavedItemType.VIDEO.name ||
+                    entity.type == SavedItemType.AUDIO.name
+                if (isMedia) entity.isPendingBackup else true
+            } else {
+                false
+            }
+        }
         if (unsynced.isEmpty()) return@withContext
 
         Log.d("SecondBrainRepo", "Starting sync of ${unsynced.size} unsynced items.")
@@ -556,7 +584,9 @@ class SecondBrainRepository(private val context: Context) {
                         .collection("items").document(finalItem.id)
                         .set(itemMap).await()
 
-                    // Update locally as synced
+                    // Update locally as synced. For media items this also implicitly
+                    // confirms isPendingBackup was already true (that's why it was
+                    // picked up above); leave the flag as-is for non-media items.
                     finalItem = finalItem.copy(isSynced = true)
                     savedItemDao.insertItem(finalItem.toEntity())
                     Log.d("SecondBrainRepo", "Successfully synced item: ${finalItem.id}")
@@ -581,7 +611,7 @@ class SecondBrainRepository(private val context: Context) {
                     firestore.collection("users").document(currentUser.uid)
                         .collection("folders").document(folder.name)
                         .set(folderMap).await()
-                    
+
                     customFolderDao.insertFolder(folder.copy(isSynced = true))
                     Log.d("SecondBrainRepo", "Successfully synced folder: ${folder.name}")
                 }
@@ -724,7 +754,7 @@ class SecondBrainRepository(private val context: Context) {
         if (currentUser != null && firestore != null) {
             try {
                 val userDocRef = firestore.collection("users").document(currentUser.uid)
-                
+
                 // Add new folder in firestore
                 userDocRef.collection("folders").document(newName).set(mapOf(
                     "name" to newName,
@@ -732,7 +762,7 @@ class SecondBrainRepository(private val context: Context) {
                     "iconName" to oldFolder.iconName,
                     "isPinned" to oldFolder.isPinned
                 )).await()
-                
+
                 // Delete old folder in firestore
                 userDocRef.collection("folders").document(oldName).delete().await()
 
@@ -812,6 +842,11 @@ class SecondBrainRepository(private val context: Context) {
                     return@forEach
                 }
 
+                // Preserve isPendingBackup from the existing local record if present,
+                // since this flag reflects the user's local backup intent and is not
+                // stored in Firestore.
+                val preservedPendingBackup = existing?.isPendingBackup ?: true
+
                 savedItemDao.insertItem(
                     SavedItemEntity(
                         id = id,
@@ -827,7 +862,8 @@ class SecondBrainRepository(private val context: Context) {
                         linkTitle = linkTitle,
                         linkDescription = linkDescription,
                         linkImage = linkImage,
-                        sizeBytes = sizeBytes
+                        sizeBytes = sizeBytes,
+                        isPendingBackup = preservedPendingBackup
                     )
                 )
             }
@@ -984,11 +1020,11 @@ class SecondBrainRepository(private val context: Context) {
             val title = document.title().takeIf { !it.isNullOrBlank() }
                 ?: document.select("meta[property=og:title]").attr("content").takeIf { !it.isNullOrBlank() }
                 ?: document.select("meta[name=twitter:title]").attr("content").takeIf { !it.isNullOrBlank() }
-                
+
             val description = document.select("meta[property=og:description]").attr("content").takeIf { !it.isNullOrBlank() }
                 ?: document.select("meta[name=description]").attr("content").takeIf { !it.isNullOrBlank() }
                 ?: document.select("meta[name=twitter:description]").attr("content").takeIf { !it.isNullOrBlank() }
-                
+
             val imageUrl = document.select("meta[property=og:image]").attr("content").takeIf { !it.isNullOrBlank() }
                 ?: document.select("meta[name=twitter:image]").attr("content").takeIf { !it.isNullOrBlank() }
 

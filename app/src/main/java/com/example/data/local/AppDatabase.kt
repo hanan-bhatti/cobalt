@@ -23,7 +23,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [SavedItemEntity::class, CustomFolderEntity::class], version = 5, exportSchema = false)
+@Database(entities = [SavedItemEntity::class, CustomFolderEntity::class], version = 1, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun savedItemDao(): SavedItemDao
     abstract fun customFolderDao(): CustomFolderDao

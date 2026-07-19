@@ -355,14 +355,14 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
 
     fun syncData() {
         if (_isSyncing.value) return
-        
+
         if (!isNetworkAvailable()) {
             showToast("No internet connection. Please check your network and try again.")
             return
         }
 
         _isSyncing.value = true
-        
+
         viewModelScope.launch {
             val auth = repository.firebaseAuth
             if (auth?.currentUser == null) {
@@ -371,7 +371,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 _isSyncing.value = false
                 return@launch
             }
-            
+
             try {
                 // Background operations to restore and sync
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -564,29 +564,40 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     val isFirebaseAvailable: Boolean = repository.firebaseAuth != null
 
     init {
-        viewModelScope.launch {
-            kotlinx.coroutines.delay(1200) // Minimum display time for professional skeleton transition
-            _isInitialLoading.value = false
-        }
-
         // Safe Firebase Auth State listener
         val auth = repository.firebaseAuth
         if (auth != null) {
-            _userEmail.value = auth.currentUser?.email
-            _userName.value = auth.currentUser?.displayName
-            _userPhotoUrl.value = auth.currentUser?.photoUrl?.toString()
+            val user = auth.currentUser
+            _userEmail.value = user?.email
+            _userName.value = user?.displayName
+            _userPhotoUrl.value = user?.photoUrl?.toString()
+
+            if (user != null) {
+                viewModelScope.launch {
+                    _isInitialLoading.value = true
+                    try {
+                        repository.restoreUserDataFromCloud()
+                        repository.syncUnsyncedItems()
+                    } catch (e: Exception) {
+                        Log.e("SecondBrainVM", "Initial auto-sync error: ${e.message}", e)
+                    } finally {
+                        _isInitialLoading.value = false
+                    }
+                }
+            } else {
+                _isInitialLoading.value = false
+            }
+
             auth.addAuthStateListener { firebaseAuth ->
-                val user = firebaseAuth.currentUser
-                _userEmail.value = user?.email
-                _userName.value = user?.displayName
-                _userPhotoUrl.value = user?.photoUrl?.toString()
-                if (user != null) {
+                val updatedUser = firebaseAuth.currentUser
+                _userEmail.value = updatedUser?.email
+                _userName.value = updatedUser?.displayName
+                _userPhotoUrl.value = updatedUser?.photoUrl?.toString()
+                if (updatedUser != null) {
                     viewModelScope.launch {
                         _isInitialLoading.value = true
                         try {
-                            // Automatically pull backed up data from cloud
                             repository.restoreUserDataFromCloud()
-                            // Automatically push any offline/unsynced data up to cloud
                             repository.syncUnsyncedItems()
                         } catch (e: Exception) {
                             Log.e("SecondBrainVM", "Initial auto-sync error: ${e.message}", e)
@@ -601,6 +612,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             _userEmail.value = prefs.getString("simulated_email", null)
             _userName.value = prefs.getString("simulated_name", null)
             _userPhotoUrl.value = prefs.getString("simulated_photo", null)
+            _isInitialLoading.value = false
         }
     }
 
@@ -726,7 +738,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             try {
                 val credentialManager = CredentialManager.create(activityContext)
-                
+
                 val clientId = activityContext.getString(com.example.R.string.default_web_client_id)
 
                 val googleIdOption = GetGoogleIdOption.Builder()
@@ -797,7 +809,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         }
         _authError.value = null
         _authLoading.value = true
-        
+
         val actionCodeSettings = com.google.firebase.auth.ActionCodeSettings.newBuilder()
             .setUrl("https://second-brain-11.firebaseapp.com/signin")
             .setHandleCodeInApp(true)
@@ -924,7 +936,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         val auth = repository.firebaseAuth ?: return
         _authError.value = null
         _authLoading.value = true
-        
+
         auth.signInWithEmailLink(email, emailLink)
             .addOnSuccessListener { result ->
                 val userMail = result.user?.email ?: email
@@ -1093,7 +1105,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         _ocrError.value = null
     }
 
-    
+
     fun transcribeAudioMemo(file: java.io.File) {
         val currentItem = _activeCaptureItem.value ?: return
         _isOcrLoading.value = true
@@ -1194,7 +1206,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             val startRegex = Regex("^```(?:json)?\\s*")
             val endRegex = Regex("\\s*```$")
             cleanText = cleanText.replace(startRegex, "").replace(endRegex, "").trim()
-            
+
             val jsonObject = org.json.JSONObject(cleanText)
             parsedExtractedText = jsonObject.optString("extractedText", raw)
             val urlsArray = jsonObject.optJSONArray("urls")
@@ -1225,7 +1237,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         )
     }
 
-    
+
     fun performFullImageOcr(uri: android.net.Uri, context: android.content.Context) {
         val currentItem = _activeCaptureItem.value ?: return
         _isOcrLoading.value = true
@@ -1253,7 +1265,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     _isOcrLoading.value = false
                     return@launch
                 }
-                
+
                 val apiKey = resolveValidApiKeyOrNull()
                 if (apiKey == null) {
                     _ocrError.value = "Please save a valid Gemini API Key first."
@@ -1275,7 +1287,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     _activeCaptureItem.value = _activeCaptureItem.value?.copy(
                         extractedText = parsedExtractedText
                     )
-                    
+
                     val reviews = urlsList.map { (urlStr, desc) ->
                         ExtractedLinkReview(
                             originalUrl = urlStr,
@@ -1328,7 +1340,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                         content = if (isHttpLink) parsedExtractedText else currentItem.content,
                         type = if (isHttpLink) com.example.data.model.SavedItemType.LINK else currentItem.type
                     )
-                    
+
                     // Stage extracted URLs for review instead of auto-saving
                     val reviews = urlsList.map { (urlStr, desc) ->
                         ExtractedLinkReview(
@@ -1415,7 +1427,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                         linkImage = metadata.imageUrl,
                         title = metadata.title ?: updatedItem.title
                     )
-                    
+
                     if (metadata.title.isNullOrBlank() && metadata.description.isNullOrBlank() && metadata.imageUrl.isNullOrBlank()) {
                         _metadataError.value = "No metadata details could be parsed from this page."
                     }
@@ -1468,7 +1480,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     pendingMediaBytes = bytes
                     val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                     _capturedBitmap.value = bitmap
-                    
+
                     val extension = if (type == SavedItemType.IMAGE) "jpg" else "mp4"
                     val localPath = repository.saveToLocalCache("media_${UUID.randomUUID()}.$extension", bytes)
                     updateActiveCaptureItem { it.copy(content = localPath, thumbnailPath = localPath, type = type) }
@@ -1532,7 +1544,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 val savedItem = repository.saveItem(newItem, null)
                 AnalyticsHelper.logNoteCreated(context, savedItem.id, savedItem.type.name)
                 showToast("Item saved successfully.")
-                
+
                 // Sync to Firestore and Storage in background
                 launch(kotlinx.coroutines.Dispatchers.IO) {
                     try {
@@ -1541,7 +1553,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                         Log.e("SecondBrainVM", "Background sync failed: ${e.message}")
                     }
                 }
-                
+
                 if (type == SavedItemType.LINK && content.isNotBlank()) {
                     launch(kotlinx.coroutines.Dispatchers.IO) {
                         try {
@@ -1589,7 +1601,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 kotlinx.coroutines.delay(200) // slight delay to show 100% progress state
                 cancelCapture()
                 showToast(if (isEdit) "Item updated successfully." else "Item saved successfully.")
-                
+
                 // Sync to Firestore and Storage in background
                 launch(kotlinx.coroutines.Dispatchers.IO) {
                     try {

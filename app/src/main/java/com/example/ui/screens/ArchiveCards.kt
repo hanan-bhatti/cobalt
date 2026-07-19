@@ -195,7 +195,7 @@ fun ArchiveItemCard(
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f)
                     )
-                    
+
                     if (item.type == SavedItemType.LINK) {
                         val context = LocalContext.current
                         IconButton(
@@ -232,11 +232,11 @@ fun ArchiveItemCard(
 
                 // Media Preview (if applicable)
                 val displayImage = item.getBestImagePath()
-                val showMediaPreview = displayImage.isNotNullOrBlank() || 
-                        item.type == SavedItemType.VIDEO || 
-                        item.type == SavedItemType.AUDIO || 
+                val showMediaPreview = displayImage.isNotNullOrBlank() ||
+                        item.type == SavedItemType.VIDEO ||
+                        item.type == SavedItemType.AUDIO ||
                         item.type == SavedItemType.CODE
-                
+
                 if (showMediaPreview) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Box(
@@ -513,7 +513,7 @@ fun ArchiveItemRow(
         Card(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.82f)
             ),
             border = BorderStroke(
                 width = if (isSelected) 2.dp else 0.dp,

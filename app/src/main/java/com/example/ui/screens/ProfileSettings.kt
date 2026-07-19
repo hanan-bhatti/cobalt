@@ -168,7 +168,7 @@ fun SettingsScreen(
                         val dynamicColorEnabled by viewModel.settingsRepository.dynamicColor.collectAsState()
                         SettingsToggleRow(
                             title = "Dynamic color",
-                            subtitle = "Use colors from your wallpaper (Android 12+)",
+                            subtitle = "Use colors from your wallpaper",
                             checked = dynamicColorEnabled,
                             onCheckedChange = { enabled -> viewModel.settingsRepository.setDynamicColor(enabled) }
                         )

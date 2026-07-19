@@ -16,445 +16,468 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.example.widget
+ package com.example.widget
 
-import android.content.Context
-import android.content.Intent
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.glance.GlanceId
-import androidx.glance.GlanceModifier
-import androidx.glance.GlanceTheme
-import androidx.glance.Image
-import androidx.glance.ImageProvider
-import androidx.glance.LocalContext
-import androidx.glance.action.clickable
-import androidx.glance.appwidget.GlanceAppWidget
-import androidx.glance.appwidget.GlanceAppWidgetReceiver
-import androidx.glance.appwidget.SizeMode
-import androidx.glance.appwidget.action.actionStartActivity
-import androidx.glance.appwidget.provideContent
-import androidx.glance.background
-import androidx.glance.layout.Alignment
-import androidx.glance.layout.Box
-import androidx.glance.layout.Column
-import androidx.glance.layout.Row
-import androidx.glance.layout.Spacer
-import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
-import androidx.glance.layout.padding
-import androidx.glance.layout.size
-import androidx.glance.layout.width
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
-import com.example.MainActivity
-import com.example.R
-import com.example.data.model.SavedItem
-import com.example.data.model.SavedItemType
-import com.example.data.repository.SecondBrainRepository
-import androidx.glance.appwidget.cornerRadius
-import androidx.glance.unit.ColorProvider
+ import android.content.Context
+ import android.content.Intent
+ import android.content.res.Configuration
+ import androidx.compose.runtime.Composable
+ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.unit.DpSize
+ import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.unit.sp
+ import androidx.glance.ColorFilter
+ import androidx.glance.GlanceId
+ import androidx.glance.GlanceModifier
+ import androidx.glance.Image
+ import androidx.glance.ImageProvider
+ import androidx.glance.LocalContext
+ import androidx.glance.action.ActionParameters
+ import androidx.glance.action.clickable
+ import androidx.glance.appwidget.GlanceAppWidget
+ import androidx.glance.appwidget.GlanceAppWidgetReceiver
+ import androidx.glance.appwidget.SizeMode
+ import androidx.glance.appwidget.action.ActionCallback
+ import androidx.glance.appwidget.action.actionRunCallback
+ import androidx.glance.appwidget.action.actionStartActivity
+ import androidx.glance.appwidget.cornerRadius
+ import androidx.glance.appwidget.lazy.LazyColumn
+ import androidx.glance.appwidget.lazy.items
+ import androidx.glance.appwidget.provideContent
+ import androidx.glance.background
+ import androidx.glance.layout.Alignment
+ import androidx.glance.layout.Box
+ import androidx.glance.layout.Column
+ import androidx.glance.layout.Row
+ import androidx.glance.layout.Spacer
+ import androidx.glance.layout.fillMaxHeight
+ import androidx.glance.layout.fillMaxSize
+ import androidx.glance.layout.fillMaxWidth
+ import androidx.glance.layout.height
+ import androidx.glance.layout.padding
+ import androidx.glance.layout.size
+ import androidx.glance.layout.width
+ import androidx.glance.text.FontFamily
+ import androidx.glance.text.FontWeight
+ import androidx.glance.text.Text
+ import androidx.glance.text.TextStyle
+ import androidx.glance.unit.ColorProvider
+ import com.example.MainActivity
+ import com.example.R
+ import com.example.data.model.SavedItem
+ import com.example.data.model.SavedItemType
+ import com.example.data.repository.SecondBrainRepository
+ import com.example.ui.theme.*
+ import com.example.utils.AnalyticsHelper
 
-import com.example.utils.AnalyticsHelper
+ // --- Universal Theme Integration ---
+ // This guarantees compilation by passing exactly one Color to ColorProvider,
+ // checking Dark Mode directly at runtime.
 
-class SecondBrainWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = SecondBrainWidget()
+ class WidgetThemeColors(isDark: Boolean) {
+     val primary = ColorProvider(if (isDark) PrimaryDark else Primary)
+     val onPrimary = ColorProvider(if (isDark) OnPrimaryDark else OnPrimary)
+     val secondary = ColorProvider(if (isDark) SecondaryDark else Secondary)
+     val background = ColorProvider(if (isDark) BackgroundDark else Background)
+     val onBackground = ColorProvider(if (isDark) OnBackgroundDark else OnBackground)
+     val surface = ColorProvider(if (isDark) SurfaceDark else Surface)
+     val onSurface = ColorProvider(if (isDark) OnSurfaceDark else OnSurface)
+     val surfaceVariant = ColorProvider(if (isDark) SurfaceVariantDark else SurfaceVariant)
+     val onSurfaceVariant = ColorProvider(if (isDark) OnSurfaceVariantDark else OnSurfaceVariant)
+     val error = ColorProvider(if (isDark) Color(0xFFFFB4AB) else Color(0xFFBA1A1A))
+     val onError = ColorProvider(if (isDark) Color(0xFF690005) else Color(0xFFFFFFFF))
+ }
 
-    override fun onEnabled(context: Context) {
-        super.onEnabled(context)
-        AnalyticsHelper.logWidgetAdded(context)
-    }
+ @Composable
+ fun getWidgetTheme(): WidgetThemeColors {
+     val uiMode = LocalContext.current.resources.configuration.uiMode
+     val isNightMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+     return WidgetThemeColors(isNightMode)
+ }
 
-    override fun onUpdate(
-        context: Context,
-        appWidgetManager: android.appwidget.AppWidgetManager,
-        appWidgetIds: IntArray
-    ) {
-        super.onUpdate(context, appWidgetManager, appWidgetIds)
-        WidgetUpdater.update(context)
-    }
-}
+ // --- Widget Core ---
 
-class RefreshCallback : androidx.glance.appwidget.action.ActionCallback {
-    override suspend fun onAction(
-        context: Context,
-        glanceId: GlanceId,
-        parameters: androidx.glance.action.ActionParameters
-    ) {
-        WidgetUpdater.update(context)
-    }
-}
+ class SecondBrainWidgetReceiver : GlanceAppWidgetReceiver() {
+     override val glanceAppWidget: GlanceAppWidget = SecondBrainWidget()
 
-class SecondBrainWidget : GlanceAppWidget() {
-    
-    override val sizeMode = SizeMode.Single
-    
-    override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val repository = SecondBrainRepository(context)
-        var isFromCache = false
-        var isTimeout = false
-        
-        val items = try {
-            val fetched = kotlinx.coroutines.withTimeoutOrNull(3000) {
-                repository.getAllItems()
-            }
-            if (fetched != null) {
-                WidgetCache.saveItemsToCache(context, fetched)
-                fetched
-            } else {
-                isTimeout = true
-                isFromCache = true
-                WidgetCache.getCachedItems(context)
-            }
-        } catch (e: Exception) {
-            isFromCache = true
-            WidgetCache.getCachedItems(context)
-        }
+     override fun onEnabled(context: Context) {
+         super.onEnabled(context)
+         AnalyticsHelper.logWidgetAdded(context)
+     }
 
-        provideContent {
-            GlanceTheme {
-                // Modernized card design with rounded corners and adaptive surface colors
-                Box(
-                    modifier = GlanceModifier
-                        .fillMaxSize()
-                        .background(GlanceTheme.colors.surface)
-                        .cornerRadius(24.dp)
-                        .padding(12.dp)
-                ) {
-                    Column(modifier = GlanceModifier.fillMaxSize()) {
-                        WidgetHeader(isFromCache = isFromCache, isTimeout = isTimeout)
-                        
-                        Spacer(modifier = GlanceModifier.height(10.dp))
-                        
-                        if (items.isEmpty()) {
-                            Box(
-                                modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                val emptyText = if (isTimeout) {
-                                    "Connection timed out\nTap a quick action to capture"
-                                } else {
-                                    "Your second brain is empty\nTap a quick action to capture"
-                                }
-                                Text(
-                                    text = emptyText,
-                                    style = TextStyle(
-                                        color = GlanceTheme.colors.onSurfaceVariant,
-                                        fontSize = 11.sp,
-                                        textAlign = androidx.glance.text.TextAlign.Center
-                                    )
-                                )
-                            }
-                        } else {
-                            // Display up to 3 items inside a clean scrollable list
-                            Column(modifier = GlanceModifier.defaultWeight()) {
-                                items.take(3).forEach { item ->
-                                    ItemRow(item)
-                                    Spacer(modifier = GlanceModifier.height(6.dp))
-                                }
-                            }
-                        }
-                        
-                        Spacer(modifier = GlanceModifier.height(6.dp))
-                        
-                        // Beautifully color-coded round quick action buttons
-                        QuickActionRow()
-                    }
-                }
-            }
-        }
-    }
-}
+     override fun onUpdate(context: Context, appWidgetManager: android.appwidget.AppWidgetManager, appWidgetIds: IntArray) {
+         super.onUpdate(context, appWidgetManager, appWidgetIds)
+         WidgetUpdater.update(context)
+     }
+ }
 
-@androidx.compose.runtime.Composable
-fun WidgetHeader(isFromCache: Boolean = false, isTimeout: Boolean = false) {
-    val context = LocalContext.current
-    
-    val userName = try {
-        val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-        auth.currentUser?.displayName?.trim()?.ifBlank { null }
-            ?: auth.currentUser?.email?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
-    } catch (e: Exception) {
-        null
-    } ?: try {
-        val prefs = context.getSharedPreferences("second_brain_prefs", Context.MODE_PRIVATE)
-        prefs.getString("simulated_name", null)?.trim()?.ifBlank { null }
-            ?: prefs.getString("simulated_email", null)?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
-    } catch (e: Exception) {
-        null
-    } ?: "User"
+ class RefreshCallback : ActionCallback {
+     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+         WidgetUpdater.update(context)
+     }
+ }
 
-    val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-    val greeting = when (hour) {
-        in 0..11 -> "Good morning"
-        in 12..16 -> "Good afternoon"
-        else -> "Good evening"
-    }
+ class SecondBrainWidget : GlanceAppWidget() {
+     override val sizeMode = SizeMode.Responsive(
+         setOf(
+             DpSize(150.dp, 100.dp),
+             DpSize(250.dp, 200.dp),
+             DpSize(300.dp, 300.dp)
+         )
+     )
 
-    Row(
-        modifier = GlanceModifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = GlanceModifier.defaultWeight()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "$greeting, $userName",
-                    style = TextStyle(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        color = GlanceTheme.colors.onSurface
-                    )
-                )
-                if (isFromCache || isTimeout) {
-                    Spacer(modifier = GlanceModifier.width(6.dp))
-                    val badgeColor = if (isTimeout) GlanceTheme.colors.error else GlanceTheme.colors.primary
-                    val badgeText = if (isTimeout) "Offline" else "Cached"
-                    Box(
-                        modifier = GlanceModifier
-                            .background(badgeColor)
-                            .cornerRadius(4.dp)
-                            .padding(horizontal = 4.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = badgeText,
-                            style = TextStyle(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 8.sp,
-                                color = GlanceTheme.colors.onPrimary
-                            )
-                        )
-                    }
-                }
-            }
-            Spacer(modifier = GlanceModifier.height(1.dp))
-            Text(
-                text = "Your Second Brain",
-                style = TextStyle(
-                    fontSize = 10.sp,
-                    color = GlanceTheme.colors.onSurfaceVariant
-                )
-            )
-        }
-        
-        // Refresh / Retry button with a subtle tint background and circular corner radius
-        Box(
-            modifier = GlanceModifier
-                .size(28.dp)
-                .background(GlanceTheme.colors.surfaceVariant)
-                .cornerRadius(14.dp)
-                .clickable(androidx.glance.appwidget.action.actionRunCallback<RefreshCallback>()),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                provider = ImageProvider(R.drawable.ic_custom_sync),
-                contentDescription = "Refresh Widget",
-                modifier = GlanceModifier.size(14.dp)
-            )
-        }
-        
-        Spacer(modifier = GlanceModifier.width(8.dp))
-        
-        val addIntent = Intent(context, MainActivity::class.java).apply {
-            action = "com.example.ACTION_QUICK_TEXT"
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        
-        // Plus action with a bright orange background glow and circular corner radius
-        Box(
-            modifier = GlanceModifier
-                .size(28.dp)
-                .background(GlanceTheme.colors.primary)
-                .cornerRadius(14.dp)
-                .clickable(actionStartActivity(addIntent)),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                provider = ImageProvider(R.drawable.ic_custom_plus),
-                contentDescription = "Add Text Notes",
-                modifier = GlanceModifier.size(14.dp)
-            )
-        }
-    }
-}
+     override suspend fun provideGlance(context: Context, id: GlanceId) {
+         val repository = SecondBrainRepository(context)
+         var isFromCache = false
+         var isTimeout = false
 
-@androidx.compose.runtime.Composable
-fun ItemRow(item: SavedItem) {
-    val context = LocalContext.current
-    val openIntent = if (item.type == SavedItemType.LINK) {
-        Intent(Intent.ACTION_VIEW, android.net.Uri.parse(item.content)).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        }
-    } else {
-        Intent(context, MainActivity::class.java).apply {
-            action = Intent.ACTION_VIEW
-            data = android.net.Uri.parse("secondbrain://item/${item.id}")
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-    }
-    
-    // Choose beautiful color accents and icons based on type
-    val (iconRes, iconTintBg) = when (item.type) {
-        SavedItemType.LINK -> Pair(R.drawable.ic_custom_link, GlanceTheme.colors.primaryContainer)
-        SavedItemType.IMAGE, SavedItemType.VIDEO -> Pair(R.drawable.ic_custom_image, GlanceTheme.colors.tertiaryContainer)
-        SavedItemType.CODE -> Pair(R.drawable.ic_custom_code, GlanceTheme.colors.secondaryContainer)
-        SavedItemType.AUDIO -> Pair(R.drawable.ic_custom_voice, GlanceTheme.colors.primaryContainer)
-        else -> Pair(R.drawable.ic_custom_text, GlanceTheme.colors.primaryContainer)
-    }
-    
-    Row(
-        modifier = GlanceModifier
-            .fillMaxWidth()
-            .background(GlanceTheme.colors.surface) // Adaptive background
-            .cornerRadius(12.dp)
-            .clickable(actionStartActivity(openIntent))
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // High contrast colored round icon container (circle)
-        Box(
-            modifier = GlanceModifier
-                .size(24.dp)
-                .background(iconTintBg) // Adaptive tint
-                .cornerRadius(12.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                provider = ImageProvider(iconRes),
-                contentDescription = null,
-                modifier = GlanceModifier.size(12.dp)
-            )
-        }
-        
-        Spacer(modifier = GlanceModifier.width(10.dp))
-        
-        Column(modifier = GlanceModifier.defaultWeight()) {
-            Text(
-                text = item.title.ifBlank { item.type.displayName },
-                maxLines = 1,
-                style = TextStyle(
-                    fontWeight = FontWeight.Medium,
-                    color = GlanceTheme.colors.onSurface,
-                    fontSize = 11.sp
-                )
-            )
-            val subText = item.content.ifBlank { item.extractedText ?: "" }
-            if (subText.isNotBlank()) {
-                Text(
-                    text = subText,
-                    maxLines = 1,
-                    style = TextStyle(
-                        color = GlanceTheme.colors.onSurfaceVariant,
-                        fontSize = 9.sp
-                    )
-                )
-            }
-        }
-        
-        Spacer(modifier = GlanceModifier.width(4.dp))
-        
-        // Arrow pointing in
-        Text(
-            text = "→",
-            style = TextStyle(
-                color = GlanceTheme.colors.onSurfaceVariant,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
-            )
-        )
-    }
-}
+         val items = try {
+             val fetched = kotlinx.coroutines.withTimeoutOrNull(3000) { repository.getAllItems() }
+             if (fetched != null) {
+                 WidgetCache.saveItemsToCache(context, fetched)
+                 fetched
+             } else {
+                 isTimeout = true
+                 isFromCache = true
+                 WidgetCache.getCachedItems(context)
+             }
+         } catch (e: Exception) {
+             isFromCache = true
+             WidgetCache.getCachedItems(context)
+         }
 
-@androidx.compose.runtime.Composable
-fun QuickActionRow() {
-    val context = LocalContext.current
-    Row(
-        modifier = GlanceModifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Link Button (Blue)
-        val linkIntent = Intent(context, MainActivity::class.java).apply {
-            action = "com.example.ACTION_QUICK_LINK"
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        QuickActionButton(
-            iconRes = R.drawable.ic_custom_link,
-            intent = linkIntent,
-            bgColor = GlanceTheme.colors.primaryContainer,
-            iconTintGlow = GlanceTheme.colors.onPrimaryContainer,
-            label = "Link"
-        )
-        
-        Spacer(modifier = GlanceModifier.defaultWeight())
-        
-        // Image Button (Pink)
-        val imageIntent = Intent(context, MainActivity::class.java).apply {
-            action = "com.example.ACTION_QUICK_IMAGE"
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        QuickActionButton(
-            iconRes = R.drawable.ic_custom_image,
-            intent = imageIntent,
-            bgColor = GlanceTheme.colors.tertiaryContainer,
-            iconTintGlow = GlanceTheme.colors.onTertiaryContainer,
-            label = "Media"
-        )
-        
-        Spacer(modifier = GlanceModifier.defaultWeight())
-        
-        // Code Button (Green)
-        val codeIntent = Intent(context, MainActivity::class.java).apply {
-            action = "com.example.ACTION_QUICK_CODE"
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        QuickActionButton(
-            iconRes = R.drawable.ic_custom_code,
-            intent = codeIntent,
-            bgColor = GlanceTheme.colors.secondaryContainer,
-            iconTintGlow = GlanceTheme.colors.onSecondaryContainer,
-            label = "Code"
-        )
-    }
-}
+         provideContent {
+             val theme = getWidgetTheme()
 
-@androidx.compose.runtime.Composable
-fun QuickActionButton(
-    iconRes: Int,
-    intent: Intent,
-    bgColor: androidx.glance.unit.ColorProvider,
-    iconTintGlow: androidx.glance.unit.ColorProvider,
-    label: String
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = GlanceModifier
-                .size(40.dp)
-                .background(bgColor)
-                .cornerRadius(20.dp) // Circular button
-                .clickable(actionStartActivity(intent)),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                provider = ImageProvider(iconRes),
-                contentDescription = label,
-                modifier = GlanceModifier.size(16.dp)
-            )
-        }
-        Spacer(modifier = GlanceModifier.height(4.dp))
-        Text(
-            text = label,
-            style = TextStyle(
-                color = iconTintGlow,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Medium
-            )
-        )
-    }
-}
+             // Smooth rounded outer container (No sharp corners)
+             Row(
+                 modifier = GlanceModifier
+                     .fillMaxSize()
+                     .background(theme.background)
+                     .cornerRadius(28.dp)
+                     .padding(12.dp)
+             ) {
+                 // Sidebar Action Column
+                 Column(
+                     modifier = GlanceModifier
+                         .fillMaxHeight()
+                         .width(64.dp)
+                         .background(theme.surfaceVariant)
+                         .cornerRadius(24.dp)
+                         .padding(vertical = 12.dp),
+                     horizontalAlignment = Alignment.CenterHorizontally
+                 ) {
+                     QuickActionRowVertical()
+                 }
 
+                 // Main Content Area
+                 Column(modifier = GlanceModifier.fillMaxSize().padding(start = 12.dp)) {
+                     WidgetHeader(theme = theme, isFromCache = isFromCache, isTimeout = isTimeout)
+                     Spacer(modifier = GlanceModifier.height(12.dp))
+
+                     if (items.isEmpty()) {
+                         Box(modifier = GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                             Text(
+                                 text = "Your archive is empty",
+                                 style = TextStyle(
+                                     fontFamily = FontFamily.SansSerif,
+                                     color = theme.onSurfaceVariant,
+                                     fontSize = 13.sp
+                                 )
+                             )
+                         }
+                     } else {
+                         LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
+                             items(items.take(20)) { item ->
+                                 ItemRow(theme = theme, item = item)
+                                 Spacer(modifier = GlanceModifier.height(8.dp))
+                             }
+                         }
+                     }
+                 }
+             }
+         }
+     }
+ }
+
+ // --- UI Components ---
+
+ @Composable
+ fun WidgetHeader(theme: WidgetThemeColors, isFromCache: Boolean, isTimeout: Boolean) {
+     val context = LocalContext.current
+
+     val userName = try {
+         val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+         auth.currentUser?.displayName?.trim()?.ifBlank { null }
+             ?: auth.currentUser?.email?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
+     } catch (e: Exception) {
+         null
+     } ?: try {
+         val prefs = context.getSharedPreferences("second_brain_prefs", Context.MODE_PRIVATE)
+         prefs.getString("simulated_name", null)?.trim()?.ifBlank { null }
+             ?: prefs.getString("simulated_email", null)?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
+     } catch (e: Exception) {
+         null
+     } ?: "User"
+
+     val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+     val greeting = when (hour) {
+         in 0..11 -> "Good morning"
+         in 12..16 -> "Good afternoon"
+         else -> "Good evening"
+     }
+
+     Row(
+         modifier = GlanceModifier.fillMaxWidth(),
+         verticalAlignment = Alignment.CenterVertically
+     ) {
+         Column(modifier = GlanceModifier.defaultWeight()) {
+             Row(verticalAlignment = Alignment.CenterVertically) {
+                 Text(
+                     text = "$greeting, $userName",
+                     style = TextStyle(
+                         fontFamily = FontFamily.Serif,
+                         fontWeight = FontWeight.Bold,
+                         fontSize = 16.sp,
+                         color = theme.onBackground
+                     )
+                 )
+                 if (isFromCache || isTimeout) {
+                     Spacer(modifier = GlanceModifier.width(6.dp))
+                     val badgeColor = if (isTimeout) theme.error else theme.secondary
+                     val badgeText = if (isTimeout) "Offline" else "Cached"
+                     Box(
+                         modifier = GlanceModifier
+                             .background(badgeColor)
+                             .cornerRadius(8.dp)
+                             .padding(horizontal = 6.dp, vertical = 2.dp)
+                     ) {
+                         Text(
+                             text = badgeText,
+                             style = TextStyle(
+                                 fontFamily = FontFamily.SansSerif,
+                                 fontWeight = FontWeight.Medium,
+                                 fontSize = 9.sp,
+                                 color = theme.onError
+                             )
+                         )
+                     }
+                 }
+             }
+             Spacer(modifier = GlanceModifier.height(2.dp))
+             Text(
+                 text = "Your Second Brain",
+                 style = TextStyle(
+                     fontFamily = FontFamily.SansSerif,
+                     fontSize = 11.sp,
+                     color = theme.onSurfaceVariant
+                 )
+             )
+         }
+
+         // Circular Refresh Button
+         Box(
+             modifier = GlanceModifier
+                 .size(36.dp)
+                 .background(theme.surfaceVariant)
+                 .cornerRadius(18.dp)
+                 .clickable(actionRunCallback<RefreshCallback>()),
+             contentAlignment = Alignment.Center
+         ) {
+             Image(
+                 provider = ImageProvider(R.drawable.ic_custom_sync),
+                 contentDescription = "Refresh",
+                 modifier = GlanceModifier.size(16.dp),
+                 colorFilter = ColorFilter.tint(theme.onSurfaceVariant)
+             )
+         }
+
+         Spacer(modifier = GlanceModifier.width(8.dp))
+
+         // Circular Add Button
+         val addIntent = Intent(context, MainActivity::class.java).apply {
+             action = "com.example.ACTION_QUICK_TEXT"
+             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+         }
+
+         Box(
+             modifier = GlanceModifier
+                 .size(36.dp)
+                 .background(theme.primary)
+                 .cornerRadius(18.dp)
+                 .clickable(actionStartActivity(addIntent)),
+             contentAlignment = Alignment.Center
+         ) {
+             Image(
+                 provider = ImageProvider(R.drawable.ic_custom_plus),
+                 contentDescription = "Add Notes",
+                 modifier = GlanceModifier.size(16.dp),
+                 colorFilter = ColorFilter.tint(theme.onPrimary)
+             )
+         }
+     }
+ }
+
+ @Composable
+ fun ItemRow(theme: WidgetThemeColors, item: SavedItem) {
+     val context = LocalContext.current
+
+     val openIntent = if (item.type == SavedItemType.LINK) {
+         Intent(Intent.ACTION_VIEW, android.net.Uri.parse(item.content)).apply {
+             flags = Intent.FLAG_ACTIVITY_NEW_TASK
+         }
+     } else {
+         Intent(context, MainActivity::class.java).apply {
+             action = Intent.ACTION_VIEW
+             data = android.net.Uri.parse("secondbrain://item/${item.id}")
+             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+         }
+     }
+
+     val (iconRes, categoryColor) = when (item.type) {
+         SavedItemType.LINK -> Pair(R.drawable.ic_custom_link, CategoryLink)
+         SavedItemType.IMAGE, SavedItemType.VIDEO -> Pair(R.drawable.ic_custom_image, CategoryImage)
+         SavedItemType.CODE -> Pair(R.drawable.ic_custom_code, CategoryCode)
+         SavedItemType.AUDIO -> Pair(R.drawable.ic_custom_voice, CategoryAudio)
+         else -> Pair(R.drawable.ic_custom_text, CategoryText)
+     }
+
+     Row(
+         modifier = GlanceModifier
+             .fillMaxWidth()
+             .background(theme.surface)
+             .cornerRadius(16.dp)
+             .clickable(actionStartActivity(openIntent))
+             .padding(horizontal = 12.dp, vertical = 10.dp),
+         verticalAlignment = Alignment.CenterVertically
+     ) {
+         // Circular Icon Background
+         Box(
+             modifier = GlanceModifier
+                 .size(32.dp)
+                 .background(ColorProvider(categoryColor))
+                 .cornerRadius(16.dp),
+             contentAlignment = Alignment.Center
+         ) {
+             Image(
+                 provider = ImageProvider(iconRes),
+                 contentDescription = null,
+                 modifier = GlanceModifier.size(16.dp),
+                 colorFilter = ColorFilter.tint(theme.surface)
+             )
+         }
+
+         Spacer(modifier = GlanceModifier.width(12.dp))
+
+         Column(modifier = GlanceModifier.defaultWeight()) {
+             Text(
+                 text = item.title.ifBlank { item.type.displayName },
+                 maxLines = 1,
+                 style = TextStyle(
+                     fontFamily = FontFamily.SansSerif,
+                     fontWeight = FontWeight.Medium,
+                     color = theme.onSurface,
+                     fontSize = 14.sp
+                 )
+             )
+             val subText = item.content.ifBlank { item.extractedText ?: "" }
+             if (subText.isNotBlank()) {
+                 Spacer(modifier = GlanceModifier.height(2.dp))
+                 Text(
+                     text = subText,
+                     maxLines = 1,
+                     style = TextStyle(
+                         fontFamily = FontFamily.SansSerif,
+                         color = theme.onSurfaceVariant,
+                         fontSize = 11.sp
+                     )
+                 )
+             }
+         }
+     }
+ }
+
+ @Composable
+ fun QuickActionRowVertical() {
+     val context = LocalContext.current
+     val theme = getWidgetTheme()
+
+     val linkIntent = Intent(context, MainActivity::class.java).apply {
+         action = "com.example.ACTION_QUICK_LINK"
+         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+     }
+     QuickActionButton(
+         iconRes = R.drawable.ic_custom_link,
+         intent = linkIntent,
+         baseColor = CategoryLink,
+         label = "Link",
+         theme = theme
+     )
+     Spacer(modifier = GlanceModifier.height(16.dp))
+
+     val imageIntent = Intent(context, MainActivity::class.java).apply {
+         action = "com.example.ACTION_QUICK_IMAGE"
+         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+     }
+     QuickActionButton(
+         iconRes = R.drawable.ic_custom_image,
+         intent = imageIntent,
+         baseColor = CategoryImage,
+         label = "Media",
+         theme = theme
+     )
+     Spacer(modifier = GlanceModifier.height(16.dp))
+
+     val codeIntent = Intent(context, MainActivity::class.java).apply {
+         action = "com.example.ACTION_QUICK_CODE"
+         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+     }
+     QuickActionButton(
+         iconRes = R.drawable.ic_custom_code,
+         intent = codeIntent,
+         baseColor = CategoryCode,
+         label = "Code",
+         theme = theme
+     )
+ }
+
+ @Composable
+ fun QuickActionButton(
+     iconRes: Int,
+     intent: Intent,
+     baseColor: Color,
+     label: String,
+     theme: WidgetThemeColors
+ ) {
+     Column(
+         horizontalAlignment = Alignment.CenterHorizontally,
+         verticalAlignment = Alignment.CenterVertically
+     ) {
+         // Perfect Circular Button (radius is exactly half of size)
+         Box(
+             modifier = GlanceModifier
+                 .size(44.dp)
+                 .background(ColorProvider(baseColor))
+                 .cornerRadius(22.dp)
+                 .clickable(actionStartActivity(intent)),
+             contentAlignment = Alignment.Center
+         ) {
+             Image(
+                 provider = ImageProvider(iconRes),
+                 contentDescription = label,
+                 modifier = GlanceModifier.size(20.dp),
+                 colorFilter = ColorFilter.tint(theme.surface)
+             )
+         }
+         Spacer(modifier = GlanceModifier.height(6.dp))
+         Text(
+             text = label,
+             style = TextStyle(
+                 fontFamily = FontFamily.SansSerif,
+                 color = theme.onSurfaceVariant,
+                 fontSize = 10.sp,
+                 fontWeight = FontWeight.Medium
+             )
+         )
+     }
+ }

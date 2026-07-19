@@ -416,7 +416,7 @@ class BrainOcrOverlayService : Service() {
                 setStroke(dpToPx(1), borderColor)
             }
             background = bg
-            elevation = dpToPx(12).toFloat()
+            elevation = 0f
             alpha = 0f
             scaleX = 0.96f
             scaleY = 0.96f

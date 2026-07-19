@@ -8,7 +8,7 @@
         android:shortcutLongLabel="@string/shortcut_smart_selection_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.example"
+            android:targetPackage="com.hanan_bhatti.second_brain"
             android:targetClass="com.example.OcrCaptureActivity" />
     </shortcut>
     <shortcut
@@ -19,7 +19,7 @@
         android:shortcutLongLabel="@string/shortcut_quick_note_long">
         <intent
             android:action="com.example.ACTION_QUICK_TEXT"
-            android:targetPackage="com.example"
+            android:targetPackage="com.hanan_bhatti.second_brain"
             android:targetClass="com.example.MainActivity" />
     </shortcut>
 </shortcuts>

@@ -33,7 +33,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
@@ -74,13 +73,13 @@ fun Modifier.dragToReorder(
                 },
                 onDrag = { change, dragAmount ->
                     change.consume()
-                    currentDragPosition = currentDragPosition?.plus(dragAmount)
+                    currentDragPosition = (currentDragPosition ?: Offset.Zero).plus(dragAmount)
 
-                    val currentPos = currentDragPosition?.y ?: return@detectDragGesturesAfterLongPress
+                    val currentPos = currentDragPosition ?: return@detectDragGesturesAfterLongPress
                     val dragged = draggedItem ?: return@detectDragGesturesAfterLongPress
 
                     val targetItem = lazyListState.layoutInfo.visibleItemsInfo.firstOrNull<LazyListItemInfo> { item ->
-                        currentPos.toInt() in item.offset..(item.offset + item.size)
+                        currentPos.y.toInt() in item.offset..(item.offset + item.size)
                     }
 
                     if (targetItem != null && targetItem.index != dragged.index) {
@@ -176,7 +175,7 @@ fun Modifier.dragToReorderGrid(
                 },
                 onDrag = { change, dragAmount ->
                     change.consume()
-                    currentDragPosition = currentDragPosition?.plus(dragAmount)
+                    currentDragPosition = (currentDragPosition ?: Offset.Zero).plus(dragAmount)
 
                     val currentPos = currentDragPosition ?: return@detectDragGesturesAfterLongPress
                     val dragged = draggedItem ?: return@detectDragGesturesAfterLongPress

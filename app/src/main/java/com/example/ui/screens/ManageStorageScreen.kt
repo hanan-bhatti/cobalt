@@ -90,7 +90,7 @@ fun ManageStorageScreen(
     val allItems by viewModel.allItems.collectAsState()
     val cloudUsedStorageBytes by viewModel.cloudUsedStorageBytes.collectAsState()
     val selectedForBackupIds by viewModel.selectedForBackupIds.collectAsState()
-    
+
     val categories = SavedItemType.values().map { type ->
         val itemsForType = allItems.filter { it.type == type }
         type to itemsForType
@@ -305,7 +305,7 @@ fun ManageStorageScreen(
                                             }
                                         }
                                     }
-                                    
+
                                     Spacer(modifier = Modifier.height(16.dp))
 
                                     Box(
@@ -328,7 +328,7 @@ fun ManageStorageScreen(
                                                     )
                                                 }
                                             }
-                                            
+
                                             val usedFraction = (totalBytes.toFloat() / maxStorageBytes).coerceIn(0f, 1f)
                                             val remainingFraction = 1f - usedFraction
                                             if (remainingFraction > 0.005f) {
@@ -393,7 +393,7 @@ fun ManageStorageScreen(
                             } else {
                                 0L
                             }
-                            
+
                             val baseColor = when (type) {
                                 SavedItemType.LINK -> CategoryLink
                                 SavedItemType.IMAGE -> CategoryImage
@@ -540,7 +540,7 @@ fun ManageStorageScreen(
                                                     .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
                                             ) {
                                                 HorizontalDivider(color = baseColor.copy(alpha = 0.15f))
-                                                
+
                                                 Column(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
@@ -652,7 +652,7 @@ fun ManageStorageScreen(
                                                                 )
                                                             }
                                                         }
-                                                        
+
                                                         if (itemIndex < items.size - 1) {
                                                             HorizontalDivider(
                                                                 color = baseColor.copy(alpha = 0.08f),
@@ -697,7 +697,7 @@ fun ManageStorageScreen(
     if (longClickedItem != null) {
         val item = longClickedItem!!
         val isAlreadyBackedUp = item.isSynced
-        
+
         AlertDialog(
             onDismissRequest = { longClickedItem = null },
             title = {
@@ -785,7 +785,7 @@ fun ManageStorageScreen(
                             Text(if (isSelected) "Remove from Backup Batch" else "Add to Backup Batch")
                         }
                     }
-                    
+
                     OutlinedButton(
                         onClick = {
                             viewModel.showDetailItem(item)
@@ -812,7 +812,7 @@ fun ManageStorageScreen(
         val typeItems = allItems.filter { it.type == type }
         val nonSyncedItems = typeItems.filter { !it.isSynced }
         val allSelected = nonSyncedItems.isNotEmpty() && nonSyncedItems.all { selectedForBackupIds.contains(it.id) }
-        
+
         val baseColor = when (type) {
             SavedItemType.LINK -> CategoryLink
             SavedItemType.IMAGE -> CategoryImage
@@ -821,7 +821,7 @@ fun ManageStorageScreen(
             SavedItemType.CODE -> CategoryCode
             SavedItemType.AUDIO -> CategoryAudio
         }
-        
+
         AlertDialog(
             onDismissRequest = { longClickedCategory = null },
             title = {
@@ -840,6 +840,7 @@ fun ManageStorageScreen(
             },
             text = {
                 Text("Select actions for the entire ${type.displayName} category folder.")
+                Text("Total=${typeItems.size}, unsynced=${nonSyncedItems.size}", style = MaterialTheme.typography.labelSmall)
             },
             confirmButton = {
                 Column(
@@ -873,7 +874,7 @@ fun ManageStorageScreen(
                             Text(if (allSelected) "Deselect All Unsynced Items" else "Select All Unsynced for Backup")
                         }
                     }
-                    
+
                     TextButton(
                         onClick = { longClickedCategory = null },
                         modifier = Modifier.fillMaxWidth()
