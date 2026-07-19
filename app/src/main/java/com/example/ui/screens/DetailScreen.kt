@@ -326,10 +326,8 @@ fun DetailScreen(
                 val displayTitle = item.title.ifBlank { item.linkTitle ?: "Untitled Memory" }
                 Text(
                     text = displayTitle,
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    lineHeight = 38.sp
+                    style = MaterialTheme.typography.displayMedium,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
 
                 // Meta row
@@ -741,7 +739,7 @@ fun DetailScreenSkeleton(
             ShimmerPlaceholder(
                 modifier = Modifier
                     .fillMaxWidth(0.8f)
-                    .height(32.dp),
+                    .height(28.dp),
                 shape = RoundedCornerShape(8.dp)
             )
             // Meta Row Skeleton
