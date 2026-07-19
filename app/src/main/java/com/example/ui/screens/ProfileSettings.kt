@@ -158,6 +158,21 @@ fun SettingsScreen(
                             }
                         }
                     }
+
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+
+                        val dynamicColorEnabled by viewModel.settingsRepository.dynamicColor.collectAsState()
+                        SettingsToggleRow(
+                            title = "Dynamic color",
+                            subtitle = "Use colors from your wallpaper (Android 12+)",
+                            checked = dynamicColorEnabled,
+                            onCheckedChange = { enabled -> viewModel.settingsRepository.setDynamicColor(enabled) }
+                        )
+                    }
                 }
 
                 SettingsSection(title = "Edge Panel", subtext = "Enable a floating panel to quickly capture thoughts from anywhere.") {

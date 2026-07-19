@@ -16,62 +16,63 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.example.ui.theme
+ package com.example.ui.theme
 
-import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.graphics.Color
 
-val CreamPaper = Color(0xFFFDFBF9)
-val Charcoal = Color(0xFF171717)
-val CocoaInk = Color(0xFF2B1A07)
-val TrueBlack = Color(0xFF000000)
-val DewDrop = Color(0xFFF7EFE9)
-val MarkerOrange = Color(0xFFFF6F1E)
-val BurntSienna = Color(0xFFCE500A)
-val SkySticker = Color(0xFF3B82F6)
-val BubblegumSticker = Color(0xFFFF66CF)
-val SproutSticker = Color(0xFF22C55E)
-val ShadowMist = Color(0xFFBEBCBB)
+ // Color definitions
+ val CreamPaper = Color(0xFFFDFBF9)
+ val Charcoal = Color(0xFF171717)
+ val CocoaInk = Color(0xFF2B1A07)
+ val TrueBlack = Color(0xFF000000)
+ val DewDrop = Color(0xFFF7EFE9)
+ val MarkerOrange = Color(0xFFFF6F1E)
+ val BurntSienna = Color(0xFFCE500A)
+ val SkySticker = Color(0xFF3B82F6)
+ val BubblegumSticker = Color(0xFFFF66CF)
+ val SproutSticker = Color(0xFF22C55E)
+ val ShadowMist = Color(0xFFBEBCBB)
 
-// M3 Light equivalents mapped from Superr
-val SuperrPrimary = MarkerOrange
-val SuperrOnPrimary = CreamPaper
-val SuperrPrimaryContainer = DewDrop
-val SuperrOnPrimaryContainer = BurntSienna
-val SuperrSecondary = BurntSienna
-val SuperrOnSecondary = CreamPaper
-val SuperrSecondaryContainer = DewDrop
-val SuperrOnSecondaryContainer = CocoaInk
-val SuperrTertiary = Charcoal
-val SuperrOnTertiary = CreamPaper
-val SuperrTertiaryContainer = DewDrop
-val SuperrOnTertiaryContainer = Charcoal
-val SuperrBackground = CreamPaper
-val SuperrOnBackground = Charcoal
-val SuperrSurface = CreamPaper
-val SuperrOnSurface = Charcoal
-val SuperrSurfaceVariant = DewDrop
-val SuperrOnSurfaceVariant = Charcoal
-val SuperrOutline = Charcoal
-val SuperrOutlineVariant = Charcoal.copy(alpha = 0.2f)
+ // Light theme colors
+ val Primary = MarkerOrange
+ val OnPrimary = CreamPaper
+ val PrimaryContainer = DewDrop
+ val OnPrimaryContainer = BurntSienna
+ val Secondary = BurntSienna
+ val OnSecondary = CreamPaper
+ val SecondaryContainer = DewDrop
+ val OnSecondaryContainer = CocoaInk
+ val Tertiary = Charcoal
+ val OnTertiary = CreamPaper
+ val TertiaryContainer = DewDrop
+ val OnTertiaryContainer = Charcoal
+ val Background = CreamPaper
+ val OnBackground = Charcoal
+ val Surface = CreamPaper
+ val OnSurface = Charcoal
+ val SurfaceVariant = DewDrop
+ val OnSurfaceVariant = Charcoal
+ val Outline = Charcoal
+ val OutlineVariant = Charcoal.copy(alpha = 0.2f)
 
-// Dark equivalents (mapped from true dark mode values)
-val SuperrPrimaryDark = MarkerOrange
-val SuperrOnPrimaryDark = TrueBlack
-val SuperrPrimaryContainerDark = Color(0xFF5C2D11)
-val SuperrOnPrimaryContainerDark = DewDrop
-val SuperrSecondaryDark = BurntSienna
-val SuperrOnSecondaryDark = TrueBlack
-val SuperrSecondaryContainerDark = Color(0xFF4A1C00)
-val SuperrOnSecondaryContainerDark = DewDrop
-val SuperrTertiaryDark = CreamPaper
-val SuperrOnTertiaryDark = TrueBlack
-val SuperrTertiaryContainerDark = Color(0xFF262626)
-val SuperrOnTertiaryContainerDark = DewDrop
-val SuperrBackgroundDark = TrueBlack
-val SuperrOnBackgroundDark = CreamPaper
-val SuperrSurfaceDark = TrueBlack
-val SuperrOnSurfaceDark = CreamPaper
-val SuperrSurfaceVariantDark = Color(0xFF1E1E1E)
-val SuperrOnSurfaceVariantDark = DewDrop
-val SuperrOutlineDark = Color(0xFF424242)
-val SuperrOutlineVariantDark = Color(0xFF2B2B2B)
+ // Dark theme colors
+ val PrimaryDark = Color(0xFFFFB690)
+ val OnPrimaryDark = Color(0xFF542202)
+ val PrimaryContainerDark = Color(0xFF703715)
+ val OnPrimaryContainerDark = Color(0xFFFFDBCA)
+ val SecondaryDark = Color(0xFFE6BEAB)
+ val OnSecondaryDark = Color(0xFF432B1D)
+ val SecondaryContainerDark = Color(0xFF5C4032)
+ val OnSecondaryContainerDark = Color(0xFFFFDBCA)
+ val TertiaryDark = Color(0xFFCFC890)
+ val OnTertiaryDark = Color(0xFF353107)
+ val TertiaryContainerDark = Color(0xFF4C481C)
+ val OnTertiaryContainerDark = Color(0xFFEBE4AA)
+ val BackgroundDark = Color(0xFF1A120E)
+ val OnBackgroundDark = Color(0xFFF0DFD8)
+ val SurfaceDark = Color(0xFF1A120E)
+ val OnSurfaceDark = Color(0xFFF0DFD8)
+ val SurfaceVariantDark = Color(0xFF52443D)
+ val OnSurfaceVariantDark = Color(0xFFD7C2B9)
+ val OutlineDark = Color(0xFFA08D84)
+ val OutlineVariantDark = OnSurfaceDark.copy(alpha = 0.2f)

@@ -76,6 +76,9 @@ class SettingsRepository(context: Context) {
     private val _blurOpacity = MutableStateFlow(prefs.getFloat(KEY_BLUR_OPACITY, 0.30f))
     val blurOpacity: StateFlow<Float> = _blurOpacity.asStateFlow()
 
+    private val _dynamicColor = MutableStateFlow(prefs.getBoolean(KEY_DYNAMIC_COLOR, true))
+    val dynamicColor: StateFlow<Boolean> = _dynamicColor.asStateFlow()
+
     fun setGeminiApiKey(key: String) {
         prefs.edit().putString(KEY_GEMINI_API_KEY, key).apply()
         _geminiApiKey.value = key
@@ -156,6 +159,11 @@ class SettingsRepository(context: Context) {
         _blurOpacity.value = opacity
     }
 
+    fun setDynamicColor(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_DYNAMIC_COLOR, enabled).apply()
+        _dynamicColor.value = enabled
+    }
+
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
             KEY_GEMINI_API_KEY -> _geminiApiKey.value = prefs.getString(KEY_GEMINI_API_KEY, "") ?: ""
@@ -180,6 +188,7 @@ class SettingsRepository(context: Context) {
             KEY_FORCE_DISABLE_BLUR -> _forceDisableBlur.value = prefs.getBoolean(KEY_FORCE_DISABLE_BLUR, false)
             KEY_BLUR_RADIUS -> _blurRadius.value = prefs.getInt(KEY_BLUR_RADIUS, 25)
             KEY_BLUR_OPACITY -> _blurOpacity.value = prefs.getFloat(KEY_BLUR_OPACITY, 0.30f)
+            KEY_DYNAMIC_COLOR -> _dynamicColor.value = prefs.getBoolean(KEY_DYNAMIC_COLOR, true)
         }
     }
 
@@ -204,5 +213,6 @@ class SettingsRepository(context: Context) {
         private const val KEY_FORCE_DISABLE_BLUR = "force_disable_blur"
         private const val KEY_BLUR_RADIUS = "blur_radius"
         private const val KEY_BLUR_OPACITY = "blur_opacity"
+        private const val KEY_DYNAMIC_COLOR = "dynamic_color"
     }
 }

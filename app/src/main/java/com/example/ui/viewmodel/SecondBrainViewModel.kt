@@ -311,6 +311,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
 
     private val _activeCaptureItem = MutableStateFlow<SavedItem?>(null)
     val activeCaptureItem: StateFlow<SavedItem?> = _activeCaptureItem.asStateFlow()
+    private val captureDrafts = mutableMapOf<SavedItemType, SavedItem>()
 
     // Bitmap of captured image (used for freehand drawing & cropping for Gemini OCR)
     private val _capturedBitmap = MutableStateFlow<Bitmap?>(null)
@@ -963,12 +964,14 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         _extractedLinksToReview.value = emptyList()
         _isMetadataExtracting.value = false
         _metadataError.value = null
+        captureDrafts.clear()
         _activeCaptureItem.value = SavedItem(
             type = type,
             title = "",
             content = if (type == SavedItemType.CODE) "```kotlin\n// Code snippet\n```" else "",
             folders = initialFolders
         )
+        _activeCaptureItem.value?.let { captureDrafts[type] = it }
     }
 
     fun cancelCapture() {
@@ -978,6 +981,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         _extractedLinksToReview.value = emptyList()
         _isMetadataExtracting.value = false
         _metadataError.value = null
+        captureDrafts.clear()
     }
 
     /**
@@ -985,6 +989,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
      */
     fun handleSharedIntent(mimeType: String?, textContent: String?, mediaUri: Uri?, subject: String? = null) {
         viewModelScope.launch {
+            captureDrafts.clear()
             _capturedBitmap.value = null
             pendingMediaBytes = null
             _isMetadataExtracting.value = false
@@ -1008,6 +1013,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                             title = title,
                             content = url
                         )
+                        _activeCaptureItem.value?.let { captureDrafts[SavedItemType.LINK] = it }
                         fetchLinkPreviewForActiveItem(url)
                     } else {
                         // Check if looks like code
@@ -1017,6 +1023,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                             title = subject?.takeIf { it.isNotBlank() } ?: if (isCode) "Captured Code Snippet" else "Captured Text Note",
                             content = textContent
                         )
+                        _activeCaptureItem.value?.let { captureDrafts[it.type] = it }
                     }
                 }
 
@@ -1037,6 +1044,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                             content = localPath,
                             thumbnailPath = localPath
                         )
+                        _activeCaptureItem.value?.let { captureDrafts[SavedItemType.IMAGE] = it }
                     } catch (e: Exception) {
                         Log.e("SecondBrainVM", "Failed to load shared image: ${e.message}")
                     }
@@ -1057,6 +1065,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                             content = localPath,
                             thumbnailPath = localPath // we can use localPath to play/display
                         )
+                        _activeCaptureItem.value?.let { captureDrafts[SavedItemType.VIDEO] = it }
                     } catch (e: Exception) {
                         Log.e("SecondBrainVM", "Failed to load shared video: ${e.message}")
                     }
@@ -1070,6 +1079,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     // ----------------------------------------------------
 
     fun startFloatingOcrCapture(bitmap: Bitmap) {
+        captureDrafts.clear()
         _capturedBitmap.value = bitmap
         _activeCaptureItem.value = SavedItem(
             type = SavedItemType.IMAGE,
@@ -1077,6 +1087,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             content = "",
             thumbnailPath = ""
         )
+        _activeCaptureItem.value?.let { captureDrafts[it.type] = it }
         _extractedLinksToReview.value = emptyList()
         _isOcrLoading.value = false
         _ocrError.value = null
@@ -1115,6 +1126,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                         title = extractedTitle ?: _activeCaptureItem.value?.title ?: "Voice Memo Transcription",
                         thumbnailPath = localPath
                     )
+                    _activeCaptureItem.value?.let { captureDrafts[SavedItemType.AUDIO] = it }
                 } else {
                     _ocrError.value = result ?: "Failed to transcribe audio."
                 }
@@ -1152,6 +1164,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                         content = result,
                         title = extractedTitle ?: _activeCaptureItem.value?.title ?: "Formatted Voice Memo"
                     )
+                    _activeCaptureItem.value?.let { captureDrafts[it.type] = it }
                 } else {
                     _ocrError.value = result ?: "Failed to format speech."
                 }
@@ -1474,12 +1487,35 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         val oldItem = _activeCaptureItem.value
         val newItem = oldItem?.let(updater)
         _activeCaptureItem.value = newItem
+        if (oldItem != null) {
+            captureDrafts[oldItem.type] = oldItem
+        }
+        if (newItem != null) {
+            captureDrafts[newItem.type] = newItem
+        }
 
         if (oldItem != null && newItem != null && newItem.type == SavedItemType.LINK) {
             if (oldItem.content != newItem.content && newItem.content.isNotBlank()) {
                 fetchLinkPreviewForActiveItem(newItem.content)
             }
         }
+    }
+
+    fun switchActiveCaptureType(type: SavedItemType) {
+        val currentItem = _activeCaptureItem.value ?: return
+        if (currentItem.type == type) return
+
+        captureDrafts[currentItem.type] = currentItem
+        _activeCaptureItem.value = captureDrafts[type]?.copy(type = type) ?: createCaptureDraft(type)
+    }
+
+    private fun createCaptureDraft(type: SavedItemType): SavedItem {
+        return SavedItem(
+            type = type,
+            title = "",
+            content = if (type == SavedItemType.CODE) "```kotlin\n// Code snippet\n```" else "",
+            folders = emptyList()
+        )
     }
 
     fun saveLocalTextItem(title: String, content: String, type: SavedItemType, selectedFolders: List<String>) {

@@ -165,7 +165,12 @@ fun DetailScreen(
                                 val shareText = buildString {
                                     appendLine("Title: ${item.title}")
                                     appendLine("Type: ${item.type.displayName}")
-                                    appendLine("Content: ${item.content}")
+                                    appendLine(
+                                        "Content: ${
+                                            if (item.type == SavedItemType.VIDEO) "Video media"
+                                            else item.content
+                                        }"
+                                    )
                                     if (item.type == SavedItemType.AUDIO && !item.thumbnailPath.isNullOrBlank()) {
                                         appendLine("Audio Link: ${item.thumbnailPath}")
                                     }
@@ -227,7 +232,12 @@ fun DetailScreen(
                                 val shareText = buildString {
                                     appendLine("Title: ${item.title}")
                                     appendLine("Type: ${item.type.displayName}")
-                                    appendLine("Content: ${item.content}")
+                                    appendLine(
+                                        "Content: ${
+                                            if (item.type == SavedItemType.VIDEO) "Video media"
+                                            else item.content
+                                        }"
+                                    )
                                     if (item.type == SavedItemType.AUDIO && !item.thumbnailPath.isNullOrBlank()) {
                                         appendLine("Audio Link: ${item.thumbnailPath}")
                                     }

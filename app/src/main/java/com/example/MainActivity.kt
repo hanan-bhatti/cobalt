@@ -128,6 +128,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val themeMode by viewModel.settingsRepository.themeMode.collectAsState()
+            val dynamicColorEnabled by viewModel.settingsRepository.dynamicColor.collectAsState()
             val isDarkTheme = when (themeMode) {
                 "Dark" -> true
                 "Light" -> false
@@ -141,7 +142,7 @@ class MainActivity : ComponentActivity() {
                     androidx.core.view.WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !isDarkTheme
                 }
             }
-            MyApplicationTheme(darkTheme = isDarkTheme) {
+            MyApplicationTheme(darkTheme = isDarkTheme, dynamicColor = dynamicColorEnabled) {
                 val navController = rememberNavController()
                 val activeCaptureItem by viewModel.activeCaptureItem.collectAsState()
                 val activeDetailItem by viewModel.activeDetailItem.collectAsState()

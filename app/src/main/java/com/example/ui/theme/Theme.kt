@@ -16,73 +16,78 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package com.example.ui.theme
+ package com.example.ui.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+ import android.os.Build
+ import androidx.compose.foundation.isSystemInDarkTheme
+ import androidx.compose.material3.MaterialTheme
+ import androidx.compose.material3.darkColorScheme
+ import androidx.compose.material3.dynamicDarkColorScheme
+ import androidx.compose.material3.dynamicLightColorScheme
+ import androidx.compose.material3.lightColorScheme
+ import androidx.compose.runtime.Composable
+ import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = SuperrPrimaryDark,
-    onPrimary = SuperrOnPrimaryDark,
-    primaryContainer = SuperrPrimaryContainerDark,
-    onPrimaryContainer = SuperrOnPrimaryContainerDark,
-    secondary = SuperrSecondaryDark,
-    onSecondary = SuperrOnSecondaryDark,
-    secondaryContainer = SuperrSecondaryContainerDark,
-    onSecondaryContainer = SuperrOnSecondaryContainerDark,
-    tertiary = SuperrTertiaryDark,
-    onTertiary = SuperrOnTertiaryDark,
-    tertiaryContainer = SuperrTertiaryContainerDark,
-    onTertiaryContainer = SuperrOnTertiaryContainerDark,
-    background = SuperrBackgroundDark,
-    onBackground = SuperrOnBackgroundDark,
-    surface = SuperrSurfaceDark,
-    onSurface = SuperrOnSurfaceDark,
-    surfaceVariant = SuperrSurfaceVariantDark,
-    onSurfaceVariant = SuperrOnSurfaceVariantDark,
-    outline = SuperrOutlineDark,
-    outlineVariant = SuperrOutlineVariantDark
-)
+ // Color definitions
+ private val DarkColorScheme = darkColorScheme(
+     primary = PrimaryDark,
+     onPrimary = OnPrimaryDark,
+     primaryContainer = PrimaryContainerDark,
+     onPrimaryContainer = OnPrimaryContainerDark,
+     secondary = SecondaryDark,
+     onSecondary = OnSecondaryDark,
+     secondaryContainer = SecondaryContainerDark,
+     onSecondaryContainer = OnSecondaryContainerDark,
+     tertiary = TertiaryDark,
+     onTertiary = OnTertiaryDark,
+     tertiaryContainer = TertiaryContainerDark,
+     onTertiaryContainer = OnTertiaryContainerDark,
+     background = BackgroundDark,
+     onBackground = OnBackgroundDark,
+     surface = SurfaceDark,
+     onSurface = OnSurfaceDark,
+     surfaceVariant = SurfaceVariantDark,
+     onSurfaceVariant = OnSurfaceVariantDark,
+     outline = OutlineDark,
+     outlineVariant = OutlineVariantDark
+ )
 
-private val LightColorScheme = lightColorScheme(
-    primary = SuperrPrimary,
-    onPrimary = SuperrOnPrimary,
-    primaryContainer = SuperrPrimaryContainer,
-    onPrimaryContainer = SuperrOnPrimaryContainer,
-    secondary = SuperrSecondary,
-    onSecondary = SuperrOnSecondary,
-    secondaryContainer = SuperrSecondaryContainer,
-    onSecondaryContainer = SuperrOnSecondaryContainer,
-    tertiary = SuperrTertiary,
-    onTertiary = SuperrOnTertiary,
-    tertiaryContainer = SuperrTertiaryContainer,
-    onTertiaryContainer = SuperrOnTertiaryContainer,
-    background = SuperrBackground,
-    onBackground = SuperrOnBackground,
-    surface = SuperrSurface,
-    onSurface = SuperrOnSurface,
-    surfaceVariant = SuperrSurfaceVariant,
-    onSurfaceVariant = SuperrOnSurfaceVariant,
-    outline = SuperrOutline,
-    outlineVariant = SuperrOutlineVariant
-)
+ // Light theme colors
+ private val LightColorScheme = lightColorScheme(
+     primary = Primary,
+     onPrimary = OnPrimary,
+     primaryContainer = PrimaryContainer,
+     onPrimaryContainer = OnPrimaryContainer,
+     secondary = Secondary,
+     onSecondary = OnSecondary,
+     secondaryContainer = SecondaryContainer,
+     onSecondaryContainer = OnSecondaryContainer,
+     tertiary = Tertiary,
+     onTertiary = OnTertiary,
+     tertiaryContainer = TertiaryContainer,
+     onTertiaryContainer = OnTertiaryContainer,
+     background = Background,
+     onBackground = OnBackground,
+     surface = Surface,
+     onSurface = OnSurface,
+     surfaceVariant = SurfaceVariant,
+     onSurfaceVariant = OnSurfaceVariant,
+     outline = Outline,
+     outlineVariant = OutlineVariant
+ )
 
-@Composable
-fun MyApplicationTheme(
-    darkTheme: Boolean = false,
-    dynamicColor: Boolean = false, // Disabled dynamic to enforce Superr theme
-    content: @Composable () -> Unit,
-) {
-    // We are forcing the light theme for Superr because it's specifically described as a light theme
-    // However, we support a basic dark theme if needed.
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-
-    MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
-}
+ @Composable
+ fun MyApplicationTheme(
+     darkTheme: Boolean = false,
+     dynamicColor: Boolean = false,
+     content: @Composable () -> Unit,
+ ) {
+     val context = LocalContext.current
+     val colorScheme = when {
+         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+         }
+         else -> if (darkTheme) DarkColorScheme else LightColorScheme
+     }
+     MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+ }

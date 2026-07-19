@@ -60,14 +60,18 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
+import com.example.ui.components.VideoPlayer
 import com.example.ui.viewmodel.SecondBrainViewModel
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.res.painterResource
 import com.example.R
 
@@ -202,7 +206,7 @@ fun CaptureScreen(
                             if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
                         ),
                         modifier = Modifier.clickable {
-                            viewModel.updateActiveCaptureItem { it.copy(type = t) }
+                            viewModel.switchActiveCaptureType(t)
                         }
                     ) {
                         Text(
@@ -254,6 +258,7 @@ fun CaptureScreen(
                 Text(
                     text = "Draw a rough box or line over text/URLs to autoextract using Gemini AI. Leave empty to skip OCR.",
                     fontSize = 11.sp,
+                    lineHeight = 15.sp,
                     color = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.padding(bottom = 10.dp)
                 )
@@ -446,6 +451,8 @@ fun CaptureScreen(
             val isMultiLine = item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE
 
             if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO) {
+                val mediaUrl = item.content
+
                 // native media picker
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
@@ -509,16 +516,27 @@ fun CaptureScreen(
                         }
                     }
                 }
-                if (item.content.isNotBlank()) {
-                    if (item.type == SavedItemType.IMAGE) {
-                        AsyncImage(
-                            model = item.content,
-                            contentDescription = "Selected Image",
-                            modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(12.dp)),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Text("Video selected: ${item.content}", style = MaterialTheme.typography.bodySmall)
+                if (item.type == SavedItemType.VIDEO && item.content.isNotBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                    ) {
+                        if (item.type == SavedItemType.IMAGE) {
+                            AsyncImage(
+                                model = mediaUrl,
+                                contentDescription = "Selected Image",
+                                modifier = Modifier.fillMaxWidth().height(200.dp),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            VideoPlayer(
+                                videoUri = mediaUrl,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                     Spacer(Modifier.height(16.dp))
                 }
@@ -901,7 +919,13 @@ fun CaptureScreen(
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = "This item will be automatically archived into system category '${item.type.displayName}'.",
+                        text = buildAnnotatedString {
+                            append("This item will be automatically archived into system category '")
+                            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append(item.type.displayName)
+                            }
+                            append("'.")
+                        },
                         fontSize = 11.sp,
                         lineHeight = 15.sp,
                         color = MaterialTheme.colorScheme.secondary

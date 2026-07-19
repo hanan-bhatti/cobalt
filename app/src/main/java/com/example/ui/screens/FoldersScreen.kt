@@ -717,7 +717,6 @@ fun PinnedFolderCard(
 ) {
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val themeColor = parseHexColor(folder.colorHex, MaterialTheme.colorScheme.primary)
-
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
@@ -728,8 +727,10 @@ fun PinnedFolderCard(
             .bounceClick(interactionSource)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxHeight(),
+            verticalArrangement = Arrangement.Top
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -749,35 +750,37 @@ fun PinnedFolderCard(
                         painter = painterResource(id = R.drawable.ic_custom_settings),
                         contentDescription = "Customize",
                         tint = themeColor.copy(alpha = 0.6f),
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(26.dp)
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.weight(1f))
+
             Column {
-                Text(
-                    text = folder.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "$count items",
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                        text = folder.name,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                         painter = painterResource(id = R.drawable.ic_custom_pin),
                         contentDescription = "Pinned",
                         tint = themeColor,
-                        modifier = Modifier.size(10.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
+                Text(
+                    text = "$count items",
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                )
             }
         }
     }
@@ -856,7 +859,7 @@ fun FolderDirectoryItem(
                     painter = painterResource(id = R.drawable.ic_custom_settings),
                     contentDescription = "Customize",
                     tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.6f),
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(26.dp)
                 )
             }
         }

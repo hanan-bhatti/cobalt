@@ -55,8 +55,7 @@ import android.widget.Toast
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
-import android.view.animation.OvershootInterpolator
-import android.view.animation.DecelerateInterpolator
+import android.view.animation.PathInterpolator
 import androidx.core.app.NotificationCompat
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
@@ -79,6 +78,7 @@ class BrainOcrOverlayService : Service() {
     private var panelView: View? = null
     private var noteInputRef: EditText? = null
     private var isExpanded = false
+    private var panelAnimator: ValueAnimator? = null
     private val EXTRA_TOUCH_WIDTH_DP = 16
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -418,8 +418,8 @@ class BrainOcrOverlayService : Service() {
             background = bg
             elevation = dpToPx(12).toFloat()
             alpha = 0f
-            scaleX = 0.9f
-            scaleY = 0.9f
+            scaleX = 0.96f
+            scaleY = 0.96f
         }
 
         // ═══════════════════════════════════════════════════
@@ -803,8 +803,6 @@ class BrainOcrOverlayService : Service() {
 
         // ── Expand animation ──
         val params = root.layoutParams as WindowManager.LayoutParams
-        val startWidth = dpToPx(getEdgePanelThickness() + EXTRA_TOUCH_WIDTH_DP)
-        val startHeight = dpToPx(getEdgePanelHeight())
         val endWidth = dpToPx(260)
 
         panel.measure(
@@ -812,29 +810,48 @@ class BrainOcrOverlayService : Service() {
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         )
         val endHeight = panel.measuredHeight
+        panel.pivotX = if (side == "Right") panel.measuredWidth.toFloat() else 0f
+        panel.pivotY = panel.measuredHeight / 2f
+
+        cancelPanelAnimation()
 
         params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         params.y = calculateYPosition(yPercent)
 
+        val startWidth = params.width
+        val startHeight = params.height
+        val startAlpha = panel.alpha
+        val startScale = panel.scaleX
+
         val animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 280
-            interpolator = OvershootInterpolator(0.8f)
+            duration = 220
+            interpolator = PathInterpolator(0.23f, 1f, 0.32f, 1f)
             addUpdateListener { animation ->
                 val fraction = animation.animatedValue as Float
                 params.width = (startWidth + (endWidth - startWidth) * fraction).toInt()
                 params.height = (startHeight + (endHeight - startHeight) * fraction).toInt()
 
-                panel.alpha = fraction
-                panel.scaleX = 0.9f + 0.1f * fraction
-                panel.scaleY = 0.9f + 0.1f * fraction
+                panel.alpha = startAlpha + (1f - startAlpha) * fraction
+                panel.scaleX = startScale + (1f - startScale) * fraction
+                panel.scaleY = startScale + (1f - startScale) * fraction
 
                 if (containerView != null) {
                     windowManager.updateViewLayout(root, params)
                 }
             }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    panelAnimator = null
+                }
+
+                override fun onAnimationCancel(animation: Animator) {
+                    panelAnimator = null
+                }
+            })
         }
+        panelAnimator = animator
         animator.start()
         updateSystemGestureExclusions()
     }
@@ -855,18 +872,22 @@ class BrainOcrOverlayService : Service() {
         val startHeight = params.height
         val endWidth = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
         val endHeight = dpToPx(height)
+        val startAlpha = panel.alpha
+        val startScale = panel.scaleX
+
+        cancelPanelAnimation()
 
         val animator = ValueAnimator.ofFloat(1f, 0f).apply {
-            duration = 220
-            interpolator = DecelerateInterpolator()
+            duration = 180
+            interpolator = PathInterpolator(0.32f, 0f, 0.67f, 1f)
             addUpdateListener { animation ->
                 val fraction = animation.animatedValue as Float
                 params.width = (endWidth + (startWidth - endWidth) * fraction).toInt()
                 params.height = (endHeight + (startHeight - endHeight) * fraction).toInt()
 
-                panel.alpha = fraction
-                panel.scaleX = 0.9f + 0.1f * fraction
-                panel.scaleY = 0.9f + 0.1f * fraction
+                panel.alpha = startAlpha * fraction
+                panel.scaleX = 0.96f + (startScale - 0.96f) * fraction
+                panel.scaleY = 0.96f + (startScale - 0.96f) * fraction
 
                 if (containerView != null) {
                     windowManager.updateViewLayout(root, params)
@@ -894,10 +915,21 @@ class BrainOcrOverlayService : Service() {
                         windowManager.updateViewLayout(root, params)
                         updateSystemGestureExclusions()
                     }
+                    panelAnimator = null
+                }
+
+                override fun onAnimationCancel(animation: Animator) {
+                    panelAnimator = null
                 }
             })
         }
+        panelAnimator = animator
         animator.start()
+    }
+
+    private fun cancelPanelAnimation() {
+        panelAnimator?.cancel()
+        panelAnimator = null
     }
 
     private fun toggleExpand() {
