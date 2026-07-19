@@ -1533,7 +1533,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         return SavedItem(
             type = type,
             title = "",
-            content = if (type == SavedItemType.CODE) "```kotlin\n// Code snippet\n```" else "",
+            content = if (type == SavedItemType.CODE) "// Code snippet" else "",
             folders = emptyList()
         )
     }
