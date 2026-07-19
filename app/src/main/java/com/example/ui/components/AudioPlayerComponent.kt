@@ -45,21 +45,25 @@ fun AudioPlayerComponent(
     }
 
     var isPlaying by remember { mutableStateOf(false) }
-    var durationSeconds by remember { mutableStateOf(0) }
-    var positionSeconds by remember { mutableStateOf(0) }
+    var isPrepared by remember { mutableStateOf(false) }
+    var durationMs by remember { mutableStateOf(0) }
+    var positionMs by remember { mutableStateOf(0) }
     val mediaPlayer = remember { MediaPlayer() }
 
     DisposableEffect(audioUri) {
         try {
             mediaPlayer.setDataSource(audioUri)
-            mediaPlayer.prepare()
-            durationSeconds = mediaPlayer.duration / 1000
+            mediaPlayer.setOnPreparedListener { mp ->
+                isPrepared = true
+                durationMs = mp.duration
+            }
+            mediaPlayer.prepareAsync()
         } catch (e: Exception) {
             e.printStackTrace()
         }
         mediaPlayer.setOnCompletionListener {
             isPlaying = false
-            positionSeconds = 0
+            positionMs = 0
         }
         onDispose {
             mediaPlayer.release()
@@ -68,8 +72,10 @@ fun AudioPlayerComponent(
 
     LaunchedEffect(isPlaying) {
         while (isPlaying) {
-            delay(500)
-            positionSeconds = mediaPlayer.currentPosition / 1000
+            delay(30)
+            if (isPrepared) {
+                positionMs = mediaPlayer.currentPosition
+            }
         }
     }
 
@@ -89,8 +95,8 @@ fun AudioPlayerComponent(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            val pos = positionSeconds
-            val dur = durationSeconds
+            val pos = positionMs / 1000
+            val dur = durationMs / 1000
             val posStr = "${pos / 60}:${if (pos % 60 < 10) "0" else ""}${pos % 60}"
             val durStr = "${dur / 60}:${if (dur % 60 < 10) "0" else ""}${dur % 60}"
             Text(
@@ -99,14 +105,16 @@ fun AudioPlayerComponent(
                 fontWeight = FontWeight.Medium,
                 color = onSurfaceVariantColor
             )
-            if (durationSeconds > 0) {
+            if (durationMs > 0) {
                 Slider(
-                    value = positionSeconds.toFloat(),
+                    value = positionMs.toFloat(),
                     onValueChange = { newPos ->
-                        positionSeconds = newPos.toInt()
-                        mediaPlayer.seekTo(newPos.toInt() * 1000)
+                        if (isPrepared) {
+                            positionMs = newPos.toInt()
+                            mediaPlayer.seekTo(newPos.toInt())
+                        }
                     },
-                    valueRange = 0f..durationSeconds.toFloat(),
+                    valueRange = 0f..durationMs.toFloat(),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -116,14 +124,15 @@ fun AudioPlayerComponent(
 
         IconButton(
             onClick = {
+                if (!isPrepared) return@IconButton
                 if (isPlaying) {
                     mediaPlayer.pause()
                     isPlaying = false
                 } else {
                     try {
-                        if (positionSeconds >= durationSeconds && durationSeconds > 0) {
+                        if (positionMs >= durationMs && durationMs > 0) {
                             mediaPlayer.seekTo(0)
-                            positionSeconds = 0
+                            positionMs = 0
                         }
                         mediaPlayer.start()
                         isPlaying = true
