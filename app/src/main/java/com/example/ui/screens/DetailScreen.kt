@@ -490,18 +490,89 @@ fun DetailScreen(
             } else null
 
             if (!descriptionToShow.isNullOrBlank()) {
-                if (item.type == SavedItemType.TEXT || item.type == SavedItemType.AUDIO) {
-                    MarkdownText(
-                        markdown = descriptionToShow,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
-                    )
-                } else {
-                    Text(
-                        text = parseMarkdown(descriptionToShow),
-                        fontSize = 17.sp,
-                        lineHeight = 26.sp,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
-                    )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Header row with Section Label and Copy Button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            val sectionIcon = when (item.type) {
+                                SavedItemType.TEXT -> R.drawable.ic_custom_text
+                                SavedItemType.AUDIO -> R.drawable.ic_custom_voice
+                                SavedItemType.LINK -> R.drawable.ic_custom_link
+                                else -> R.drawable.ic_custom_text
+                            }
+                            Icon(
+                                painter = painterResource(id = sectionIcon),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = when (item.type) {
+                                    SavedItemType.TEXT -> "NOTE CONTENT"
+                                    SavedItemType.AUDIO -> "TRANCRIPTION"
+                                    SavedItemType.LINK -> "DESCRIPTION"
+                                    else -> "CONTENT"
+                                },
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        // Copy Button
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    coroutineScope.launch {
+                                        clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Second Brain Content", descriptionToShow)))
+                                    }
+                                    Toast.makeText(context, "Copied to clipboard!", Toast.LENGTH_SHORT).show()
+                                }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_copy),
+                                contentDescription = "Copy",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Copy",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    // Rendered Markdown/Text
+                    if (item.type == SavedItemType.TEXT || item.type == SavedItemType.AUDIO) {
+                        MarkdownText(
+                            markdown = descriptionToShow,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
+                        )
+                    } else {
+                        Text(
+                            text = parseMarkdown(descriptionToShow),
+                            fontSize = 17.sp,
+                            lineHeight = 26.sp,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
+                        )
+                    }
                 }
             }
 
@@ -577,64 +648,7 @@ fun DetailScreen(
                 }
             }
 
-            // OCR EXTRACTED TEXT
-            if (!item.extractedText.isNullOrBlank()) {
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_star),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Text(
-                                    text = "AI EXTRACTED TEXT",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_copy),
-                                contentDescription = "Copy",
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .clickable {
-                                        coroutineScope.launch {
-                                            clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Second Brain Extracted Text", item.extractedText ?: "")))
-                                        }
-                                        Toast.makeText(context, "Copied!", Toast.LENGTH_SHORT).show()
-                                    },
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        
-                        Text(
-                            text = item.extractedText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
+
             
             Spacer(modifier = Modifier.height(40.dp))
             
