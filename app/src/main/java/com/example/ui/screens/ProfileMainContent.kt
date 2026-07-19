@@ -102,7 +102,8 @@ fun ProfileMainContent(
 
     val hasCloudMedia = remember(allItems) {
         allItems.any { item ->
-            val hasWebUrl = item.content.startsWith("http://") || item.content.startsWith("https://")
+            val url = if (item.type == SavedItemType.AUDIO) item.thumbnailPath ?: "" else item.content
+            val hasWebUrl = url.startsWith("http://") || url.startsWith("https://")
             val isMedia = item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO
             isMedia && hasWebUrl
         }

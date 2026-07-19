@@ -166,6 +166,9 @@ fun DetailScreen(
                                     appendLine("Title: ${item.title}")
                                     appendLine("Type: ${item.type.displayName}")
                                     appendLine("Content: ${item.content}")
+                                    if (item.type == SavedItemType.AUDIO && !item.thumbnailPath.isNullOrBlank()) {
+                                        appendLine("Audio Link: ${item.thumbnailPath}")
+                                    }
                                     if (item.extractedText != null) {
                                         appendLine("Extracted Text: ${item.extractedText}")
                                     }
@@ -225,6 +228,9 @@ fun DetailScreen(
                                     appendLine("Title: ${item.title}")
                                     appendLine("Type: ${item.type.displayName}")
                                     appendLine("Content: ${item.content}")
+                                    if (item.type == SavedItemType.AUDIO && !item.thumbnailPath.isNullOrBlank()) {
+                                        appendLine("Audio Link: ${item.thumbnailPath}")
+                                    }
                                     if (item.extractedText != null) {
                                         appendLine("Extracted Text: ${item.extractedText}")
                                     }
