@@ -241,8 +241,7 @@ fun ArchiveItemCard(
                             .clip(RoundedCornerShape(12.dp))
                             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
                     ) {
-                        val hasImage = displayImage.isNotNullOrBlank() && 
-                                (item.type != SavedItemType.AUDIO && item.type != SavedItemType.VIDEO || displayImage?.endsWith(".mp4") == false)
+                        val hasImage = displayImage.isNotNullOrBlank() && item.type != SavedItemType.AUDIO
 
                         if (hasImage) {
                             AsyncImage(
@@ -529,8 +528,7 @@ fun ArchiveItemRow(
             Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 // Left thumbnail
                 val displayImage = item.getBestImagePath()
-                val hasImage = displayImage.isNotNullOrBlank() && 
-                        (item.type != SavedItemType.AUDIO && item.type != SavedItemType.VIDEO || displayImage?.endsWith(".mp4") == false)
+                val hasImage = displayImage.isNotNullOrBlank() && item.type != SavedItemType.AUDIO
 
                 if (hasImage) {
                     Box(
