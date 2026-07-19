@@ -197,8 +197,11 @@ fun CaptureScreen(
                     androidx.compose.material3.Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                        border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent),
-                        modifier = Modifier.clickable { 
+                        border = BorderStroke(
+                            1.dp,
+                            if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                        ),
+                        modifier = Modifier.clickable {
                             viewModel.updateActiveCaptureItem { it.copy(type = t) }
                         }
                     ) {
@@ -288,9 +291,17 @@ fun CaptureScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Gemini AI OCR extracting text...", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            "Gemini AI OCR extracting text...",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -340,7 +351,10 @@ fun CaptureScreen(
                                 colors = CardDefaults.cardColors(
                                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
                                 ),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                                border = BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                ),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(
@@ -440,14 +454,19 @@ fun CaptureScreen(
                 ) {
                     Button(
                         onClick = {
-                            mediaPicker.launch(androidx.activity.result.PickVisualMediaRequest(
-                                if (item.type == SavedItemType.IMAGE) androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
-                                else androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.VideoOnly
-                            ))
+                            mediaPicker.launch(
+                                androidx.activity.result.PickVisualMediaRequest(
+                                    if (item.type == SavedItemType.IMAGE) androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    else androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.VideoOnly
+                                )
+                            )
                         },
                         modifier = Modifier.weight(1f),
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
                     ) {
                         Icon(
                             painter = painterResource(id = if (item.type == SavedItemType.IMAGE) R.drawable.ic_custom_image else R.drawable.ic_custom_video),
@@ -464,13 +483,16 @@ fun CaptureScreen(
                     }
                     if (item.content.isNotBlank() && item.type == SavedItemType.IMAGE) {
                         Button(
-                            onClick = { 
+                            onClick = {
                                 val uri = android.net.Uri.parse(item.content)
                                 viewModel.performFullImageOcr(uri, context)
                             },
                             modifier = Modifier.weight(1.1f),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
                         ) {
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_custom_text),
@@ -507,7 +529,7 @@ fun CaptureScreen(
                     },
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
-                
+
                 if (isOcrLoading) {
                     Box(
                         modifier = Modifier
@@ -520,9 +542,17 @@ fun CaptureScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.primary)
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("Gemini AI transcribing audio...", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                            Text(
+                                "Gemini AI transcribing audio...",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
@@ -540,7 +570,13 @@ fun CaptureScreen(
             } else if (item.type == SavedItemType.TEXT) {
                 RichTextEditor(
                     value = item.content,
-                    onValueChange = { newContent -> viewModel.updateActiveCaptureItem { captured -> captured.copy(content = newContent) } },
+                    onValueChange = { newContent ->
+                        viewModel.updateActiveCaptureItem { captured ->
+                            captured.copy(
+                                content = newContent
+                            )
+                        }
+                    },
                     placeholder = { Text("Capture your thoughts or paste clipboard contents...") },
                     minLines = if (isMultiLine) 5 else 1,
                     modifier = Modifier
@@ -597,7 +633,13 @@ fun CaptureScreen(
                         .padding(bottom = 6.dp)
                         .clip(RoundedCornerShape(4.dp))
                         .clickable {
-                            viewModel.updateActiveCaptureItem { it.copy(linkTitle = null, linkDescription = null, linkImage = null) }
+                            viewModel.updateActiveCaptureItem {
+                                it.copy(
+                                    linkTitle = null,
+                                    linkDescription = null,
+                                    linkImage = null
+                                )
+                            }
                             viewModel.fetchLinkPreviewForActiveItem(item.content)
                         }
                         .testTag("retry_link_extraction")
@@ -698,7 +740,10 @@ fun CaptureScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(56.dp)
-                                        .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
+                                        .background(
+                                            MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                                            RoundedCornerShape(12.dp)
+                                        ),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -730,7 +775,11 @@ fun CaptureScreen(
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
-                                val uri = try { android.net.Uri.parse(item.content) } catch (e: Exception) { null }
+                                val uri = try {
+                                    android.net.Uri.parse(item.content)
+                                } catch (e: Exception) {
+                                    null
+                                }
                                 val domain = uri?.host ?: item.content
                                 Text(
                                     text = domain,
@@ -780,6 +829,7 @@ fun CaptureScreen(
             Text(
                 text = "Assign to Custom Folders",
                 fontSize = 12.sp,
+                lineHeight = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.padding(bottom = 6.dp)
@@ -789,6 +839,7 @@ fun CaptureScreen(
                 Text(
                     text = "No custom folders created yet. Create folder tags on the Home Screen to tag your items.",
                     fontSize = 12.sp,
+                    lineHeight = 16.sp,
                     color = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
@@ -806,7 +857,10 @@ fun CaptureScreen(
                             shape = RoundedCornerShape(20.dp),
                             color = if (isAssigned) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface,
                             contentColor = if (isAssigned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                            border = BorderStroke(1.dp, if (isAssigned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
+                            border = BorderStroke(
+                                1.dp,
+                                if (isAssigned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                            ),
                             modifier = Modifier
                                 .clickable {
                                     viewModel.updateActiveCaptureItem { item ->
@@ -849,6 +903,7 @@ fun CaptureScreen(
                     Text(
                         text = "This item will be automatically archived into system category '${item.type.displayName}'.",
                         fontSize = 11.sp,
+                        lineHeight = 15.sp,
                         color = MaterialTheme.colorScheme.secondary
                     )
                 }

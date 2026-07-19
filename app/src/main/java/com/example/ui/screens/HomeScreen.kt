@@ -1596,97 +1596,103 @@ fun OnboardingSharingGuide(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        tonalElevation = 2.dp
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+        tonalElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Header Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(modifier = Modifier.width(24.dp))
-                Text(
-                    text = "Your Second Brain is Ready!",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    modifier = Modifier.weight(1f)
-                )
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_folder_special),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Your Second Brain is Ready!",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Share from any app or add notes manually.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 IconButton(
                     onClick = onDismiss,
                     modifier = Modifier
-                        .size(24.dp)
+                        .size(32.dp)
                         .testTag("dismiss_onboarding_button")
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_custom_close),
                         contentDescription = "Dismiss guide",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(14.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
             Text(
-                text = "Capture any web link, photo, code, or note effortlessly.",
+                text = "Capture links, photos, code, and notes in seconds.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                modifier = Modifier.fillMaxWidth()
             )
 
             SharingGuideVisualMockup()
 
             HorizontalDivider(
-                modifier = Modifier.padding(vertical = 12.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
             )
 
             Text(
                 text = "HOW TO GET STARTED",
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.8.sp),
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .align(Alignment.Start)
-                    .padding(bottom = 10.dp)
             )
 
-            // Step 1
             OnboardingStepRow(
                 stepNumber = "1",
                 title = "Share from any app",
-                description = "Open Chrome, YouTube, X, or Gallery. Tap \"Share\" on any webpage, image, or text selection."
+                description = "Open Chrome, YouTube, Photos, X, or any app and tap Share."
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Step 2
             OnboardingStepRow(
                 stepNumber = "2",
                 title = "Select Second Brain",
-                description = "Choose \"Second Brain\" from the system share sheet to instantly save, parse, and auto-categorize it."
+                description = "Pick Second Brain from the share sheet to save it instantly."
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Step 3
             OnboardingStepRow(
                 stepNumber = "3",
-                title = "Or build it manually",
-                description = "Tap the '+' Floating Action Button below to manually type a text note, code snippet, or link."
+                title = "Or add it manually",
+                description = "Use the + button for a quick note, link, or code snippet."
             )
         }
     }
@@ -1697,19 +1703,18 @@ fun SharingGuideVisualMockup() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp),
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Source card (e.g. Browser)
         Surface(
-            shape = RoundedCornerShape(14.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-            modifier = Modifier.size(width = 72.dp, height = 76.dp)
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+            modifier = Modifier.size(width = 76.dp, height = 72.dp)
         ) {
             Column(
-                modifier = Modifier.padding(6.dp),
+                modifier = Modifier.padding(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
@@ -1717,11 +1722,11 @@ fun SharingGuideVisualMockup() {
                     painter = painterResource(id = R.drawable.ic_custom_globe),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp)
                 )
                 Text(
                     text = "Any App",
-                    fontSize = 10.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1734,19 +1739,18 @@ fun SharingGuideVisualMockup() {
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
             modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .size(18.dp)
+                .padding(horizontal = 12.dp)
+                .size(16.dp)
         )
 
-        // Destination card (Second Brain)
         Surface(
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.primaryContainer,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
-            modifier = Modifier.size(width = 72.dp, height = 76.dp)
+            modifier = Modifier.size(width = 82.dp, height = 72.dp)
         ) {
             Column(
-                modifier = Modifier.padding(6.dp),
+                modifier = Modifier.padding(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
@@ -1754,11 +1758,11 @@ fun SharingGuideVisualMockup() {
                     painter = painterResource(id = R.drawable.ic_custom_folder_special),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp)
                 )
                 Text(
                     text = "Second Brain",
-                    fontSize = 10.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -1777,19 +1781,19 @@ fun OnboardingStepRow(
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.Top
     ) {
         Box(
             modifier = Modifier
-                .size(24.dp)
-                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp)),
+                .size(22.dp)
+                .background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = stepNumber,
-                color = MaterialTheme.colorScheme.onPrimary,
-                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -1798,14 +1802,14 @@ fun OnboardingStepRow(
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = description,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
