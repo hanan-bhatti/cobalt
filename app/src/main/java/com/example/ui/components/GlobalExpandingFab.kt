@@ -177,7 +177,7 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel, hazeState: HazeState) {
                 }
 
                 val context = LocalContext.current
-                val useBlur = DevicePerformance.shouldUseBlur(context) && !forceDisableBlur
+                val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
                 val fabModifier = if (useBlur) {
                     Modifier
                         .testTag("fab_expand")

@@ -19,6 +19,8 @@
 package com.example.data.repository
 
 import android.content.Context
+import android.provider.Settings
+import com.example.data.model.DeviceSession
 import android.graphics.Bitmap
 import android.util.Base64
 import android.util.Log
@@ -239,6 +241,10 @@ class SecondBrainRepository(private val context: Context) {
             isPendingBackup = isPendingBackup,
             isUnavailable = isUnavailable
         )
+    }
+
+    suspend fun saveItemLocallyOnly(item: SavedItem) = withContext(Dispatchers.IO) {
+        savedItemDao.insertItem(item.toEntity())
     }
 
     // ----------------------------------------------------
@@ -1193,6 +1199,77 @@ class SecondBrainRepository(private val context: Context) {
         } catch (e: Exception) {
             Log.e("SecondBrainRepo", "Failed to fetch link metadata: ${e.message}")
             LinkMetadata(null, null, null)
+        }
+    }
+
+    suspend fun updateDeviceSession() = withContext(Dispatchers.IO) {
+        val currentUser = firebaseAuth?.currentUser ?: return@withContext
+        val firestore = firestore ?: return@withContext
+        val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"
+
+        try {
+            val deviceDocRef = firestore.collection("users").document(currentUser.uid)
+                .collection("devices").document(androidId)
+            
+            val snapshot = deviceDocRef.get().await()
+            val now = System.currentTimeMillis()
+            val firstSeen = if (snapshot.exists()) {
+                snapshot.getLong("firstSeen") ?: now
+            } else {
+                now
+            }
+
+            val deviceName = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
+            val deviceType = com.example.utils.DevicePerformance.getDeviceType(context)
+            val osVersion = "Android ${android.os.Build.VERSION.RELEASE}"
+            val appVersion = BuildConfig.VERSION_NAME
+
+            val data = mapOf(
+                "deviceId" to androidId,
+                "deviceName" to deviceName,
+                "deviceType" to deviceType,
+                "osVersion" to osVersion,
+                "appVersion" to appVersion,
+                "lastActive" to now,
+                "firstSeen" to firstSeen
+            )
+
+            deviceDocRef.set(data).await()
+        } catch (e: Exception) {
+            Log.e("SecondBrainRepo", "Failed to update device session: ${e.message}")
+        }
+    }
+
+    suspend fun getAllDeviceSessions(): List<DeviceSession> = withContext(Dispatchers.IO) {
+        val currentUser = firebaseAuth?.currentUser ?: return@withContext emptyList()
+        val firestore = firestore ?: return@withContext emptyList()
+
+        try {
+            val snap = firestore.collection("users").document(currentUser.uid)
+                .collection("devices").get().await()
+            
+            snap.documents.mapNotNull { doc ->
+                val deviceId = doc.getString("deviceId") ?: return@mapNotNull null
+                val deviceName = doc.getString("deviceName") ?: ""
+                val deviceType = doc.getString("deviceType") ?: "MOBILE"
+                val osVersion = doc.getString("osVersion") ?: ""
+                val appVersion = doc.getString("appVersion") ?: ""
+                val lastActive = doc.getLong("lastActive") ?: 0L
+                val firstSeen = doc.getLong("firstSeen") ?: 0L
+                
+                DeviceSession(
+                    deviceId = deviceId,
+                    deviceName = deviceName,
+                    deviceType = deviceType,
+                    osVersion = osVersion,
+                    appVersion = appVersion,
+                    lastActive = lastActive,
+                    firstSeen = firstSeen
+                )
+            }.sortedByDescending { it.lastActive }
+        } catch (e: Exception) {
+            Log.e("SecondBrainRepo", "Failed to get device sessions: ${e.message}")
+            emptyList()
         }
     }
 }

@@ -29,17 +29,11 @@ import android.os.Build
 object DevicePerformance {
     private var cachedBlurTier: Boolean? = null
 
-    fun shouldUseBlur(context: Context): Boolean {
-        // 1. Check manual override first
-        val prefs = context.getSharedPreferences("second_brain_settings", Context.MODE_PRIVATE)
-        if (prefs.getBoolean("force_disable_blur", false)) {
-            return false
-        }
-
-        // 2. Return in-memory cached value if already computed
+    fun isDeviceCapableOfBlur(context: Context): Boolean {
+        // 1. Return in-memory cached value if already computed
         cachedBlurTier?.let { return it }
 
-        // 3. SharedPreferences persistent cache
+        // 2. SharedPreferences persistent cache
         val perfPrefs = context.getSharedPreferences("device_performance", Context.MODE_PRIVATE)
         if (perfPrefs.contains("device_blur_tier")) {
             val cachedValue = perfPrefs.getBoolean("device_blur_tier", false)
@@ -47,7 +41,7 @@ object DevicePerformance {
             return cachedValue
         }
 
-        // 4. Compute once
+        // 3. Compute once
         val computedValue = computeBlurTier(context)
         
         // Save to cache
@@ -55,6 +49,25 @@ object DevicePerformance {
         cachedBlurTier = computedValue
         
         return computedValue
+    }
+
+    fun shouldUseBlur(context: Context): Boolean {
+        // 1. Check manual override first
+        val prefs = context.getSharedPreferences("second_brain_settings", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("force_disable_blur", false)) {
+            return false
+        }
+
+        // 2. Delegate to capability check
+        return isDeviceCapableOfBlur(context)
+    }
+
+    fun getDeviceType(context: Context): String {
+        val metrics = context.resources.displayMetrics
+        val widthDp = metrics.widthPixels / metrics.density
+        val heightDp = metrics.heightPixels / metrics.density
+        val smallestWidthDp = minOf(widthDp, heightDp)
+        return if (smallestWidthDp >= 600) "TABLET" else "MOBILE"
     }
 
     private fun computeBlurTier(context: Context): Boolean {

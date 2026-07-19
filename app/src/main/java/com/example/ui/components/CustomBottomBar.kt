@@ -80,7 +80,7 @@ fun CustomBottomBar(
     val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
     val blurRadius by viewModel.blurRadius.collectAsState()
     val blurOpacity by viewModel.blurOpacity.collectAsState()
-    val useBlur = DevicePerformance.shouldUseBlur(context) && !forceDisableBlur
+    val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
     val rowModifier = if (useBlur) {
         Modifier
             .fillMaxWidth()

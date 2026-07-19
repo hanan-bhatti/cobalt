@@ -1,0 +1,27 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="25dp"
+    android:height="24dp"
+    android:viewportWidth="25"
+    android:viewportHeight="24">
+  <!-- Outer browser window border, slightly wobbly to feel hand-drawn -->
+  <path
+      android:pathData="M4.2 4.5C8.2 4.3,16.8 4.3,20.8 4.5C22.1 4.6,22.1 5.2,22.1 6.5C22.1 10.5,22.1 15.5,22.1 19.5C22.1 20.8,22.1 20.8,20.8 20.8C16.8 21.0,8.2 21.0,4.2 20.8C2.9 20.8,2.9 20.8,2.9 19.5C2.9 15.5,2.9 10.5,2.9 6.5C2.9 5.2,2.9 4.6,4.2 4.5Z"
+      android:strokeLineJoin="round"
+      android:strokeWidth="1.5"
+      android:strokeColor="#FF000000"
+      android:strokeLineCap="round"/>
+  <!-- Horizontal divider for the address/tab bar -->
+  <path
+      android:pathData="M2.9 8.5C8.2 8.5,16.8 8.5,22.1 8.5"
+      android:strokeLineJoin="round"
+      android:strokeWidth="1.5"
+      android:strokeColor="#FF000000"
+      android:strokeLineCap="round"/>
+  <!-- Mini browser window dots representing window controls -->
+  <path
+      android:pathData="M5.5 6.5C5.5 6.1,5.9 6.1,5.9 6.5C5.9 6.9,5.5 6.9,5.5 6.5ZM8.0 6.5C8.0 6.1,8.4 6.1,8.4 6.5C8.4 6.9,8.0 6.9,8.0 6.5ZM10.5 6.5C10.5 6.1,10.9 6.1,10.9 6.5C10.9 6.9,10.5 6.9,10.5 6.5Z"
+      android:strokeLineJoin="round"
+      android:strokeWidth="1.5"
+      android:strokeColor="#FF000000"
+      android:strokeLineCap="round"/>
+</vector>

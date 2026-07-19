@@ -7,13 +7,6 @@
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 package com.example.service
@@ -23,6 +16,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 object DataDownloadManager {
+    data class FailedItem(val id: String, val title: String, val reason: String)
+
     data class DownloadProgress(
         val isDownloading: Boolean = false,
         val totalFiles: Int = 0,
@@ -33,7 +28,8 @@ object DataDownloadManager {
         val speedBytesPerSec: Long = 0L,
         val estRemainingSeconds: Long = -1L,
         val error: String? = null,
-        val isCompleted: Boolean = false
+        val isCompleted: Boolean = false,
+        val failedItems: List<FailedItem> = emptyList()
     )
 
     private val _progress = MutableStateFlow(DownloadProgress())

@@ -7,26 +7,16 @@
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 package com.example.service
 
 import android.app.*
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
-import android.os.Environment
 import android.os.IBinder
-import android.provider.MediaStore
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.R
@@ -39,10 +29,11 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.FileOutputStream
-import java.io.InputStream
 import java.net.URL
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 
 class DataDownloadService : Service() {
 
@@ -79,7 +70,7 @@ class DataDownloadService : Service() {
 
         serviceScope.launch {
             try {
-                performDownload()
+                performDownload(intent)
             } catch (e: Exception) {
                 Log.e(TAG, "Download failed: ${e.message}", e)
                 DataDownloadManager.updateProgress(
@@ -103,36 +94,93 @@ class DataDownloadService : Service() {
         return START_NOT_STICKY
     }
 
-    private suspend fun performDownload() = withContext(Dispatchers.IO) {
+    private suspend fun performDownload(intent: Intent?) = withContext(Dispatchers.IO) {
+        val prefs = getSharedPreferences("second_brain_prefs", Context.MODE_PRIVATE)
+        val resumeInterrupted = intent?.getBooleanExtra("resume_interrupted", false) ?: false
+        val retryFailed = intent?.getBooleanExtra("retry_failed", false) ?: false
+
         DataDownloadManager.updateProgress(
             DataDownloadManager.DownloadProgress(
                 isDownloading = true,
                 totalFiles = 0,
                 downloadedFiles = 0,
-                currentFileName = "Fetching items list..."
+                currentFileName = "Checking pre-requisites..."
             )
         )
 
+        // Pre-flight check: Network connectivity
+        if (!isNetworkAvailable()) {
+            val errorMsg = "No internet connection. Please check your network and try again."
+            Log.e(TAG, errorMsg)
+            DataDownloadManager.updateProgress(
+                DataDownloadManager.progress.value.copy(
+                    isDownloading = false,
+                    error = errorMsg
+                )
+            )
+            updateNotificationError("No internet connection")
+            return@withContext
+        }
+
         // Fetch all items from repository
         val allItems = repository.getAllItems()
-        
-        // Filter cloud media items (images, videos, audios with web URLs)
-        val mediaItems = allItems.filter { item ->
-            val mediaUrl = if (item.type == SavedItemType.AUDIO) item.thumbnailPath ?: "" else item.content
-            val hasWebUrl = mediaUrl.startsWith("http://") || mediaUrl.startsWith("https://")
-            val isMedia = item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO
-            isMedia && hasWebUrl
+        val mediaItems: List<SavedItem>
+
+        if (resumeInterrupted || retryFailed) {
+            val allIds = prefs.getStringSet("interrupted_backup_all_ids", emptySet()) ?: emptySet()
+            val completedIds = prefs.getStringSet("interrupted_backup_completed_ids", emptySet()) ?: emptySet()
+            val remainingIds = allIds - completedIds
+            mediaItems = allItems.filter { it.id in remainingIds }
+        } else {
+            // Fresh run
+            mediaItems = allItems.filter { item ->
+                val mediaUrl = if (item.type == SavedItemType.AUDIO) item.thumbnailPath ?: "" else item.content
+                val hasWebUrl = mediaUrl.startsWith("http://") || mediaUrl.startsWith("https://")
+                val isMedia = item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO
+                isMedia && hasWebUrl
+            }
+            
+            // Persist initial state
+            val allIds = mediaItems.map { it.id }.toSet()
+            prefs.edit().apply {
+                putBoolean("interrupted_backup_in_progress", true)
+                putStringSet("interrupted_backup_all_ids", allIds)
+                putStringSet("interrupted_backup_completed_ids", emptySet())
+                putStringSet("interrupted_backup_failed_ids", emptySet())
+                apply()
+            }
         }
 
         if (mediaItems.isEmpty()) {
             Log.d(TAG, "No media files to download from cloud.")
-            finalizeSignOutAndComplete(0)
+            val completedIds = prefs.getStringSet("interrupted_backup_completed_ids", emptySet()) ?: emptySet()
+            val allIds = prefs.getStringSet("interrupted_backup_all_ids", emptySet()) ?: emptySet()
+            val totalCount = if (allIds.isNotEmpty()) allIds.size else 0
+            
+            val failedIds = prefs.getStringSet("interrupted_backup_failed_ids", emptySet()) ?: emptySet()
+            if (failedIds.isNotEmpty() && (resumeInterrupted || retryFailed)) {
+                val failedItems = allItems.filter { it.id in failedIds }.map { 
+                    DataDownloadManager.FailedItem(it.id, it.title, "Interrupted download")
+                }
+                DataDownloadManager.updateProgress(
+                    DataDownloadManager.DownloadProgress(
+                        isDownloading = false,
+                        isCompleted = false,
+                        downloadedFiles = totalCount - failedIds.size,
+                        totalFiles = totalCount,
+                        failedItems = failedItems
+                    )
+                )
+                updateNotificationError("${failedIds.size} items failed to back up.")
+            } else {
+                finalizeSignOutAndComplete(totalCount)
+            }
             return@withContext
         }
 
         val totalFilesCount = mediaItems.size
         
-        // Determine total size of all items (by requesting headers or content lengths)
+        // Determine total size of all items
         var totalBytesExpected = 0L
         val sizes = LongArray(totalFilesCount) { -1L }
         
@@ -146,11 +194,21 @@ class DataDownloadService : Service() {
         for (i in mediaItems.indices) {
             val item = mediaItems[i]
             val mediaUrl = if (item.type == SavedItemType.AUDIO) item.thumbnailPath ?: "" else item.content
-            val size = getRemoteFileSize(mediaUrl)
-            sizes[i] = size
-            if (size > 0L) {
-                totalBytesExpected += size
+            var size = getRemoteFileSize(mediaUrl)
+            if (size <= 0L) {
+                size = if (item.sizeBytes > 0L) {
+                    item.sizeBytes
+                } else {
+                    // Conservative non-zero estimate based on type
+                    when (item.type) {
+                        SavedItemType.VIDEO -> 15L * 1024L * 1024L
+                        SavedItemType.AUDIO -> 5L * 1024L * 1024L
+                        else -> 2L * 1024L * 1024L
+                    }
+                }
             }
+            sizes[i] = size
+            totalBytesExpected += size
         }
 
         DataDownloadManager.updateProgress(
@@ -159,14 +217,35 @@ class DataDownloadService : Service() {
             )
         )
 
+        // Pre-flight check: Storage space check
+        val freeSpaceBytes = applicationContext.filesDir.freeSpace
+        val requiredWithMargin = (totalBytesExpected * 1.1).toLong() + (10 * 1024 * 1024)
+        if (freeSpaceBytes < requiredWithMargin) {
+            val errorMsg = "Not enough storage: need ${requiredWithMargin / (1024 * 1024)} MB, have ${freeSpaceBytes / (1024 * 1024)} MB available."
+            Log.e(TAG, errorMsg)
+            DataDownloadManager.updateProgress(
+                DataDownloadManager.progress.value.copy(
+                    isDownloading = false,
+                    error = errorMsg
+                )
+            )
+            updateNotificationError("Insufficient storage space")
+            return@withContext
+        }
+
         var totalDownloadedBytes = 0L
         val startDownloadTimeMs = System.currentTimeMillis()
+        val failedList = mutableListOf<DataDownloadManager.FailedItem>()
 
         for (index in mediaItems.indices) {
             val item = mediaItems[index]
             val mediaUrl = if (item.type == SavedItemType.AUDIO) item.thumbnailPath ?: "" else item.content
-            val fileName = getFileNameFromUrl(mediaUrl, item.id, item.type)
-            val mimeType = getMimeTypeFromType(item.type)
+            val extension = when (item.type) {
+                SavedItemType.VIDEO -> "mp4"
+                SavedItemType.AUDIO -> "mp4"
+                else -> "jpg"
+            }
+            val fileName = "${item.id}.$extension"
 
             var downloadSuccess = false
             var retries = 3
@@ -181,55 +260,105 @@ class DataDownloadService : Service() {
                         }
 
                         val body = response.body ?: throw Exception("Response body is empty")
+                        val contentLength = body.contentLength()
                         val inputStream = body.byteStream()
                         
-                        saveFileToDownloads(
-                            context = this@DataDownloadService,
-                            fileName = fileName,
-                            mimeType = mimeType,
-                            byteStream = inputStream
-                        ) { bytesWritten ->
-                            totalDownloadedBytes += bytesWritten
-                            
-                            // Realtime stats calculation
-                            val timeElapsedMs = System.currentTimeMillis() - startDownloadTimeMs
-                            val speedBytesPerSec = if (timeElapsedMs > 0) (totalDownloadedBytes * 1000L) / timeElapsedMs else 0L
-                            val estRemainingSeconds = if (speedBytesPerSec > 0 && totalBytesExpected > totalDownloadedBytes) {
-                                (totalBytesExpected - totalDownloadedBytes) / speedBytesPerSec
-                            } else {
-                                -1L
-                            }
+                        val targetDir = repository.getPermanentMediaDir(item.type)
+                        val destFile = File(targetDir, fileName)
 
-                            val progressPercent = if (totalBytesExpected > 0) {
-                                ((totalDownloadedBytes * 100) / totalBytesExpected).toInt().coerceIn(0, 100)
-                            } else {
-                                ((index * 100) / totalFilesCount)
-                            }
+                        FileOutputStream(destFile).use { outputStream ->
+                            val buffer = ByteArray(8192)
+                            var bytesRead: Int
+                            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                                outputStream.write(buffer, 0, bytesRead)
+                                totalDownloadedBytes += bytesRead
+                                
+                                // Realtime stats calculation
+                                val timeElapsedMs = System.currentTimeMillis() - startDownloadTimeMs
+                                val speedBytesPerSec = if (timeElapsedMs > 0) (totalDownloadedBytes * 1000L) / timeElapsedMs else 0L
+                                val estRemainingSeconds = if (speedBytesPerSec > 0 && totalBytesExpected > totalDownloadedBytes) {
+                                    (totalBytesExpected - totalDownloadedBytes) / speedBytesPerSec
+                                } else {
+                                    -1L
+                                }
 
-                            DataDownloadManager.updateProgress(
-                                DataDownloadManager.progress.value.copy(
-                                    downloadedFiles = index,
-                                    currentFileName = fileName,
-                                    downloadedBytes = totalDownloadedBytes,
-                                    speedBytesPerSec = speedBytesPerSec,
-                                    estRemainingSeconds = estRemainingSeconds
+                                val progressPercent = if (totalBytesExpected > 0) {
+                                    ((totalDownloadedBytes * 100) / totalBytesExpected).toInt().coerceIn(0, 100)
+                                } else {
+                                    ((index * 100) / totalFilesCount)
+                                }
+
+                                DataDownloadManager.updateProgress(
+                                    DataDownloadManager.progress.value.copy(
+                                        downloadedFiles = index,
+                                        currentFileName = fileName,
+                                        downloadedBytes = totalDownloadedBytes,
+                                        speedBytesPerSec = speedBytesPerSec,
+                                        estRemainingSeconds = estRemainingSeconds
+                                    )
                                 )
-                            )
 
-                            // Update notification progress
-                            val infoText = String.format(
-                                Locale.US,
-                                "File %d/%d | %.1f MB/s",
-                                index + 1,
-                                totalFilesCount,
-                                speedBytesPerSec / (1024f * 1024f)
+                                // Update notification progress
+                                val infoText = String.format(
+                                    Locale.US,
+                                    "File %d/%d | %.1f MB/s",
+                                    index + 1,
+                                    totalFilesCount,
+                                    speedBytesPerSec / (1024f * 1024f)
+                                )
+                                val notification = createNotification(
+                                    contentText = infoText,
+                                    progress = progressPercent,
+                                    maxProgress = 100
+                                )
+                                notificationManager.notify(NOTIFICATION_ID, notification)
+                            }
+                        }
+
+                        // Verify downloaded file integrity
+                        val localFileSize = destFile.length()
+                        val expectedSize = if (item.sizeBytes > 0) item.sizeBytes else contentLength
+                        if (expectedSize > 0 && localFileSize != expectedSize) {
+                            if (destFile.exists()) {
+                                destFile.delete()
+                            }
+                            throw Exception("File size mismatch. Expected $expectedSize bytes, got $localFileSize bytes.")
+                        }
+
+                        // Update Room Entity
+                        val updatedItem = if (item.type == SavedItemType.AUDIO) {
+                            item.copy(
+                                thumbnailPath = destFile.absolutePath,
+                                isSynced = false,
+                                isPendingBackup = false,
+                                isBackedUp = false,
+                                isUnavailable = false
                             )
-                            val notification = createNotification(
-                                contentText = infoText,
-                                progress = progressPercent,
-                                maxProgress = 100
+                        } else {
+                            item.copy(
+                                content = destFile.absolutePath,
+                                thumbnailPath = destFile.absolutePath,
+                                isSynced = false,
+                                isPendingBackup = false,
+                                isBackedUp = false,
+                                isUnavailable = false
                             )
-                            notificationManager.notify(NOTIFICATION_ID, notification)
+                        }
+                        repository.saveItemLocallyOnly(updatedItem)
+
+                        // Update persisted completed list
+                        synchronized(prefs) {
+                            val completed = prefs.getStringSet("interrupted_backup_completed_ids", emptySet())!!.toMutableSet()
+                            completed.add(item.id)
+                            
+                            val failed = prefs.getStringSet("interrupted_backup_failed_ids", emptySet())!!.toMutableSet()
+                            failed.remove(item.id) // successfully completed, remove from failed if it was there
+                            
+                            prefs.edit().apply {
+                                putStringSet("interrupted_backup_completed_ids", completed)
+                                putStringSet("interrupted_backup_failed_ids", failed)
+                                apply()
+                            }
                         }
                         downloadSuccess = true
                     }
@@ -237,17 +366,49 @@ class DataDownloadService : Service() {
                     retries--
                     lastError = e
                     Log.w(TAG, "Retry failed for $fileName. Retries left: $retries", e)
-                    delay(2000) // Delay before retry
+                    if (retries > 0) {
+                        delay(2000)
+                    }
                 }
             }
 
             if (!downloadSuccess) {
-                // We propagate the exception if all retries failed
-                throw lastError ?: Exception("Failed to download $fileName")
+                val reason = lastError?.localizedMessage ?: "Unknown download error"
+                Log.e(TAG, "Failed to download ${item.title}: $reason")
+                failedList.add(DataDownloadManager.FailedItem(item.id, item.title, reason))
+                
+                // Update persisted failed list
+                synchronized(prefs) {
+                    val failed = prefs.getStringSet("interrupted_backup_failed_ids", emptySet())!!.toMutableSet()
+                    failed.add(item.id)
+                    prefs.edit().putStringSet("interrupted_backup_failed_ids", failed).apply()
+                }
             }
         }
 
-        finalizeSignOutAndComplete(totalFilesCount)
+        // Final completion check
+        val allIds = prefs.getStringSet("interrupted_backup_all_ids", emptySet()) ?: emptySet()
+        val finalFailedIds = prefs.getStringSet("interrupted_backup_failed_ids", emptySet()) ?: emptySet()
+        val totalCount = allIds.size
+
+        if (finalFailedIds.isEmpty()) {
+            finalizeSignOutAndComplete(totalCount)
+        } else {
+            val failedItems = allItems.filter { it.id in finalFailedIds }.map { 
+                DataDownloadManager.FailedItem(it.id, it.title, "Download failed")
+            }
+            DataDownloadManager.updateProgress(
+                DataDownloadManager.DownloadProgress(
+                    isDownloading = false,
+                    isCompleted = false,
+                    downloadedFiles = totalCount - finalFailedIds.size,
+                    totalFiles = totalCount,
+                    failedItems = failedItems
+                )
+            )
+            val errorNotificationText = "${finalFailedIds.size} items failed to back up."
+            updateNotificationError(errorNotificationText)
+        }
     }
 
     private fun finalizeSignOutAndComplete(downloadedCount: Int) {
@@ -255,7 +416,14 @@ class DataDownloadService : Service() {
         
         // Remove simulated preference
         val prefs = getSharedPreferences("second_brain_prefs", Context.MODE_PRIVATE)
-        prefs.edit().remove("simulated_email").apply()
+        prefs.edit().apply {
+            remove("simulated_email")
+            putBoolean("interrupted_backup_in_progress", false)
+            putStringSet("interrupted_backup_all_ids", emptySet())
+            putStringSet("interrupted_backup_completed_ids", emptySet())
+            putStringSet("interrupted_backup_failed_ids", emptySet())
+            apply()
+        }
         
         // Firebase Auth sign-out
         try {
@@ -301,96 +469,12 @@ class DataDownloadService : Service() {
         }
     }
 
-    private fun saveFileToDownloads(
-        context: Context,
-        fileName: String,
-        mimeType: String?,
-        byteStream: InputStream,
-        onBytesWritten: (Int) -> Unit
-    ) {
-        val contentResolver = context.contentResolver
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val contentValues = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                if (mimeType != null) {
-                    put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-                }
-                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/SecondBrainArchive")
-                put(MediaStore.MediaColumns.IS_PENDING, 1)
-            }
-
-            val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-            if (uri != null) {
-                try {
-                    contentResolver.openOutputStream(uri)?.use { outputStream ->
-                        val buffer = ByteArray(8192)
-                        var bytesRead: Int
-                        while (byteStream.read(buffer).also { bytesRead = it } != -1) {
-                            outputStream.write(buffer, 0, bytesRead)
-                            onBytesWritten(bytesRead)
-                        }
-                    }
-                    contentValues.clear()
-                    contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
-                    contentResolver.update(uri, contentValues, null, null)
-                } catch (e: Exception) {
-                    contentResolver.delete(uri, null, null)
-                    throw e
-                }
-            } else {
-                throw Exception("Failed to insert MediaStore download record")
-            }
-        } else {
-            // Fallback for pre-Q devices
-            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            val archiveDir = File(downloadsDir, "SecondBrainArchive")
-            if (!archiveDir.exists()) {
-                archiveDir.mkdirs()
-            }
-            val targetFile = File(archiveDir, fileName)
-            FileOutputStream(targetFile).use { outputStream ->
-                val buffer = ByteArray(8192)
-                var bytesRead: Int
-                while (byteStream.read(buffer).also { bytesRead = it } != -1) {
-                    outputStream.write(buffer, 0, bytesRead)
-                    onBytesWritten(bytesRead)
-                }
-            }
-        }
-    }
-
-    private fun getFileNameFromUrl(urlString: String, itemId: String, type: SavedItemType): String {
-        return try {
-            val path = URL(urlString).path
-            val name = path.substring(path.lastIndexOf('/') + 1)
-            if (name.contains(".") && name.length > 5) {
-                name
-            } else {
-                getDefaultName(itemId, type)
-            }
-        } catch (e: Exception) {
-            getDefaultName(itemId, type)
-        }
-    }
-
-    private fun getDefaultName(itemId: String, type: SavedItemType): String {
-        val ext = when (type) {
-            SavedItemType.IMAGE -> "jpg"
-            SavedItemType.VIDEO -> "mp4"
-            SavedItemType.AUDIO -> "mp3"
-            else -> "bin"
-        }
-        return "archive_$itemId.$ext"
-    }
-
-    private fun getMimeTypeFromType(type: SavedItemType): String? {
-        return when (type) {
-            SavedItemType.IMAGE -> "image/jpeg"
-            SavedItemType.VIDEO -> "video/mp4"
-            SavedItemType.AUDIO -> "audio/mpeg"
-            else -> null
-        }
+    private fun isNetworkAvailable(): Boolean {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
+        return caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+               caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+               caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
     }
 
     private fun createNotification(contentText: String, progress: Int, maxProgress: Int): Notification {

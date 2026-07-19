@@ -56,6 +56,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import android.Manifest
 import android.content.Intent
 import android.os.Build
+import android.content.Context
 import com.example.service.DataDownloadManager
 import com.example.service.DataDownloadService
 import com.example.ui.theme.SuccessGreen
@@ -77,6 +78,7 @@ fun ProfileMainContent(
     onNavigateToAuth: () -> Unit,
     onNavigateToLegal: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToDevices: () -> Unit,
     onNavigateToManageStorage: () -> Unit
 ) {
     val userEmail by viewModel.userEmail.collectAsState()
@@ -119,6 +121,15 @@ fun ProfileMainContent(
     }
 
     var showSignOutConfirmDialog by remember { mutableStateOf(false) }
+    var showSignOutOnlyConfirmDialog by remember { mutableStateOf(false) }
+
+    val prefs = remember { context.getSharedPreferences("second_brain_prefs", Context.MODE_PRIVATE) }
+    var showInterruptedBackupDialog by remember {
+        mutableStateOf(
+            prefs.getBoolean("interrupted_backup_in_progress", false) &&
+            !DataDownloadManager.progress.value.isDownloading
+        )
+    }
 
     val pullToRefreshState = rememberPullToRefreshState()
     androidx.compose.material3.pulltorefresh.PullToRefreshBox(
@@ -444,6 +455,11 @@ fun ProfileMainContent(
             // APP
             SectionContainer(title = "APP") {
                 ClickableRow(title = "Settings", onClick = onNavigateToSettings)
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+                ClickableRow(title = "Devices", onClick = onNavigateToDevices)
             }
 
             // STORAGE SECTION
@@ -691,8 +707,7 @@ fun ProfileMainContent(
                             OutlinedButton(
                                 onClick = {
                                     showSignOutConfirmDialog = false
-                                    viewModel.signOut()
-                                    onNavigateToAuth()
+                                    showSignOutOnlyConfirmDialog = true
                                 },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -714,6 +729,194 @@ fun ProfileMainContent(
                 dismissButton = {
                     TextButton(onClick = { showSignOutConfirmDialog = false }) {
                         Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        if (showSignOutOnlyConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { showSignOutOnlyConfirmDialog = false },
+                title = { Text("Confirm Sign Out without Backup") },
+                text = {
+                    Text("Your cloud-synced photos, videos, and audio will not be accessible on this device until you sign back in online. Local copies of that media will not be created. Are you sure you want to sign out without downloading a backup?")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showSignOutOnlyConfirmDialog = false
+                            viewModel.signOut()
+                            onNavigateToAuth()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Sign Out Anyway")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showSignOutOnlyConfirmDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        if (showInterruptedBackupDialog) {
+            AlertDialog(
+                onDismissRequest = { showInterruptedBackupDialog = false },
+                title = { Text("Backup Interrupted") },
+                text = {
+                    Text("Your last backup attempt was interrupted. Would you like to retry downloading the remaining media files now?")
+                },
+                confirmButton = {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Button(
+                            onClick = {
+                                showInterruptedBackupDialog = false
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    val permissionCheck = androidx.core.content.ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.POST_NOTIFICATIONS
+                                    )
+                                    if (permissionCheck == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                        val serviceIntent = Intent(context, DataDownloadService::class.java).apply {
+                                            putExtra("resume_interrupted", true)
+                                        }
+                                        context.startForegroundService(serviceIntent)
+                                    } else {
+                                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                } else {
+                                    val serviceIntent = Intent(context, DataDownloadService::class.java).apply {
+                                        putExtra("resume_interrupted", true)
+                                    }
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                        context.startForegroundService(serviceIntent)
+                                    } else {
+                                        context.startService(serviceIntent)
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Retry Backup")
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                showInterruptedBackupDialog = false
+                                prefs.edit().apply {
+                                    putBoolean("interrupted_backup_in_progress", false)
+                                    putStringSet("interrupted_backup_all_ids", emptySet())
+                                    putStringSet("interrupted_backup_completed_ids", emptySet())
+                                    putStringSet("interrupted_backup_failed_ids", emptySet())
+                                    apply()
+                                }
+                                viewModel.signOut()
+                                onNavigateToAuth()
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Sign Out Anyway")
+                        }
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            prefs.edit().putBoolean("interrupted_backup_in_progress", false).apply()
+                            showInterruptedBackupDialog = false
+                        }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        if (downloadProgress.failedItems.isNotEmpty()) {
+            val failedCount = downloadProgress.failedItems.size
+            val totalCount = downloadProgress.totalFiles
+            val succeededCount = downloadProgress.downloadedFiles
+            val titlesList = downloadProgress.failedItems.map { it.title }.joinToString(", ")
+            val truncatedTitles = if (titlesList.length > 150) titlesList.take(150) + "..." else titlesList
+
+            AlertDialog(
+                onDismissRequest = { /* Cannot dismiss by tapping outside */ },
+                title = { Text("Backup Completed with Failures") },
+                text = {
+                    Text("$succeededCount of $totalCount items backed up locally. $failedCount failed:\n\n$truncatedTitles\n\nWould you like to retry the failed items, or sign out anyway?")
+                },
+                confirmButton = {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Button(
+                            onClick = {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    val permissionCheck = androidx.core.content.ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.POST_NOTIFICATIONS
+                                    )
+                                    if (permissionCheck == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                        val serviceIntent = Intent(context, DataDownloadService::class.java).apply {
+                                            putExtra("retry_failed", true)
+                                        }
+                                        context.startForegroundService(serviceIntent)
+                                    } else {
+                                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    }
+                                } else {
+                                    val serviceIntent = Intent(context, DataDownloadService::class.java).apply {
+                                        putExtra("retry_failed", true)
+                                    }
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                        context.startForegroundService(serviceIntent)
+                                    } else {
+                                        context.startService(serviceIntent)
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Retry Failed")
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                prefs.edit().apply {
+                                    putBoolean("interrupted_backup_in_progress", false)
+                                    putStringSet("interrupted_backup_all_ids", emptySet())
+                                    putStringSet("interrupted_backup_completed_ids", emptySet())
+                                    putStringSet("interrupted_backup_failed_ids", emptySet())
+                                    apply()
+                                }
+                                DataDownloadManager.reset()
+                                viewModel.signOut()
+                                onNavigateToAuth()
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Sign Out Anyway")
+                        }
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            prefs.edit().apply {
+                                putBoolean("interrupted_backup_in_progress", false)
+                                putStringSet("interrupted_backup_all_ids", emptySet())
+                                putStringSet("interrupted_backup_completed_ids", emptySet())
+                                putStringSet("interrupted_backup_failed_ids", emptySet())
+                                apply()
+                            }
+                            DataDownloadManager.reset()
+                        }
+                    ) {
+                        Text("Cancel Sign Out")
                     }
                 }
             )

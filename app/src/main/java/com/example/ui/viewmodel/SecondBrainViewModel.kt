@@ -29,6 +29,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
+import com.example.data.model.DeviceSession
 import com.example.data.repository.SecondBrainRepository
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -376,6 +377,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 // Background operations to restore and sync
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     repository.restoreUserDataFromCloud()
+                    repository.updateDeviceSession()
                     repository.syncUnsyncedItems()
                 }
                 showToast("Data synced successfully.")
@@ -577,6 +579,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     _isInitialLoading.value = true
                     try {
                         repository.restoreUserDataFromCloud()
+                        repository.updateDeviceSession()
                         repository.syncUnsyncedItems()
                     } catch (e: Exception) {
                         Log.e("SecondBrainVM", "Initial auto-sync error: ${e.message}", e)
@@ -598,6 +601,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                         _isInitialLoading.value = true
                         try {
                             repository.restoreUserDataFromCloud()
+                            repository.updateDeviceSession()
                             repository.syncUnsyncedItems()
                         } catch (e: Exception) {
                             Log.e("SecondBrainVM", "Initial auto-sync error: ${e.message}", e)
@@ -659,6 +663,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 viewModelScope.launch {
                     try {
                         repository.restoreUserDataFromCloud()
+                        repository.updateDeviceSession()
                         repository.syncUnsyncedItems()
                         showToast("Successfully registered and synced as $userMail.")
                     } catch (e: Exception) {
@@ -703,6 +708,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 viewModelScope.launch {
                     try {
                         repository.restoreUserDataFromCloud()
+                        repository.updateDeviceSession()
                         repository.syncUnsyncedItems()
                         showToast("Successfully logged in and synced as $userMail.")
                     } catch (e: Exception) {
@@ -762,6 +768,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     _userEmail.value = userMail
                     AnalyticsHelper.logSignInSuccess(context, "Google")
                     repository.restoreUserDataFromCloud()
+                    repository.updateDeviceSession()
                     repository.syncUnsyncedItems()
                     showToast("Successfully logged in and synced as $userMail.")
                     onCompletion(true)
@@ -947,6 +954,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 viewModelScope.launch {
                     try {
                         repository.restoreUserDataFromCloud()
+                        repository.updateDeviceSession()
                         repository.syncUnsyncedItems()
                         showToast("Successfully logged in and synced as $userMail.")
                     } catch (e: Exception) {
@@ -1903,6 +1911,25 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         }
 
         return totalScore
+    }
+
+    private val _devices = MutableStateFlow<List<DeviceSession>>(emptyList())
+    val devices: StateFlow<List<DeviceSession>> = _devices.asStateFlow()
+
+    private val _isDevicesLoading = MutableStateFlow(false)
+    val isDevicesLoading: StateFlow<Boolean> = _isDevicesLoading.asStateFlow()
+
+    fun loadDeviceSessions() {
+        viewModelScope.launch {
+            _isDevicesLoading.value = true
+            try {
+                _devices.value = repository.getAllDeviceSessions()
+            } catch (e: Exception) {
+                Log.e("SecondBrainVM", "Failed to load device sessions: ${e.message}")
+            } finally {
+                _isDevicesLoading.value = false
+            }
+        }
     }
 }
 

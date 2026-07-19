@@ -203,7 +203,7 @@ fun DetailScreen(
             )
         },
         bottomBar = {
-            val useBlur = DevicePerformance.shouldUseBlur(context) && !forceDisableBlur
+            val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
             val barModifier = if (useBlur) {
                 Modifier
                     .fillMaxWidth()

@@ -424,7 +424,7 @@ fun FoldersScreen(
                     }
                 }
 
-                val useBlurGrid = DevicePerformance.shouldUseBlur(context) && !forceDisableBlur
+                val useBlurGrid = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
                 val folderFabModifier = if (useBlurGrid) {
                     Modifier
                         .testTag("fab_create_folder")
@@ -945,7 +945,7 @@ fun FolderContentsBrowser(
                 SavedItemType.AUDIO -> CategoryAudio
             }
 
-            val useBlurDetail = DevicePerformance.shouldUseBlur(context) && !forceDisableBlur
+            val useBlurDetail = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
             val detailFabModifier = if (useBlurDetail) {
                 Modifier
                     .size(56.dp)

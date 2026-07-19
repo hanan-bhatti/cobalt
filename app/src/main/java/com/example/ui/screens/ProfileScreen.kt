@@ -43,6 +43,10 @@ import androidx.compose.ui.unit.dp
 import com.example.ui.components.bounceClick
 import com.example.ui.viewmodel.SecondBrainViewModel
 
+enum class ProfileSubScreen {
+    MAIN, SETTINGS, DEVICES
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
@@ -52,26 +56,36 @@ fun ProfileScreen(
     onNavigateToLegal: (String) -> Unit = {},
     onNavigateToManageStorage: () -> Unit = {}
 ) {
-    var showSettings by remember { mutableStateOf(false) }
+    var currentScreen by remember { mutableStateOf(ProfileSubScreen.MAIN) }
 
-    BackHandler(enabled = showSettings) {
-        showSettings = false
+    BackHandler(enabled = currentScreen != ProfileSubScreen.MAIN) {
+        currentScreen = ProfileSubScreen.MAIN
     }
 
-    if (!showSettings) {
-        ProfileMainContent(
-            viewModel = viewModel,
-            onNavigateBack = onNavigateBack,
-            onNavigateToAuth = onNavigateToAuth,
-            onNavigateToLegal = onNavigateToLegal,
-            onNavigateToSettings = { showSettings = true },
-            onNavigateToManageStorage = onNavigateToManageStorage
-        )
-    } else {
-        SettingsScreen(
-            viewModel = viewModel,
-            onNavigateBack = { showSettings = false }
-        )
+    when (currentScreen) {
+        ProfileSubScreen.MAIN -> {
+            ProfileMainContent(
+                viewModel = viewModel,
+                onNavigateBack = onNavigateBack,
+                onNavigateToAuth = onNavigateToAuth,
+                onNavigateToLegal = onNavigateToLegal,
+                onNavigateToSettings = { currentScreen = ProfileSubScreen.SETTINGS },
+                onNavigateToDevices = { currentScreen = ProfileSubScreen.DEVICES },
+                onNavigateToManageStorage = onNavigateToManageStorage
+            )
+        }
+        ProfileSubScreen.SETTINGS -> {
+            SettingsScreen(
+                viewModel = viewModel,
+                onNavigateBack = { currentScreen = ProfileSubScreen.MAIN }
+            )
+        }
+        ProfileSubScreen.DEVICES -> {
+            DevicesScreen(
+                viewModel = viewModel,
+                onNavigateBack = { currentScreen = ProfileSubScreen.MAIN }
+            )
+        }
     }
 }
 

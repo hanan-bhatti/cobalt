@@ -1,0 +1,27 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="25dp"
+    android:height="24dp"
+    android:viewportWidth="25"
+    android:viewportHeight="24">
+  <!-- Monitor screen boundary, slightly wobbly to feel hand-drawn -->
+  <path
+      android:pathData="M4.2 4.5C8.2 4.3,16.8 4.3,20.8 4.5C22.1 4.6,22.1 5.2,22.1 6.5C22.1 9.5,22.1 12.5,22.1 15.5C22.1 16.8,22.1 16.8,20.8 16.8C16.8 17.0,8.2 17.0,4.2 16.8C2.9 16.8,2.9 16.8,2.9 15.5C2.9 12.5,2.9 9.5,2.9 6.5C2.9 5.2,2.9 4.6,4.2 4.5Z"
+      android:strokeLineJoin="round"
+      android:strokeWidth="1.5"
+      android:strokeColor="#FF000000"
+      android:strokeLineCap="round"/>
+  <!-- Bezel bottom line -->
+  <path
+      android:pathData="M2.9 14.5C8.2 14.5,16.8 14.5,22.1 14.5"
+      android:strokeLineJoin="round"
+      android:strokeWidth="1.5"
+      android:strokeColor="#FF000000"
+      android:strokeLineCap="round"/>
+  <!-- Monitor stand, slightly hand-drawn slant -->
+  <path
+      android:pathData="M10.5 16.8C10.5 19.0,9.5 21.0,7.5 21.5C10.5 21.5,14.5 21.5,17.5 21.5C15.5 21.0,14.5 19.0,14.5 16.8"
+      android:strokeLineJoin="round"
+      android:strokeWidth="1.5"
+      android:strokeColor="#FF000000"
+      android:strokeLineCap="round"/>
+</vector>

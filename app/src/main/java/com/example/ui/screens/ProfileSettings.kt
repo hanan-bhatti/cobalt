@@ -382,7 +382,7 @@ fun SettingsScreen(
                     }
                 }
 
-                if (DevicePerformance.shouldUseBlur(context)) {
+                if (DevicePerformance.isDeviceCapableOfBlur(context)) {
                     val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
                     val blurRadius by viewModel.blurRadius.collectAsState()
                     val blurOpacity by viewModel.blurOpacity.collectAsState()
