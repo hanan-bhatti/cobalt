@@ -132,7 +132,12 @@ fun SettingsScreen(
                     .padding(bottom = 100.dp)
             ) {
 
-                SettingsSection(title = "App Theme") {
+                // GROUP 1: APPEARANCE & DISPLAY
+                SettingsSection(
+                    title = "Appearance & Display",
+                    subtext = "Customize app theme, dynamic colors, and visual blur effects.",
+                    iconRes = R.drawable.ic_custom_image
+                ) {
                     val themeMode by viewModel.settingsRepository.themeMode.collectAsState()
                     val themeOptions = listOf("System Default", "Light", "Dark")
                     var expanded by remember { mutableStateOf(false) }
@@ -173,45 +178,53 @@ fun SettingsScreen(
                             onCheckedChange = { enabled -> viewModel.settingsRepository.setDynamicColor(enabled) }
                         )
                     }
-                }
 
-                SettingsSection(title = "Edge Panel", subtext = "Enable a floating panel to quickly capture thoughts from anywhere.") {
-                    if (!hasOverlayPermission) {
-                        SettingsRow(
-                            title = "Grant Overlay Permission",
-                            value = "Required",
-                            onClick = {
-                                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
-                                context.startActivity(intent)
-                            }
+                    if (DevicePerformance.isDeviceCapableOfBlur(context)) {
+                        val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
+                        val blurRadius by viewModel.blurRadius.collectAsState()
+                        val blurOpacity by viewModel.blurOpacity.collectAsState()
+
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                            modifier = Modifier.fillMaxWidth()
                         )
-                    } else {
-                        val isEnabled by viewModel.settingsRepository.isFloatingOcrEnabled.collectAsState()
+
                         SettingsToggleRow(
-                            title = "Enable Edge Panel",
-                            checked = isEnabled,
-                            onCheckedChange = { enable ->
-                                viewModel.settingsRepository.setFloatingOcrEnabled(enable)
-                                val serviceIntent = Intent(context, com.example.BrainOcrOverlayService::class.java)
-                                if (enable) {
-                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                                        context.startForegroundService(serviceIntent)
-                                    } else {
-                                        context.startService(serviceIntent)
-                                    }
-                                } else {
-                                    context.stopService(serviceIntent)
-                                }
-                            }
+                            title = "Enable Blur Effects",
+                            subtitle = "Frosted glass blur on bottom bar, FAB, and toolbar",
+                            checked = !forceDisableBlur,
+                            onCheckedChange = { enabled -> viewModel.setForceDisableBlur(!enabled) }
                         )
 
-                        if (isEnabled) {
-                            SettingsRow(title = "Edge Panel Settings", onClick = { showEdgePanelSettings = true })
+                        if (!forceDisableBlur) {
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            SliderRow(
+                                title = "Blur Radius",
+                                value = blurRadius.toFloat(),
+                                valueStr = "${blurRadius}dp",
+                                onValueChange = { viewModel.setBlurRadius(it.toInt()) },
+                                valueRange = 5f..50f
+                            )
+                            SliderRow(
+                                title = "Blur Opacity",
+                                value = blurOpacity,
+                                valueStr = "${(blurOpacity * 100).toInt()}%",
+                                onValueChange = { viewModel.setBlurOpacity(it) },
+                                valueRange = 0.05f..0.80f
+                            )
                         }
                     }
                 }
 
-                SettingsSection(title = "Gemini API", subtext = "Configure your API key for advanced AI features.") {
+                // GROUP 2: INTELLIGENCE & AI
+                SettingsSection(
+                    title = "Intelligence & AI",
+                    subtext = "Configure Gemini API credentials, OCR models, and extraction sensitivity.",
+                    iconRes = R.drawable.ic_custom_code
+                ) {
                     var apiKey by remember { mutableStateOf("") }
                     val currentKey by viewModel.settingsRepository.geminiApiKey.collectAsState()
                     LaunchedEffect(currentKey) { apiKey = currentKey }
@@ -304,16 +317,19 @@ fun SettingsScreen(
                             modifier = Modifier.size(16.dp)
                         )
                     }
-                }
 
-                SettingsSection(title = "OCR Model", subtext = "Select ML model used for image text extraction.") {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
                     val models by viewModel.availableModels.collectAsState()
                     val selectedModel by viewModel.settingsRepository.selectedModel.collectAsState()
                     var modelExpanded by remember { mutableStateOf(false) }
 
                     Box(modifier = Modifier.fillMaxWidth()) {
                         SettingsRow(
-                            title = "Selected Model",
+                            title = "OCR Model",
                             value = selectedModel,
                             onClick = { modelExpanded = true }
                         )
@@ -342,7 +358,7 @@ fun SettingsScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 12.dp),
+                            .padding(bottom = 12.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         FilledTonalButton(
@@ -353,86 +369,104 @@ fun SettingsScreen(
                             Text("Refresh Models")
                         }
                     }
-                }
 
-                SettingsSection(title = "OCR Sensitivity", subtext = "Adjust OCR precision. 'High' extracts more detail but might include background noise.") {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
                     val sensitivity by viewModel.settingsRepository.ocrSensitivity.collectAsState()
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        val levels = listOf("Low", "Medium", "High")
-                        levels.forEach { level ->
-                            val isSelected = (sensitivity == level)
-                            Button(
-                                onClick = { viewModel.settingsRepository.setOcrSensitivity(level) },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                                    contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                                ),
-                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text(text = level, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+                        Text(
+                            text = "OCR Sensitivity",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            val levels = listOf("Low", "Medium", "High")
+                            levels.forEach { level ->
+                                val isSelected = (sensitivity == level)
+                                Button(
+                                    onClick = { viewModel.settingsRepository.setOcrSensitivity(level) },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                                        contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(text = level, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                                }
                             }
                         }
                     }
                 }
 
-                if (DevicePerformance.isDeviceCapableOfBlur(context)) {
-                    val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
-                    val blurRadius by viewModel.blurRadius.collectAsState()
-                    val blurOpacity by viewModel.blurOpacity.collectAsState()
-
-                    SettingsSection(
-                        title = "Blur Effects",
-                        subtext = "Frosted glass blur applied to the bottom bar, FAB, and detail toolbar. Requires a capable device."
-                    ) {
+                // GROUP 3: CAPTURE & OVERLAYS
+                SettingsSection(
+                    title = "Capture & Overlays",
+                    subtext = "Configure floating edge panel to quickly capture thoughts from anywhere.",
+                    iconRes = R.drawable.ic_custom_edit
+                ) {
+                    if (!hasOverlayPermission) {
+                        SettingsRow(
+                            title = "Grant Overlay Permission",
+                            value = "Required",
+                            onClick = {
+                                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
+                                context.startActivity(intent)
+                            }
+                        )
+                    } else {
+                        val isEnabled by viewModel.settingsRepository.isFloatingOcrEnabled.collectAsState()
                         SettingsToggleRow(
-                            title = "Enable Blur",
-                            subtitle = "Toggle frosted glass effect app-wide",
-                            checked = !forceDisableBlur,
-                            onCheckedChange = { enabled -> viewModel.setForceDisableBlur(!enabled) }
+                            title = "Enable Edge Panel",
+                            checked = isEnabled,
+                            onCheckedChange = { enable ->
+                                viewModel.settingsRepository.setFloatingOcrEnabled(enable)
+                                val serviceIntent = Intent(context, com.example.BrainOcrOverlayService::class.java)
+                                if (enable) {
+                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                        context.startForegroundService(serviceIntent)
+                                    } else {
+                                        context.startService(serviceIntent)
+                                    }
+                                } else {
+                                    context.stopService(serviceIntent)
+                                }
+                            }
                         )
 
-                        if (!forceDisableBlur) {
+                        if (isEnabled) {
                             HorizontalDivider(
                                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            SliderRow(
-                                title = "Blur Radius",
-                                value = blurRadius.toFloat(),
-                                valueStr = "${blurRadius}dp",
-                                onValueChange = { viewModel.setBlurRadius(it.toInt()) },
-                                valueRange = 5f..50f
-                            )
-                            SliderRow(
-                                title = "Blur Opacity",
-                                value = blurOpacity,
-                                valueStr = "${(blurOpacity * 100).toInt()}%",
-                                onValueChange = { viewModel.setBlurOpacity(it) },
-                                valueRange = 0.05f..0.80f
-                            )
+                            SettingsRow(title = "Customize Handle & Position", onClick = { showEdgePanelSettings = true })
                         }
                     }
                 }
 
+                // GROUP 4: SYSTEM & PERFORMANCE
                 if (!isIgnoringBattery) {
                     val isColorOS = remember { com.example.utils.BatteryOptimizationHelper.isColorOSDevice() }
-                    val titleText = if (isColorOS) "Fix widget not loading" else "Background activity"
+                    val titleText = if (isColorOS) "Fix Widget Loading" else "Background Activity"
                     val subtextText = if (isColorOS) {
-                        "OPPO's battery manager can stop the home screen widget from updating. Please allow background activity to keep it updated."
+                        "OPPO's battery manager can stop the home screen widget from updating. Allow background activity to keep it updated."
                     } else {
                         "Allow background activity to ensure home screen widgets update reliably."
                     }
 
                     SettingsSection(
-                        title = titleText,
-                        subtext = subtextText
+                        title = "System & Performance",
+                        subtext = subtextText,
+                        iconRes = R.drawable.ic_custom_sync
                     ) {
                         Box(
                             modifier = Modifier
@@ -451,7 +485,7 @@ fun SettingsScreen(
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("Allow Background Activity")
+                                Text(titleText)
                             }
                         }
                     }
@@ -464,20 +498,42 @@ fun SettingsScreen(
 }
 
 @Composable
-fun SettingsSection(title: String, subtext: String? = null, content: @Composable () -> Unit) {
+fun SettingsSection(title: String, subtext: String? = null, iconRes: Int? = null, content: @Composable () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+        ) {
+            if (iconRes != null) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+            Text(
+                text = title.uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold
+            )
+        }
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(18.dp),
             color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-            modifier = Modifier.fillMaxWidth()
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+            modifier = Modifier.fillMaxWidth(),
+            shadowElevation = 1.dp
         ) {
             Column {
                 content()
@@ -488,7 +544,7 @@ fun SettingsSection(title: String, subtext: String? = null, content: @Composable
                 text = subtext,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 8.dp, top = 8.dp)
+                modifier = Modifier.padding(start = 8.dp, top = 6.dp)
             )
         }
     }
