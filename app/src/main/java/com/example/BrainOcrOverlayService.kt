@@ -194,14 +194,15 @@ class BrainOcrOverlayService : Service() {
     }
 
     private fun updateSystemGestureExclusions() {
+        val root = containerView ?: return
+        val lp = root.layoutParams as? WindowManager.LayoutParams ?: return
+        val w = lp.width
+        val h = lp.height
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val root = containerView ?: return
             if (isExpanded || handleView?.visibility != View.VISIBLE) {
                 root.systemGestureExclusionRects = emptyList()
                 return
             }
-            val w = root.width
-            val h = root.height
             if (w > 0 && h > 0) {
                 // Exclude the entire touch window of the handle from system back gestures.
                 // This ensures swiping directly from the extreme screen edge over the handle height
@@ -427,6 +428,7 @@ class BrainOcrOverlayService : Service() {
         val yPercent = getEdgePanelYPercent()
         val isDark = isDarkTheme()
         val thickness = getEdgePanelThickness()
+        val height = getEdgePanelHeight()
         val opacity = getEdgePanelOpacity()
 
         isExpanded = true
@@ -862,12 +864,7 @@ class BrainOcrOverlayService : Service() {
         panelView = panel
         val endWidth = dpToPx(260)
         val endHeight = dpToPx(400)
-        val marginPx = dpToPx(10)
 
-        panel.measure(
-            View.MeasureSpec.makeMeasureSpec(endWidth, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(endHeight, View.MeasureSpec.EXACTLY)
-        )
         panel.layoutParams = FrameLayout.LayoutParams(endWidth, endHeight).apply {
             gravity = (if (side == "Right") Gravity.END else Gravity.START) or Gravity.CENTER_VERTICAL
         }
@@ -881,12 +878,11 @@ class BrainOcrOverlayService : Service() {
 
         cancelPanelAnimation()
 
+        val startY = params.y
         val targetY = calculateYPosition(yPercent, 400)
+        val startWinWidth = params.width
+        val startWinHeight = params.height
 
-        // Resize window upfront to fit 260dp card + 10dp side margin gap
-        params.width = endWidth + marginPx
-        params.height = endHeight
-        params.y = targetY
         params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
@@ -894,32 +890,29 @@ class BrainOcrOverlayService : Service() {
             windowManager.updateViewLayout(root, params)
         } catch (_: Exception) {}
 
+        val startAlpha = panel.alpha
+        val startScale = panel.scaleX
+
         val animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 380
-            interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
+            duration = 300
+            interpolator = PathInterpolator(0.32f, 0.72f, 0f, 1f)
             addUpdateListener { animation ->
                 val fraction = animation.animatedValue as Float
 
-                panel.alpha = fraction
-                panel.scaleX = 0.92f + 0.08f * fraction
-                panel.scaleY = 0.92f + 0.08f * fraction
+                panel.alpha = startAlpha + (1f - startAlpha) * fraction
+                panel.scaleX = startScale + (1f - startScale) * fraction
+                panel.scaleY = startScale + (1f - startScale) * fraction
 
                 // Handle morphing animation
                 val handleParams = handleView?.layoutParams as? FrameLayout.LayoutParams
                 if (handleParams != null) {
                     val startHandleWidth = dpToPx(thickness)
+                    val endHandleWidth = endWidth
                     val startHandleHeight = dpToPx(height)
+                    val endHandleHeight = endHeight
 
-                    handleParams.width = (startHandleWidth + (endWidth - startHandleWidth) * fraction).toInt()
-                    handleParams.height = (startHandleHeight + (endHeight - startHandleHeight) * fraction).toInt()
-                    val m = (marginPx * fraction).toInt()
-                    if (side == "Right") {
-                        handleParams.marginEnd = m
-                        handleParams.marginStart = 0
-                    } else {
-                        handleParams.marginStart = m
-                        handleParams.marginEnd = 0
-                    }
+                    handleParams.width = (startHandleWidth + (endHandleWidth - startHandleWidth) * fraction).toInt()
+                    handleParams.height = (startHandleHeight + (endHandleHeight - startHandleHeight) * fraction).toInt()
                     handleView?.layoutParams = handleParams
                 }
 
@@ -958,8 +951,7 @@ class BrainOcrOverlayService : Service() {
 
                     val evaluator = ArgbEvaluator()
                     val startColor = getAccentColor()
-                    val colorProgress = animation.animatedFraction
-                    val currentColor = evaluator.evaluate(colorProgress, startColor, surfaceColor) as Int
+                    val currentColor = evaluator.evaluate(fraction, startColor, surfaceColor) as Int
                     handleBg.setColor(currentColor)
 
                     val strokeW = (dpToPx(1) * fraction).toInt()
@@ -967,9 +959,25 @@ class BrainOcrOverlayService : Service() {
                 }
 
                 handleView?.alpha = opacity + (1f - opacity) * fraction
+
+                // Animate window position AND size in lockstep per-frame
+                params.y = (startY + (targetY - startY) * fraction).toInt()
+                params.width = (startWinWidth + (endWidth - startWinWidth) * fraction).toInt()
+                params.height = (startWinHeight + (endHeight - startWinHeight) * fraction).toInt()
+                try {
+                    windowManager.updateViewLayout(root, params)
+                } catch (_: Exception) {}
             }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
+                    params.y = targetY
+                    params.width = endWidth
+                    params.height = endHeight
+                    if (containerView != null) {
+                        try {
+                            windowManager.updateViewLayout(root, params)
+                        } catch (_: Exception) {}
+                    }
                     panelAnimator = null
                 }
 
@@ -1007,45 +1015,39 @@ class BrainOcrOverlayService : Service() {
         isExpanded = false
         noteInputRef = null
 
-        val endWidth = dpToPx(260)
-        val endHeight = dpToPx(400)
-        val marginPx = dpToPx(10)
-
-        // Release window focus immediately so system gestures work everywhere
         val params = root.layoutParams as WindowManager.LayoutParams
-        params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-        try {
-            windowManager.updateViewLayout(root, params)
-        } catch (_: Exception) {}
+        val startWidth = params.width
+        val startHeight = params.height
+        val endWidth = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
+        val endHeight = dpToPx(height)
+        val startAlpha = panel.alpha
+        val startScale = panel.scaleX
+
+        val startY = params.y
+        val targetY = calculateYPosition(yPercent, height)
 
         cancelPanelAnimation()
 
         val animator = ValueAnimator.ofFloat(1f, 0f).apply {
-            duration = 380
-            interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
+            duration = 300
+            interpolator = PathInterpolator(0.32f, 0.72f, 0f, 1f)
             addUpdateListener { animation ->
                 val fraction = animation.animatedValue as Float
 
-                panel.alpha = fraction
-                panel.scaleX = 0.92f + 0.08f * fraction
-                panel.scaleY = 0.92f + 0.08f * fraction
+                panel.alpha = startAlpha * fraction
+                panel.scaleX = 0.96f + (startScale - 0.96f) * fraction
+                panel.scaleY = 0.96f + (startScale - 0.96f) * fraction
 
                 // Handle morphing animation
                 val handleParams = handleView?.layoutParams as? FrameLayout.LayoutParams
                 if (handleParams != null) {
                     val startHandleWidth = dpToPx(thickness)
+                    val endHandleWidth = startWidth
                     val startHandleHeight = dpToPx(height)
+                    val endHandleHeight = startHeight
 
-                    handleParams.width = (startHandleWidth + (endWidth - startHandleWidth) * fraction).toInt()
-                    handleParams.height = (startHandleHeight + (endHeight - startHandleHeight) * fraction).toInt()
-                    val m = (marginPx * fraction).toInt()
-                    if (side == "Right") {
-                        handleParams.marginEnd = m
-                        handleParams.marginStart = 0
-                    } else {
-                        handleParams.marginStart = m
-                        handleParams.marginEnd = 0
-                    }
+                    handleParams.width = (startHandleWidth + (endHandleWidth - startHandleWidth) * fraction).toInt()
+                    handleParams.height = (startHandleHeight + (endHandleHeight - startHandleHeight) * fraction).toInt()
                     handleView?.layoutParams = handleParams
                 }
 
@@ -1060,12 +1062,12 @@ class BrainOcrOverlayService : Service() {
                         0f + (endRadius - 0f) * fraction
                     }
                     val rTopRight = if (side == "Right") {
-                        0f + (endRadius - 0f) * fraction
+                        startRadius + (endRadius - startRadius) * fraction
                     } else {
                         startRadius + (endRadius - startRadius) * fraction
                     }
                     val rBottomRight = if (side == "Right") {
-                        0f + (endRadius - 0f) * fraction
+                        startRadius + (endRadius - startRadius) * fraction
                     } else {
                         startRadius + (endRadius - startRadius) * fraction
                     }
@@ -1084,8 +1086,7 @@ class BrainOcrOverlayService : Service() {
 
                     val evaluator = ArgbEvaluator()
                     val startColor = getAccentColor()
-                    val colorProgress = 1f - animation.animatedFraction
-                    val currentColor = evaluator.evaluate(colorProgress, startColor, surfaceColor) as Int
+                    val currentColor = evaluator.evaluate(fraction, startColor, surfaceColor) as Int
                     handleBg.setColor(currentColor)
 
                     val strokeW = (dpToPx(1) * fraction).toInt()
@@ -1093,6 +1094,14 @@ class BrainOcrOverlayService : Service() {
                 }
 
                 handleView?.alpha = opacity + (1f - opacity) * fraction
+
+                // Animate actual window position and size per-frame in lockstep
+                params.y = (targetY + (startY - targetY) * fraction).toInt()
+                params.width = (endWidth + (startWidth - endWidth) * fraction).toInt()
+                params.height = (endHeight + (startHeight - endHeight) * fraction).toInt()
+                try {
+                    windowManager.updateViewLayout(root, params)
+                } catch (_: Exception) {}
             }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
@@ -1100,40 +1109,13 @@ class BrainOcrOverlayService : Service() {
                         (handleView as? ViewGroup)?.removeView(panel)
                         panelView = null
                         handleView?.visibility = View.VISIBLE
-                        handleView?.alpha = opacity
-
-                        // Reset handle params flush to edge for 22dp collapsed window
-                        val handleParams = handleView?.layoutParams as? FrameLayout.LayoutParams
-                        if (handleParams != null) {
-                            handleParams.width = dpToPx(thickness)
-                            handleParams.height = dpToPx(height)
-                            handleParams.marginStart = 0
-                            handleParams.marginEnd = 0
-                            handleView?.layoutParams = handleParams
-                        }
-
-                        val handleBg = handleView?.background as? GradientDrawable
-                        if (handleBg != null) {
-                            val radiusPx = dpToPx(8).toFloat()
-                            handleBg.cornerRadii = if (side == "Right") {
-                                floatArrayOf(radiusPx, radiusPx, 0f, 0f, 0f, 0f, radiusPx, radiusPx)
-                            } else {
-                                floatArrayOf(0f, 0f, radiusPx, radiusPx, radiusPx, radiusPx, 0f, 0f)
-                            }
-                            handleBg.setColor(getAccentColor())
-                            handleBg.setStroke(0, 0)
-                        }
-
-                        // Resize window back to collapsed bounds ONCE
-                        params.width = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
-                        params.height = dpToPx(height)
-                        params.y = calculateYPosition(yPercent, height)
+                        params.y = targetY
+                        params.width = endWidth
+                        params.height = endHeight
                         try {
                             windowManager.updateViewLayout(root, params)
-                        } catch (e: Exception) {
-                            // Ignore if view was detached.
-                        }
-                        updateSystemGestureExclusions()
+                        } catch (_: Exception) {}
+                        updateViewLayoutAndStyle()
                     }
                     panelAnimator = null
                 }
