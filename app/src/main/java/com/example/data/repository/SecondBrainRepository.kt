@@ -1183,8 +1183,9 @@ class SecondBrainRepository(private val context: Context) {
             }
 
             val document = org.jsoup.Jsoup.connect(cleanUrl)
-                .timeout(5000)
-                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                .timeout(8000)
+                .ignoreHttpErrors(true)
+                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
                 .get()
 
             val title = document.title().takeIf { !it.isNullOrBlank() }
@@ -1195,7 +1196,9 @@ class SecondBrainRepository(private val context: Context) {
                 ?: document.select("meta[name=description]").attr("content").takeIf { !it.isNullOrBlank() }
                 ?: document.select("meta[name=twitter:description]").attr("content").takeIf { !it.isNullOrBlank() }
 
-            val imageUrl = document.select("meta[property=og:image]").attr("content").takeIf { !it.isNullOrBlank() }
+            val imageUrl = document.select("meta[property=og:image]").firstOrNull()?.absUrl("content")?.takeIf { it.isNotBlank() }
+                ?: document.select("meta[name=twitter:image]").firstOrNull()?.absUrl("content")?.takeIf { it.isNotBlank() }
+                ?: document.select("meta[property=og:image]").attr("content").takeIf { !it.isNullOrBlank() }
                 ?: document.select("meta[name=twitter:image]").attr("content").takeIf { !it.isNullOrBlank() }
 
             LinkMetadata(title?.trim(), description?.trim(), imageUrl)
