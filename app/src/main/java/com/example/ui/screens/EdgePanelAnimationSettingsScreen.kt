@@ -23,6 +23,7 @@ import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -114,7 +115,8 @@ fun EdgePanelAnimationSettingsScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp)
+                .padding(top = 12.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // ANIMATION PRESETS SECTION
@@ -234,7 +236,9 @@ fun EdgePanelAnimationSettingsScreen(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Easing Curve", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     listOf("Emphasized", "Decelerate", "Overshoot", "Bounce", "Linear").forEach { mode ->

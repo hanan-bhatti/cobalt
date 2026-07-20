@@ -29,6 +29,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -119,7 +120,8 @@ fun WidgetSettingsScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp)
+                .padding(top = 12.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // ACTIVE WIDGETS STATUS CARD
@@ -264,16 +266,30 @@ private fun ActiveWidgetsStatusCard(
                     OutlinedButton(
                         onClick = onPinQuick,
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
                     ) {
-                        Text("Add Quick Action", fontSize = 12.sp)
+                        Text(
+                            text = "Add Quick Action",
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                     Button(
                         onClick = onPinRecent,
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
                     ) {
-                        Text("Add Recent Items", fontSize = 12.sp)
+                        Text(
+                            text = "Add Recent Items",
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }
@@ -493,10 +509,14 @@ private fun RecentItemsCustomizationSection(
                         else -> MaterialTheme.colorScheme.surface.copy(alpha = opacity)
                     },
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(230.dp)
                 ) {
                     Column(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         if (showHeader) {
@@ -538,7 +558,7 @@ private fun RecentItemsCustomizationSection(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 16.dp),
+                                    .weight(1f),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
@@ -548,57 +568,65 @@ private fun RecentItemsCustomizationSection(
                                 )
                             }
                         } else {
-                            itemsToDisplay.forEach { item ->
-                                val (iconRes, categoryColor) = when (item.type) {
-                                    com.example.data.model.SavedItemType.LINK -> Pair(R.drawable.ic_custom_link, CategoryLink)
-                                    com.example.data.model.SavedItemType.IMAGE, com.example.data.model.SavedItemType.VIDEO -> Pair(R.drawable.ic_custom_image, CategoryImage)
-                                    com.example.data.model.SavedItemType.CODE -> Pair(R.drawable.ic_custom_code, CategoryCode)
-                                    com.example.data.model.SavedItemType.AUDIO -> Pair(R.drawable.ic_custom_voice, CategoryAudio)
-                                    else -> Pair(R.drawable.ic_custom_text, CategoryText)
-                                }
-
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(
-                                            if (widgetTheme == "Dark") Color(0xFF2C2E33) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                            RoundedCornerShape(10.dp)
-                                        )
-                                        .padding(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .background(categoryColor.copy(alpha = 0.2f), CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(id = iconRes),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(14.dp),
-                                            tint = categoryColor
-                                        )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                                    .verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                itemsToDisplay.forEach { item ->
+                                    val (iconRes, categoryColor) = when (item.type) {
+                                        com.example.data.model.SavedItemType.LINK -> Pair(R.drawable.ic_custom_link, CategoryLink)
+                                        com.example.data.model.SavedItemType.IMAGE, com.example.data.model.SavedItemType.VIDEO -> Pair(R.drawable.ic_custom_image, CategoryImage)
+                                        com.example.data.model.SavedItemType.CODE -> Pair(R.drawable.ic_custom_code, CategoryCode)
+                                        com.example.data.model.SavedItemType.AUDIO -> Pair(R.drawable.ic_custom_voice, CategoryAudio)
+                                        else -> Pair(R.drawable.ic_custom_text, CategoryText)
                                     }
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = item.title.ifBlank { item.type.displayName },
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            color = if (widgetTheme == "Dark") Color.White else MaterialTheme.colorScheme.onSurface
-                                        )
-                                        val snippet = item.content.ifBlank { item.extractedText ?: "" }
-                                        if (snippet.isNotBlank()) {
+
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(
+                                                if (widgetTheme == "Dark") Color(0xFF2C2E33) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                                RoundedCornerShape(10.dp)
+                                            )
+                                            .padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .background(categoryColor.copy(alpha = 0.2f), CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(id = iconRes),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(14.dp),
+                                                tint = categoryColor
+                                            )
+                                        }
+                                        Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = snippet,
-                                                fontSize = 10.sp,
+                                                text = item.title.ifBlank { item.type.displayName },
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
-                                                color = if (widgetTheme == "Dark") Color.LightGray else MaterialTheme.colorScheme.onSurfaceVariant
+                                                color = if (widgetTheme == "Dark") Color.White else MaterialTheme.colorScheme.onSurface
                                             )
+                                            val snippet = item.content.ifBlank { item.extractedText ?: "" }
+                                            if (snippet.isNotBlank()) {
+                                                Text(
+                                                    text = snippet,
+                                                    fontSize = 10.sp,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    color = if (widgetTheme == "Dark") Color.LightGray else MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -612,7 +640,9 @@ private fun RecentItemsCustomizationSection(
         // CATEGORY FILTER
         Text("Filter by Category", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             val categories = listOf("All", "LINK", "TEXT", "IMAGE", "AUDIO", "CODE")
@@ -631,7 +661,9 @@ private fun RecentItemsCustomizationSection(
         // MAX ITEMS
         Text("Maximum Displayed Items", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             listOf(5, 10, 15, 20).forEach { num ->
@@ -649,7 +681,9 @@ private fun RecentItemsCustomizationSection(
         // WIDGET THEME
         Text("Widget Theme Mode", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             listOf("System", "Light", "Dark", "Glass").forEach { themeName ->
