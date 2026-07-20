@@ -199,9 +199,11 @@ class SecondBrainRepository(private val context: Context) {
         } catch (e: Exception) {
             emptyList()
         }
+        val itemType = try { SavedItemType.valueOf(type) } catch (e: Exception) { SavedItemType.TEXT }
+        val isMedia = itemType == SavedItemType.IMAGE || itemType == SavedItemType.VIDEO || itemType == SavedItemType.AUDIO
         return SavedItem(
             id = id,
-            type = try { SavedItemType.valueOf(type) } catch (e: Exception) { SavedItemType.TEXT },
+            type = itemType,
             title = title,
             content = content,
             timestamp = timestamp,
@@ -216,12 +218,13 @@ class SecondBrainRepository(private val context: Context) {
             isBackedUp = isBackedUp,
             sizeBytes = sizeBytes,
             isPendingBackup = isPendingBackup,
-            isUnavailable = isUnavailable
+            isUnavailable = if (isMedia) isUnavailable else false
         )
     }
 
     private fun SavedItem.toEntity(): SavedItemEntity {
         val foldersJsonStr = "[" + folders.joinToString(",") { "\"$it\"" } + "]"
+        val isMedia = type == SavedItemType.IMAGE || type == SavedItemType.VIDEO || type == SavedItemType.AUDIO
         return SavedItemEntity(
             id = id,
             type = type.name,
@@ -239,7 +242,7 @@ class SecondBrainRepository(private val context: Context) {
             isBackedUp = isBackedUp,
             sizeBytes = sizeBytes,
             isPendingBackup = isPendingBackup,
-            isUnavailable = isUnavailable
+            isUnavailable = if (isMedia) isUnavailable else false
         )
     }
 
@@ -942,16 +945,16 @@ class SecondBrainRepository(private val context: Context) {
 
                 val isBackedUp = doc.getBoolean("isBackedUp") ?: true
                 
-                // Reconcile isBackedUp status
+                val isMedia = type == SavedItemType.IMAGE.name || type == SavedItemType.VIDEO.name || type == SavedItemType.AUDIO.name
                 val existing = savedItemDao.getItemById(id)
-                val isRemoteUrl = existing != null && (
+                val isRemoteUrl = existing != null && isMedia && (
                     (type == SavedItemType.AUDIO.name && existing.thumbnailPath != null && (existing.thumbnailPath.startsWith("http://") || existing.thumbnailPath.startsWith("https://"))) ||
                     (type != SavedItemType.AUDIO.name && existing.content.isNotBlank() && (existing.content.startsWith("http://") || existing.content.startsWith("https://")))
                 )
-                val newIsUnavailable = if (existing != null && !isBackedUp && isRemoteUrl) {
-                    true
+                val newIsUnavailable = if (isMedia) {
+                    if (existing != null && !isBackedUp && isRemoteUrl) true else (existing?.isUnavailable ?: false)
                 } else {
-                    existing?.isUnavailable ?: false
+                    false
                 }
 
                 if (existing != null) {
