@@ -79,6 +79,24 @@ class SettingsRepository(private val context: Context) {
     private val _dynamicColor = MutableStateFlow(prefs.getBoolean(KEY_DYNAMIC_COLOR, true))
     val dynamicColor: StateFlow<Boolean> = _dynamicColor.asStateFlow()
 
+    private val _widgetTheme = MutableStateFlow(prefs.getString(KEY_WIDGET_THEME, "System") ?: "System")
+    val widgetTheme: StateFlow<String> = _widgetTheme.asStateFlow()
+
+    private val _widgetOpacity = MutableStateFlow(prefs.getFloat(KEY_WIDGET_OPACITY, 0.85f))
+    val widgetOpacity: StateFlow<Float> = _widgetOpacity.asStateFlow()
+
+    private val _widgetShowHeader = MutableStateFlow(prefs.getBoolean(KEY_WIDGET_SHOW_HEADER, true))
+    val widgetShowHeader: StateFlow<Boolean> = _widgetShowHeader.asStateFlow()
+
+    private val _widgetCategoryFilter = MutableStateFlow(prefs.getString(KEY_WIDGET_CATEGORY_FILTER, "All") ?: "All")
+    val widgetCategoryFilter: StateFlow<String> = _widgetCategoryFilter.asStateFlow()
+
+    private val _widgetMaxItems = MutableStateFlow(prefs.getInt(KEY_WIDGET_MAX_ITEMS, 10))
+    val widgetMaxItems: StateFlow<Int> = _widgetMaxItems.asStateFlow()
+
+    private val _quickCaptureAction = MutableStateFlow(prefs.getString(KEY_QUICK_CAPTURE_ACTION, "TEXT") ?: "TEXT")
+    val quickCaptureAction: StateFlow<String> = _quickCaptureAction.asStateFlow()
+
     fun setGeminiApiKey(key: String) {
         prefs.edit().putString(KEY_GEMINI_API_KEY, key).apply()
         _geminiApiKey.value = key
@@ -97,6 +115,42 @@ class SettingsRepository(private val context: Context) {
     fun setThemeMode(mode: String) {
         prefs.edit().putString(KEY_THEME_MODE, mode).apply()
         _themeMode.value = mode
+        com.example.widget.WidgetUpdater.update(context)
+    }
+
+    fun setWidgetTheme(theme: String) {
+        prefs.edit().putString(KEY_WIDGET_THEME, theme).apply()
+        _widgetTheme.value = theme
+        com.example.widget.WidgetUpdater.update(context)
+    }
+
+    fun setWidgetOpacity(opacity: Float) {
+        prefs.edit().putFloat(KEY_WIDGET_OPACITY, opacity).apply()
+        _widgetOpacity.value = opacity
+        com.example.widget.WidgetUpdater.update(context)
+    }
+
+    fun setWidgetShowHeader(show: Boolean) {
+        prefs.edit().putBoolean(KEY_WIDGET_SHOW_HEADER, show).apply()
+        _widgetShowHeader.value = show
+        com.example.widget.WidgetUpdater.update(context)
+    }
+
+    fun setWidgetCategoryFilter(category: String) {
+        prefs.edit().putString(KEY_WIDGET_CATEGORY_FILTER, category).apply()
+        _widgetCategoryFilter.value = category
+        com.example.widget.WidgetUpdater.update(context)
+    }
+
+    fun setWidgetMaxItems(max: Int) {
+        prefs.edit().putInt(KEY_WIDGET_MAX_ITEMS, max).apply()
+        _widgetMaxItems.value = max
+        com.example.widget.WidgetUpdater.update(context)
+    }
+
+    fun setQuickCaptureAction(action: String) {
+        prefs.edit().putString(KEY_QUICK_CAPTURE_ACTION, action).apply()
+        _quickCaptureAction.value = action
         com.example.widget.WidgetUpdater.update(context)
     }
 
@@ -191,6 +245,12 @@ class SettingsRepository(private val context: Context) {
             KEY_BLUR_RADIUS -> _blurRadius.value = prefs.getInt(KEY_BLUR_RADIUS, 25)
             KEY_BLUR_OPACITY -> _blurOpacity.value = prefs.getFloat(KEY_BLUR_OPACITY, 0.30f)
             KEY_DYNAMIC_COLOR -> _dynamicColor.value = prefs.getBoolean(KEY_DYNAMIC_COLOR, true)
+            KEY_WIDGET_THEME -> _widgetTheme.value = prefs.getString(KEY_WIDGET_THEME, "System") ?: "System"
+            KEY_WIDGET_OPACITY -> _widgetOpacity.value = prefs.getFloat(KEY_WIDGET_OPACITY, 0.85f)
+            KEY_WIDGET_SHOW_HEADER -> _widgetShowHeader.value = prefs.getBoolean(KEY_WIDGET_SHOW_HEADER, true)
+            KEY_WIDGET_CATEGORY_FILTER -> _widgetCategoryFilter.value = prefs.getString(KEY_WIDGET_CATEGORY_FILTER, "All") ?: "All"
+            KEY_WIDGET_MAX_ITEMS -> _widgetMaxItems.value = prefs.getInt(KEY_WIDGET_MAX_ITEMS, 10)
+            KEY_QUICK_CAPTURE_ACTION -> _quickCaptureAction.value = prefs.getString(KEY_QUICK_CAPTURE_ACTION, "TEXT") ?: "TEXT"
         }
     }
 
@@ -216,5 +276,11 @@ class SettingsRepository(private val context: Context) {
         private const val KEY_BLUR_RADIUS = "blur_radius"
         private const val KEY_BLUR_OPACITY = "blur_opacity"
         private const val KEY_DYNAMIC_COLOR = "dynamic_color"
+        private const val KEY_WIDGET_THEME = "widget_theme"
+        private const val KEY_WIDGET_OPACITY = "widget_opacity"
+        private const val KEY_WIDGET_SHOW_HEADER = "widget_show_header"
+        private const val KEY_WIDGET_CATEGORY_FILTER = "widget_category_filter"
+        private const val KEY_WIDGET_MAX_ITEMS = "widget_max_items"
+        private const val KEY_QUICK_CAPTURE_ACTION = "quick_capture_action"
     }
 }

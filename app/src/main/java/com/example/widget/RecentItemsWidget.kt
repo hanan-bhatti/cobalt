@@ -125,6 +125,19 @@ class RecentItemsWidget : GlanceAppWidget() {
 
 @Composable
 fun RecentItemsContent(items: List<SavedItem>, isFromCache: Boolean, isTimeout: Boolean) {
+    val context = LocalContext.current
+    val prefs = context.getSharedPreferences("second_brain_settings", Context.MODE_PRIVATE)
+
+    val categoryFilter = prefs.getString("widget_category_filter", "All") ?: "All"
+    val maxItems = prefs.getInt("widget_max_items", 10)
+    val showHeader = prefs.getBoolean("widget_show_header", true)
+
+    val filteredItems = if (categoryFilter == "All") {
+        items
+    } else {
+        items.filter { it.type.name.equals(categoryFilter, ignoreCase = true) }
+    }.take(maxItems)
+
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -135,16 +148,18 @@ fun RecentItemsContent(items: List<SavedItem>, isFromCache: Boolean, isTimeout: 
             .appWidgetBackground()
             .padding(12.dp)
     ) {
-        RecentItemsHeader(isFromCache = isFromCache, isTimeout = isTimeout)
-        Spacer(modifier = GlanceModifier.height(10.dp))
+        if (showHeader) {
+            RecentItemsHeader(isFromCache = isFromCache, isTimeout = isTimeout)
+            Spacer(modifier = GlanceModifier.height(10.dp))
+        }
 
-        if (items.isEmpty()) {
+        if (filteredItems.isEmpty()) {
             Box(
                 modifier = GlanceModifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Your archive is empty",
+                    text = if (items.isEmpty()) "Your archive is empty" else "No $categoryFilter items found",
                     style = TextStyle(
                         fontFamily = FontFamily.SansSerif,
                         color = GlanceTheme.colors.onSurfaceVariant,
@@ -154,7 +169,7 @@ fun RecentItemsContent(items: List<SavedItem>, isFromCache: Boolean, isTimeout: 
             }
         } else {
             LazyColumn(modifier = GlanceModifier.fillMaxSize()) {
-                items(items.take(20)) { item ->
+                items(filteredItems) { item ->
                     RecentItemRow(item = item)
                     Spacer(modifier = GlanceModifier.height(8.dp))
                 }

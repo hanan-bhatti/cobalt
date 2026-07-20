@@ -72,13 +72,20 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit
 ) {
     var showEdgePanelSettings by remember { mutableStateOf(false) }
+    var showWidgetSettings by remember { mutableStateOf(false) }
 
-    BackHandler(enabled = showEdgePanelSettings) {
+    BackHandler(enabled = showEdgePanelSettings || showWidgetSettings) {
         showEdgePanelSettings = false
+        showWidgetSettings = false
     }
 
     if (showEdgePanelSettings) {
         EdgePanelSettingsScreen(viewModel = viewModel, onNavigateBack = { showEdgePanelSettings = false })
+        return
+    }
+
+    if (showWidgetSettings) {
+        WidgetSettingsScreen(viewModel = viewModel, onNavigateBack = { showWidgetSettings = false })
         return
     }
 
@@ -453,12 +460,35 @@ fun SettingsScreen(
                     }
                 }
 
+                // GROUP 4: HOME SCREEN WIDGETS
+                SettingsSection(
+                    title = "Home Screen Widgets",
+                    subtext = "Customize action button, category filters, theme, and transparency of your home screen widgets.",
+                    iconRes = R.drawable.ic_custom_grid
+                ) {
+                    SettingsRow(
+                        title = "Widget Customization & Actions",
+                        onClick = { showWidgetSettings = true }
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    SettingsRow(
+                        title = "Force Refresh All Widgets",
+                        onClick = {
+                            com.example.widget.WidgetUpdater.update(context)
+                            android.widget.Toast.makeText(context, "Force refreshed all widgets!", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
+
                 // GROUP 4: SYSTEM & PERFORMANCE
                 if (!isIgnoringBattery) {
                     val isColorOS = remember { com.example.utils.BatteryOptimizationHelper.isColorOSDevice() }
                     val titleText = if (isColorOS) "Fix Widget Loading" else "Background Activity"
                     val subtextText = if (isColorOS) {
-                        "OPPO's battery manager can stop the home screen widget from updating. Allow background activity to keep it updated."
+                        "Battery manager can stop the home screen widget from updating. Allow background activity to keep it updated."
                     } else {
                         "Allow background activity to ensure home screen widgets update reliably."
                     }

@@ -464,6 +464,13 @@ BackHandler(enabled = activeDetailItem != null) {
             viewModel.startManualCapture(com.example.data.model.SavedItemType.IMAGE)
         } else if ("com.example.ACTION_QUICK_CODE" == action) {
             viewModel.startManualCapture(com.example.data.model.SavedItemType.CODE)
+        } else if ("com.example.ACTION_QUICK_AUDIO" == action) {
+            viewModel.startManualCapture(com.example.data.model.SavedItemType.AUDIO)
+        } else if ("com.example.ACTION_QUICK_OCR" == action) {
+            val ocrIntent = Intent(this, OcrCaptureActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            startActivity(ocrIntent)
         }
     }
 }

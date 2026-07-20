@@ -68,9 +68,20 @@ class QuickCaptureWidget : GlanceAppWidget() {
 @Composable
 fun QuickCaptureContent() {
     val context = LocalContext.current
+    val prefs = context.getSharedPreferences("second_brain_settings", Context.MODE_PRIVATE)
+    val actionType = prefs.getString("quick_capture_action", "TEXT") ?: "TEXT"
 
-    val addIntent = Intent(context, MainActivity::class.java).apply {
-        action = "com.example.ACTION_QUICK_TEXT"
+    val (iconRes, intentAction, desc) = when (actionType) {
+        "LINK" -> Triple(R.drawable.ic_custom_link, "com.example.ACTION_QUICK_LINK", "Quick Add Link")
+        "IMAGE" -> Triple(R.drawable.ic_custom_image, "com.example.ACTION_QUICK_IMAGE", "Quick Capture Photo")
+        "AUDIO" -> Triple(R.drawable.ic_custom_voice, "com.example.ACTION_QUICK_AUDIO", "Quick Voice Memo")
+        "CODE" -> Triple(R.drawable.ic_custom_code, "com.example.ACTION_QUICK_CODE", "Quick Add Code")
+        "OCR" -> Triple(R.drawable.ic_custom_ocr, "com.example.ACTION_QUICK_OCR", "Quick Screen OCR")
+        else -> Triple(R.drawable.ic_custom_text, "com.example.ACTION_QUICK_TEXT", "Quick Add Note")
+    }
+
+    val targetIntent = Intent(context, MainActivity::class.java).apply {
+        action = intentAction
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
     }
 
@@ -81,12 +92,12 @@ fun QuickCaptureContent() {
                 imageProvider = ImageProvider(R.drawable.widget_bg_oval),
                 colorFilter = ColorFilter.tint(GlanceTheme.colors.primary)
             )
-            .clickable(actionStartActivity(addIntent)),
+            .clickable(actionStartActivity(targetIntent)),
         contentAlignment = Alignment.Center
     ) {
         Image(
-            provider = ImageProvider(R.drawable.ic_custom_plus),
-            contentDescription = "Quick Add Note",
+            provider = ImageProvider(iconRes),
+            contentDescription = desc,
             modifier = GlanceModifier.size(32.dp),
             colorFilter = ColorFilter.tint(GlanceTheme.colors.onPrimary)
         )

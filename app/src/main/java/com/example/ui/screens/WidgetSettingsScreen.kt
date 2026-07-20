@@ -1,0 +1,643 @@
+/*
+ * Second Brain - A universal capture and personal knowledge archive
+ * Copyright (C) 2026 Hanan Bhatti
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package com.example.ui.screens
+
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.widget.Toast
+import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.R
+import com.example.ui.theme.*
+import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.widget.QuickCaptureWidgetReceiver
+import com.example.widget.RecentItemsWidgetReceiver
+import com.example.widget.WidgetUpdater
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WidgetSettingsScreen(
+    viewModel: SecondBrainViewModel,
+    onNavigateBack: () -> Unit
+) {
+    val context = LocalContext.current
+    val appWidgetManager = remember { AppWidgetManager.getInstance(context) }
+
+    val recentWidgetIds by rememberUpdatedState(
+        appWidgetManager.getAppWidgetIds(ComponentName(context, RecentItemsWidgetReceiver::class.java))
+    )
+    val quickWidgetIds by rememberUpdatedState(
+        appWidgetManager.getAppWidgetIds(ComponentName(context, QuickCaptureWidgetReceiver::class.java))
+    )
+
+    val totalActiveWidgets = recentWidgetIds.size + quickWidgetIds.size
+
+    val widgetTheme by viewModel.settingsRepository.widgetTheme.collectAsState()
+    val widgetOpacity by viewModel.settingsRepository.widgetOpacity.collectAsState()
+    val widgetShowHeader by viewModel.settingsRepository.widgetShowHeader.collectAsState()
+    val widgetCategoryFilter by viewModel.settingsRepository.widgetCategoryFilter.collectAsState()
+    val widgetMaxItems by viewModel.settingsRepository.widgetMaxItems.collectAsState()
+    val quickCaptureAction by viewModel.settingsRepository.quickCaptureAction.collectAsState()
+
+    var selectedTab by remember { mutableIntStateOf(0) }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Widget Customization", style = MaterialTheme.typography.titleLarge) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_back),
+                            contentDescription = "Back",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            WidgetUpdater.update(context)
+                            Toast.makeText(context, "Force refreshed all widgets!", Toast.LENGTH_SHORT).show()
+                        }
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_sync),
+                            contentDescription = "Force Refresh",
+                            modifier = Modifier.size(22.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // ACTIVE WIDGETS STATUS CARD
+            ActiveWidgetsStatusCard(
+                totalActive = totalActiveWidgets,
+                recentCount = recentWidgetIds.size,
+                quickCount = quickWidgetIds.size,
+                onPinRecent = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && appWidgetManager.isRequestPinAppWidgetSupported) {
+                        val component = ComponentName(context, RecentItemsWidgetReceiver::class.java)
+                        appWidgetManager.requestPinAppWidget(component, null, null)
+                    } else {
+                        Toast.makeText(context, "Long press home screen to add Second Brain widget", Toast.LENGTH_LONG).show()
+                    }
+                },
+                onPinQuick = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && appWidgetManager.isRequestPinAppWidgetSupported) {
+                        val component = ComponentName(context, QuickCaptureWidgetReceiver::class.java)
+                        appWidgetManager.requestPinAppWidget(component, null, null)
+                    } else {
+                        Toast.makeText(context, "Long press home screen to add Second Brain widget", Toast.LENGTH_LONG).show()
+                    }
+                }
+            )
+
+            // SUB-PAGES / TABS
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                contentColor = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clip(RoundedCornerShape(12.dp))
+            ) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = { Text("Quick Capture", fontWeight = FontWeight.SemiBold) }
+                )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = { Text("Recent Archive", fontWeight = FontWeight.SemiBold) }
+                )
+            }
+
+            if (selectedTab == 0) {
+                QuickCaptureCustomizationSection(
+                    currentAction = quickCaptureAction,
+                    onSelectAction = { action ->
+                        viewModel.settingsRepository.setQuickCaptureAction(action)
+                    }
+                )
+            } else {
+                RecentItemsCustomizationSection(
+                    widgetTheme = widgetTheme,
+                    onThemeSelected = { viewModel.settingsRepository.setWidgetTheme(it) },
+                    opacity = widgetOpacity,
+                    onOpacityChanged = { viewModel.settingsRepository.setWidgetOpacity(it) },
+                    showHeader = widgetShowHeader,
+                    onHeaderToggled = { viewModel.settingsRepository.setWidgetShowHeader(it) },
+                    categoryFilter = widgetCategoryFilter,
+                    onCategorySelected = { viewModel.settingsRepository.setWidgetCategoryFilter(it) },
+                    maxItems = widgetMaxItems,
+                    onMaxItemsSelected = { viewModel.settingsRepository.setWidgetMaxItems(it) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActiveWidgetsStatusCard(
+    totalActive: Int,
+    recentCount: Int,
+    quickCount: Int,
+    onPinRecent: () -> Unit,
+    onPinQuick: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (totalActive > 0) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+            else MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.25f)
+        ),
+        border = BorderStroke(
+            1.dp,
+            if (totalActive > 0) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+            else MaterialTheme.colorScheme.error.copy(alpha = 0.3f)
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(
+                            if (totalActive > 0) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            else MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+                            CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_custom_grid),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = if (totalActive > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (totalActive > 0) "$totalActive Active Widget(s) Detected" else "No Home Widgets Added",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = if (totalActive > 0) {
+                            "Recent Items: $recentCount  •  Quick Action: $quickCount"
+                        } else {
+                            "Pin widgets to your home screen to access capture actions and recent notes instantly."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onPinQuick,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Add Quick Action", fontSize = 12.sp)
+                    }
+                    Button(
+                        onClick = onPinRecent,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Add Recent Items", fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickCaptureCustomizationSection(
+    currentAction: String,
+    onSelectAction: (String) -> Unit
+) {
+    val context = LocalContext.current
+
+    val actions = listOf(
+        QuickActionOption("TEXT", "Add Note", "Create quick text note", R.drawable.ic_custom_text, CategoryText),
+        QuickActionOption("LINK", "Save Link", "Bookmark URL or web page", R.drawable.ic_custom_link, CategoryLink),
+        QuickActionOption("IMAGE", "Photo Capture", "Snap photo or select image", R.drawable.ic_custom_image, CategoryImage),
+        QuickActionOption("AUDIO", "Voice Memo", "Record audio memo instantly", R.drawable.ic_custom_voice, CategoryAudio),
+        QuickActionOption("CODE", "Add Code", "Save code snippet", R.drawable.ic_custom_code, CategoryCode),
+        QuickActionOption("OCR", "Screen OCR", "Capture & extract text from screen", R.drawable.ic_custom_ocr, MaterialTheme.colorScheme.primary)
+    )
+
+    val selectedOption = actions.find { it.id == currentAction } ?: actions[0]
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // LIVE PREVIEW CARD
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "WIDGET LIVE PREVIEW",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp
+                )
+
+                // Simulated 1x1 circular widget button
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .background(selectedOption.accentColor, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = selectedOption.iconRes),
+                        contentDescription = selectedOption.title,
+                        modifier = Modifier.size(32.dp),
+                        tint = Color.White
+                    )
+                }
+
+                Text(
+                    text = selectedOption.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = selectedOption.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        Text(
+            text = "Select Quick Action for Widget",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            actions.forEach { option ->
+                val isSelected = option.id == currentAction
+                Surface(
+                    onClick = { onSelectAction(option.id) },
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isSelected) option.accentColor.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(
+                        width = if (isSelected) 2.dp else 1.dp,
+                        color = if (isSelected) option.accentColor else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(option.accentColor.copy(alpha = 0.2f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(id = option.iconRes),
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = option.accentColor
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = option.title,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = option.description,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Selected",
+                                tint = option.accentColor
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private data class QuickActionOption(
+    val id: String,
+    val title: String,
+    val description: String,
+    val iconRes: Int,
+    val accentColor: Color
+)
+
+@Composable
+private fun RecentItemsCustomizationSection(
+    widgetTheme: String,
+    onThemeSelected: (String) -> Unit,
+    opacity: Float,
+    onOpacityChanged: (Float) -> Unit,
+    showHeader: Boolean,
+    onHeaderToggled: (Boolean) -> Unit,
+    categoryFilter: String,
+    onCategorySelected: (String) -> Unit,
+    maxItems: Int,
+    onMaxItemsSelected: (Int) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // LIVE PREVIEW CARD FOR RECENT ITEMS WIDGET
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = "WIDGET LIVE PREVIEW",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+
+                // Simulated Widget Container
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = when (widgetTheme) {
+                        "Dark" -> Color(0xFF1A1C1E).copy(alpha = opacity)
+                        "Light" -> Color.White.copy(alpha = opacity)
+                        "Glass" -> Color.White.copy(alpha = opacity * 0.5f)
+                        else -> MaterialTheme.colorScheme.surface.copy(alpha = opacity)
+                    },
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (showHeader) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Good morning, User",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = if (widgetTheme == "Dark") Color.White else MaterialTheme.colorScheme.onSurface
+                                )
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_sync),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
+                        // Dummy Item Rows
+                        repeat(minOf(maxItems, 3)) { idx ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        if (widgetTheme == "Dark") Color(0xFF2C2E33) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .padding(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .background(
+                                            when (idx) {
+                                                0 -> CategoryLink
+                                                1 -> CategoryText
+                                                else -> CategoryImage
+                                            }.copy(alpha = 0.2f),
+                                            CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(
+                                            id = when (idx) {
+                                                0 -> R.drawable.ic_custom_link
+                                                1 -> R.drawable.ic_custom_text
+                                                else -> R.drawable.ic_custom_image
+                                            }
+                                        ),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(12.dp),
+                                        tint = when (idx) {
+                                            0 -> CategoryLink
+                                            1 -> CategoryText
+                                            else -> CategoryImage
+                                        }
+                                    )
+                                }
+                                Text(
+                                    text = when (idx) {
+                                        0 -> "https://github.com/kotlin"
+                                        1 -> "Meeting notes from design sync"
+                                        else -> "Captured screenshot"
+                                    },
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = if (widgetTheme == "Dark") Color.White else MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // CATEGORY FILTER
+        Text("Filter by Category", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            val categories = listOf("All", "LINK", "TEXT", "IMAGE", "AUDIO", "CODE")
+            categories.forEach { cat ->
+                val isSelected = categoryFilter.equals(cat, ignoreCase = true)
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { onCategorySelected(cat) },
+                    label = { Text(if (cat == "All") "All" else cat.lowercase().replaceFirstChar { it.uppercase() }, fontSize = 12.sp) }
+                )
+            }
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+        // MAX ITEMS
+        Text("Maximum Displayed Items", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(5, 10, 15, 20).forEach { num ->
+                val isSelected = maxItems == num
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { onMaxItemsSelected(num) },
+                    label = { Text("$num items", fontSize = 12.sp) }
+                )
+            }
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+        // WIDGET THEME
+        Text("Widget Theme Mode", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf("System", "Light", "Dark", "Glass").forEach { themeName ->
+                val isSelected = widgetTheme.equals(themeName, ignoreCase = true)
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { onThemeSelected(themeName) },
+                    label = { Text(themeName, fontSize = 12.sp) }
+                )
+            }
+        }
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+        // OPACITY SLIDER
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Background Opacity", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text("${(opacity * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        }
+        Slider(
+            value = opacity,
+            onValueChange = onOpacityChanged,
+            valueRange = 0.4f..1.0f,
+            steps = 5
+        )
+
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+
+        // SHOW HEADER TOGGLE
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Show Greeting Header", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Displays 'Good morning, User' header on the widget.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Switch(
+                checked = showHeader,
+                onCheckedChange = onHeaderToggled
+            )
+        }
+    }
+}
