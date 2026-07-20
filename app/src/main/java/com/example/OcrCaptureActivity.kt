@@ -302,21 +302,14 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                     }
 
                     // Extracted Results bottom review panel
-                    var activeTab by remember { mutableStateOf("Note") }
+                    var userSelectedTab by remember { mutableStateOf<String?>(null) }
+                    val activeTab = userSelectedTab ?: if (extractedLinks.isNotEmpty()) "Links" else "Note"
                     var noteTitle by remember { mutableStateOf("Extracted Note") }
-                    var isPreviewMode by remember { mutableStateOf(false) }
+                    var isPreviewMode by remember { mutableStateOf(true) }
                     val customFolders by viewModel.customFolders.collectAsState()
                     var selectedFolders by remember { mutableStateOf(setOf("AI Extracted")) }
                     var showNewFolderDialog by remember { mutableStateOf(false) }
                     var newFolderName by remember { mutableStateOf("") }
-
-                    LaunchedEffect(extractedLinks) {
-                        if (extractedLinks.isNotEmpty()) {
-                            activeTab = "Links"
-                        } else {
-                            activeTab = "Note"
-                        }
-                    }
 
                     LaunchedEffect(activeItem?.extractedText) {
                         val text = activeItem?.extractedText
@@ -397,7 +390,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                         if (isSelected) MaterialTheme.colorScheme.primary
                                                         else Color.Transparent
                                                     )
-                                                    .clickable(enabled = hasContent) { activeTab = tab }
+                                                    .clickable(enabled = hasContent) { userSelectedTab = tab }
                                                     .padding(vertical = 10.dp),
                                                 contentAlignment = Alignment.Center
                                             ) {
@@ -509,13 +502,13 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                                 ) {
                                                     Icon(
-                                                        painter = painterResource(id = if (isPreviewMode) R.drawable.ic_custom_text else R.drawable.ic_custom_edit),
+                                                        painter = painterResource(id = if (isPreviewMode) R.drawable.ic_custom_edit else R.drawable.ic_custom_text),
                                                         contentDescription = null,
                                                         tint = MaterialTheme.colorScheme.primary,
                                                         modifier = Modifier.size(16.dp)
                                                     )
                                                     Text(
-                                                        text = if (isPreviewMode) "Styled Preview" else "Edit Markdown",
+                                                        text = if (isPreviewMode) "Edit Raw Text" else "Styled Preview",
                                                         style = MaterialTheme.typography.bodySmall,
                                                         color = MaterialTheme.colorScheme.primary,
                                                         fontWeight = FontWeight.Bold
@@ -537,7 +530,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                 ) {
                                                     Column(modifier = Modifier.padding(16.dp)) {
                                                         Text(
-                                                            text = parseMarkdownToAnnotatedString(
+                                                            text = com.example.ui.screens.parseMarkdown(
                                                                 activeItem?.extractedText ?: "",
                                                                 MaterialTheme.colorScheme.primary
                                                             ),
@@ -724,11 +717,8 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                         Button(
                                             onClick = {
                                                 viewModel.confirmAndSaveExtractedLinks(selectedFolders.toList())
-                                                coroutineScope.launch {
-                                                    snackbarHostState.showSnackbar("Saved links to Second Brain!")
-                                                    delay(1200)
-                                                    finish()
-                                                }
+                                                Toast.makeText(context.applicationContext, "Saved links to Second Brain!", Toast.LENGTH_SHORT).show()
+                                                finish()
                                             },
                                             shape = RoundedCornerShape(20.dp),
                                             colors = ButtonDefaults.buttonColors(
@@ -757,11 +747,8 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                     )
                                                 }
                                                 viewModel.saveActiveItem()
-                                                coroutineScope.launch {
-                                                    snackbarHostState.showSnackbar("Saved formatted note to Second Brain!")
-                                                    delay(1200)
-                                                    finish()
-                                                }
+                                                Toast.makeText(context.applicationContext, "Saved formatted note to Second Brain!", Toast.LENGTH_SHORT).show()
+                                                finish()
                                             },
                                             shape = RoundedCornerShape(20.dp),
                                             colors = ButtonDefaults.buttonColors(
@@ -792,53 +779,4 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
     }
 }
 
-fun parseMarkdownToAnnotatedString(text: String, primaryColor: Color): androidx.compose.ui.text.AnnotatedString {
-    val lines = text.split("\n")
-    return androidx.compose.ui.text.buildAnnotatedString {
-        lines.forEachIndexed { i, line ->
-            var processedLine = line
-            if (line.trimStart().startsWith("- ") || line.trimStart().startsWith("* ")) {
-                val firstCharIndex = line.indexOf(line.trimStart().first())
-                val indent = if (firstCharIndex >= 0) line.substring(0, firstCharIndex) else ""
-                processedLine = indent + "•  " + line.trimStart().substring(2)
-            }
 
-            var index = 0
-            while (index < processedLine.length) {
-                val boldStart = processedLine.indexOf("**", index)
-                if (boldStart != -1) {
-                    append(processedLine.substring(index, boldStart))
-                    val boldEnd = processedLine.indexOf("**", boldStart + 2)
-                    if (boldEnd != -1) {
-                        pushStyle(androidx.compose.ui.text.SpanStyle(fontWeight = FontWeight.Bold))
-                        append(processedLine.substring(boldStart + 2, boldEnd))
-                        pop()
-                        index = boldEnd + 2
-                    } else {
-                        append("**")
-                        index = boldStart + 2
-                    }
-                } else {
-                    val remaining = processedLine.substring(index)
-                    val urlMatch = Regex("https?://[\\w\\d\\-_\\?\\.\\/\\=\\+&%#]+").find(remaining)
-                    if (urlMatch != null) {
-                        append(remaining.substring(0, urlMatch.range.first))
-                        pushStyle(androidx.compose.ui.text.SpanStyle(
-                            color = primaryColor,
-                            textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline
-                        ))
-                        append(urlMatch.value)
-                        pop()
-                        index += urlMatch.range.last + 1
-                    } else {
-                        append(remaining)
-                        break
-                    }
-                }
-            }
-            if (i < lines.size - 1) {
-                append("\n")
-            }
-        }
-    }
-}
