@@ -58,6 +58,8 @@ import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.view.animation.PathInterpolator
 import androidx.core.app.NotificationCompat
+import androidx.compose.ui.graphics.toArgb
+import com.example.ui.theme.*
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.data.repository.SecondBrainRepository
@@ -106,8 +108,8 @@ class BrainOcrOverlayService : Service() {
     }
 
     private fun getThemedColor(
-        lightColorHex: String,
-        darkColorHex: String,
+        fallbackLightColor: Int,
+        fallbackDarkColor: Int,
         dynamicLightColorRes: Int?,
         dynamicDarkColorRes: Int?
     ): Int {
@@ -117,16 +119,16 @@ class BrainOcrOverlayService : Service() {
             try {
                 return resources.getColor(resId, theme)
             } catch (e: Exception) {
-                // Fallback to static hex
+                // Fallback
             }
         }
-        return Color.parseColor(if (isDark) darkColorHex else lightColorHex)
+        return if (isDark) fallbackDarkColor else fallbackLightColor
     }
 
     private fun getAccentColor(): Int {
         return getThemedColor(
-            "#FF7043",
-            "#FF7043",
+            Primary.toArgb(),
+            PrimaryDark.toArgb(),
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_accent1_600 else null,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_accent1_600 else null
         )
@@ -428,33 +430,39 @@ class BrainOcrOverlayService : Service() {
 
         // ── Color palette ──
         val surfaceColor = getThemedColor(
-            "#FFFFFF", "#1A1A1E",
+            Background.toArgb(),
+            BackgroundDark.toArgb(),
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral1_10 else null,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral1_900 else null
         )
         val cardColor = getThemedColor(
-            "#F5F5F8", "#242428",
+            SurfaceVariant.toArgb(),
+            SurfaceVariantDark.toArgb(),
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral1_100 else null,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral1_800 else null
         )
         val textPrimary = getThemedColor(
-            "#1C1B1F", "#F0F0F0",
+            OnBackground.toArgb(),
+            OnBackgroundDark.toArgb(),
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral1_900 else null,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral1_50 else null
         )
         val textSecondary = getThemedColor(
-            "#6E6E73", "#8E8E93",
+            OnSurfaceVariant.toArgb(),
+            OnSurfaceVariantDark.toArgb(),
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral2_500 else null,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral2_300 else null
         )
         val accent = getAccentColor()
         val accentSoft = getThemedColor(
-            "#FFF0EB", "#2C221F",
+            PrimaryContainer.toArgb(),
+            PrimaryContainerDark.toArgb(),
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_accent1_100 else null,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_accent1_900 else null
         )
         val borderColor = getThemedColor(
-            "#E8E8EC", "#2E2E32",
+            OutlineVariant.toArgb(),
+            OutlineVariantDark.toArgb(),
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral2_200 else null,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral2_800 else null
         )
@@ -879,7 +887,7 @@ class BrainOcrOverlayService : Service() {
         val startScale = panel.scaleX
 
         val animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 320
+            duration = 280
             startDelay = 50
             interpolator = PathInterpolator(0.3f, 0f, 0.1f, 1f)
             addUpdateListener { animation ->
@@ -896,7 +904,7 @@ class BrainOcrOverlayService : Service() {
                     val endHandleWidth = endWidth
                     val startHandleHeight = dpToPx(getEdgePanelHeight())
                     val endHandleHeight = endHeight
-                    
+
                     handleParams.width = (startHandleWidth + (endHandleWidth - startHandleWidth) * fraction).toInt()
                     handleParams.height = (startHandleHeight + (endHandleHeight - startHandleHeight) * fraction).toInt()
                     handleView?.layoutParams = handleParams
@@ -906,7 +914,7 @@ class BrainOcrOverlayService : Service() {
                 if (handleBg != null) {
                     val startRadius = dpToPx(8).toFloat()
                     val endRadius = dpToPx(22).toFloat()
-                    
+
                     val rTopLeft = if (side == "Right") {
                         startRadius + (endRadius - startRadius) * fraction
                     } else {
@@ -927,7 +935,7 @@ class BrainOcrOverlayService : Service() {
                     } else {
                         0f + (endRadius - 0f) * fraction
                     }
-                    
+
                     handleBg.cornerRadii = floatArrayOf(
                         rTopLeft, rTopLeft,
                         rTopRight, rTopRight,
@@ -1006,7 +1014,7 @@ class BrainOcrOverlayService : Service() {
                     val endHandleWidth = startWidth
                     val startHandleHeight = dpToPx(height)
                     val endHandleHeight = startHeight
-                    
+
                     handleParams.width = (startHandleWidth + (endHandleWidth - startHandleWidth) * fraction).toInt()
                     handleParams.height = (startHandleHeight + (endHandleHeight - startHandleHeight) * fraction).toInt()
                     handleView?.layoutParams = handleParams
@@ -1016,7 +1024,7 @@ class BrainOcrOverlayService : Service() {
                 if (handleBg != null) {
                     val startRadius = dpToPx(8).toFloat()
                     val endRadius = dpToPx(22).toFloat()
-                    
+
                     val rTopLeft = if (side == "Right") {
                         startRadius + (endRadius - startRadius) * fraction
                     } else {
@@ -1037,7 +1045,7 @@ class BrainOcrOverlayService : Service() {
                     } else {
                         0f + (endRadius - 0f) * fraction
                     }
-                    
+
                     handleBg.cornerRadii = floatArrayOf(
                         rTopLeft, rTopLeft,
                         rTopRight, rTopRight,
@@ -1046,7 +1054,7 @@ class BrainOcrOverlayService : Service() {
                     )
 
                     val evaluator = ArgbEvaluator()
-                    val startColor = Color.parseColor("#FF7043")
+                    val startColor = getAccentColor()
                     val currentColor = evaluator.evaluate(fraction, startColor, surfaceColor) as Int
                     handleBg.setColor(currentColor)
 
