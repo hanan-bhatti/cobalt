@@ -101,7 +101,7 @@ class BrainOcrOverlayService : Service() {
     private fun getAnimInterpolator(): android.animation.TimeInterpolator {
         return when (prefs.getString("edge_panel_anim_interpolator", "Emphasized") ?: "Emphasized") {
             "Decelerate" -> android.view.animation.DecelerateInterpolator()
-            "Overshoot" -> android.view.animation.OvershootInterpolator(1.4f)
+            "Overshoot" -> android.view.animation.OvershootInterpolator(1.1f)
             "Bounce" -> android.view.animation.BounceInterpolator()
             "Linear" -> android.view.animation.LinearInterpolator()
             "Accelerate" -> android.view.animation.AccelerateInterpolator()
@@ -920,8 +920,9 @@ class BrainOcrOverlayService : Service() {
             interpolator = getAnimInterpolator()
             addUpdateListener { animation ->
                 val fraction = animation.animatedValue as Float
+                val clampedFraction = fraction.coerceIn(0f, 1f)
 
-                panel.alpha = startAlpha + (1f - startAlpha) * fraction
+                panel.alpha = (startAlpha + (1f - startAlpha) * fraction).coerceIn(0f, 1f)
                 panel.scaleX = startScaleFloat + (1f - startScaleFloat) * fraction
                 panel.scaleY = startScaleFloat + (1f - startScaleFloat) * fraction
 
@@ -933,8 +934,8 @@ class BrainOcrOverlayService : Service() {
                     val startHandleHeight = dpToPx(height)
                     val endHandleHeight = endHeight
 
-                    handleParams.width = (startHandleWidth + (endHandleWidth - startHandleWidth) * fraction).toInt()
-                    handleParams.height = (startHandleHeight + (endHandleHeight - startHandleHeight) * fraction).toInt()
+                    handleParams.width = (startHandleWidth + (endHandleWidth - startHandleWidth) * clampedFraction).toInt()
+                    handleParams.height = (startHandleHeight + (endHandleHeight - startHandleHeight) * clampedFraction).toInt()
                     handleView?.layoutParams = handleParams
                 }
 
@@ -944,24 +945,24 @@ class BrainOcrOverlayService : Service() {
                     val endRadius = dpToPx(22).toFloat()
 
                     val rTopLeft = if (side == "Right") {
-                        startRadius + (endRadius - startRadius) * fraction
+                        startRadius + (endRadius - startRadius) * clampedFraction
                     } else {
-                        0f + (endRadius - 0f) * fraction
+                        0f + (endRadius - 0f) * clampedFraction
                     }
                     val rTopRight = if (side == "Right") {
-                        0f + (endRadius - 0f) * fraction
+                        0f + (endRadius - 0f) * clampedFraction
                     } else {
-                        startRadius + (endRadius - startRadius) * fraction
+                        startRadius + (endRadius - startRadius) * clampedFraction
                     }
                     val rBottomRight = if (side == "Right") {
-                        0f + (endRadius - 0f) * fraction
+                        0f + (endRadius - 0f) * clampedFraction
                     } else {
-                        startRadius + (endRadius - startRadius) * fraction
+                        startRadius + (endRadius - startRadius) * clampedFraction
                     }
                     val rBottomLeft = if (side == "Right") {
-                        startRadius + (endRadius - startRadius) * fraction
+                        startRadius + (endRadius - startRadius) * clampedFraction
                     } else {
-                        0f + (endRadius - 0f) * fraction
+                        0f + (endRadius - 0f) * clampedFraction
                     }
 
                     handleBg.cornerRadii = floatArrayOf(
@@ -973,19 +974,19 @@ class BrainOcrOverlayService : Service() {
 
                     val evaluator = ArgbEvaluator()
                     val startColor = getAccentColor()
-                    val currentColor = evaluator.evaluate(fraction, startColor, surfaceColor) as Int
+                    val currentColor = evaluator.evaluate(clampedFraction, startColor, surfaceColor) as Int
                     handleBg.setColor(currentColor)
 
-                    val strokeW = (dpToPx(1) * fraction).toInt()
+                    val strokeW = (dpToPx(1) * clampedFraction).toInt().coerceAtLeast(0)
                     handleBg.setStroke(strokeW, borderColor)
                 }
 
-                handleView?.alpha = opacity + (1f - opacity) * fraction
+                handleView?.alpha = opacity + (1f - opacity) * clampedFraction
 
                 // Animate window position AND size in lockstep per-frame
-                params.y = (startY + (targetY - startY) * fraction).toInt()
-                params.width = (startWinWidth + (endWidth - startWinWidth) * fraction).toInt()
-                params.height = (startWinHeight + (endHeight - startWinHeight) * fraction).toInt()
+                params.y = (startY + (targetY - startY) * clampedFraction).toInt()
+                params.width = (startWinWidth + (endWidth - startWinWidth) * clampedFraction).toInt()
+                params.height = (startWinHeight + (endHeight - startWinHeight) * clampedFraction).toInt()
                 try {
                     windowManager.updateViewLayout(root, params)
                 } catch (_: Exception) {}
@@ -1063,8 +1064,9 @@ class BrainOcrOverlayService : Service() {
             interpolator = getAnimInterpolator()
             addUpdateListener { animation ->
                 val fraction = animation.animatedValue as Float
+                val clampedFraction = fraction.coerceIn(0f, 1f)
 
-                panel.alpha = startAlpha * fraction
+                panel.alpha = (startAlpha * fraction).coerceIn(0f, 1f)
                 panel.scaleX = minScaleFloat + (startScale - minScaleFloat) * fraction
                 panel.scaleY = minScaleFloat + (startScale - minScaleFloat) * fraction
 
@@ -1076,8 +1078,8 @@ class BrainOcrOverlayService : Service() {
                     val startHandleHeight = dpToPx(height)
                     val endHandleHeight = startHeight
 
-                    handleParams.width = (startHandleWidth + (endHandleWidth - startHandleWidth) * fraction).toInt()
-                    handleParams.height = (startHandleHeight + (endHandleHeight - startHandleHeight) * fraction).toInt()
+                    handleParams.width = (startHandleWidth + (endHandleWidth - startHandleWidth) * clampedFraction).toInt()
+                    handleParams.height = (startHandleHeight + (endHandleHeight - startHandleHeight) * clampedFraction).toInt()
                     handleView?.layoutParams = handleParams
                 }
 
@@ -1087,24 +1089,24 @@ class BrainOcrOverlayService : Service() {
                     val endRadius = dpToPx(22).toFloat()
 
                     val rTopLeft = if (side == "Right") {
-                        startRadius + (endRadius - startRadius) * fraction
+                        startRadius + (endRadius - startRadius) * clampedFraction
                     } else {
-                        0f + (endRadius - 0f) * fraction
+                        0f + (endRadius - 0f) * clampedFraction
                     }
                     val rTopRight = if (side == "Right") {
-                        0f + (endRadius - 0f) * fraction
+                        0f + (endRadius - 0f) * clampedFraction
                     } else {
-                        startRadius + (endRadius - startRadius) * fraction
+                        startRadius + (endRadius - startRadius) * clampedFraction
                     }
                     val rBottomRight = if (side == "Right") {
-                        0f + (endRadius - 0f) * fraction
+                        0f + (endRadius - 0f) * clampedFraction
                     } else {
-                        startRadius + (endRadius - startRadius) * fraction
+                        startRadius + (endRadius - startRadius) * clampedFraction
                     }
                     val rBottomLeft = if (side == "Right") {
-                        startRadius + (endRadius - startRadius) * fraction
+                        startRadius + (endRadius - startRadius) * clampedFraction
                     } else {
-                        0f + (endRadius - 0f) * fraction
+                        0f + (endRadius - 0f) * clampedFraction
                     }
 
                     handleBg.cornerRadii = floatArrayOf(
@@ -1116,19 +1118,19 @@ class BrainOcrOverlayService : Service() {
 
                     val evaluator = ArgbEvaluator()
                     val startColor = getAccentColor()
-                    val currentColor = evaluator.evaluate(fraction, startColor, surfaceColor) as Int
+                    val currentColor = evaluator.evaluate(clampedFraction, startColor, surfaceColor) as Int
                     handleBg.setColor(currentColor)
 
-                    val strokeW = (dpToPx(1) * fraction).toInt()
+                    val strokeW = (dpToPx(1) * clampedFraction).toInt().coerceAtLeast(0)
                     handleBg.setStroke(strokeW, borderColor)
                 }
 
-                handleView?.alpha = opacity + (1f - opacity) * fraction
+                handleView?.alpha = opacity + (1f - opacity) * clampedFraction
 
                 // Animate actual window position and size per-frame in lockstep
-                params.y = (targetY + (startY - targetY) * fraction).toInt()
-                params.width = (endWidth + (startWidth - endWidth) * fraction).toInt()
-                params.height = (endHeight + (startHeight - endHeight) * fraction).toInt()
+                params.y = (targetY + (startY - targetY) * clampedFraction).toInt()
+                params.width = (endWidth + (startWidth - endWidth) * clampedFraction).toInt()
+                params.height = (endHeight + (startHeight - endHeight) * clampedFraction).toInt()
                 try {
                     windowManager.updateViewLayout(root, params)
                 } catch (_: Exception) {}
