@@ -54,6 +54,7 @@ import android.widget.TextView
 import android.widget.Toast
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
+import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.view.animation.PathInterpolator
 import androidx.core.app.NotificationCompat
@@ -102,6 +103,33 @@ class BrainOcrOverlayService : Service() {
                 (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
             }
         }
+    }
+
+    private fun getThemedColor(
+        lightColorHex: String,
+        darkColorHex: String,
+        dynamicLightColorRes: Int?,
+        dynamicDarkColorRes: Int?
+    ): Int {
+        val isDark = isDarkTheme()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && dynamicLightColorRes != null && dynamicDarkColorRes != null) {
+            val resId = if (isDark) dynamicDarkColorRes else dynamicLightColorRes
+            try {
+                return resources.getColor(resId, theme)
+            } catch (e: Exception) {
+                // Fallback to static hex
+            }
+        }
+        return Color.parseColor(if (isDark) darkColorHex else lightColorHex)
+    }
+
+    private fun getAccentColor(): Int {
+        return getThemedColor(
+            "#FF7043",
+            "#FF7043",
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_accent1_600 else null,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_accent1_600 else null
+        )
     }
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -215,7 +243,7 @@ class BrainOcrOverlayService : Service() {
         // 1. Collapsed state: Draggable thin vertical handle (like Samsung edge)
         val handle = FrameLayout(this).apply {
             val bgShape = GradientDrawable().apply {
-                setColor(Color.parseColor("#FF7043")) // Second Brain primary accent orange
+                setColor(getAccentColor())
                 val radiusPx = dpToPx(8).toFloat()
                 cornerRadii = if (side == "Right") {
                     floatArrayOf(radiusPx, radiusPx, 0f, 0f, 0f, 0f, radiusPx, radiusPx)
@@ -369,9 +397,9 @@ class BrainOcrOverlayService : Service() {
         // Align the visible handle perfectly to the edge within the wider touchable window container
         val handleParams = FrameLayout.LayoutParams(
             dpToPx(thickness),
-            FrameLayout.LayoutParams.MATCH_PARENT
+            dpToPx(height)
         ).apply {
-            gravity = if (side == "Right") Gravity.END else Gravity.START
+            gravity = (if (side == "Right") Gravity.END else Gravity.START) or Gravity.CENTER_VERTICAL
         }
         rootContainer.addView(handle, handleParams)
 
@@ -392,30 +420,51 @@ class BrainOcrOverlayService : Service() {
         val side = getEdgePanelSide()
         val yPercent = getEdgePanelYPercent()
         val isDark = isDarkTheme()
+        val thickness = getEdgePanelThickness()
+        val opacity = getEdgePanelOpacity()
 
         isExpanded = true
-        handleView?.visibility = View.GONE
+        handleView?.visibility = View.VISIBLE
 
         // ── Color palette ──
-        val surfaceColor = if (isDark) Color.parseColor("#1A1A1E") else Color.parseColor("#FFFFFF")
-        val cardColor = if (isDark) Color.parseColor("#242428") else Color.parseColor("#F5F5F8")
-        val textPrimary = if (isDark) Color.parseColor("#F0F0F0") else Color.parseColor("#1C1B1F")
-        val textSecondary = if (isDark) Color.parseColor("#8E8E93") else Color.parseColor("#6E6E73")
-        val accent = Color.parseColor("#FF7043")
-        val accentSoft = if (isDark) Color.parseColor("#2C221F") else Color.parseColor("#FFF0EB")
-        val borderColor = if (isDark) Color.parseColor("#2E2E32") else Color.parseColor("#E8E8EC")
-        val accentBorder = Color.parseColor("#33FF7043") // 20% alpha
+        val surfaceColor = getThemedColor(
+            "#FFFFFF", "#1A1A1E",
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral1_10 else null,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral1_900 else null
+        )
+        val cardColor = getThemedColor(
+            "#F5F5F8", "#242428",
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral1_100 else null,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral1_800 else null
+        )
+        val textPrimary = getThemedColor(
+            "#1C1B1F", "#F0F0F0",
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral1_900 else null,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral1_50 else null
+        )
+        val textSecondary = getThemedColor(
+            "#6E6E73", "#8E8E93",
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral2_500 else null,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral2_300 else null
+        )
+        val accent = getAccentColor()
+        val accentSoft = getThemedColor(
+            "#FFF0EB", "#2C221F",
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_accent1_100 else null,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_accent1_900 else null
+        )
+        val borderColor = getThemedColor(
+            "#E8E8EC", "#2E2E32",
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral2_200 else null,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral2_800 else null
+        )
+        val accentBorder = (accent and 0x00FFFFFF) or 0x33000000 // 20% alpha
 
         // ── Root panel ──
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dpToPx(14), dpToPx(14), dpToPx(14), dpToPx(12))
-            val bg = GradientDrawable().apply {
-                setColor(surfaceColor)
-                cornerRadius = dpToPx(22).toFloat()
-                setStroke(dpToPx(1), borderColor)
-            }
-            background = bg
+            background = null
             elevation = 0f
             alpha = 0f
             scaleX = 0.96f
@@ -799,19 +848,22 @@ class BrainOcrOverlayService : Service() {
         }
 
         panelView = panel
-        root.addView(panel)
-
-        // ── Expand animation ──
-        val params = root.layoutParams as WindowManager.LayoutParams
         val endWidth = dpToPx(260)
-
         panel.measure(
             View.MeasureSpec.makeMeasureSpec(endWidth, View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         )
         val endHeight = panel.measuredHeight
-        panel.pivotX = if (side == "Right") panel.measuredWidth.toFloat() else 0f
-        panel.pivotY = panel.measuredHeight / 2f
+        panel.layoutParams = FrameLayout.LayoutParams(endWidth, endHeight).apply {
+            gravity = (if (side == "Right") Gravity.END else Gravity.START) or Gravity.CENTER_VERTICAL
+        }
+        val handle = handleView as? FrameLayout
+        handle?.addView(panel)
+
+        // ── Expand animation ──
+        val params = root.layoutParams as WindowManager.LayoutParams
+        panel.pivotX = if (side == "Right") endWidth.toFloat() else 0f
+        panel.pivotY = endHeight / 2f
 
         cancelPanelAnimation()
 
@@ -819,26 +871,82 @@ class BrainOcrOverlayService : Service() {
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         params.y = calculateYPosition(yPercent)
+        params.width = endWidth
+        params.height = endHeight
+        windowManager.updateViewLayout(root, params) // Apply final window size immediately to avoid IPC layout thrashing
 
-        val startWidth = params.width
-        val startHeight = params.height
         val startAlpha = panel.alpha
         val startScale = panel.scaleX
 
         val animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 220
-            interpolator = PathInterpolator(0.23f, 1f, 0.32f, 1f)
+            duration = 320
+            startDelay = 50
+            interpolator = PathInterpolator(0.3f, 0f, 0.1f, 1f)
             addUpdateListener { animation ->
                 val fraction = animation.animatedValue as Float
-                params.width = (startWidth + (endWidth - startWidth) * fraction).toInt()
-                params.height = (startHeight + (endHeight - startHeight) * fraction).toInt()
 
                 panel.alpha = startAlpha + (1f - startAlpha) * fraction
                 panel.scaleX = startScale + (1f - startScale) * fraction
                 panel.scaleY = startScale + (1f - startScale) * fraction
 
-                if (containerView != null) {
-                    windowManager.updateViewLayout(root, params)
+                // Handle morphing animation
+                val handleParams = handleView?.layoutParams as? FrameLayout.LayoutParams
+                if (handleParams != null) {
+                    val startHandleWidth = dpToPx(thickness)
+                    val endHandleWidth = endWidth
+                    val startHandleHeight = dpToPx(getEdgePanelHeight())
+                    val endHandleHeight = endHeight
+                    
+                    handleParams.width = (startHandleWidth + (endHandleWidth - startHandleWidth) * fraction).toInt()
+                    handleParams.height = (startHandleHeight + (endHandleHeight - startHandleHeight) * fraction).toInt()
+                    handleView?.layoutParams = handleParams
+                }
+
+                val handleBg = handleView?.background as? GradientDrawable
+                if (handleBg != null) {
+                    val startRadius = dpToPx(8).toFloat()
+                    val endRadius = dpToPx(22).toFloat()
+                    
+                    val rTopLeft = if (side == "Right") {
+                        startRadius + (endRadius - startRadius) * fraction
+                    } else {
+                        0f + (endRadius - 0f) * fraction
+                    }
+                    val rTopRight = if (side == "Right") {
+                        0f + (endRadius - 0f) * fraction
+                    } else {
+                        startRadius + (endRadius - startRadius) * fraction
+                    }
+                    val rBottomRight = if (side == "Right") {
+                        0f + (endRadius - 0f) * fraction
+                    } else {
+                        startRadius + (endRadius - startRadius) * fraction
+                    }
+                    val rBottomLeft = if (side == "Right") {
+                        startRadius + (endRadius - startRadius) * fraction
+                    } else {
+                        0f + (endRadius - 0f) * fraction
+                    }
+                    
+                    handleBg.cornerRadii = floatArrayOf(
+                        rTopLeft, rTopLeft,
+                        rTopRight, rTopRight,
+                        rBottomRight, rBottomRight,
+                        rBottomLeft, rBottomLeft
+                    )
+
+                    val evaluator = ArgbEvaluator()
+                    val startColor = getAccentColor()
+                    val currentColor = evaluator.evaluate(fraction, startColor, surfaceColor) as Int
+                    handleBg.setColor(currentColor)
+
+                    val strokeW = (dpToPx(1) * fraction).toInt()
+                    handleBg.setStroke(strokeW, borderColor)
+                }
+
+                handleView?.alpha = opacity + (1f - opacity) * fraction
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    handleView?.elevation = dpToPx(4) + (dpToPx(8) - dpToPx(4)) * fraction
                 }
             }
             addListener(object : AnimatorListenerAdapter() {
@@ -863,6 +971,10 @@ class BrainOcrOverlayService : Service() {
         val yPercent = getEdgePanelYPercent()
         val thickness = getEdgePanelThickness()
         val height = getEdgePanelHeight()
+        val isDark = isDarkTheme()
+        val surfaceColor = if (isDark) Color.parseColor("#1A1A1E") else Color.parseColor("#FFFFFF")
+        val borderColor = if (isDark) Color.parseColor("#2E2E32") else Color.parseColor("#E8E8EC")
+        val opacity = getEdgePanelOpacity()
 
         isExpanded = false
         noteInputRef = null
@@ -878,42 +990,82 @@ class BrainOcrOverlayService : Service() {
         cancelPanelAnimation()
 
         val animator = ValueAnimator.ofFloat(1f, 0f).apply {
-            duration = 180
-            interpolator = PathInterpolator(0.32f, 0f, 0.67f, 1f)
+            duration = 280
+            interpolator = PathInterpolator(0.3f, 0f, 0.1f, 1f)
             addUpdateListener { animation ->
                 val fraction = animation.animatedValue as Float
-                params.width = (endWidth + (startWidth - endWidth) * fraction).toInt()
-                params.height = (endHeight + (startHeight - endHeight) * fraction).toInt()
 
                 panel.alpha = startAlpha * fraction
                 panel.scaleX = 0.96f + (startScale - 0.96f) * fraction
                 panel.scaleY = 0.96f + (startScale - 0.96f) * fraction
 
-                if (containerView != null) {
-                    windowManager.updateViewLayout(root, params)
+                // Handle morphing animation
+                val handleParams = handleView?.layoutParams as? FrameLayout.LayoutParams
+                if (handleParams != null) {
+                    val startHandleWidth = dpToPx(thickness)
+                    val endHandleWidth = startWidth
+                    val startHandleHeight = dpToPx(height)
+                    val endHandleHeight = startHeight
+                    
+                    handleParams.width = (startHandleWidth + (endHandleWidth - startHandleWidth) * fraction).toInt()
+                    handleParams.height = (startHandleHeight + (endHandleHeight - startHandleHeight) * fraction).toInt()
+                    handleView?.layoutParams = handleParams
+                }
+
+                val handleBg = handleView?.background as? GradientDrawable
+                if (handleBg != null) {
+                    val startRadius = dpToPx(8).toFloat()
+                    val endRadius = dpToPx(22).toFloat()
+                    
+                    val rTopLeft = if (side == "Right") {
+                        startRadius + (endRadius - startRadius) * fraction
+                    } else {
+                        0f + (endRadius - 0f) * fraction
+                    }
+                    val rTopRight = if (side == "Right") {
+                        0f + (endRadius - 0f) * fraction
+                    } else {
+                        startRadius + (endRadius - startRadius) * fraction
+                    }
+                    val rBottomRight = if (side == "Right") {
+                        0f + (endRadius - 0f) * fraction
+                    } else {
+                        startRadius + (endRadius - startRadius) * fraction
+                    }
+                    val rBottomLeft = if (side == "Right") {
+                        startRadius + (endRadius - startRadius) * fraction
+                    } else {
+                        0f + (endRadius - 0f) * fraction
+                    }
+                    
+                    handleBg.cornerRadii = floatArrayOf(
+                        rTopLeft, rTopLeft,
+                        rTopRight, rTopRight,
+                        rBottomRight, rBottomRight,
+                        rBottomLeft, rBottomLeft
+                    )
+
+                    val evaluator = ArgbEvaluator()
+                    val startColor = Color.parseColor("#FF7043")
+                    val currentColor = evaluator.evaluate(fraction, startColor, surfaceColor) as Int
+                    handleBg.setColor(currentColor)
+
+                    val strokeW = (dpToPx(1) * fraction).toInt()
+                    handleBg.setStroke(strokeW, borderColor)
+                }
+
+                handleView?.alpha = opacity + (1f - opacity) * fraction
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    handleView?.elevation = dpToPx(4) + (dpToPx(8) - dpToPx(4)) * fraction
                 }
             }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
                     if (containerView != null) {
-                        root.removeView(panel)
+                        (handleView as? ViewGroup)?.removeView(panel)
                         panelView = null
                         handleView?.visibility = View.VISIBLE
-
-                        handleView?.layoutParams = FrameLayout.LayoutParams(
-                            dpToPx(thickness),
-                            FrameLayout.LayoutParams.MATCH_PARENT
-                        ).apply {
-                            gravity = if (side == "Right") Gravity.END else Gravity.START
-                        }
-
-                        params.width = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
-                        params.height = dpToPx(height)
-                        params.flags =
-                            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-                        params.y = calculateYPosition(yPercent)
-                        windowManager.updateViewLayout(root, params)
-                        updateSystemGestureExclusions()
+                        updateViewLayoutAndStyle()
                     }
                     panelAnimator = null
                 }
@@ -951,7 +1103,7 @@ class BrainOcrOverlayService : Service() {
         // Reapply background shape style to handle
         handleView?.let { h ->
             val bgShape = GradientDrawable().apply {
-                setColor(Color.parseColor("#FF7043"))
+                setColor(getAccentColor())
                 val radiusPx = dpToPx(8).toFloat()
                 cornerRadii = if (side == "Right") {
                     floatArrayOf(radiusPx, radiusPx, 0f, 0f, 0f, 0f, radiusPx, radiusPx)
@@ -964,9 +1116,9 @@ class BrainOcrOverlayService : Service() {
 
             h.layoutParams = FrameLayout.LayoutParams(
                 dpToPx(thickness),
-                FrameLayout.LayoutParams.MATCH_PARENT
+                dpToPx(height)
             ).apply {
-                gravity = if (side == "Right") Gravity.END else Gravity.START
+                gravity = (if (side == "Right") Gravity.END else Gravity.START) or Gravity.CENTER_VERTICAL
             }
         }
 
