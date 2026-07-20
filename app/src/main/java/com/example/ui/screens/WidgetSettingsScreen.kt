@@ -164,6 +164,8 @@ fun WidgetSettingsScreen(
                 )
             }
 
+            val allItems by viewModel.allItems.collectAsState()
+
             if (selectedTab == 0) {
                 QuickCaptureCustomizationSection(
                     currentAction = quickCaptureAction,
@@ -173,6 +175,7 @@ fun WidgetSettingsScreen(
                 )
             } else {
                 RecentItemsCustomizationSection(
+                    realItems = allItems,
                     widgetTheme = widgetTheme,
                     onThemeSelected = { viewModel.settingsRepository.setWidgetTheme(it) },
                     opacity = widgetOpacity,
@@ -419,6 +422,7 @@ private data class QuickActionOption(
 
 @Composable
 private fun RecentItemsCustomizationSection(
+    realItems: List<com.example.data.model.SavedItem>,
     widgetTheme: String,
     onThemeSelected: (String) -> Unit,
     opacity: Float,
@@ -430,6 +434,33 @@ private fun RecentItemsCustomizationSection(
     maxItems: Int,
     onMaxItemsSelected: (Int) -> Unit
 ) {
+    val context = LocalContext.current
+    val cachedItems = remember {
+        try { com.example.widget.WidgetCache.getCachedItems(context) } catch (e: Exception) { emptyList() }
+    }
+    val itemsToDisplay = remember(realItems, cachedItems, categoryFilter, maxItems) {
+        val base = if (realItems.isNotEmpty()) realItems else cachedItems
+        val filtered = if (categoryFilter == "All") base else base.filter { it.type.name.equals(categoryFilter, ignoreCase = true) }
+        filtered.take(maxItems)
+    }
+
+    val userName = remember {
+        try {
+            val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+            auth.currentUser?.displayName?.trim()?.ifBlank { null }
+                ?: auth.currentUser?.email?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
+        } catch (e: Exception) { null } ?: "User"
+    }
+
+    val greeting = remember {
+        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        when (hour) {
+            in 0..11 -> "Good morning"
+            in 12..16 -> "Good afternoon"
+            else -> "Good evening"
+        }
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         // LIVE PREVIEW CARD FOR RECENT ITEMS WIDGET
         Card(
@@ -444,7 +475,7 @@ private fun RecentItemsCustomizationSection(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(
-                    text = "WIDGET LIVE PREVIEW",
+                    text = "REAL WIDGET LIVE PREVIEW",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -474,76 +505,103 @@ private fun RecentItemsCustomizationSection(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(
-                                    text = "Good morning, User",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    color = if (widgetTheme == "Dark") Color.White else MaterialTheme.colorScheme.onSurface
-                                )
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_sync),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(14.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-
-                        // Dummy Item Rows
-                        repeat(minOf(maxItems, 3)) { idx ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(
-                                        if (widgetTheme == "Dark") Color(0xFF2C2E33) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                        RoundedCornerShape(8.dp)
+                                Column {
+                                    Text(
+                                        text = "$greeting, $userName",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = if (widgetTheme == "Dark") Color.White else MaterialTheme.colorScheme.onSurface
                                     )
-                                    .padding(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
+                                    Text(
+                                        text = "Your Second Brain",
+                                        fontSize = 11.sp,
+                                        color = if (widgetTheme == "Dark") Color.LightGray else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                                 Box(
                                     modifier = Modifier
-                                        .size(24.dp)
-                                        .background(
-                                            when (idx) {
-                                                0 -> CategoryLink
-                                                1 -> CategoryText
-                                                else -> CategoryImage
-                                            }.copy(alpha = 0.2f),
-                                            CircleShape
-                                        ),
+                                        .size(28.dp)
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        painter = painterResource(
-                                            id = when (idx) {
-                                                0 -> R.drawable.ic_custom_link
-                                                1 -> R.drawable.ic_custom_text
-                                                else -> R.drawable.ic_custom_image
-                                            }
-                                        ),
+                                        painter = painterResource(id = R.drawable.ic_custom_sync),
                                         contentDescription = null,
-                                        modifier = Modifier.size(12.dp),
-                                        tint = when (idx) {
-                                            0 -> CategoryLink
-                                            1 -> CategoryText
-                                            else -> CategoryImage
-                                        }
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
+                            }
+                        }
+
+                        if (itemsToDisplay.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text(
-                                    text = when (idx) {
-                                        0 -> "https://github.com/kotlin"
-                                        1 -> "Meeting notes from design sync"
-                                        else -> "Captured screenshot"
-                                    },
-                                    fontSize = 11.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    color = if (widgetTheme == "Dark") Color.White else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f)
+                                    text = if (categoryFilter == "All") "Your archive is empty" else "No $categoryFilter items found",
+                                    fontSize = 12.sp,
+                                    color = if (widgetTheme == "Dark") Color.LightGray else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                            }
+                        } else {
+                            itemsToDisplay.forEach { item ->
+                                val (iconRes, categoryColor) = when (item.type) {
+                                    com.example.data.model.SavedItemType.LINK -> Pair(R.drawable.ic_custom_link, CategoryLink)
+                                    com.example.data.model.SavedItemType.IMAGE, com.example.data.model.SavedItemType.VIDEO -> Pair(R.drawable.ic_custom_image, CategoryImage)
+                                    com.example.data.model.SavedItemType.CODE -> Pair(R.drawable.ic_custom_code, CategoryCode)
+                                    com.example.data.model.SavedItemType.AUDIO -> Pair(R.drawable.ic_custom_voice, CategoryAudio)
+                                    else -> Pair(R.drawable.ic_custom_text, CategoryText)
+                                }
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(
+                                            if (widgetTheme == "Dark") Color(0xFF2C2E33) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                            RoundedCornerShape(10.dp)
+                                        )
+                                        .padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .background(categoryColor.copy(alpha = 0.2f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = iconRes),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp),
+                                            tint = categoryColor
+                                        )
+                                    }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = item.title.ifBlank { item.type.displayName },
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            color = if (widgetTheme == "Dark") Color.White else MaterialTheme.colorScheme.onSurface
+                                        )
+                                        val snippet = item.content.ifBlank { item.extractedText ?: "" }
+                                        if (snippet.isNotBlank()) {
+                                            Text(
+                                                text = snippet,
+                                                fontSize = 10.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                color = if (widgetTheme == "Dark") Color.LightGray else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
