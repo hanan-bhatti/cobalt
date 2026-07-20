@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudQueue
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
@@ -113,12 +114,12 @@ fun ManageStorageScreen(
     }
 
     // --- Storage helpers (mirrors ViewModel logic) ---
-    // Only IMAGE, VIDEO, and AUDIO use quota. Text / Code / Link are always free.
+    // Only IMAGE, VIDEO, and AUDIO use quota. Text / Code / Link are always free. Unavailable items consume 0 bytes.
     fun isMediaType(type: SavedItemType) =
         type == SavedItemType.IMAGE || type == SavedItemType.VIDEO || type == SavedItemType.AUDIO
 
     fun mediaQuotaBytes(item: com.example.data.model.SavedItem): Long {
-        if (!isMediaType(item.type)) return 0L
+        if (!isMediaType(item.type) || item.isUnavailable) return 0L
         if (item.sizeBytes > 0L) return item.sizeBytes
         val localPath = (item.thumbnailPath ?: item.content).takeIf { it.startsWith("/") }
         if (localPath != null) {
@@ -481,11 +482,13 @@ fun ManageStorageScreen(
                                                 horizontalArrangement = Arrangement.SpaceBetween,
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                val syncedCount = items.count { it.isSynced }
-                                                val localCount = items.size - syncedCount
+                                                val syncedCount = items.count { it.isSynced && !it.isUnavailable }
+                                                val unavailableCount = items.count { it.isUnavailable }
+                                                val localCount = items.size - syncedCount - unavailableCount
                                                 val freeLabel = if (!isMediaType(type)) " • Free (no quota)" else ""
+                                                val unavailLabel = if (unavailableCount > 0) " • $unavailableCount unavailable" else ""
                                                 Text(
-                                                    text = "${items.size} items • $syncedCount synced, $localCount local$freeLabel",
+                                                    text = "${items.size} items • $syncedCount synced, $localCount local$unavailLabel$freeLabel",
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                     modifier = Modifier.weight(1f),
@@ -548,7 +551,8 @@ fun ManageStorageScreen(
                                                 ) {
                                                     items.forEachIndexed { itemIndex, item ->
                                                         val isSelected = selectedForBackupIds.contains(item.id)
-                                                        val isAlreadyBackedUp = item.isSynced
+                                                        val isAlreadyBackedUp = item.isSynced && !item.isUnavailable
+                                                        val isItemUnavailable = item.isUnavailable
                                                         val itemSize = mediaQuotaBytes(item)
 
                                                         Row(
@@ -561,8 +565,23 @@ fun ManageStorageScreen(
                                                                 .padding(horizontal = 16.dp, vertical = 10.dp),
                                                             verticalAlignment = Alignment.CenterVertically
                                                         ) {
-                                                            val bestImagePath = item.getBestImagePath()
-                                                            if (item.type == SavedItemType.LINK && bestImagePath != null) {
+                                                            val bestImagePath = if (isItemUnavailable) null else item.getBestImagePath()
+                                                            if (isItemUnavailable) {
+                                                                Box(
+                                                                    modifier = Modifier
+                                                                        .size(36.dp)
+                                                                        .clip(RoundedCornerShape(8.dp))
+                                                                        .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)),
+                                                                    contentAlignment = Alignment.Center
+                                                                ) {
+                                                                    Icon(
+                                                                        imageVector = Icons.Default.CloudOff,
+                                                                        contentDescription = "Unavailable",
+                                                                        tint = MaterialTheme.colorScheme.error,
+                                                                        modifier = Modifier.size(18.dp)
+                                                                    )
+                                                                }
+                                                            } else if (item.type == SavedItemType.LINK && bestImagePath != null) {
                                                                 AsyncImage(
                                                                     model = bestImagePath,
                                                                     contentDescription = null,
@@ -617,15 +636,48 @@ fun ManageStorageScreen(
                                                                 )
                                                                 Spacer(modifier = Modifier.height(2.dp))
                                                                 Text(
-                                                                    text = if (isMediaType(item.type)) formatStorageSize(itemSize) else "Free",
+                                                                    text = when {
+                                                                        isItemUnavailable -> "Removed from cloud (0 B)"
+                                                                        isMediaType(item.type) -> formatStorageSize(itemSize)
+                                                                        else -> "Free"
+                                                                    },
                                                                     style = MaterialTheme.typography.bodySmall,
-                                                                    color = if (isMediaType(item.type)) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.tertiary
+                                                                    color = when {
+                                                                        isItemUnavailable -> MaterialTheme.colorScheme.error
+                                                                        isMediaType(item.type) -> MaterialTheme.colorScheme.onSurfaceVariant
+                                                                        else -> MaterialTheme.colorScheme.tertiary
+                                                                    }
                                                                 )
                                                             }
 
                                                             Spacer(modifier = Modifier.width(8.dp))
 
-                                                            if (isAlreadyBackedUp) {
+                                                            if (isItemUnavailable) {
+                                                                Surface(
+                                                                    shape = RoundedCornerShape(4.dp),
+                                                                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f),
+                                                                    modifier = Modifier.padding(horizontal = 4.dp)
+                                                                ) {
+                                                                    Row(
+                                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                                        verticalAlignment = Alignment.CenterVertically,
+                                                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                                    ) {
+                                                                        Icon(
+                                                                            imageVector = Icons.Default.CloudOff,
+                                                                            contentDescription = "Unavailable",
+                                                                            tint = MaterialTheme.colorScheme.error,
+                                                                            modifier = Modifier.size(12.dp)
+                                                                        )
+                                                                        Text(
+                                                                            text = "Unavailable",
+                                                                            style = MaterialTheme.typography.labelSmall,
+                                                                            color = MaterialTheme.colorScheme.error,
+                                                                            fontWeight = FontWeight.Bold
+                                                                        )
+                                                                    }
+                                                                }
+                                                            } else if (isAlreadyBackedUp) {
                                                                 Icon(
                                                                     imageVector = Icons.Default.CloudQueue,
                                                                     contentDescription = "Backed up",

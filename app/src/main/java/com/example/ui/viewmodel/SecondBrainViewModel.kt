@@ -452,9 +452,9 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     private fun SavedItem.isMediaType() =
         type == SavedItemType.IMAGE || type == SavedItemType.VIDEO || type == SavedItemType.AUDIO
 
-    /** Best-effort size in bytes for a media item. Returns 0 for non-media (free) types. */
+    /** Best-effort size in bytes for a media item. Returns 0 for non-media (free) or unavailable items. */
     private fun SavedItem.mediaQuotaBytes(): Long {
-        if (!isMediaType()) return 0L
+        if (!isMediaType() || isUnavailable) return 0L
         // If we stored the size during upload/backup, use it directly
         if (sizeBytes > 0L) return sizeBytes
         // Otherwise try reading the local file (will be 0 on a new device after cloud restore)
@@ -467,7 +467,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     val cloudUsedStorageBytes: StateFlow<Long> = allItems.map { items: List<com.example.data.model.SavedItem> ->
-        items.filter { it.isSynced && it.isMediaType() }.sumOf { it.mediaQuotaBytes() }
+        items.filter { it.isSynced && !it.isUnavailable && it.isMediaType() }.sumOf { it.mediaQuotaBytes() }
     }.stateIn(viewModelScope, SharingStarted.Lazily, 0L)
 
     private val _selectedForBackupIds = MutableStateFlow<Set<String>>(emptySet())
