@@ -75,11 +75,6 @@ class RecentItemsWidgetReceiver : GlanceAppWidgetReceiver() {
         super.onEnabled(context)
         AnalyticsHelper.logWidgetAdded(context)
     }
-
-    override fun onUpdate(context: Context, appWidgetManager: android.appwidget.AppWidgetManager, appWidgetIds: IntArray) {
-        super.onUpdate(context, appWidgetManager, appWidgetIds)
-        WidgetUpdater.update(context)
-    }
 }
 
 class RecentItemsRefreshCallback : ActionCallback {
@@ -98,28 +93,31 @@ class RecentItemsWidget : GlanceAppWidget() {
     )
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val repository = SecondBrainRepository(context)
-        var isFromCache = false
-        var isTimeout = false
-
-        val items = try {
-            val fetched = kotlinx.coroutines.withTimeoutOrNull(3000) { repository.getAllItems() }
-            if (fetched != null) {
-                WidgetCache.saveItemsToCache(context, fetched)
-                fetched
-            } else {
-                isTimeout = true
-                isFromCache = true
-                WidgetCache.getCachedItems(context)
-            }
-        } catch (e: Exception) {
-            isFromCache = true
+        val cachedItems = try {
             WidgetCache.getCachedItems(context)
+        } catch (e: Throwable) {
+            emptyList()
         }
+
+        var freshItems: List<SavedItem>? = null
+        try {
+            val fetched = kotlinx.coroutines.withTimeoutOrNull(2000) {
+                SecondBrainRepository(context).getAllItems()
+            }
+            if (fetched != null) {
+                freshItems = fetched
+                WidgetCache.saveItemsToCache(context, fetched)
+            }
+        } catch (e: Throwable) {
+            // Fallback gracefully to cached items
+        }
+
+        val itemsToShow = freshItems ?: cachedItems
+        val isFromCache = freshItems == null && cachedItems.isNotEmpty()
 
         provideContent {
             GlanceTheme(colors = getWidgetColorProviders()) {
-                RecentItemsContent(items = items, isFromCache = isFromCache, isTimeout = isTimeout)
+                RecentItemsContent(items = itemsToShow, isFromCache = isFromCache, isTimeout = freshItems == null)
             }
         }
     }
