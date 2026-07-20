@@ -875,13 +875,18 @@ class BrainOcrOverlayService : Service() {
 
         cancelPanelAnimation()
 
+        val startY = params.y
+        val targetY = calculateYPosition(yPercent)
+        val startWinWidth = params.width
+        val startWinHeight = params.height
+
         params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-        params.y = calculateYPosition(yPercent)
-        params.width = endWidth
-        params.height = endHeight
-        windowManager.updateViewLayout(root, params) // Apply final window size immediately to avoid IPC layout thrashing
+        // Do NOT assign params.y/width/height to their end values yet — that happens
+        // per-frame in the animator below so the window moves in lockstep with the
+        // handle's visual morph instead of teleporting first.
+        windowManager.updateViewLayout(root, params) // Apply flags change only; position/size still animate below
 
         val startAlpha = panel.alpha
         val startScale = panel.scaleX
@@ -956,9 +961,36 @@ class BrainOcrOverlayService : Service() {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     handleView?.elevation = dpToPx(4) + (dpToPx(8) - dpToPx(4)) * fraction
                 }
+
+                // Animate window position AND size in lockstep with the shape morph,
+                // instead of snapping them upfront. This is what actually fixes the
+                // "handle flies off the edge" bug: previously params.y/width/height
+                // were set to their final values in a single frame before this
+                // animator started, so the window teleported to the new position the
+                // instant expand began, disconnected from the smooth visual morph.
+                params.y = (startY + (targetY - startY) * fraction).toInt()
+                params.width = (startWinWidth + (endWidth - startWinWidth) * fraction).toInt()
+                params.height = (startWinHeight + (endHeight - startWinHeight) * fraction).toInt()
+                try {
+                    windowManager.updateViewLayout(root, params)
+                } catch (e: Exception) {
+                    // View may have been detached mid-animation (e.g. service tearing down); ignore.
+                }
             }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
+                    // Ensure we land exactly on the target values (avoids any residual
+                    // rounding drift from the per-frame interpolation above).
+                    params.y = targetY
+                    params.width = endWidth
+                    params.height = endHeight
+                    if (containerView != null) {
+                        try {
+                            windowManager.updateViewLayout(root, params)
+                        } catch (e: Exception) {
+                            // Ignore if view was detached.
+                        }
+                    }
                     panelAnimator = null
                 }
 
@@ -994,6 +1026,12 @@ class BrainOcrOverlayService : Service() {
         val endHeight = dpToPx(height)
         val startAlpha = panel.alpha
         val startScale = panel.scaleX
+
+        // Same fix as expandPanel(): capture actual current y and the recalculated
+        // target y so position can be interpolated per-frame instead of being
+        // snapped afterward by updateViewLayoutAndStyle().
+        val startY = params.y
+        val targetY = calculateYPosition(yPercent)
 
         cancelPanelAnimation()
 
@@ -1066,6 +1104,21 @@ class BrainOcrOverlayService : Service() {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     handleView?.elevation = dpToPx(4) + (dpToPx(8) - dpToPx(4)) * fraction
                 }
+
+                // Animate the actual window position and size per-frame, in lockstep
+                // with the shape morph — mirrors the fix in expandPanel(). Note the
+                // animator runs 1f -> 0f here, so `fraction` already represents
+                // "how collapsed we are" (1 = fully expanded, 0 = fully collapsed),
+                // matching startWidth/startHeight (expanded) -> endWidth/endHeight
+                // (collapsed) and startY -> targetY directly.
+                params.y = (targetY + (startY - targetY) * fraction).toInt()
+                params.width = (endWidth + (startWidth - endWidth) * fraction).toInt()
+                params.height = (endHeight + (startHeight - endHeight) * fraction).toInt()
+                try {
+                    windowManager.updateViewLayout(root, params)
+                } catch (e: Exception) {
+                    // View may have been detached mid-animation; ignore.
+                }
             }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
@@ -1073,6 +1126,19 @@ class BrainOcrOverlayService : Service() {
                         (handleView as? ViewGroup)?.removeView(panel)
                         panelView = null
                         handleView?.visibility = View.VISIBLE
+                        // Land exactly on the final collapsed values to correct any
+                        // rounding drift from the per-frame interpolation above.
+                        params.y = targetY
+                        params.width = endWidth
+                        params.height = endHeight
+                        try {
+                            windowManager.updateViewLayout(root, params)
+                        } catch (e: Exception) {
+                            // Ignore if view was detached.
+                        }
+                        // Reapply handle background/shape/gravity for the fully
+                        // collapsed state (style only — position/size are already
+                        // correct above, so this no longer causes a second snap).
                         updateViewLayoutAndStyle()
                     }
                     panelAnimator = null
