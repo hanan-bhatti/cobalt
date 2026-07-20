@@ -39,6 +39,7 @@ class BrainOcrTileService : TileService() {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             tile.subtitle = "Smart OCR"
         }
+        tile.icon = android.graphics.drawable.Icon.createWithResource(applicationContext, R.drawable.ic_custom_ocr)
         tile.updateTile()
     }
 

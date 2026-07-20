@@ -114,7 +114,8 @@ class BrainOcrOverlayService : Service() {
         dynamicDarkColorRes: Int?
     ): Int {
         val isDark = isDarkTheme()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && dynamicLightColorRes != null && dynamicDarkColorRes != null) {
+        val useDynamic = prefs.getBoolean("dynamic_color", true)
+        if (useDynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && dynamicLightColorRes != null && dynamicDarkColorRes != null) {
             val resId = if (isDark) dynamicDarkColorRes else dynamicLightColorRes
             try {
                 return resources.getColor(resId, theme)
@@ -137,7 +138,8 @@ class BrainOcrOverlayService : Service() {
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "edge_panel_height" || key == "edge_panel_thickness" ||
             key == "edge_panel_opacity" || key == "edge_panel_side" ||
-            key == "edge_panel_y_percent" || key == "floating_ocr_enabled"
+            key == "edge_panel_y_percent" || key == "floating_ocr_enabled" ||
+            key == "dynamic_color" || key == "theme_mode"
         ) {
             Handler(Looper.getMainLooper()).post {
                 updateViewLayoutAndStyle()
@@ -201,9 +203,11 @@ class BrainOcrOverlayService : Service() {
             val w = root.width
             val h = root.height
             if (w > 0 && h > 0) {
-                // Gesture edge workaround: Only exclude the handle area itself, not the full touch window.
-                // This allows back gestures to function in the extra padding area.
-                val rect = android.graphics.Rect(0, 0, dpToPx(getEdgePanelThickness()), h)
+                // Exclude the entire touch window of the handle from system back gestures.
+                // This ensures swiping directly from the extreme screen edge over the handle height
+                // always triggers the panel expand gesture, while system back gestures remain
+                // fully functional above and below the handle.
+                val rect = android.graphics.Rect(0, 0, w, h)
                 root.systemGestureExclusionRects = listOf(rect)
             }
         }
@@ -234,7 +238,7 @@ class BrainOcrOverlayService : Service() {
         ).apply {
             gravity = Gravity.CENTER_VERTICAL or (if (side == "Right") Gravity.END else Gravity.START)
             x = 0
-            y = calculateYPosition(yPercent)
+            y = calculateYPosition(yPercent, height)
         }
 
         val rootContainer = FrameLayout(this).apply {
@@ -857,11 +861,13 @@ class BrainOcrOverlayService : Service() {
 
         panelView = panel
         val endWidth = dpToPx(260)
+        val endHeight = dpToPx(400)
+        val marginPx = dpToPx(10)
+
         panel.measure(
             View.MeasureSpec.makeMeasureSpec(endWidth, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+            View.MeasureSpec.makeMeasureSpec(endHeight, View.MeasureSpec.EXACTLY)
         )
-        val endHeight = panel.measuredHeight
         panel.layoutParams = FrameLayout.LayoutParams(endWidth, endHeight).apply {
             gravity = (if (side == "Right") Gravity.END else Gravity.START) or Gravity.CENTER_VERTICAL
         }
@@ -875,43 +881,45 @@ class BrainOcrOverlayService : Service() {
 
         cancelPanelAnimation()
 
-        val startY = params.y
-        val targetY = calculateYPosition(yPercent)
-        val startWinWidth = params.width
-        val startWinHeight = params.height
+        val targetY = calculateYPosition(yPercent, 400)
 
+        // Resize window upfront to fit 260dp card + 10dp side margin gap
+        params.width = endWidth + marginPx
+        params.height = endHeight
+        params.y = targetY
         params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-        // Do NOT assign params.y/width/height to their end values yet — that happens
-        // per-frame in the animator below so the window moves in lockstep with the
-        // handle's visual morph instead of teleporting first.
-        windowManager.updateViewLayout(root, params) // Apply flags change only; position/size still animate below
-
-        val startAlpha = panel.alpha
-        val startScale = panel.scaleX
+        try {
+            windowManager.updateViewLayout(root, params)
+        } catch (_: Exception) {}
 
         val animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            startDelay = 50
             duration = 380
-            interpolator = PathInterpolator(0.05f, 0.7f, 0.1f, 1f)
+            interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
             addUpdateListener { animation ->
                 val fraction = animation.animatedValue as Float
 
-                panel.alpha = startAlpha + (1f - startAlpha) * fraction
-                panel.scaleX = startScale + (1f - startScale) * fraction
-                panel.scaleY = startScale + (1f - startScale) * fraction
+                panel.alpha = fraction
+                panel.scaleX = 0.92f + 0.08f * fraction
+                panel.scaleY = 0.92f + 0.08f * fraction
 
                 // Handle morphing animation
                 val handleParams = handleView?.layoutParams as? FrameLayout.LayoutParams
                 if (handleParams != null) {
                     val startHandleWidth = dpToPx(thickness)
-                    val endHandleWidth = endWidth
-                    val startHandleHeight = dpToPx(getEdgePanelHeight())
-                    val endHandleHeight = endHeight
+                    val startHandleHeight = dpToPx(height)
 
-                    handleParams.width = (startHandleWidth + (endHandleWidth - startHandleWidth) * fraction).toInt()
-                    handleParams.height = (startHandleHeight + (endHandleHeight - startHandleHeight) * fraction).toInt()
+                    handleParams.width = (startHandleWidth + (endWidth - startHandleWidth) * fraction).toInt()
+                    handleParams.height = (startHandleHeight + (endHeight - startHandleHeight) * fraction).toInt()
+                    val m = (marginPx * fraction).toInt()
+                    if (side == "Right") {
+                        handleParams.marginEnd = m
+                        handleParams.marginStart = 0
+                    } else {
+                        handleParams.marginStart = m
+                        handleParams.marginEnd = 0
+                    }
                     handleView?.layoutParams = handleParams
                 }
 
@@ -950,7 +958,8 @@ class BrainOcrOverlayService : Service() {
 
                     val evaluator = ArgbEvaluator()
                     val startColor = getAccentColor()
-                    val currentColor = evaluator.evaluate(fraction, startColor, surfaceColor) as Int
+                    val colorProgress = animation.animatedFraction
+                    val currentColor = evaluator.evaluate(colorProgress, startColor, surfaceColor) as Int
                     handleBg.setColor(currentColor)
 
                     val strokeW = (dpToPx(1) * fraction).toInt()
@@ -958,39 +967,9 @@ class BrainOcrOverlayService : Service() {
                 }
 
                 handleView?.alpha = opacity + (1f - opacity) * fraction
-                // if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                //     handleView?.elevation = dpToPx(4) + (dpToPx(8) - dpToPx(4)) * fraction
-                // }
-
-                // Animate window position AND size in lockstep with the shape morph,
-                // instead of snapping them upfront. This is what actually fixes the
-                // "handle flies off the edge" bug: previously params.y/width/height
-                // were set to their final values in a single frame before this
-                // animator started, so the window teleported to the new position the
-                // instant expand began, disconnected from the smooth visual morph.
-                params.y = (startY + (targetY - startY) * fraction).toInt()
-                params.width = (startWinWidth + (endWidth - startWinWidth) * fraction).toInt()
-                params.height = (startWinHeight + (endHeight - startWinHeight) * fraction).toInt()
-                try {
-                    windowManager.updateViewLayout(root, params)
-                } catch (e: Exception) {
-                    // View may have been detached mid-animation (e.g. service tearing down); ignore.
-                }
             }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
-                    // Ensure we land exactly on the target values (avoids any residual
-                    // rounding drift from the per-frame interpolation above).
-                    params.y = targetY
-                    params.width = endWidth
-                    params.height = endHeight
-                    if (containerView != null) {
-                        try {
-                            windowManager.updateViewLayout(root, params)
-                        } catch (e: Exception) {
-                            // Ignore if view was detached.
-                        }
-                    }
                     panelAnimator = null
                 }
 
@@ -1011,50 +990,62 @@ class BrainOcrOverlayService : Service() {
         val yPercent = getEdgePanelYPercent()
         val thickness = getEdgePanelThickness()
         val height = getEdgePanelHeight()
-        val isDark = isDarkTheme()
-        val surfaceColor = if (isDark) Color.parseColor("#1A1A1E") else Color.parseColor("#FFFFFF")
-        val borderColor = if (isDark) Color.parseColor("#2E2E32") else Color.parseColor("#E8E8EC")
+        val surfaceColor = getThemedColor(
+            Background.toArgb(),
+            BackgroundDark.toArgb(),
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral1_10 else null,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral1_900 else null
+        )
+        val borderColor = getThemedColor(
+            OutlineVariant.toArgb(),
+            OutlineVariantDark.toArgb(),
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral2_200 else null,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) android.R.color.system_neutral2_800 else null
+        )
         val opacity = getEdgePanelOpacity()
 
         isExpanded = false
         noteInputRef = null
 
-        val params = root.layoutParams as WindowManager.LayoutParams
-        val startWidth = params.width
-        val startHeight = params.height
-        val endWidth = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
-        val endHeight = dpToPx(height)
-        val startAlpha = panel.alpha
-        val startScale = panel.scaleX
+        val endWidth = dpToPx(260)
+        val endHeight = dpToPx(400)
+        val marginPx = dpToPx(10)
 
-        // Same fix as expandPanel(): capture actual current y and the recalculated
-        // target y so position can be interpolated per-frame instead of being
-        // snapped afterward by updateViewLayoutAndStyle().
-        val startY = params.y
-        val targetY = calculateYPosition(yPercent)
+        // Release window focus immediately so system gestures work everywhere
+        val params = root.layoutParams as WindowManager.LayoutParams
+        params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+        try {
+            windowManager.updateViewLayout(root, params)
+        } catch (_: Exception) {}
 
         cancelPanelAnimation()
 
         val animator = ValueAnimator.ofFloat(1f, 0f).apply {
             duration = 380
-            interpolator = PathInterpolator(0.05f, 0.7f, 0.1f, 1f)
+            interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
             addUpdateListener { animation ->
                 val fraction = animation.animatedValue as Float
 
-                panel.alpha = startAlpha * fraction
-                panel.scaleX = 0.96f + (startScale - 0.96f) * fraction
-                panel.scaleY = 0.96f + (startScale - 0.96f) * fraction
+                panel.alpha = fraction
+                panel.scaleX = 0.92f + 0.08f * fraction
+                panel.scaleY = 0.92f + 0.08f * fraction
 
                 // Handle morphing animation
                 val handleParams = handleView?.layoutParams as? FrameLayout.LayoutParams
                 if (handleParams != null) {
                     val startHandleWidth = dpToPx(thickness)
-                    val endHandleWidth = startWidth
                     val startHandleHeight = dpToPx(height)
-                    val endHandleHeight = startHeight
 
-                    handleParams.width = (startHandleWidth + (endHandleWidth - startHandleWidth) * fraction).toInt()
-                    handleParams.height = (startHandleHeight + (endHandleHeight - startHandleHeight) * fraction).toInt()
+                    handleParams.width = (startHandleWidth + (endWidth - startHandleWidth) * fraction).toInt()
+                    handleParams.height = (startHandleHeight + (endHeight - startHandleHeight) * fraction).toInt()
+                    val m = (marginPx * fraction).toInt()
+                    if (side == "Right") {
+                        handleParams.marginEnd = m
+                        handleParams.marginStart = 0
+                    } else {
+                        handleParams.marginStart = m
+                        handleParams.marginEnd = 0
+                    }
                     handleView?.layoutParams = handleParams
                 }
 
@@ -1093,7 +1084,8 @@ class BrainOcrOverlayService : Service() {
 
                     val evaluator = ArgbEvaluator()
                     val startColor = getAccentColor()
-                    val currentColor = evaluator.evaluate(fraction, startColor, surfaceColor) as Int
+                    val colorProgress = 1f - animation.animatedFraction
+                    val currentColor = evaluator.evaluate(colorProgress, startColor, surfaceColor) as Int
                     handleBg.setColor(currentColor)
 
                     val strokeW = (dpToPx(1) * fraction).toInt()
@@ -1101,24 +1093,6 @@ class BrainOcrOverlayService : Service() {
                 }
 
                 handleView?.alpha = opacity + (1f - opacity) * fraction
-                // if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                //     handleView?.elevation = dpToPx(4) + (dpToPx(8) - dpToPx(4)) * fraction
-                // }
-
-                // Animate the actual window position and size per-frame, in lockstep
-                // with the shape morph — mirrors the fix in expandPanel(). Note the
-                // animator runs 1f -> 0f here, so `fraction` already represents
-                // "how collapsed we are" (1 = fully expanded, 0 = fully collapsed),
-                // matching startWidth/startHeight (expanded) -> endWidth/endHeight
-                // (collapsed) and startY -> targetY directly.
-                params.y = (targetY + (startY - targetY) * fraction).toInt()
-                params.width = (endWidth + (startWidth - endWidth) * fraction).toInt()
-                params.height = (endHeight + (startHeight - endHeight) * fraction).toInt()
-                try {
-                    windowManager.updateViewLayout(root, params)
-                } catch (e: Exception) {
-                    // View may have been detached mid-animation; ignore.
-                }
             }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
@@ -1126,20 +1100,40 @@ class BrainOcrOverlayService : Service() {
                         (handleView as? ViewGroup)?.removeView(panel)
                         panelView = null
                         handleView?.visibility = View.VISIBLE
-                        // Land exactly on the final collapsed values to correct any
-                        // rounding drift from the per-frame interpolation above.
-                        params.y = targetY
-                        params.width = endWidth
-                        params.height = endHeight
+                        handleView?.alpha = opacity
+
+                        // Reset handle params flush to edge for 22dp collapsed window
+                        val handleParams = handleView?.layoutParams as? FrameLayout.LayoutParams
+                        if (handleParams != null) {
+                            handleParams.width = dpToPx(thickness)
+                            handleParams.height = dpToPx(height)
+                            handleParams.marginStart = 0
+                            handleParams.marginEnd = 0
+                            handleView?.layoutParams = handleParams
+                        }
+
+                        val handleBg = handleView?.background as? GradientDrawable
+                        if (handleBg != null) {
+                            val radiusPx = dpToPx(8).toFloat()
+                            handleBg.cornerRadii = if (side == "Right") {
+                                floatArrayOf(radiusPx, radiusPx, 0f, 0f, 0f, 0f, radiusPx, radiusPx)
+                            } else {
+                                floatArrayOf(0f, 0f, radiusPx, radiusPx, radiusPx, radiusPx, 0f, 0f)
+                            }
+                            handleBg.setColor(getAccentColor())
+                            handleBg.setStroke(0, 0)
+                        }
+
+                        // Resize window back to collapsed bounds ONCE
+                        params.width = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
+                        params.height = dpToPx(height)
+                        params.y = calculateYPosition(yPercent, height)
                         try {
                             windowManager.updateViewLayout(root, params)
                         } catch (e: Exception) {
                             // Ignore if view was detached.
                         }
-                        // Reapply handle background/shape/gravity for the fully
-                        // collapsed state (style only — position/size are already
-                        // correct above, so this no longer causes a second snap).
-                        updateViewLayoutAndStyle()
+                        updateSystemGestureExclusions()
                     }
                     panelAnimator = null
                 }
@@ -1189,20 +1183,31 @@ class BrainOcrOverlayService : Service() {
             h.alpha = opacity
 
             h.layoutParams = FrameLayout.LayoutParams(
-                dpToPx(thickness),
-                dpToPx(height)
+                if (isExpanded) dpToPx(260) else dpToPx(thickness),
+                if (isExpanded) dpToPx(400) else dpToPx(height)
             ).apply {
                 gravity = (if (side == "Right") Gravity.END else Gravity.START) or Gravity.CENTER_VERTICAL
+                val m = if (isExpanded) dpToPx(10) else 0
+                if (side == "Right") {
+                    marginEnd = m
+                    marginStart = 0
+                } else {
+                    marginStart = m
+                    marginEnd = 0
+                }
             }
         }
 
         val params = root.layoutParams as WindowManager.LayoutParams
         params.gravity = Gravity.CENTER_VERTICAL or (if (side == "Right") Gravity.END else Gravity.START)
-        params.y = calculateYPosition(yPercent)
+        params.y = calculateYPosition(yPercent, if (isExpanded) 400 else height)
 
         if (!isExpanded) {
             params.width = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
             params.height = dpToPx(height)
+        } else {
+            params.width = dpToPx(260 + 10)
+            params.height = dpToPx(400)
         }
 
         windowManager.updateViewLayout(root, params)
@@ -1256,9 +1261,14 @@ class BrainOcrOverlayService : Service() {
         return (dp * resources.displayMetrics.density).toInt()
     }
 
-    private fun calculateYPosition(yPercent: Float): Int {
-        val usableHeight = resources.displayMetrics.heightPixels - dpToPx(160)
-        return ((usableHeight * yPercent) - (usableHeight / 2)).toInt()
+    private fun calculateYPosition(yPercent: Float, heightDp: Int = 100): Int {
+        val screenHeight = resources.displayMetrics.heightPixels
+        val targetCenterY = screenHeight * yPercent
+        val halfHeight = dpToPx(heightDp) / 2
+        val minCenterY = halfHeight.toFloat() + dpToPx(24)
+        val maxCenterY = screenHeight.toFloat() - halfHeight - dpToPx(24)
+        val clampedCenterY = targetCenterY.coerceIn(minCenterY, maxCenterY)
+        return (clampedCenterY - (screenHeight / 2f)).toInt()
     }
 
     private fun createDivider(): View {
@@ -1300,7 +1310,7 @@ class BrainOcrOverlayService : Service() {
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Second Brain Assistant Active")
-            .setContentText("Tap the side handle on your screen to open options.")
+            .setContentText("Tap the side handle on your screen or swipe from the edge to open options.")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentIntent(pendingIntent)
             .setOngoing(true)

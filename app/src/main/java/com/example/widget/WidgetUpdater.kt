@@ -28,7 +28,8 @@ object WidgetUpdater {
     fun update(context: Context) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                SecondBrainWidget().updateAll(context)
+                RecentItemsWidget().updateAll(context)
+                QuickCaptureWidget().updateAll(context)
             } catch (e: Exception) {
                 // Ignore
             }

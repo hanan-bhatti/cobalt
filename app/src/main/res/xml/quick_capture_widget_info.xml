@@ -4,8 +4,8 @@
     android:minHeight="110dp"
     android:targetCellWidth="2"
     android:targetCellHeight="2"
-    android:updatePeriodMillis="86400000"
-    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:resizeMode="none"
     android:widgetCategory="home_screen"
     android:initialLayout="@layout/widget_loading_layout">
 </appwidget-provider>

@@ -24,7 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class SettingsRepository(context: Context) {
+class SettingsRepository(private val context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("second_brain_settings", Context.MODE_PRIVATE)
 
     private val _geminiApiKey = MutableStateFlow(prefs.getString(KEY_GEMINI_API_KEY, "") ?: "")
@@ -97,6 +97,7 @@ class SettingsRepository(context: Context) {
     fun setThemeMode(mode: String) {
         prefs.edit().putString(KEY_THEME_MODE, mode).apply()
         _themeMode.value = mode
+        com.example.widget.WidgetUpdater.update(context)
     }
 
     fun setFloatingOcrEnabled(enabled: Boolean) {
@@ -162,6 +163,7 @@ class SettingsRepository(context: Context) {
     fun setDynamicColor(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_DYNAMIC_COLOR, enabled).apply()
         _dynamicColor.value = enabled
+        com.example.widget.WidgetUpdater.update(context)
     }
 
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->

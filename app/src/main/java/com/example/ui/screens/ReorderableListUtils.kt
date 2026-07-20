@@ -26,6 +26,8 @@ import androidx.compose.foundation.lazy.LazyListItemInfo
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridItemInfo
 import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridItemInfo
+import androidx.compose.foundation.lazy.staggeredgrid.LazyStaggeredGridState
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -181,6 +183,77 @@ fun Modifier.dragToReorderGrid(
                     val dragged = draggedItem ?: return@detectDragGesturesAfterLongPress
 
                     val targetItem = lazyGridState.layoutInfo.visibleItemsInfo.firstOrNull<LazyGridItemInfo> { item ->
+                        val rect = Rect(
+                            offset = Offset(item.offset.x.toFloat(), item.offset.y.toFloat()),
+                            size = Size(item.size.width.toFloat(), item.size.height.toFloat())
+                        )
+                        rect.contains(currentPos)
+                    }
+
+                    if (targetItem != null && targetItem.index != dragged.index) {
+                        onMove(dragged.index, targetItem.index)
+                        draggedItem = targetItem
+                    }
+                },
+                onDragEnd = {
+                    isDragActive = false
+                    initialDragPosition = null
+                    currentDragPosition = null
+                    draggedItem = null
+                    onDraggingItemChange(null)
+                    onDragEnd()
+                },
+                onDragCancel = {
+                    isDragActive = false
+                    initialDragPosition = null
+                    currentDragPosition = null
+                    draggedItem = null
+                    onDraggingItemChange(null)
+                    onDragEnd()
+                }
+            )
+        }
+    )
+}
+
+fun Modifier.dragToReorderStaggeredGrid(
+    lazyStaggeredGridState: LazyStaggeredGridState,
+    onMove: (Int, Int) -> Unit,
+    onDragEnd: () -> Unit,
+    draggingItemId: Int? = null,
+    onDraggingItemChange: (Int?) -> Unit = {}
+): Modifier {
+    return this.then(
+        Modifier.pointerInput(Unit) {
+            var initialDragPosition: Offset? = null
+            var currentDragPosition: Offset? = null
+            var draggedItem: LazyStaggeredGridItemInfo? = null
+            var isDragActive = false
+
+            detectDragGesturesAfterLongPress(
+                onDragStart = { offset ->
+                    lazyStaggeredGridState.layoutInfo.visibleItemsInfo.firstOrNull<LazyStaggeredGridItemInfo> { item ->
+                        val rect = Rect(
+                            offset = Offset(item.offset.x.toFloat(), item.offset.y.toFloat()),
+                            size = Size(item.size.width.toFloat(), item.size.height.toFloat())
+                        )
+                        rect.contains(offset)
+                    }?.also {
+                        draggedItem = it
+                        initialDragPosition = offset
+                        currentDragPosition = offset
+                        isDragActive = true
+                        onDraggingItemChange(it.index)
+                    }
+                },
+                onDrag = { change, dragAmount ->
+                    change.consume()
+                    currentDragPosition = (currentDragPosition ?: Offset.Zero).plus(dragAmount)
+
+                    val currentPos = currentDragPosition ?: return@detectDragGesturesAfterLongPress
+                    val dragged = draggedItem ?: return@detectDragGesturesAfterLongPress
+
+                    val targetItem = lazyStaggeredGridState.layoutInfo.visibleItemsInfo.firstOrNull<LazyStaggeredGridItemInfo> { item ->
                         val rect = Rect(
                             offset = Offset(item.offset.x.toFloat(), item.offset.y.toFloat()),
                             size = Size(item.size.width.toFloat(), item.size.height.toFloat())

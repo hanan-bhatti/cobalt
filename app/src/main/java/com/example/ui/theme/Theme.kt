@@ -29,7 +29,7 @@
  import androidx.compose.ui.platform.LocalContext
 
  // Color definitions
- private val DarkColorScheme = darkColorScheme(
+ val DarkColorScheme = darkColorScheme(
      primary = PrimaryDark,
      onPrimary = OnPrimaryDark,
      primaryContainer = PrimaryContainerDark,
@@ -53,7 +53,7 @@
  )
 
  // Light theme colors
- private val LightColorScheme = lightColorScheme(
+ val LightColorScheme = lightColorScheme(
      primary = Primary,
      onPrimary = OnPrimary,
      primaryContainer = PrimaryContainer,

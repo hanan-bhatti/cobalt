@@ -40,6 +40,13 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -123,6 +130,12 @@ fun HomeScreen(
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
     val selectedItemIds by viewModel.selectedItemIds.collectAsState()
     val hasDismissedOnboarding by viewModel.hasDismissedOnboarding.collectAsState()
+    val themeMode by viewModel.settingsRepository.themeMode.collectAsState()
+    val isDark = when (themeMode) {
+        "Dark" -> true
+        "Light" -> false
+        else -> isSystemInDarkTheme()
+    }
 
     var isDragging by remember { mutableStateOf(false) }
     var draggingItemId by remember { mutableStateOf<String?>(null) }
@@ -185,7 +198,7 @@ fun HomeScreen(
     var showBulkDeleteConfirm by remember { mutableStateOf(false) }
 
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-    val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    val gridState = rememberLazyStaggeredGridState()
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -575,11 +588,11 @@ fun HomeScreen(
                                 }
                             }
                         } else {
-                            LazyVerticalGrid(
-                                columns = GridCells.Fixed(2),
+                            LazyVerticalStaggeredGrid(
+                                columns = StaggeredGridCells.Fixed(2),
                                 contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 100.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalItemSpacing = 12.dp,
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 items(6) {
@@ -592,7 +605,10 @@ fun HomeScreen(
                     AnimatedContent(
                         targetState = isListView,
                         transitionSpec = {
-                            fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+                            (fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing)) +
+                                    scaleIn(initialScale = 0.92f, animationSpec = tween(350, easing = FastOutSlowInEasing)))
+                                .togetherWith(fadeOut(animationSpec = tween(280, easing = FastOutSlowInEasing)) +
+                                        scaleOut(targetScale = 1.05f, animationSpec = tween(280, easing = FastOutSlowInEasing)))
                         },
                         label = "content_view_toggle",
                         modifier = Modifier.weight(1f).fillMaxWidth()
@@ -651,6 +667,7 @@ fun HomeScreen(
                                 item = item,
                                 enable = !isSelectionMode,
                                 isScrolling = listState.isScrollInProgress,
+                                isDark = isDark,
                                 onDismissToDelete = {
                                     itemToDelete = item
                                 },
@@ -710,13 +727,13 @@ fun HomeScreen(
                         }
                     }
                 } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
+                    LazyVerticalStaggeredGrid(
+                        columns = StaggeredGridCells.Fixed(2),
                         state = gridState,
                         modifier = Modifier
                             .fillMaxSize()
-                            .dragToReorderGrid(
-                                lazyGridState = gridState,
+                            .dragToReorderStaggeredGrid(
+                                lazyStaggeredGridState = gridState,
                                 onMove = { from, to ->
                                     isDragging = true
                                     mutableItems = mutableItems.toMutableList().apply {
@@ -739,7 +756,7 @@ fun HomeScreen(
                             ),
                         contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 100.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalItemSpacing = 12.dp
                     ) {
                         itemsIndexed(mutableItems, key = { _, item -> item.id }) { index, item ->
                             val animDelay = (index % 10) * 50
@@ -1456,6 +1473,7 @@ fun SwipeToDismissWrapper(
     modifier: Modifier = Modifier,
     enable: Boolean = true,
     isScrolling: Boolean = false,
+    isDark: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
     val isArchived = remember(item.folders) { item.folders.contains("Archive") }
@@ -1483,7 +1501,6 @@ fun SwipeToDismissWrapper(
         // Background layer — only visible while dragging
         if (absProgress > 0.02f) {
             val isArchiveDirection = offsetX.value > 0
-            val isDark = isSystemInDarkTheme()
             val bgColor by animateColorAsState(
                 targetValue = if (isArchiveDirection) {
                     if (isPastThreshold) {
