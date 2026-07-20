@@ -1026,6 +1026,12 @@ class BrainOcrOverlayService : Service() {
         val startY = params.y
         val targetY = calculateYPosition(yPercent, height)
 
+        params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+        try {
+            windowManager.updateViewLayout(root, params)
+        } catch (_: Exception) {}
+
         cancelPanelAnimation()
 
         val animator = ValueAnimator.ofFloat(1f, 0f).apply {
@@ -1190,6 +1196,15 @@ class BrainOcrOverlayService : Service() {
         } else {
             params.width = dpToPx(260 + 10)
             params.height = dpToPx(400)
+        }
+
+        params.flags = if (isExpanded) {
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+        } else {
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         }
 
         windowManager.updateViewLayout(root, params)
