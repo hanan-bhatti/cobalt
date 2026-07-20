@@ -96,6 +96,19 @@ class BrainOcrOverlayService : Service() {
     private fun getEdgePanelHeight(): Int = prefs.getInt("edge_panel_height", 100)
     private fun getEdgePanelOpacity(): Float = prefs.getFloat("edge_panel_opacity", 0.7f)
 
+    private fun getAnimDuration(): Long = prefs.getInt("edge_panel_anim_duration", 350).toLong()
+    private fun getAnimStartScale(): Float = prefs.getFloat("edge_panel_anim_scale", 0.96f)
+    private fun getAnimInterpolator(): android.animation.TimeInterpolator {
+        return when (prefs.getString("edge_panel_anim_interpolator", "Emphasized") ?: "Emphasized") {
+            "Decelerate" -> android.view.animation.DecelerateInterpolator()
+            "Overshoot" -> android.view.animation.OvershootInterpolator(1.4f)
+            "Bounce" -> android.view.animation.BounceInterpolator()
+            "Linear" -> android.view.animation.LinearInterpolator()
+            "Accelerate" -> android.view.animation.AccelerateInterpolator()
+            else -> PathInterpolator(0.2f, 0f, 0f, 1f) // Emphasized
+        }
+    }
+
     private fun isDarkTheme(): Boolean {
         val theme = prefs.getString("theme_mode", "Light") ?: "Light"
         return when (theme) {
@@ -139,7 +152,9 @@ class BrainOcrOverlayService : Service() {
         if (key == "edge_panel_height" || key == "edge_panel_thickness" ||
             key == "edge_panel_opacity" || key == "edge_panel_side" ||
             key == "edge_panel_y_percent" || key == "floating_ocr_enabled" ||
-            key == "dynamic_color" || key == "theme_mode"
+            key == "dynamic_color" || key == "theme_mode" ||
+            key == "edge_panel_anim_preset" || key == "edge_panel_anim_duration" ||
+            key == "edge_panel_anim_interpolator" || key == "edge_panel_anim_scale"
         ) {
             Handler(Looper.getMainLooper()).post {
                 updateViewLayoutAndStyle()
@@ -182,6 +197,13 @@ class BrainOcrOverlayService : Service() {
             Toast.makeText(this, "Enable Draw Over Other Apps permission to use Floating OCR", Toast.LENGTH_LONG).show()
             stopSelf()
             return START_NOT_STICKY
+        }
+
+        if (intent?.action == "com.example.ACTION_TOGGLE_PANEL") {
+            mainHandler.post {
+                toggleExpand()
+            }
+            return START_STICKY
         }
 
         if (containerView == null) {
@@ -891,17 +913,17 @@ class BrainOcrOverlayService : Service() {
         } catch (_: Exception) {}
 
         val startAlpha = panel.alpha
-        val startScale = panel.scaleX
+        val startScaleFloat = getAnimStartScale()
 
         val animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 350
-            interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
+            duration = getAnimDuration()
+            interpolator = getAnimInterpolator()
             addUpdateListener { animation ->
                 val fraction = animation.animatedValue as Float
 
                 panel.alpha = startAlpha + (1f - startAlpha) * fraction
-                panel.scaleX = startScale + (1f - startScale) * fraction
-                panel.scaleY = startScale + (1f - startScale) * fraction
+                panel.scaleX = startScaleFloat + (1f - startScaleFloat) * fraction
+                panel.scaleY = startScaleFloat + (1f - startScaleFloat) * fraction
 
                 // Handle morphing animation
                 val handleParams = handleView?.layoutParams as? FrameLayout.LayoutParams
@@ -1034,15 +1056,17 @@ class BrainOcrOverlayService : Service() {
 
         cancelPanelAnimation()
 
+        val minScaleFloat = getAnimStartScale()
+
         val animator = ValueAnimator.ofFloat(1f, 0f).apply {
-            duration = 350
-            interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
+            duration = getAnimDuration()
+            interpolator = getAnimInterpolator()
             addUpdateListener { animation ->
                 val fraction = animation.animatedValue as Float
 
                 panel.alpha = startAlpha * fraction
-                panel.scaleX = 0.96f + (startScale - 0.96f) * fraction
-                panel.scaleY = 0.96f + (startScale - 0.96f) * fraction
+                panel.scaleX = minScaleFloat + (startScale - minScaleFloat) * fraction
+                panel.scaleY = minScaleFloat + (startScale - minScaleFloat) * fraction
 
                 // Handle morphing animation
                 val handleParams = handleView?.layoutParams as? FrameLayout.LayoutParams

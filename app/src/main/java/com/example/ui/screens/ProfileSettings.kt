@@ -73,10 +73,12 @@ fun SettingsScreen(
 ) {
     var showEdgePanelSettings by remember { mutableStateOf(false) }
     var showWidgetSettings by remember { mutableStateOf(false) }
+    var showEdgeAnimSettings by remember { mutableStateOf(false) }
 
-    BackHandler(enabled = showEdgePanelSettings || showWidgetSettings) {
+    BackHandler(enabled = showEdgePanelSettings || showWidgetSettings || showEdgeAnimSettings) {
         showEdgePanelSettings = false
         showWidgetSettings = false
+        showEdgeAnimSettings = false
     }
 
     if (showEdgePanelSettings) {
@@ -86,6 +88,11 @@ fun SettingsScreen(
 
     if (showWidgetSettings) {
         WidgetSettingsScreen(viewModel = viewModel, onNavigateBack = { showWidgetSettings = false })
+        return
+    }
+
+    if (showEdgeAnimSettings) {
+        EdgePanelAnimationSettingsScreen(viewModel = viewModel, onNavigateBack = { showEdgeAnimSettings = false })
         return
     }
 
@@ -456,6 +463,11 @@ fun SettingsScreen(
                                 modifier = Modifier.fillMaxWidth()
                             )
                             SettingsRow(title = "Customize Handle & Position", onClick = { showEdgePanelSettings = true })
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            SettingsRow(title = "Customize Expand & Collapse Animations", onClick = { showEdgeAnimSettings = true })
                         }
                     }
                 }
