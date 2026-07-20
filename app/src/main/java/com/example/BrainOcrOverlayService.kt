@@ -201,9 +201,9 @@ class BrainOcrOverlayService : Service() {
             val w = root.width
             val h = root.height
             if (w > 0 && h > 0) {
-                // OPPO / ColorOS edge workaround: Declare the exclusion rect starting from x=0
-                // at the screen edge covering the entire declared width and height of the container.
-                val rect = android.graphics.Rect(0, 0, w, h)
+                // Gesture edge workaround: Only exclude the handle area itself, not the full touch window.
+                // This allows back gestures to function in the extra padding area.
+                val rect = android.graphics.Rect(0, 0, dpToPx(getEdgePanelThickness()), h)
                 root.systemGestureExclusionRects = listOf(rect)
             }
         }
@@ -216,8 +216,8 @@ class BrainOcrOverlayService : Service() {
         val height = getEdgePanelHeight()
         val opacity = getEdgePanelOpacity()
 
-        // ColorOS edge quirk workaround: Make window 16dp wider than the handle thickness.
-        // This ensures the window extends slightly inset from the edge so ColorOS's native gesture
+        // Gesture edge quirk workaround: Make window 16dp wider than the handle thickness.
+        // This ensures the window extends slightly inset from the edge so android's native gesture
         // zone does not eat our swipe. The handle is aligned to the extreme edge, but swipe-detection
         // covers the whole window, capturing touches started slightly inset (e.g. ~8dp to 28dp).
         val params = WindowManager.LayoutParams(
@@ -255,7 +255,7 @@ class BrainOcrOverlayService : Service() {
             }
             background = bgShape
             alpha = opacity
-            elevation = dpToPx(4).toFloat()
+            // elevation = dpToPx(4).toFloat()
         }
 
         // Gesture state variables
@@ -958,9 +958,9 @@ class BrainOcrOverlayService : Service() {
                 }
 
                 handleView?.alpha = opacity + (1f - opacity) * fraction
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    handleView?.elevation = dpToPx(4) + (dpToPx(8) - dpToPx(4)) * fraction
-                }
+                // if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                //     handleView?.elevation = dpToPx(4) + (dpToPx(8) - dpToPx(4)) * fraction
+                // }
 
                 // Animate window position AND size in lockstep with the shape morph,
                 // instead of snapping them upfront. This is what actually fixes the
@@ -1101,9 +1101,9 @@ class BrainOcrOverlayService : Service() {
                 }
 
                 handleView?.alpha = opacity + (1f - opacity) * fraction
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    handleView?.elevation = dpToPx(4) + (dpToPx(8) - dpToPx(4)) * fraction
-                }
+                // if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                //     handleView?.elevation = dpToPx(4) + (dpToPx(8) - dpToPx(4)) * fraction
+                // }
 
                 // Animate the actual window position and size per-frame, in lockstep
                 // with the shape morph — mirrors the fix in expandPanel(). Note the
