@@ -892,9 +892,9 @@ class BrainOcrOverlayService : Service() {
         val startScale = panel.scaleX
 
         val animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 280
             startDelay = 50
-            interpolator = PathInterpolator(0.3f, 0f, 0.1f, 1f)
+            duration = 380
+            interpolator = PathInterpolator(0.05f, 0.7f, 0.1f, 1f)
             addUpdateListener { animation ->
                 val fraction = animation.animatedValue as Float
 
@@ -1036,8 +1036,8 @@ class BrainOcrOverlayService : Service() {
         cancelPanelAnimation()
 
         val animator = ValueAnimator.ofFloat(1f, 0f).apply {
-            duration = 280
-            interpolator = PathInterpolator(0.3f, 0f, 0.1f, 1f)
+            duration = 380
+            interpolator = PathInterpolator(0.05f, 0.7f, 0.1f, 1f)
             addUpdateListener { animation ->
                 val fraction = animation.animatedValue as Float
 
