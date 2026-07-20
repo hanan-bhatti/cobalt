@@ -21,8 +21,8 @@ android {
     applicationId = "com.hanan_bhatti.second_brain"
     minSdk = 24
     targetSdk = 37
-    versionCode = 1
-    versionName = "0.9.0-beta02"
+    versionCode = 3
+    versionName = "0.9.1-beta01"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
