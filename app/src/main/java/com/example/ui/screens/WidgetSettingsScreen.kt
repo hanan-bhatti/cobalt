@@ -146,7 +146,7 @@ fun WidgetSettingsScreen(
             )
 
             // SUB-PAGES / TABS
-            TabRow(
+            SecondaryTabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 contentColor = MaterialTheme.colorScheme.primary,
