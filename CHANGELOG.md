@@ -6,6 +6,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.1-beta01] - 2026-07-21
+
+### Added
+- **Widget Customizer Engine:** Production-grade `WidgetSettingsScreen` with live interactive previews, real user archive data rendering, category filtering, opacity controls, and active widget detection.
+
+### Changed
+- **Settings UI:** Redesigned the main Settings screen into clean, logical section groups with clear visual badges.
+- **Window Animation Geometry:** Corrected collapse corner radii math and tuned morph curve interpolation for the edge panel.
+- **Media Availability Logic:** Scoped `isUnavailable` state evaluation strictly to media items (images, videos, audio) to prevent text file false-positives.
+
+### Fixed
+- **Oppo/ColorOS Crash:** Replaced reflection-based Moshi JSON parsing in Glance widgets with `org.json` to resolve stuck loading states on custom Android ROMs.
+- **Back Gesture Navigation:** Restored the `FLAG_NOT_FOCUSABLE` window flag upon overlay collapse to fix Android system back-swipe gesture blocking.
+- **OCR Workflow:** Prevented tab switches during image saves, defaulted to styled Markdown previews, and enabled instant task exit.
+- **Metadata Extraction:** Resolved relative `og:image` preview URLs using absolute URL resolution (`absUrl`) and added graceful HTTP error handling.
+
+## [0.9.0-beta02] - 2026-07-20
+
+### Added
+- **Glance Widgets:** Dedicated `RecentItemsWidget` and `QuickCaptureWidget` components featuring dynamic color support.
+- **Background Data Downloader:** `DataDownloadService` and `DataDownloadManager` for asynchronous background media retrieval.
+- **Search Capabilities:** Fuzzy and synonym-aware search ranking utilizing Levenshtein distance scoring.
+- **Device Session Management:** Remote session tracking, device type detection, and profile session management.
+- **Code Syntax Highlighting:** Custom `CodeHighlighter` utility for real-time Markdown code block styling.
+- **Media Processing:** `Coil-Video` support for inline video thumbnail rendering and preservation of audio transcripts during cloud sync.
+- **UI Blur Effects:** Performance-gated dynamic background blur (`Haze`) with automatic RAM/OS capability detection.
+- **Theming:** Dynamic Material You color extraction on Android 12+ across UI screens and widgets.
+- **Telemetry:** Firebase Crashlytics, Firebase Performance monitoring, and privacy-first Analytics with query masking.
+- **Battery Management:** `BatteryOptimizationHelper` to request background execution permissions.
+- **Repository Standards:** AGPLv3 license headers, issue/PR templates, and updated contributor documentation.
+
+### Changed
+- **Quota Calculations:** Updated cloud quota logic to treat text/link items as free, counting only media files against the 512MB limit.
+- **Unavailable Media Handling:** Added an `isUnavailable` flag and custom visual placeholders for items deleted from cloud storage.
+- **Edge Panel Animation:** Implemented per-frame window layout bounds morphing during edge panel expansion and collapse to prevent visual snapping.
+
 ## [0.9.0-beta01] - 2026-07-18
 
 ### Added
@@ -38,3 +74,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Added cloud backup sync to secure database updates and media files on Firebase.
 - Added secure, passwordless authentication using Google Sign-In and email login links.
 - Added storage diagnostics to compress cached media and export or import database backups.
+-
