@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.1-beta02] - 2026-07-21
+
+### Added
+- **Edge Panel Animation Studio:** Subpage featuring 5 animation presets, custom duration/scale/easing controls, and live hot-reloading.
+- **Dynamic Category Tinting:** QuickCapture action button background tinting using category accent colors with `onUpdate` callbacks.
+- **Real-Time Widget Sync:** Updated `WidgetTheme` to mirror app theme and improved real-time `WidgetUpdater` recomposition.
+
+### Changed
+- **Synchronous Preference Persistence:** Updated widget preference saving to use `commit()` for immediate synchronous writes.
+- **Widget Settings Polish:** Removed redundant theme selector and added a "no-widget" fallback card in profile settings.
+- **Subpage UI Layouts:** Added bottom padding across subpages, horizontal scrolling for filter chips, and single-line action buttons.
+
+### Fixed
+- **Animation Color Flashing:** Clamped color, alpha, radii, and layout fraction bounds in `expandPanel` and `collapsePanel` to eliminate pink/green extrapolation artifacts.
+- **Composable Modernization:** Replaced deprecated `TabRow` with `SecondaryTabRow` in `WidgetSettingsScreen`.
+- **Widget Preview Clipping:** Made 2x4 widget previews scrollable within the customizer view.
+
 ## [0.9.1-beta01] - 2026-07-21
 
 ### Added
