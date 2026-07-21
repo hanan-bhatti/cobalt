@@ -74,6 +74,12 @@ class RecentItemsWidgetReceiver : GlanceAppWidgetReceiver() {
     override fun onEnabled(context: Context) {
         super.onEnabled(context)
         AnalyticsHelper.logWidgetAdded(context)
+        WidgetUpdater.update(context)
+    }
+
+    override fun onUpdate(context: Context, appWidgetManager: android.appwidget.AppWidgetManager, appWidgetIds: IntArray) {
+        super.onUpdate(context, appWidgetManager, appWidgetIds)
+        WidgetUpdater.update(context)
     }
 }
 

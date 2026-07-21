@@ -18,6 +18,8 @@
 
 package com.example.widget
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.Composable
@@ -31,6 +33,7 @@ import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
@@ -44,12 +47,26 @@ import com.example.MainActivity
 import com.example.R
 import com.example.utils.AnalyticsHelper
 
+import androidx.compose.ui.graphics.Color
+import androidx.glance.unit.ColorProvider
+import com.example.ui.theme.CategoryAudio
+import com.example.ui.theme.CategoryCode
+import com.example.ui.theme.CategoryImage
+import com.example.ui.theme.CategoryLink
+import com.example.ui.theme.CategoryText
+
 class QuickCaptureWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = QuickCaptureWidget()
 
     override fun onEnabled(context: Context) {
         super.onEnabled(context)
         AnalyticsHelper.logWidgetAdded(context)
+        WidgetUpdater.update(context)
+    }
+
+    override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
+        super.onUpdate(context, appWidgetManager, appWidgetIds)
+        WidgetUpdater.update(context)
     }
 }
 
@@ -57,27 +74,41 @@ class QuickCaptureWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Single
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val appWidgetId = try {
+            GlanceAppWidgetManager(context).getAppWidgetId(id)
+        } catch (e: Exception) {
+            -1
+        }
+
+        val prefs = context.getSharedPreferences("second_brain_settings", Context.MODE_PRIVATE)
+
+        val appWidgetManager = AppWidgetManager.getInstance(context)
+        val quickIds = appWidgetManager.getAppWidgetIds(ComponentName(context, QuickCaptureWidgetReceiver::class.java))
+        val slotIndex = quickIds.indexOf(appWidgetId).let { if (it >= 0) it else 0 }
+
+        val actionType = prefs.getString("quick_capture_action_$slotIndex", null)
+            ?: prefs.getString("quick_capture_action", "TEXT")
+            ?: "TEXT"
+
         provideContent {
             GlanceTheme(colors = getWidgetColorProviders()) {
-                QuickCaptureContent()
+                QuickCaptureContent(actionType = actionType)
             }
         }
     }
 }
 
 @Composable
-fun QuickCaptureContent() {
+fun QuickCaptureContent(actionType: String = "TEXT") {
     val context = LocalContext.current
-    val prefs = context.getSharedPreferences("second_brain_settings", Context.MODE_PRIVATE)
-    val actionType = prefs.getString("quick_capture_action", "TEXT") ?: "TEXT"
 
-    val (iconRes, intentAction, desc) = when (actionType) {
-        "LINK" -> Triple(R.drawable.ic_custom_link, "com.example.ACTION_QUICK_LINK", "Quick Add Link")
-        "IMAGE" -> Triple(R.drawable.ic_custom_image, "com.example.ACTION_QUICK_IMAGE", "Quick Capture Photo")
-        "AUDIO" -> Triple(R.drawable.ic_custom_voice, "com.example.ACTION_QUICK_AUDIO", "Quick Voice Memo")
-        "CODE" -> Triple(R.drawable.ic_custom_code, "com.example.ACTION_QUICK_CODE", "Quick Add Code")
-        "OCR" -> Triple(R.drawable.ic_custom_ocr, "com.example.ACTION_QUICK_OCR", "Quick Screen OCR")
-        else -> Triple(R.drawable.ic_custom_text, "com.example.ACTION_QUICK_TEXT", "Quick Add Note")
+    val (iconRes, intentAction, desc, colorProvider) = when (actionType) {
+        "LINK" -> Quadruple(R.drawable.ic_custom_link, "com.example.ACTION_QUICK_LINK", "Quick Add Link", ColorProvider(CategoryLink))
+        "IMAGE" -> Quadruple(R.drawable.ic_custom_image, "com.example.ACTION_QUICK_IMAGE", "Quick Capture Photo", ColorProvider(CategoryImage))
+        "AUDIO" -> Quadruple(R.drawable.ic_custom_voice, "com.example.ACTION_QUICK_AUDIO", "Quick Voice Memo", ColorProvider(CategoryAudio))
+        "CODE" -> Quadruple(R.drawable.ic_custom_code, "com.example.ACTION_QUICK_CODE", "Quick Add Code", ColorProvider(CategoryCode))
+        "OCR" -> Quadruple(R.drawable.ic_custom_ocr, "com.example.ACTION_QUICK_OCR", "Quick Screen OCR", GlanceTheme.colors.primary)
+        else -> Quadruple(R.drawable.ic_custom_text, "com.example.ACTION_QUICK_TEXT", "Quick Add Note", ColorProvider(CategoryText))
     }
 
     val targetIntent = Intent(context, MainActivity::class.java).apply {
@@ -90,7 +121,7 @@ fun QuickCaptureContent() {
             .fillMaxSize()
             .background(
                 imageProvider = ImageProvider(R.drawable.widget_bg_oval),
-                colorFilter = ColorFilter.tint(GlanceTheme.colors.primary)
+                colorFilter = ColorFilter.tint(colorProvider)
             )
             .clickable(actionStartActivity(targetIntent)),
         contentAlignment = Alignment.Center
@@ -99,7 +130,9 @@ fun QuickCaptureContent() {
             provider = ImageProvider(iconRes),
             contentDescription = desc,
             modifier = GlanceModifier.size(32.dp),
-            colorFilter = ColorFilter.tint(GlanceTheme.colors.onPrimary)
+            colorFilter = ColorFilter.tint(ColorProvider(Color.White))
         )
     }
 }
+
+private data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
