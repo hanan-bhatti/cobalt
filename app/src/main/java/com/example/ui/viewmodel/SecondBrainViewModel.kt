@@ -316,6 +316,17 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    private val _showMediaSearchBottomSheet = MutableStateFlow(false)
+    val showMediaSearchBottomSheet: StateFlow<Boolean> = _showMediaSearchBottomSheet.asStateFlow()
+
+    fun openMediaSearchSheet() {
+        _showMediaSearchBottomSheet.value = true
+    }
+
+    fun closeMediaSearchSheet() {
+        _showMediaSearchBottomSheet.value = false
+    }
+
     // ----------------------------------------------------
     // CAPTURE STATE
     // ----------------------------------------------------

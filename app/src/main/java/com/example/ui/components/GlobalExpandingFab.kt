@@ -112,6 +112,21 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel, hazeState: HazeState) {
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.padding(bottom = 8.dp)
                     ) {
+                        // Movie / Anime
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Movie / Anime", color = Color.White, fontWeight = FontWeight.Medium, modifier = Modifier.padding(end = 8.dp))
+                            SmallFloatingActionButton(
+                                onClick = {
+                                    isFabExpanded = false
+                                    viewModel.openMediaSearchSheet()
+                                },
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                contentColor = MaterialTheme.colorScheme.primary
+                            ) {
+                                Icon(painter = painterResource(id = R.drawable.ic_custom_movie), contentDescription = "Movie / Anime")
+                            }
+                        }
+
                         // Quick Note
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("Quick Note", color = Color.White, fontWeight = FontWeight.Medium, modifier = Modifier.padding(end = 8.dp))
