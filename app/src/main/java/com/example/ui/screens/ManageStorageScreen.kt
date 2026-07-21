@@ -398,7 +398,7 @@ fun ManageStorageScreen(
                             val baseColor = when (type) {
                                 SavedItemType.LINK -> CategoryLink
                                 SavedItemType.IMAGE -> CategoryImage
-                                SavedItemType.VIDEO -> CategoryVideo
+                                SavedItemType.VIDEO, SavedItemType.MEDIA -> CategoryVideo
                                 SavedItemType.TEXT -> CategoryText
                                 SavedItemType.CODE -> CategoryCode
                                 SavedItemType.AUDIO -> CategoryAudio
@@ -406,7 +406,7 @@ fun ManageStorageScreen(
                             val iconResId = when (type) {
                                 SavedItemType.LINK -> R.drawable.ic_custom_link
                                 SavedItemType.IMAGE -> R.drawable.ic_custom_image
-                                SavedItemType.VIDEO -> R.drawable.ic_custom_video
+                                SavedItemType.VIDEO, SavedItemType.MEDIA -> R.drawable.ic_custom_video
                                 SavedItemType.CODE -> R.drawable.ic_custom_code
                                 SavedItemType.TEXT -> R.drawable.ic_custom_text
                                 SavedItemType.AUDIO -> R.drawable.ic_custom_voice
@@ -594,7 +594,7 @@ fun ManageStorageScreen(
                                                                 val itemIconResId = when (item.type) {
                                                                     SavedItemType.LINK -> R.drawable.ic_custom_link
                                                                     SavedItemType.IMAGE -> R.drawable.ic_custom_image
-                                                                    SavedItemType.VIDEO -> R.drawable.ic_custom_video
+                                                                    SavedItemType.VIDEO, SavedItemType.MEDIA -> R.drawable.ic_custom_video
                                                                     SavedItemType.CODE -> R.drawable.ic_custom_code
                                                                     SavedItemType.TEXT -> R.drawable.ic_custom_text
                                                                     SavedItemType.AUDIO -> R.drawable.ic_custom_voice
@@ -602,7 +602,7 @@ fun ManageStorageScreen(
                                                                 val itemBaseColor = when (item.type) {
                                                                     SavedItemType.LINK -> CategoryLink
                                                                     SavedItemType.IMAGE -> CategoryImage
-                                                                    SavedItemType.VIDEO -> CategoryVideo
+                                                                    SavedItemType.VIDEO, SavedItemType.MEDIA -> CategoryVideo
                                                                     SavedItemType.TEXT -> CategoryText
                                                                     SavedItemType.CODE -> CategoryCode
                                                                     SavedItemType.AUDIO -> CategoryAudio
@@ -760,7 +760,7 @@ fun ManageStorageScreen(
                     val baseColor = when (item.type) {
                         SavedItemType.LINK -> CategoryLink
                         SavedItemType.IMAGE -> CategoryImage
-                        SavedItemType.VIDEO -> CategoryVideo
+                        SavedItemType.VIDEO, SavedItemType.MEDIA -> CategoryVideo
                         SavedItemType.TEXT -> CategoryText
                         SavedItemType.CODE -> CategoryCode
                         SavedItemType.AUDIO -> CategoryAudio
@@ -868,7 +868,7 @@ fun ManageStorageScreen(
         val baseColor = when (type) {
             SavedItemType.LINK -> CategoryLink
             SavedItemType.IMAGE -> CategoryImage
-            SavedItemType.VIDEO -> CategoryVideo
+            SavedItemType.VIDEO, SavedItemType.MEDIA -> CategoryVideo
             SavedItemType.TEXT -> CategoryText
             SavedItemType.CODE -> CategoryCode
             SavedItemType.AUDIO -> CategoryAudio

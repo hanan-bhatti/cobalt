@@ -325,7 +325,7 @@ fun FoldersScreen(
                             val iconResId = when (type) {
                                 SavedItemType.LINK -> R.drawable.ic_custom_link
                                 SavedItemType.IMAGE -> R.drawable.ic_custom_image
-                                SavedItemType.VIDEO -> R.drawable.ic_custom_video
+                                SavedItemType.VIDEO, SavedItemType.MEDIA -> R.drawable.ic_custom_video
                                 SavedItemType.CODE -> R.drawable.ic_custom_code
                                 SavedItemType.TEXT -> R.drawable.ic_custom_text
                                 SavedItemType.AUDIO -> R.drawable.ic_custom_voice
@@ -939,7 +939,7 @@ fun FolderContentsBrowser(
             val fabColor = when (targetType) {
                 SavedItemType.LINK -> CategoryLink
                 SavedItemType.IMAGE -> CategoryImage
-                SavedItemType.VIDEO -> CategoryVideo
+                SavedItemType.VIDEO, SavedItemType.MEDIA -> CategoryVideo
                 SavedItemType.TEXT -> CategoryText
                 SavedItemType.CODE -> CategoryCode
                 SavedItemType.AUDIO -> CategoryAudio
@@ -988,7 +988,7 @@ fun FolderContentsBrowser(
                 val iconRes = when (targetType) {
                     SavedItemType.LINK -> R.drawable.ic_custom_link
                     SavedItemType.IMAGE -> R.drawable.ic_custom_image
-                    SavedItemType.VIDEO -> R.drawable.ic_custom_video
+                    SavedItemType.VIDEO, SavedItemType.MEDIA -> R.drawable.ic_custom_video
                     SavedItemType.TEXT -> R.drawable.ic_custom_text
                     SavedItemType.CODE -> R.drawable.ic_custom_code
                     SavedItemType.AUDIO -> R.drawable.ic_custom_voice
@@ -1083,7 +1083,7 @@ fun FolderBrowseItemRow(
     val iconResId = when (item.type) {
         SavedItemType.LINK -> R.drawable.ic_custom_link
         SavedItemType.IMAGE -> R.drawable.ic_custom_image
-        SavedItemType.VIDEO -> R.drawable.ic_custom_video
+        SavedItemType.VIDEO, SavedItemType.MEDIA -> R.drawable.ic_custom_video
         SavedItemType.CODE -> R.drawable.ic_custom_code
         SavedItemType.TEXT -> R.drawable.ic_custom_text
         SavedItemType.AUDIO -> R.drawable.ic_custom_voice
@@ -1270,7 +1270,7 @@ fun FolderBrowseItemRow(
                             )
                         )
                     }
-                    SavedItemType.IMAGE, SavedItemType.VIDEO -> {
+                    SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.MEDIA -> {
                         DropdownMenuItem(
                             leadingIcon = {
                                 Icon(

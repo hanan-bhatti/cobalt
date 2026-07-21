@@ -97,7 +97,7 @@ fun ArchiveItemCard(
     // Dynamic coloring based on type
     val typeColor = when (item.type) {
         SavedItemType.LINK -> ArchiveLinkColor
-        SavedItemType.IMAGE, SavedItemType.VIDEO -> ArchiveImageVideoColor
+        SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.MEDIA -> ArchiveImageVideoColor
         SavedItemType.CODE -> ArchiveCodeColor
         SavedItemType.TEXT -> ArchiveTextColor
         SavedItemType.AUDIO -> ArchiveAudioColor
@@ -148,7 +148,7 @@ fun ArchiveItemCard(
                         val iconResId = when (item.type) {
                             SavedItemType.LINK -> R.drawable.ic_custom_link
                             SavedItemType.IMAGE -> R.drawable.ic_custom_image
-                            SavedItemType.VIDEO -> R.drawable.ic_custom_video
+                            SavedItemType.VIDEO, SavedItemType.MEDIA -> R.drawable.ic_custom_video
                             SavedItemType.CODE -> R.drawable.ic_custom_code
                             SavedItemType.TEXT -> R.drawable.ic_custom_text
                             SavedItemType.AUDIO -> R.drawable.ic_custom_voice
@@ -503,7 +503,7 @@ fun ArchiveItemRow(
 
     val typeColor = when (item.type) {
         SavedItemType.LINK -> ArchiveLinkColor
-        SavedItemType.IMAGE, SavedItemType.VIDEO -> ArchiveImageVideoColor
+        SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.MEDIA -> ArchiveImageVideoColor
         SavedItemType.CODE -> ArchiveCodeColor
         SavedItemType.TEXT -> ArchiveTextColor
         SavedItemType.AUDIO -> ArchiveAudioColor
@@ -609,7 +609,7 @@ fun ArchiveItemRow(
                         SavedItemType.LINK -> R.drawable.ic_custom_link
                         SavedItemType.TEXT -> R.drawable.ic_custom_text
                         SavedItemType.AUDIO -> R.drawable.ic_custom_voice
-                        SavedItemType.VIDEO -> R.drawable.ic_custom_video
+                        SavedItemType.VIDEO, SavedItemType.MEDIA -> R.drawable.ic_custom_video
                         SavedItemType.IMAGE -> R.drawable.ic_custom_image
                         SavedItemType.CODE -> R.drawable.ic_custom_code
                     }

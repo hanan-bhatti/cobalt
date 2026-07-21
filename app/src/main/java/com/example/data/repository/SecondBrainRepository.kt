@@ -199,6 +199,22 @@ class SecondBrainRepository(private val context: Context) {
         } catch (e: Exception) {
             emptyList()
         }
+        val genresList = try {
+            genresJson.removeSurrounding("[", "]")
+                .split(",")
+                .map { it.trim().removeSurrounding("\"") }
+                .filter { it.isNotEmpty() }
+        } catch (e: Exception) {
+            emptyList()
+        }
+        val watchProvidersList = try {
+            watchProvidersJson.removeSurrounding("[", "]")
+                .split(",")
+                .map { it.trim().removeSurrounding("\"") }
+                .filter { it.isNotEmpty() }
+        } catch (e: Exception) {
+            emptyList()
+        }
         val itemType = try { SavedItemType.valueOf(type) } catch (e: Exception) { SavedItemType.TEXT }
         val isMedia = itemType == SavedItemType.IMAGE || itemType == SavedItemType.VIDEO || itemType == SavedItemType.AUDIO
         return SavedItem(
@@ -218,12 +234,20 @@ class SecondBrainRepository(private val context: Context) {
             isBackedUp = isBackedUp,
             sizeBytes = sizeBytes,
             isPendingBackup = isPendingBackup,
-            isUnavailable = if (isMedia) isUnavailable else false
+            isUnavailable = if (isMedia) isUnavailable else false,
+            mediaType = mediaType,
+            watchStatus = watchStatus,
+            genres = genresList,
+            watchProviders = watchProvidersList,
+            trailerUrl = trailerUrl,
+            backdropUrl = backdropUrl
         )
     }
 
     private fun SavedItem.toEntity(): SavedItemEntity {
         val foldersJsonStr = "[" + folders.joinToString(",") { "\"$it\"" } + "]"
+        val genresJsonStr = "[" + genres.joinToString(",") { "\"$it\"" } + "]"
+        val watchProvidersJsonStr = "[" + watchProviders.joinToString(",") { "\"$it\"" } + "]"
         val isMedia = type == SavedItemType.IMAGE || type == SavedItemType.VIDEO || type == SavedItemType.AUDIO
         return SavedItemEntity(
             id = id,
@@ -242,7 +266,13 @@ class SecondBrainRepository(private val context: Context) {
             isBackedUp = isBackedUp,
             sizeBytes = sizeBytes,
             isPendingBackup = isPendingBackup,
-            isUnavailable = if (isMedia) isUnavailable else false
+            isUnavailable = if (isMedia) isUnavailable else false,
+            mediaType = mediaType,
+            watchStatus = watchStatus,
+            genresJson = genresJsonStr,
+            watchProvidersJson = watchProvidersJsonStr,
+            trailerUrl = trailerUrl,
+            backdropUrl = backdropUrl
         )
     }
 
@@ -386,7 +416,13 @@ class SecondBrainRepository(private val context: Context) {
                         "linkDescription" to finalItem.linkDescription,
                         "linkImage" to finalItem.linkImage,
                         "sizeBytes" to finalItem.sizeBytes,
-                        "isBackedUp" to finalItem.isBackedUp
+                        "isBackedUp" to finalItem.isBackedUp,
+                        "mediaType" to finalItem.mediaType,
+                        "watchStatus" to finalItem.watchStatus,
+                        "genres" to finalItem.genres,
+                        "watchProviders" to finalItem.watchProviders,
+                        "trailerUrl" to finalItem.trailerUrl,
+                        "backdropUrl" to finalItem.backdropUrl
                     )
                     firestore.collection("users").document(currentUser.uid)
                         .collection("items").document(finalItem.id)
@@ -475,7 +511,13 @@ class SecondBrainRepository(private val context: Context) {
                         "linkTitle" to finalItem.linkTitle,
                         "linkDescription" to finalItem.linkDescription,
                         "linkImage" to finalItem.linkImage,
-                        "sizeBytes" to finalItem.sizeBytes
+                        "sizeBytes" to finalItem.sizeBytes,
+                        "mediaType" to finalItem.mediaType,
+                        "watchStatus" to finalItem.watchStatus,
+                        "genres" to finalItem.genres,
+                        "watchProviders" to finalItem.watchProviders,
+                        "trailerUrl" to finalItem.trailerUrl,
+                        "backdropUrl" to finalItem.backdropUrl
                     )
                     firestore.collection("users").document(currentUser.uid)
                         .collection("items").document(finalItem.id)
@@ -697,7 +739,13 @@ class SecondBrainRepository(private val context: Context) {
                             "linkDescription" to finalItem.linkDescription,
                             "linkImage" to finalItem.linkImage,
                             "sizeBytes" to finalItem.sizeBytes,
-                            "isBackedUp" to finalItem.isBackedUp
+                            "isBackedUp" to finalItem.isBackedUp,
+                            "mediaType" to finalItem.mediaType,
+                            "watchStatus" to finalItem.watchStatus,
+                            "genres" to finalItem.genres,
+                            "watchProviders" to finalItem.watchProviders,
+                            "trailerUrl" to finalItem.trailerUrl,
+                            "backdropUrl" to finalItem.backdropUrl
                         )
                         firestore.collection("users").document(currentUser.uid)
                             .collection("items").document(finalItem.id)
@@ -904,7 +952,13 @@ class SecondBrainRepository(private val context: Context) {
                         "linkTitle" to finalItem.linkTitle,
                         "linkDescription" to finalItem.linkDescription,
                         "linkImage" to finalItem.linkImage,
-                        "sizeBytes" to finalItem.sizeBytes
+                        "sizeBytes" to finalItem.sizeBytes,
+                        "mediaType" to finalItem.mediaType,
+                        "watchStatus" to finalItem.watchStatus,
+                        "genres" to finalItem.genres,
+                        "watchProviders" to finalItem.watchProviders,
+                        "trailerUrl" to finalItem.trailerUrl,
+                        "backdropUrl" to finalItem.backdropUrl
                     )
                     userDocRef.collection("items").document(finalItem.id).set(itemMap).await()
                 }
@@ -953,8 +1007,18 @@ class SecondBrainRepository(private val context: Context) {
                 val linkDescription = doc.getString("linkDescription")
                 val linkImage = doc.getString("linkImage")
                 val sizeBytes = doc.getLong("sizeBytes") ?: 0L
+                val mediaType = doc.getString("mediaType")
+                val watchStatus = doc.getString("watchStatus")
+                @Suppress("UNCHECKED_CAST")
+                val genresList = doc.get("genres") as? List<String> ?: emptyList()
+                @Suppress("UNCHECKED_CAST")
+                val watchProvidersList = doc.get("watchProviders") as? List<String> ?: emptyList()
+                val trailerUrl = doc.getString("trailerUrl")
+                val backdropUrl = doc.getString("backdropUrl")
 
                 val foldersJsonStr = "[" + foldersList.joinToString(",") { "\"$it\"" } + "]"
+                val genresJsonStr = "[" + genresList.joinToString(",") { "\"$it\"" } + "]"
+                val watchProvidersJsonStr = "[" + watchProvidersList.joinToString(",") { "\"$it\"" } + "]"
 
                 val isBackedUp = doc.getBoolean("isBackedUp") ?: true
                 
@@ -1032,7 +1096,13 @@ class SecondBrainRepository(private val context: Context) {
                         sizeBytes = sizeBytes,
                         isPendingBackup = preservedPendingBackup,
                         isBackedUp = isBackedUp,
-                        isUnavailable = newIsUnavailable
+                        isUnavailable = newIsUnavailable,
+                        mediaType = mediaType,
+                        watchStatus = watchStatus,
+                        genresJson = genresJsonStr,
+                        watchProvidersJson = watchProvidersJsonStr,
+                        trailerUrl = trailerUrl,
+                        backdropUrl = backdropUrl
                     )
                 )
             }

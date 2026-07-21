@@ -24,7 +24,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "saved_items")
 data class SavedItemEntity(
     @PrimaryKey val id: String,
-    val type: String,          // "Link", "Image", "Video", "Code", "Text"
+    val type: String,          // "Link", "Image", "Video", "Code", "Text", "MEDIA"
     val title: String,
     val content: String,        // text, URL, or local URI
     val timestamp: Long,
@@ -39,5 +39,11 @@ data class SavedItemEntity(
     val isBackedUp: Boolean = false,
     val sizeBytes: Long = 0,
     val isPendingBackup: Boolean = false,
-    val isUnavailable: Boolean = false
+    val isUnavailable: Boolean = false,
+    val mediaType: String? = null,
+    val watchStatus: String? = null,
+    val genresJson: String = "[]",
+    val watchProvidersJson: String = "[]",
+    val trailerUrl: String? = null,
+    val backdropUrl: String? = null
 )

@@ -26,7 +26,8 @@ enum class SavedItemType(val displayName: String) {
     VIDEO("Videos"),
     CODE("Code"),
     TEXT("Text"),
-    AUDIO("Audio")
+    AUDIO("Audio"),
+    MEDIA("Movies & Anime")
 }
 
 data class SavedItem(
@@ -46,7 +47,13 @@ data class SavedItem(
     val isBackedUp: Boolean = false,
     val sizeBytes: Long = 0,
     val isPendingBackup: Boolean = false,
-    val isUnavailable: Boolean = false
+    val isUnavailable: Boolean = false,
+    val mediaType: String? = null,
+    val watchStatus: String? = null,
+    val genres: List<String> = emptyList(),
+    val watchProviders: List<String> = emptyList(),
+    val trailerUrl: String? = null,
+    val backdropUrl: String? = null
 )
 
 fun SavedItem.getBestImagePath(): String? {
