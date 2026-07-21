@@ -1019,7 +1019,12 @@ fun FolderContentsBrowser(
                 )
             }
         ) {
-            if (folderItems.isEmpty()) {
+            if (folderName == "Movies & Anime") {
+                MediaHubContent(
+                    viewModel = viewModel,
+                    onMediaClick = { item -> viewModel.showDetailItem(item) }
+                )
+            } else if (folderItems.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center

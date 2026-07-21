@@ -247,6 +247,7 @@ BackHandler(enabled = activeDetailItem != null) {
                                             onNavigateToSearch = { navController.navigate("search") },
                                             viewModel = viewModel,
                                             onNavigateToProfile = { navController.navigate("profile") },
+                                            onNavigateToMediaHub = { navController.navigate("media_hub") },
                                             sharedTransitionScope = this@SharedTransitionLayout,
                                             animatedVisibilityScope = this@composable
                                         )
@@ -388,6 +389,7 @@ BackHandler(enabled = activeDetailItem != null) {
                             val items = listOf(
                                 BottomBarItem("home", R.drawable.ic_custom_home, "Home"),
                                 BottomBarItem("search", R.drawable.ic_custom_search, "Search"),
+                                BottomBarItem("media_hub", R.drawable.ic_custom_movie, "Media"),
                                 BottomBarItem("folders", R.drawable.ic_custom_folder, "Folders"),
                                 BottomBarItem("profile", R.drawable.ic_custom_profile, "Profile")
                             )

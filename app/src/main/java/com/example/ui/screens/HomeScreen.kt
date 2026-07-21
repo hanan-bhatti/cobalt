@@ -111,6 +111,7 @@ fun HomeScreen(
     onNavigateToSearch: () -> Unit,
     viewModel: SecondBrainViewModel,
     onNavigateToProfile: () -> Unit,
+    onNavigateToMediaHub: () -> Unit = {},
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null
@@ -313,6 +314,16 @@ fun HomeScreen(
                         }
                     },
                     actions = {
+                        IconButton(
+                            onClick = onNavigateToMediaHub,
+                            modifier = Modifier.testTag("media_hub_button")
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_movie),
+                                contentDescription = "Movies & Anime Hub",
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                         IconButton(
                             onClick = { viewModel.settingsRepository.setIsListView(!isListView) },
                             modifier = Modifier.testTag("toggle_view_button")
