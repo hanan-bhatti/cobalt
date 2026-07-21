@@ -68,7 +68,13 @@ import com.example.ui.theme.CategoryCode
 import com.example.ui.theme.CategoryAudio
 import com.example.ui.theme.CloudStorageBlue
 import com.example.ui.theme.LocalStorageGreen
-
+import android.net.Uri
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -86,6 +92,7 @@ fun ProfileMainContent(
     val userPhotoUrl by viewModel.userPhotoUrl.collectAsState()
     val allItems by viewModel.allItems.collectAsState()
     val usedStorageBytes by viewModel.usedStorageBytes.collectAsState()
+    val tmdbApiKey by viewModel.tmdbApiKey.collectAsState()
 
     val totalItems = allItems.size
     val totalLinks = allItems.count { it.type == SavedItemType.LINK }
@@ -460,6 +467,123 @@ fun ProfileMainContent(
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
                 ClickableRow(title = "Devices", onClick = onNavigateToDevices)
+            }
+
+            // TMDB API KEY CARD
+            SectionContainer(title = "TMDB API KEY (MOVIES & TV)") {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_movie),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "TMDb API Key (Movies & TV)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Search Movies & TV Shows. Anime search works without a key.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    var tmdbKeyInput by remember(tmdbApiKey) { mutableStateOf(tmdbApiKey) }
+                    var keyVisibility by remember { mutableStateOf(false) }
+                    val focusManager = LocalFocusManager.current
+
+                    OutlinedTextField(
+                        value = tmdbKeyInput,
+                        onValueChange = { tmdbKeyInput = it },
+                        placeholder = { Text("Enter TMDb API Key") },
+                        singleLine = true,
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_lock),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        trailingIcon = {
+                            val iconResId = if (keyVisibility) R.drawable.ic_custom_eye else R.drawable.ic_custom_eye_off
+                            val description = if (keyVisibility) "Hide API Key" else "Show API Key"
+                            IconButton(onClick = { keyVisibility = !keyVisibility }) {
+                                Icon(
+                                    painter = painterResource(id = iconResId),
+                                    contentDescription = description,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        },
+                        visualTransformation = if (keyVisibility) VisualTransformation.None else PasswordVisualTransformation(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.1f)
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                viewModel.updateTmdbApiKey(tmdbKeyInput)
+                                focusManager.clearFocus()
+                            }
+                        )
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Get free API key on TMDb",
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .clickable {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.themoviedb.org/settings/api"))
+                                    context.startActivity(intent)
+                                }
+                                .padding(vertical = 4.dp)
+                        )
+
+                        Button(
+                            onClick = {
+                                viewModel.updateTmdbApiKey(tmdbKeyInput)
+                                focusManager.clearFocus()
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Text("Save TMDb Key", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             }
 
             // STORAGE SECTION

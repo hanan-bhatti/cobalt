@@ -120,6 +120,15 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         return apiKey.isNotEmpty() || com.example.BuildConfig.GEMINI_API_KEY.isNotEmpty()
     }
 
+    private val _tmdbApiKey = MutableStateFlow(repository.getTmdbApiKey())
+    val tmdbApiKey: StateFlow<String> = _tmdbApiKey.asStateFlow()
+
+    fun updateTmdbApiKey(key: String) {
+        repository.setTmdbApiKey(key.trim())
+        _tmdbApiKey.value = key.trim()
+        showToast("TMDb API Key saved successfully")
+    }
+
     // ----------------------------------------------------
     // STATE FLOWS
     // ----------------------------------------------------
