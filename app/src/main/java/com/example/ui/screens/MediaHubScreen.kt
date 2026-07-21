@@ -333,6 +333,11 @@ fun MediaItemCard(
         "anime" -> "Anime"
         else -> item.mediaType?.replaceFirstChar { it.uppercase() } ?: "Media"
     }
+    val badgeText = if (!item.releaseYear.isNullOrBlank()) {
+        "${item.releaseYear} • ${formattedType.uppercase()}"
+    } else {
+        formattedType
+    }
 
     Card(
         modifier = modifier
@@ -387,7 +392,7 @@ fun MediaItemCard(
                         .padding(6.dp)
                 ) {
                     Text(
-                        text = formattedType,
+                        text = badgeText,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,

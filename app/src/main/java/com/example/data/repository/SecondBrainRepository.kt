@@ -242,7 +242,8 @@ class SecondBrainRepository(private val context: Context) {
             genres = genresList,
             watchProviders = watchProvidersList,
             trailerUrl = trailerUrl,
-            backdropUrl = backdropUrl
+            backdropUrl = backdropUrl,
+            releaseYear = releaseYear
         )
     }
 
@@ -274,7 +275,8 @@ class SecondBrainRepository(private val context: Context) {
             genresJson = genresJsonStr,
             watchProvidersJson = watchProvidersJsonStr,
             trailerUrl = trailerUrl,
-            backdropUrl = backdropUrl
+            backdropUrl = backdropUrl,
+            releaseYear = releaseYear
         )
     }
 
@@ -509,7 +511,8 @@ class SecondBrainRepository(private val context: Context) {
                         "genres" to finalItem.genres,
                         "watchProviders" to finalItem.watchProviders,
                         "trailerUrl" to finalItem.trailerUrl,
-                        "backdropUrl" to finalItem.backdropUrl
+                        "backdropUrl" to finalItem.backdropUrl,
+                        "releaseYear" to finalItem.releaseYear
                     )
                     firestore.collection("users").document(currentUser.uid)
                         .collection("items").document(finalItem.id)
@@ -604,7 +607,8 @@ class SecondBrainRepository(private val context: Context) {
                         "genres" to finalItem.genres,
                         "watchProviders" to finalItem.watchProviders,
                         "trailerUrl" to finalItem.trailerUrl,
-                        "backdropUrl" to finalItem.backdropUrl
+                        "backdropUrl" to finalItem.backdropUrl,
+                        "releaseYear" to finalItem.releaseYear
                     )
                     firestore.collection("users").document(currentUser.uid)
                         .collection("items").document(finalItem.id)
@@ -832,7 +836,8 @@ class SecondBrainRepository(private val context: Context) {
                             "genres" to finalItem.genres,
                             "watchProviders" to finalItem.watchProviders,
                             "trailerUrl" to finalItem.trailerUrl,
-                            "backdropUrl" to finalItem.backdropUrl
+                            "backdropUrl" to finalItem.backdropUrl,
+                            "releaseYear" to finalItem.releaseYear
                         )
                         firestore.collection("users").document(currentUser.uid)
                             .collection("items").document(finalItem.id)
@@ -1045,7 +1050,8 @@ class SecondBrainRepository(private val context: Context) {
                         "genres" to finalItem.genres,
                         "watchProviders" to finalItem.watchProviders,
                         "trailerUrl" to finalItem.trailerUrl,
-                        "backdropUrl" to finalItem.backdropUrl
+                        "backdropUrl" to finalItem.backdropUrl,
+                        "releaseYear" to finalItem.releaseYear
                     )
                     userDocRef.collection("items").document(finalItem.id).set(itemMap).await()
                 }
@@ -1102,6 +1108,7 @@ class SecondBrainRepository(private val context: Context) {
                 val watchProvidersList = doc.get("watchProviders") as? List<String> ?: emptyList()
                 val trailerUrl = doc.getString("trailerUrl")
                 val backdropUrl = doc.getString("backdropUrl")
+                val releaseYear = doc.getString("releaseYear")
 
                 val foldersJsonStr = "[" + foldersList.joinToString(",") { "\"$it\"" } + "]"
                 val genresJsonStr = "[" + genresList.joinToString(",") { "\"$it\"" } + "]"
@@ -1189,7 +1196,8 @@ class SecondBrainRepository(private val context: Context) {
                         genresJson = genresJsonStr,
                         watchProvidersJson = watchProvidersJsonStr,
                         trailerUrl = trailerUrl,
-                        backdropUrl = backdropUrl
+                        backdropUrl = backdropUrl,
+                        releaseYear = releaseYear
                     )
                 )
             }

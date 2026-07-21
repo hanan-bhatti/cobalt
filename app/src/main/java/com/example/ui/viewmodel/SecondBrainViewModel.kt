@@ -369,7 +369,8 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 genres = item.genres,
                 watchProviders = item.watchProviders,
                 trailerUrl = item.trailerUrl,
-                folders = foldersToUse
+                folders = foldersToUse,
+                releaseYear = item.releaseYear
             )
             repository.saveItem(newItem)
             WidgetUpdater.update(context)
