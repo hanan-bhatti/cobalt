@@ -38,6 +38,7 @@ import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.tasks.await
 import java.io.InputStream
 import java.util.UUID
@@ -1390,18 +1391,49 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             viewModelScope.launch(Dispatchers.IO) {
                 try {
                     val newId = java.util.UUID.randomUUID().toString()
-                    val meta = repository.fetchLinkMetadata(reviewItem.url)
-                    val newItem = com.example.data.model.SavedItem(
+                    val foldersToUse = if (selectedFolders.isNotEmpty()) selectedFolders else listOf("AI Extracted")
+                    val initialTitle = if (reviewItem.description.isNotBlank()) reviewItem.description else reviewItem.url
+
+                    val initialItem = com.example.data.model.SavedItem(
                         id = newId,
                         type = com.example.data.model.SavedItemType.LINK,
-                        title = meta.title ?: "Extracted URL",
+                        title = initialTitle,
                         content = reviewItem.url,
-                        folders = if (selectedFolders.isNotEmpty()) selectedFolders else listOf("AI Extracted"),
-                        linkTitle = meta.title,
-                        linkDescription = reviewItem.description.ifBlank { meta.description },
-                        linkImage = meta.imageUrl
+                        folders = foldersToUse,
+                        linkDescription = reviewItem.description
                     )
-                    repository.saveItem(newItem)
+
+                    // 1. Save IMMEDIATELY to DB so it appears instantly
+                    val savedItem = repository.saveItem(initialItem, null)
+                    withContext(Dispatchers.Main) {
+                        com.example.widget.WidgetUpdater.update(context)
+                    }
+
+                    // 2. Fetch metadata in background and update DB
+                    try {
+                        val meta = repository.fetchLinkMetadata(reviewItem.url)
+                        if (!meta.title.isNullOrBlank() || !meta.description.isNullOrBlank() || !meta.imageUrl.isNullOrBlank()) {
+                            val updatedItem = savedItem.copy(
+                                title = meta.title ?: savedItem.title,
+                                linkTitle = meta.title,
+                                linkDescription = reviewItem.description.ifBlank { meta.description },
+                                linkImage = meta.imageUrl
+                            )
+                            repository.saveItem(updatedItem, null)
+                            withContext(Dispatchers.Main) {
+                                com.example.widget.WidgetUpdater.update(context)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("SecondBrainVM", "Background link metadata fetch failed: ${e.message}")
+                    }
+
+                    // Sync to Firestore in background
+                    try {
+                        repository.syncUnsyncedItems()
+                    } catch (e: Exception) {
+                        Log.e("SecondBrainVM", "Background sync failed: ${e.message}")
+                    }
                 } catch (e: Exception) {
                     Log.e("SecondBrainVM", "Failed to save confirmed extracted link: ${e.message}")
                 }
