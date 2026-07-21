@@ -209,6 +209,12 @@ fun EdgePanelAnimationSettingsScreen(
                     valueRange = 100f..800f,
                     steps = 13
                 )
+                Text(
+                    text = "Controls how fast the side handle expands into the full overlay panel.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 11.sp
+                )
             }
 
             // SCALE EFFECT SLIDER
@@ -229,6 +235,12 @@ fun EdgePanelAnimationSettingsScreen(
                     },
                     valueRange = 0.70f..1.0f,
                     steps = 5
+                )
+                Text(
+                    text = "Controls the starting zoom scale before expanding into full view.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 11.sp
                 )
             }
 
