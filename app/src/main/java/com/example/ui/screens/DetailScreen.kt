@@ -499,7 +499,7 @@ fun DetailScreen(
             // DESCRIPTION / LINK META
             val descriptionToShow = if (item.type == SavedItemType.LINK) {
                 item.linkDescription
-            } else if (item.type != SavedItemType.CODE && item.content.isNotBlank() && item.type != SavedItemType.IMAGE && item.type != SavedItemType.VIDEO) {
+            } else if (item.type != SavedItemType.CODE && item.content.isNotBlank() && item.type != SavedItemType.IMAGE && item.type != SavedItemType.VIDEO && item.type != SavedItemType.MEDIA) {
                 item.content
             } else null
 
@@ -660,6 +660,10 @@ fun DetailScreen(
                         )
                     }
                 }
+            }
+
+            if (item.type == SavedItemType.MEDIA) {
+                MediaDetailSection(item = item, viewModel = viewModel)
             }
 
 
