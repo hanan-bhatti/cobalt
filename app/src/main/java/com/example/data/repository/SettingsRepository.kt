@@ -131,38 +131,54 @@ class SettingsRepository(private val context: Context) {
     }
 
     fun setWidgetTheme(theme: String) {
-        prefs.edit().putString(KEY_WIDGET_THEME, theme).apply()
+        prefs.edit().putString(KEY_WIDGET_THEME, theme).commit()
         _widgetTheme.value = theme
         com.example.widget.WidgetUpdater.update(context)
     }
 
     fun setWidgetOpacity(opacity: Float) {
-        prefs.edit().putFloat(KEY_WIDGET_OPACITY, opacity).apply()
+        prefs.edit().putFloat(KEY_WIDGET_OPACITY, opacity).commit()
         _widgetOpacity.value = opacity
         com.example.widget.WidgetUpdater.update(context)
     }
 
     fun setWidgetShowHeader(show: Boolean) {
-        prefs.edit().putBoolean(KEY_WIDGET_SHOW_HEADER, show).apply()
+        prefs.edit().putBoolean(KEY_WIDGET_SHOW_HEADER, show).commit()
         _widgetShowHeader.value = show
         com.example.widget.WidgetUpdater.update(context)
     }
 
     fun setWidgetCategoryFilter(category: String) {
-        prefs.edit().putString(KEY_WIDGET_CATEGORY_FILTER, category).apply()
+        prefs.edit().putString(KEY_WIDGET_CATEGORY_FILTER, category).commit()
         _widgetCategoryFilter.value = category
         com.example.widget.WidgetUpdater.update(context)
     }
 
     fun setWidgetMaxItems(max: Int) {
-        prefs.edit().putInt(KEY_WIDGET_MAX_ITEMS, max).apply()
+        prefs.edit().putInt(KEY_WIDGET_MAX_ITEMS, max).commit()
         _widgetMaxItems.value = max
         com.example.widget.WidgetUpdater.update(context)
     }
 
+    fun getQuickCaptureActionForSlot(slotIndex: Int): String {
+        return prefs.getString("${KEY_QUICK_CAPTURE_ACTION}_$slotIndex", null)
+            ?: if (slotIndex == 0) _quickCaptureAction.value else when (slotIndex % 3) {
+                1 -> "LINK"
+                2 -> "AUDIO"
+                else -> "TEXT"
+            }
+    }
+
     fun setQuickCaptureAction(action: String) {
-        prefs.edit().putString(KEY_QUICK_CAPTURE_ACTION, action).apply()
-        _quickCaptureAction.value = action
+        setQuickCaptureActionForSlot(0, action)
+    }
+
+    fun setQuickCaptureActionForSlot(slotIndex: Int, action: String) {
+        prefs.edit().putString("${KEY_QUICK_CAPTURE_ACTION}_$slotIndex", action).commit()
+        if (slotIndex == 0) {
+            prefs.edit().putString(KEY_QUICK_CAPTURE_ACTION, action).commit()
+            _quickCaptureAction.value = action
+        }
         com.example.widget.WidgetUpdater.update(context)
     }
 
