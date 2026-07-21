@@ -603,10 +603,21 @@ class SecondBrainRepository(private val context: Context) {
         }
     }
 
-    // Auto-sync used for normal saves/edits and app-open/sign-in flows.
-    // For media items (IMAGE/VIDEO/AUDIO), only re-upload if isPendingBackup is
-    // true — i.e. the user actually selected this for cloud backup at some point
-    // and hasn't removed it since. This prevents pull-to-refresh / auto-sync from
+    private fun getFolderDocId(folderName: String): String {
+        return try {
+            java.net.URLEncoder.encode(folderName, "UTF-8")
+        } catch (e: Exception) {
+            folderName.replace("/", "_")
+        }
+    }
+
+    // ----------------------------------------------------
+    // BACKGROUND SYNC FOR OFFLINE-SAVED ITEMS & FOLDERS
+    // ----------------------------------------------------
+
+    // Attempts to upload any items/folders saved locally while offline or waiting for sync.
+    // Preserves explicit backup removal choices: media items marked with
+    // isPendingBackup = false (after a user un-backed them up) are skipped to avoid
     // silently re-uploading media the user just removed from backup (isSynced
     // alone can't distinguish "never backed up" from "explicitly removed").
     // Non-media items (TEXT/LINK/CODE) are free/unlimited and always auto-synced
@@ -624,83 +635,84 @@ class SecondBrainRepository(private val context: Context) {
                 false
             }
         }
-        if (unsynced.isEmpty()) return@withContext
 
-        Log.d("SecondBrainRepo", "Starting sync of ${unsynced.size} unsynced items.")
-        for (entity in unsynced) {
-            try {
-                var domainItem = entity.toDomain()
-                var finalItem = domainItem
+        if (unsynced.isNotEmpty()) {
+            Log.d("SecondBrainRepo", "Starting sync of ${unsynced.size} unsynced items.")
+            for (entity in unsynced) {
+                try {
+                    var domainItem = entity.toDomain()
+                    var finalItem = domainItem
 
-                val mediaUrl = if (domainItem.type == SavedItemType.AUDIO) domainItem.thumbnailPath ?: "" else domainItem.content
-                if ((domainItem.type == SavedItemType.IMAGE || domainItem.type == SavedItemType.VIDEO || domainItem.type == SavedItemType.AUDIO) &&
-                    !mediaUrl.startsWith("http://") && !mediaUrl.startsWith("https://")
-                ) {
-                    val localPath = when (domainItem.type) {
-                        SavedItemType.AUDIO -> domainItem.thumbnailPath ?: ""
-                        else -> domainItem.thumbnailPath ?: domainItem.content
+                    val mediaUrl = if (domainItem.type == SavedItemType.AUDIO) domainItem.thumbnailPath ?: "" else domainItem.content
+                    if ((domainItem.type == SavedItemType.IMAGE || domainItem.type == SavedItemType.VIDEO || domainItem.type == SavedItemType.AUDIO) &&
+                        !mediaUrl.startsWith("http://") && !mediaUrl.startsWith("https://")
+                    ) {
+                        val localPath = when (domainItem.type) {
+                            SavedItemType.AUDIO -> domainItem.thumbnailPath ?: ""
+                            else -> domainItem.thumbnailPath ?: domainItem.content
+                        }
+                        val bytes = readFileBytes(localPath)
+                        if (bytes != null && storage != null) {
+                            val fileExtension = when (domainItem.type) {
+                                SavedItemType.VIDEO -> "mp4"
+                                SavedItemType.AUDIO -> "m4a"
+                                else -> "jpg"
+                            }
+                            val storageRef = storage.reference.child("users/${currentUser.uid}/media/${domainItem.id}.$fileExtension")
+                            val uploadTask = storageRef.putBytes(bytes)
+                            val snapshot = uploadTask.await()
+                            val downloadUrl = (snapshot.metadata?.reference?.downloadUrl ?: throw Exception("No reference URL")).await()
+                            finalItem = if (domainItem.type == SavedItemType.AUDIO) {
+                                finalItem.copy(
+                                    thumbnailPath = downloadUrl.toString(),
+                                    sizeBytes = bytes.size.toLong(),
+                                    isBackedUp = true
+                                )
+                            } else {
+                                finalItem.copy(
+                                    content = downloadUrl.toString(),
+                                    thumbnailPath = downloadUrl.toString(),
+                                    sizeBytes = bytes.size.toLong(),
+                                    isBackedUp = true
+                                )
+                            }
+                            savedItemDao.insertItem(finalItem.toEntity())
+                        }
                     }
-                    val bytes = readFileBytes(localPath)
-                    if (bytes != null && storage != null) {
-                        val fileExtension = when (domainItem.type) {
-                            SavedItemType.VIDEO -> "mp4"
-                            SavedItemType.AUDIO -> "m4a"
-                            else -> "jpg"
-                        }
-                        val storageRef = storage.reference.child("users/${currentUser.uid}/media/${domainItem.id}.$fileExtension")
-                        val uploadTask = storageRef.putBytes(bytes)
-                        val snapshot = uploadTask.await()
-                        val downloadUrl = (snapshot.metadata?.reference?.downloadUrl ?: throw Exception("No reference URL")).await()
-                        finalItem = if (domainItem.type == SavedItemType.AUDIO) {
-                            finalItem.copy(
-                                thumbnailPath = downloadUrl.toString(),
-                                sizeBytes = bytes.size.toLong(),
-                                isBackedUp = true
-                            )
-                        } else {
-                            finalItem.copy(
-                                content = downloadUrl.toString(),
-                                thumbnailPath = downloadUrl.toString(),
-                                sizeBytes = bytes.size.toLong(),
-                                isBackedUp = true
-                            )
-                        }
+
+                    // Upload metadata to Firestore
+                    if (firestore != null) {
+                        val itemMap = mapOf(
+                            "id" to finalItem.id,
+                            "type" to finalItem.type.name,
+                            "title" to finalItem.title,
+                            "content" to finalItem.content,
+                            "timestamp" to finalItem.timestamp,
+                            "orderIndex" to finalItem.orderIndex,
+                            "folders" to finalItem.folders,
+                            "extractedText" to finalItem.extractedText,
+                            "thumbnailPath" to finalItem.thumbnailPath,
+                            "isSynced" to true,
+                            "linkTitle" to finalItem.linkTitle,
+                            "linkDescription" to finalItem.linkDescription,
+                            "linkImage" to finalItem.linkImage,
+                            "sizeBytes" to finalItem.sizeBytes,
+                            "isBackedUp" to finalItem.isBackedUp
+                        )
+                        firestore.collection("users").document(currentUser.uid)
+                            .collection("items").document(finalItem.id)
+                            .set(itemMap).await()
+
+                        // Update locally as synced. For media items this also implicitly
+                        // confirms isPendingBackup was already true (that's why it was
+                        // picked up above); leave the flag as-is for non-media items.
+                        finalItem = finalItem.copy(isSynced = true)
                         savedItemDao.insertItem(finalItem.toEntity())
+                        Log.d("SecondBrainRepo", "Successfully synced item: ${finalItem.id}")
                     }
+                } catch (e: Exception) {
+                    Log.e("SecondBrainRepo", "Failed to sync item ${entity.id}: ${e.message}")
                 }
-
-                // Upload metadata to Firestore
-                if (firestore != null) {
-                    val itemMap = mapOf(
-                        "id" to finalItem.id,
-                        "type" to finalItem.type.name,
-                        "title" to finalItem.title,
-                        "content" to finalItem.content,
-                        "timestamp" to finalItem.timestamp,
-                        "orderIndex" to finalItem.orderIndex,
-                        "folders" to finalItem.folders,
-                        "extractedText" to finalItem.extractedText,
-                        "thumbnailPath" to finalItem.thumbnailPath,
-                        "isSynced" to true,
-                        "linkTitle" to finalItem.linkTitle,
-                        "linkDescription" to finalItem.linkDescription,
-                        "linkImage" to finalItem.linkImage,
-                        "sizeBytes" to finalItem.sizeBytes,
-                        "isBackedUp" to finalItem.isBackedUp
-                    )
-                    firestore.collection("users").document(currentUser.uid)
-                        .collection("items").document(finalItem.id)
-                        .set(itemMap).await()
-
-                    // Update locally as synced. For media items this also implicitly
-                    // confirms isPendingBackup was already true (that's why it was
-                    // picked up above); leave the flag as-is for non-media items.
-                    finalItem = finalItem.copy(isSynced = true)
-                    savedItemDao.insertItem(finalItem.toEntity())
-                    Log.d("SecondBrainRepo", "Successfully synced item: ${finalItem.id}")
-                }
-            } catch (e: Exception) {
-                Log.e("SecondBrainRepo", "Failed to sync item ${entity.id}: ${e.message}")
             }
         }
 
@@ -717,7 +729,7 @@ class SecondBrainRepository(private val context: Context) {
                         "isSynced" to true
                     )
                     firestore.collection("users").document(currentUser.uid)
-                        .collection("folders").document(folder.name)
+                        .collection("folders").document(getFolderDocId(folder.name))
                         .set(folderMap).await()
 
                     customFolderDao.insertFolder(folder.copy(isSynced = true))
@@ -750,9 +762,9 @@ class SecondBrainRepository(private val context: Context) {
         if (currentUser != null && storage != null && mediaUrl.startsWith("https://firebasestorage")) {
             try {
                 val storageRef = storage.getReferenceFromUrl(mediaUrl)
-                storageRef.delete()
+                storageRef.delete().await()
             } catch (e: Exception) {
-                Log.e("SecondBrainRepo", "Failed to delete file from Storage: ${e.message}")
+                Log.e("SecondBrainRepo", "Failed to delete media from Storage: ${e.message}")
             }
         }
         com.example.widget.WidgetUpdater.update(context)
@@ -777,14 +789,14 @@ class SecondBrainRepository(private val context: Context) {
         if (currentUser != null && firestore != null) {
             try {
                 firestore.collection("users").document(currentUser.uid)
-                    .collection("folders").document(folderName)
+                    .collection("folders").document(getFolderDocId(folderName))
                     .set(mapOf(
                         "name" to folderName,
                         "colorHex" to colorHex,
                         "iconName" to iconName,
                         "isPinned" to isPinned,
                         "isSynced" to true
-                    ))
+                    )).await()
                 customFolderDao.insertFolder(newFolder.copy(isSynced = true))
             } catch (e: Exception) {
                 Log.e("SecondBrainRepo", "Failed to sync folder to Firestore: ${e.message}")
@@ -799,8 +811,8 @@ class SecondBrainRepository(private val context: Context) {
         if (currentUser != null && firestore != null) {
             try {
                 firestore.collection("users").document(currentUser.uid)
-                    .collection("folders").document(folderName)
-                    .delete()
+                    .collection("folders").document(getFolderDocId(folderName))
+                    .delete().await()
             } catch (e: Exception) {
                 Log.e("SecondBrainRepo", "Failed to delete folder from Firestore: ${e.message}")
             }
@@ -815,14 +827,14 @@ class SecondBrainRepository(private val context: Context) {
         if (currentUser != null && firestore != null) {
             try {
                 firestore.collection("users").document(currentUser.uid)
-                    .collection("folders").document(updatedFolder.name)
+                    .collection("folders").document(getFolderDocId(updatedFolder.name))
                     .set(mapOf(
                         "name" to updatedFolder.name,
                         "colorHex" to updatedFolder.colorHex,
                         "iconName" to updatedFolder.iconName,
                         "isPinned" to updatedFolder.isPinned,
                         "isSynced" to true
-                    ))
+                    )).await()
                 customFolderDao.insertFolder(updatedFolder.copy(isSynced = true))
             } catch (e: Exception) {
                 Log.e("SecondBrainRepo", "Failed to sync updated folder to Firestore: ${e.message}")
@@ -864,7 +876,7 @@ class SecondBrainRepository(private val context: Context) {
                 val userDocRef = firestore.collection("users").document(currentUser.uid)
 
                 // Add new folder in firestore
-                userDocRef.collection("folders").document(newName).set(mapOf(
+                userDocRef.collection("folders").document(getFolderDocId(newName)).set(mapOf(
                     "name" to newName,
                     "colorHex" to oldFolder.colorHex,
                     "iconName" to oldFolder.iconName,
@@ -872,7 +884,7 @@ class SecondBrainRepository(private val context: Context) {
                 )).await()
 
                 // Delete old folder in firestore
-                userDocRef.collection("folders").document(oldName).delete().await()
+                userDocRef.collection("folders").document(getFolderDocId(oldName)).delete().await()
 
                 // Update items online
                 allItemsList.filter { it.foldersJson.contains(oldName) }.forEach { entity ->
@@ -915,7 +927,8 @@ class SecondBrainRepository(private val context: Context) {
             val folderSnap = firestore.collection("users").document(currentUser.uid)
                 .collection("folders").get().await()
             folderSnap.documents.forEach { doc ->
-                val name = doc.id
+                val rawName = doc.getString("name") ?: doc.id
+                val name = try { java.net.URLDecoder.decode(rawName, "UTF-8") } catch (e: Exception) { rawName }
                 val colorHex = doc.getString("colorHex")
                 val iconName = doc.getString("iconName")
                 val isPinned = doc.getBoolean("isPinned") ?: false
