@@ -44,7 +44,7 @@ import com.example.ui.components.bounceClick
 import com.example.ui.viewmodel.SecondBrainViewModel
 
 enum class ProfileSubScreen {
-    MAIN, SETTINGS, DEVICES
+    MAIN, SETTINGS, DEVICES, MOVIE_API_KEY
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,6 +71,7 @@ fun ProfileScreen(
                 onNavigateToLegal = onNavigateToLegal,
                 onNavigateToSettings = { currentScreen = ProfileSubScreen.SETTINGS },
                 onNavigateToDevices = { currentScreen = ProfileSubScreen.DEVICES },
+                onNavigateToMovieApiKey = { currentScreen = ProfileSubScreen.MOVIE_API_KEY },
                 onNavigateToManageStorage = onNavigateToManageStorage
             )
         }
@@ -82,6 +83,12 @@ fun ProfileScreen(
         }
         ProfileSubScreen.DEVICES -> {
             DevicesScreen(
+                viewModel = viewModel,
+                onNavigateBack = { currentScreen = ProfileSubScreen.MAIN }
+            )
+        }
+        ProfileSubScreen.MOVIE_API_KEY -> {
+            MovieApiKeyScreen(
                 viewModel = viewModel,
                 onNavigateBack = { currentScreen = ProfileSubScreen.MAIN }
             )
