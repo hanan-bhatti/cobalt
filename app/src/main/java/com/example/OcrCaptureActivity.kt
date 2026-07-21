@@ -712,57 +712,62 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
 
                                     Spacer(modifier = Modifier.height(4.dp))
 
-                                    // Action buttons depending on selection state
-                                     val hasSelectedLinks = extractedLinks.any { it.isSelected && it.url.isNotBlank() }
-                                     val hasNoteText = activeItem?.extractedText != null && activeItem?.extractedText?.isNotBlank() == true
-
-                                     val buttonText = when {
-                                         hasSelectedLinks && hasNoteText -> "Save Links (${extractedLinks.count { it.isSelected }}) & Note to Brain"
-                                         hasSelectedLinks -> "Save Selected Links (${extractedLinks.count { it.isSelected }}) to Brain"
-                                         else -> "Save Formatted Note to Brain"
-                                     }
-
-                                     Button(
-                                         onClick = {
-                                             if (hasSelectedLinks) {
-                                                 viewModel.confirmAndSaveExtractedLinks(selectedFolders.toList())
-                                             }
-                                             if (hasNoteText) {
-                                                 viewModel.updateActiveCaptureItem { item ->
-                                                     item.copy(
-                                                         title = noteTitle.ifBlank { "Extracted Note" },
-                                                         content = item.extractedText ?: "",
-                                                         type = SavedItemType.TEXT,
-                                                         folders = selectedFolders.toList()
-                                                     )
-                                                 }
-                                                 viewModel.saveActiveItem()
-                                             }
-                                             Toast.makeText(context.applicationContext, "Saved to Second Brain!", Toast.LENGTH_SHORT).show()
-                                             finish()
-                                         },
-                                         shape = RoundedCornerShape(20.dp),
-                                         colors = ButtonDefaults.buttonColors(
-                                             containerColor = MaterialTheme.colorScheme.primary,
-                                             contentColor = MaterialTheme.colorScheme.onPrimary
-                                         ),
-                                         modifier = Modifier.fillMaxWidth().height(48.dp)
-                                     ) {
-                                         Icon(
-                                             painter = painterResource(
-                                                 id = if (hasSelectedLinks && hasNoteText) R.drawable.ic_custom_check
-                                                      else if (hasSelectedLinks) R.drawable.ic_custom_link
-                                                      else R.drawable.ic_custom_text
-                                             ),
-                                             contentDescription = null
-                                         )
-                                         Spacer(modifier = Modifier.width(8.dp))
-                                         Text(
-                                             text = buttonText,
-                                             fontWeight = FontWeight.Bold,
-                                             fontSize = 14.sp
-                                         )
-                                     }
+                                    // Action buttons depending on active tab selection
+                                    if (activeTab == "Links") {
+                                        val selectedCount = extractedLinks.count { it.isSelected && it.url.isNotBlank() }
+                                        Button(
+                                            onClick = {
+                                                viewModel.confirmAndSaveExtractedLinks(selectedFolders.toList())
+                                                Toast.makeText(context.applicationContext, "Saved selected links to Second Brain!", Toast.LENGTH_SHORT).show()
+                                                finish()
+                                            },
+                                            enabled = selectedCount > 0,
+                                            shape = RoundedCornerShape(20.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.primary,
+                                                contentColor = MaterialTheme.colorScheme.onPrimary
+                                            ),
+                                            modifier = Modifier.fillMaxWidth().height(48.dp)
+                                        ) {
+                                            Icon(painter = painterResource(id = R.drawable.ic_custom_link), contentDescription = null)
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = if (selectedCount > 0) "Save Selected Links ($selectedCount) to Brain" else "No Links Selected",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp
+                                            )
+                                        }
+                                    } else {
+                                        Button(
+                                            onClick = {
+                                                viewModel.updateActiveCaptureItem { item ->
+                                                    item.copy(
+                                                        title = noteTitle.ifBlank { "Extracted Note" },
+                                                        content = item.extractedText ?: "",
+                                                        type = SavedItemType.TEXT,
+                                                        folders = selectedFolders.toList()
+                                                    )
+                                                }
+                                                viewModel.saveActiveItem()
+                                                Toast.makeText(context.applicationContext, "Saved formatted note to Second Brain!", Toast.LENGTH_SHORT).show()
+                                                finish()
+                                            },
+                                            shape = RoundedCornerShape(20.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.primary,
+                                                contentColor = MaterialTheme.colorScheme.onPrimary
+                                            ),
+                                            modifier = Modifier.fillMaxWidth().height(48.dp)
+                                        ) {
+                                            Icon(painter = painterResource(id = R.drawable.ic_custom_text), contentDescription = null)
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = "Save Formatted Note to Brain",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
