@@ -307,14 +307,20 @@ BackHandler(enabled = activeDetailItem != null) {
                                             viewModel = viewModel
                                         )
                                     }
-                                    composable("about") {
-                                        com.example.ui.screens.LegalScreen(
-                                            title = "About",
-                                            markdownContent = com.example.ui.screens.LegalDocs.about,
-                                            onBack = { navController.popBackStack() }
-                                        )
-                                    }
-                                }
+                                     composable("about") {
+                                         com.example.ui.screens.LegalScreen(
+                                             title = "About",
+                                             markdownContent = com.example.ui.screens.LegalDocs.about,
+                                             onBack = { navController.popBackStack() }
+                                         )
+                                     }
+                                     composable("media_hub") {
+                                         com.example.ui.screens.MediaHubScreen(
+                                             viewModel = viewModel,
+                                             onMediaClick = { item -> viewModel.showDetailItem(item) }
+                                         )
+                                     }
+                                 }
 
                                  // Sliding overlay for the capture screen - mimics Apple's native share action sheet
                                  AnimatedVisibility(
@@ -377,7 +383,7 @@ BackHandler(enabled = activeDetailItem != null) {
                         }
 
                         // Floating CustomBottomBar Overlay
-                        val routesWithBottomBar = listOf("home", "search", "folders", "profile")
+                        val routesWithBottomBar = listOf("home", "search", "folders", "profile", "media_hub")
                         if (currentRoute in routesWithBottomBar && activeCaptureItem == null && activeDetailItem == null) {
                             val items = listOf(
                                 BottomBarItem("home", R.drawable.ic_custom_home, "Home"),
@@ -407,7 +413,7 @@ BackHandler(enabled = activeDetailItem != null) {
                                 )
                             }
 
-                            val routesWithExpandingFab = listOf("home", "search", "profile")
+                            val routesWithExpandingFab = listOf("home", "search", "profile", "media_hub")
                             if (currentRoute in routesWithExpandingFab) {
                                 com.example.ui.components.GlobalExpandingFab(viewModel = viewModel, hazeState = hazeState)
                             }

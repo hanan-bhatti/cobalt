@@ -420,6 +420,7 @@ fun HomeScreen(
                         "Videos" -> painterResource(id = R.drawable.ic_custom_video)
                         "Code" -> painterResource(id = R.drawable.ic_custom_code)
                         "Text" -> painterResource(id = R.drawable.ic_custom_text)
+                        "Movies & Anime" -> painterResource(id = R.drawable.ic_custom_movie)
                         else -> painterResource(id = R.drawable.ic_custom_folder)
                     }
                     FolderChipItem(
@@ -483,7 +484,12 @@ fun HomeScreen(
             }
 
             // Items Grid list
-            if (items.isEmpty()) {
+            if (selectedFolder == "Movies & Anime") {
+                MediaHubContent(
+                    viewModel = viewModel,
+                    onMediaClick = { item -> viewModel.showDetailItem(item) }
+                )
+            } else if (items.isEmpty()) {
                 if (searchQuery.isNotEmpty()) {
                     Box(
                         modifier = Modifier
