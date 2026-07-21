@@ -708,6 +708,7 @@ class BrainOcrOverlayService : Service() {
                         repository.saveItem(newItem)
                         withContext(Dispatchers.Main) {
                             noteInput.setText("")
+                            com.example.widget.WidgetUpdater.update(applicationContext)
                             Toast.makeText(applicationContext, "✓ Saved to Second Brain", Toast.LENGTH_SHORT).show()
                         }
                     }
