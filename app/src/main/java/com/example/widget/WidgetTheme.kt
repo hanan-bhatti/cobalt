@@ -35,29 +35,24 @@ fun getWidgetColorProviders(): ColorProviders {
     val context = LocalContext.current
     val prefs = context.getSharedPreferences("second_brain_settings", Context.MODE_PRIVATE)
 
-    val themeMode = prefs.getString("theme_mode", "System Default") ?: "System Default"
+    val themeMode = prefs.getString("theme_mode", "Light") ?: "Light"
     val useDynamic = prefs.getBoolean("dynamic_color", true)
 
     val isSystemDark = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-    val isDark = when (themeMode) {
-        "Dark" -> true
-        "Light" -> false
+    val isDark = when {
+        themeMode.equals("Dark", ignoreCase = true) -> true
+        themeMode.equals("Light", ignoreCase = true) -> false
         else -> isSystemDark
     }
 
-    return if (useDynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        val lightScheme = dynamicLightColorScheme(context)
-        val darkScheme = dynamicDarkColorScheme(context)
-        when (themeMode) {
-            "Light" -> ColorProviders(light = lightScheme, dark = lightScheme)
-            "Dark" -> ColorProviders(light = darkScheme, dark = darkScheme)
-            else -> ColorProviders(light = lightScheme, dark = darkScheme)
-        }
+    val colorScheme = if (useDynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
     } else {
-        when (themeMode) {
-            "Light" -> ColorProviders(light = LightColorScheme, dark = LightColorScheme)
-            "Dark" -> ColorProviders(light = DarkColorScheme, dark = DarkColorScheme)
-            else -> ColorProviders(light = LightColorScheme, dark = DarkColorScheme)
-        }
+        if (isDark) DarkColorScheme else LightColorScheme
     }
+
+    return ColorProviders(
+        light = colorScheme,
+        dark = colorScheme
+    )
 }
