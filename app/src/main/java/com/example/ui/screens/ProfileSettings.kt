@@ -19,9 +19,16 @@
 
 package com.example.ui.screens
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
+import androidx.compose.ui.text.style.TextOverflow
+import com.example.widget.QuickCaptureWidgetReceiver
+import com.example.widget.RecentItemsWidgetReceiver
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -60,9 +67,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.ui.text.style.TextOverflow
 import com.example.utils.DevicePerformance
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -473,26 +477,126 @@ fun SettingsScreen(
                 }
 
                 // GROUP 4: HOME SCREEN WIDGETS
+                val appWidgetManager = remember { AppWidgetManager.getInstance(context) }
+                val recentWidgetIds = remember {
+                    appWidgetManager.getAppWidgetIds(ComponentName(context, RecentItemsWidgetReceiver::class.java))
+                }
+                val quickWidgetIds = remember {
+                    appWidgetManager.getAppWidgetIds(ComponentName(context, QuickCaptureWidgetReceiver::class.java))
+                }
+                val totalActiveWidgets = recentWidgetIds.size + quickWidgetIds.size
+
                 SettingsSection(
                     title = "Home Screen Widgets",
-                    subtext = "Customize action button, category filters, theme, and transparency of your home screen widgets.",
+                    subtext = if (totalActiveWidgets > 0) "Customize action button, category filters, theme, and transparency of your home screen widgets."
+                              else "No widgets added on home screen. Pin widgets below to access capture actions and recent notes.",
                     iconRes = R.drawable.ic_custom_grid
                 ) {
-                    SettingsRow(
-                        title = "Widget Customization & Actions",
-                        onClick = { showWidgetSettings = true }
-                    )
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    SettingsRow(
-                        title = "Force Refresh All Widgets",
-                        onClick = {
-                            com.example.widget.WidgetUpdater.update(context)
-                            android.widget.Toast.makeText(context, "Force refreshed all widgets!", android.widget.Toast.LENGTH_SHORT).show()
+                    if (totalActiveWidgets == 0) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), androidx.compose.foundation.shape.CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_grid),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "No Home Widgets Added",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "Pin widgets to your home screen to access capture actions and recent notes instantly.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            if (appWidgetManager.isRequestPinAppWidgetSupported) {
+                                                val component = ComponentName(context, QuickCaptureWidgetReceiver::class.java)
+                                                appWidgetManager.requestPinAppWidget(component, null, null)
+                                            } else {
+                                                Toast.makeText(context, "Long press home screen to add Second Brain widget", Toast.LENGTH_LONG).show()
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(10.dp),
+                                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(
+                                            text = "Add Quick Action",
+                                            fontSize = 11.sp,
+                                            maxLines = 1,
+                                            softWrap = false,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    Button(
+                                        onClick = {
+                                            if (appWidgetManager.isRequestPinAppWidgetSupported) {
+                                                val component = ComponentName(context, RecentItemsWidgetReceiver::class.java)
+                                                appWidgetManager.requestPinAppWidget(component, null, null)
+                                            } else {
+                                                Toast.makeText(context, "Long press home screen to add Second Brain widget", Toast.LENGTH_LONG).show()
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(10.dp),
+                                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(
+                                            text = "Add Recent Items",
+                                            fontSize = 11.sp,
+                                            maxLines = 1,
+                                            softWrap = false,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
                         }
-                    )
+                    } else {
+                        SettingsRow(
+                            title = "Widget Customization & Actions",
+                            onClick = { showWidgetSettings = true }
+                        )
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        SettingsRow(
+                            title = "Force Refresh All Widgets",
+                            onClick = {
+                                com.example.widget.WidgetUpdater.update(context)
+                                Toast.makeText(context, "Force refreshed all widgets!", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    }
                 }
 
                 // GROUP 4: SYSTEM & PERFORMANCE
