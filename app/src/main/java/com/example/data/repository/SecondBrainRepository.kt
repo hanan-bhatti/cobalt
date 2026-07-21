@@ -390,6 +390,106 @@ class SecondBrainRepository(private val context: Context) {
         results
     }
 
+    suspend fun enrichMediaItemDetails(item: SavedItem): SavedItem = withContext(Dispatchers.IO) {
+        if (item.type != SavedItemType.MEDIA) return@withContext item
+
+        var genres = item.genres
+        var watchProviders = item.watchProviders
+        var trailerUrl = item.trailerUrl
+        var backdropUrl = item.backdropUrl
+
+        var updated = false
+
+        if (item.id.startsWith("tmdb_") || item.mediaType?.lowercase() == "movie" || item.mediaType?.lowercase() == "tv") {
+            val tmdbId = item.id.substringAfterLast("_").toIntOrNull()
+            val apiKey = getTmdbApiKey()
+
+            if (tmdbId != null && apiKey.isNotBlank()) {
+                try {
+                    val isTv = item.mediaType?.lowercase() == "tv" || item.id.startsWith("tmdb_tv_")
+                    val details = if (isTv) {
+                        MediaApiClient.tmdbApiService.getTvDetails(tmdbId, apiKey)
+                    } else {
+                        MediaApiClient.tmdbApiService.getMovieDetails(tmdbId, apiKey)
+                    }
+
+                    if (genres.isEmpty()) {
+                        val fetchedGenres = details.genres?.mapNotNull { it.name } ?: emptyList()
+                        if (fetchedGenres.isNotEmpty()) {
+                            genres = fetchedGenres
+                            updated = true
+                        }
+                    }
+
+                    if (backdropUrl.isNullOrBlank()) {
+                        val fetchedBackdrop = details.backdropPath?.let { "https://image.tmdb.org/t/p/w780$it" }
+                        if (!fetchedBackdrop.isNullOrBlank()) {
+                            backdropUrl = fetchedBackdrop
+                            updated = true
+                        }
+                    }
+
+                    if (trailerUrl.isNullOrBlank()) {
+                        val ytKey = details.videos?.results?.firstOrNull {
+                            it.site?.equals("YouTube", ignoreCase = true) == true &&
+                            (it.type?.equals("Trailer", ignoreCase = true) == true || it.type?.equals("Teaser", ignoreCase = true) == true)
+                        }?.key ?: details.videos?.results?.firstOrNull { it.site?.equals("YouTube", ignoreCase = true) == true }?.key
+
+                        if (ytKey != null) {
+                            trailerUrl = "https://www.youtube.com/watch?v=$ytKey"
+                            updated = true
+                        }
+                    }
+
+                    if (watchProviders.isEmpty()) {
+                        val providerList = mutableListOf<String>()
+                        val countryMap = details.watchProviders?.results
+                        val countryData = countryMap?.get("US") ?: countryMap?.values?.firstOrNull()
+
+                        countryData?.flatrate?.forEach { p -> p.providerName?.let { providerList.add(it) } }
+                        countryData?.rent?.forEach { p -> p.providerName?.let { providerList.add(it) } }
+                        countryData?.buy?.forEach { p -> p.providerName?.let { providerList.add(it) } }
+
+                        val fetchedProviders = providerList.filter { it.isNotBlank() }.distinct()
+                        if (fetchedProviders.isNotEmpty()) {
+                            watchProviders = fetchedProviders
+                            updated = true
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("SecondBrainRepo", "Failed to enrich TMDb media item: ${e.message}")
+                }
+            }
+        } else if (item.id.startsWith("jikan_") || item.mediaType?.lowercase() == "anime") {
+            val malId = item.id.substringAfterLast("_").toIntOrNull()
+            if (malId != null && watchProviders.isEmpty()) {
+                try {
+                    val streamingResp = MediaApiClient.jikanApiService.getAnimeStreaming(malId)
+                    val providers = streamingResp.data?.mapNotNull { it.name }?.filter { it.isNotBlank() }?.distinct() ?: emptyList()
+                    if (providers.isNotEmpty()) {
+                        watchProviders = providers
+                        updated = true
+                    }
+                } catch (e: Exception) {
+                    Log.e("SecondBrainRepo", "Failed to fetch Jikan streaming info: ${e.message}")
+                }
+            }
+        }
+
+        if (updated) {
+            val newItem = item.copy(
+                genres = genres,
+                watchProviders = watchProviders,
+                trailerUrl = trailerUrl,
+                backdropUrl = backdropUrl
+            )
+            savedItemDao.insertItem(newItem.toEntity())
+            return@withContext newItem
+        }
+
+        return@withContext item
+    }
+
     suspend fun updateItems(items: List<SavedItem>) = withContext(kotlinx.coroutines.Dispatchers.IO) {
         items.forEach {
             savedItemDao.insertItem(it.toEntity())

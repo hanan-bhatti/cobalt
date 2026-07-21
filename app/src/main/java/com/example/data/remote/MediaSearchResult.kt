@@ -164,3 +164,14 @@ data class JikanTrailer(
     @param:Json(name = "embed_url") val embedUrl: String? = null,
     @param:Json(name = "youtube_id") val youtubeId: String? = null
 )
+
+@JsonClass(generateAdapter = true)
+data class JikanStreamingResponse(
+    @param:Json(name = "data") val data: List<JikanStreamingItem>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class JikanStreamingItem(
+    @param:Json(name = "name") val name: String? = null,
+    @param:Json(name = "url") val url: String? = null
+)

@@ -70,6 +70,10 @@ fun MediaDetailSection(
 ) {
     var showPosterZoom by remember { mutableStateOf(false) }
 
+    LaunchedEffect(item.id) {
+        viewModel.enrichMediaItem(item)
+    }
+
     val formattedMediaType = remember(item.mediaType) {
         when (item.mediaType?.lowercase()) {
             "movie" -> "Movie"

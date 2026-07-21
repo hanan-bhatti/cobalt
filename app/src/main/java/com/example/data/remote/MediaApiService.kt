@@ -54,6 +54,11 @@ interface JikanApiService {
         @Query("q") query: String,
         @Query("limit") limit: Int = 10
     ): JikanAnimeSearchResponse
+
+    @GET("anime/{id}/streaming")
+    suspend fun getAnimeStreaming(
+        @Path("id") id: Int
+    ): JikanStreamingResponse
 }
 
 object MediaApiClient {

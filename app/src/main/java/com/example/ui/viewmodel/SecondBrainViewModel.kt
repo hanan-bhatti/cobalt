@@ -358,7 +358,8 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     fun saveMediaItem(item: MediaSearchResultItem, watchStatus: String = "Plan to Watch", selectedFolders: List<String> = emptyList()) {
         viewModelScope.launch {
             val foldersToUse = if (selectedFolders.isNotEmpty()) selectedFolders else listOf("Media")
-            val newItem = SavedItem(
+            var newItem = SavedItem(
+                id = item.id,
                 type = SavedItemType.MEDIA,
                 title = item.title,
                 content = item.overview ?: "",
@@ -372,10 +373,18 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 folders = foldersToUse,
                 releaseYear = item.releaseYear
             )
+            newItem = repository.enrichMediaItemDetails(newItem)
             repository.saveItem(newItem)
             WidgetUpdater.update(context)
             closeMediaSearchSheet()
             showToast("Saved ${item.title} to Second Brain!")
+        }
+    }
+
+    fun enrichMediaItem(item: SavedItem) {
+        if (item.type != SavedItemType.MEDIA) return
+        viewModelScope.launch {
+            repository.enrichMediaItemDetails(item)
         }
     }
 
