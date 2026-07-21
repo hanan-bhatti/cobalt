@@ -37,6 +37,8 @@ import com.example.data.remote.Part
 import com.example.data.remote.RetrofitClient
 import com.example.data.remote.GenerationConfig
 import com.example.data.remote.ResponseSchema
+import com.example.data.remote.MediaApiClient
+import com.example.data.remote.MediaSearchResultItem
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
@@ -300,6 +302,91 @@ class SecondBrainRepository(private val context: Context) {
     }
 
     private val prefs = context.getSharedPreferences("second_brain_prefs", Context.MODE_PRIVATE)
+
+    fun getTmdbApiKey(): String {
+        return prefs.getString("tmdb_api_key", "") ?: ""
+    }
+
+    fun setTmdbApiKey(key: String) {
+        prefs.edit().putString("tmdb_api_key", key).apply()
+    }
+
+    suspend fun searchMedia(query: String): List<MediaSearchResultItem> = withContext(Dispatchers.IO) {
+        if (query.isBlank()) return@withContext emptyList()
+
+        val results = mutableListOf<MediaSearchResultItem>()
+        val apiKey = getTmdbApiKey()
+
+        if (apiKey.isNotBlank()) {
+            try {
+                val tmdbResponse = MediaApiClient.tmdbApiService.searchMulti(query = query, apiKey = apiKey)
+                tmdbResponse.results?.forEach { item ->
+                    val type = item.mediaType
+                    if (type == "movie" || type == "tv") {
+                        val title = if (type == "movie") (item.title ?: item.name ?: "") else (item.name ?: item.title ?: "")
+                        val releaseYear = if (type == "movie") {
+                            item.releaseDate?.take(4)
+                        } else {
+                            item.firstAirDate?.take(4)
+                        }
+                        val posterUrl = item.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }
+                        val backdropUrl = item.backdropPath?.let { "https://image.tmdb.org/t/p/w780$it" }
+
+                        results.add(
+                            MediaSearchResultItem(
+                                id = "tmdb_${type}_${item.id}",
+                                title = title,
+                                mediaType = type,
+                                posterUrl = posterUrl,
+                                backdropUrl = backdropUrl,
+                                releaseYear = releaseYear,
+                                overview = item.overview,
+                                genres = emptyList(),
+                                watchProviders = emptyList(),
+                                trailerUrl = null
+                            )
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("SecondBrainRepo", "TMDb searchMulti failed: ${e.message}")
+            }
+        }
+
+        try {
+            val jikanResponse = MediaApiClient.jikanApiService.searchAnime(query = query, limit = 10)
+            jikanResponse.data?.forEach { item ->
+                val title = item.titleEnglish?.takeIf { it.isNotBlank() } ?: item.title ?: ""
+                val posterUrl = item.images?.jpg?.largeImageUrl ?: item.images?.jpg?.imageUrl
+                val backdropUrl = item.images?.jpg?.largeImageUrl ?: item.images?.jpg?.imageUrl
+                val releaseYear = item.year?.toString()
+                    ?: item.aired?.prop?.from?.year?.toString()
+                    ?: item.aired?.string?.take(4)
+                val trailerUrl = item.trailer?.url ?: item.trailer?.embedUrl
+                    ?: item.trailer?.youtubeId?.let { "https://www.youtube.com/watch?v=$it" }
+                val genres = item.genres?.mapNotNull { it.name } ?: emptyList()
+
+                results.add(
+                    MediaSearchResultItem(
+                        id = "jikan_anime_${item.malId}",
+                        title = title,
+                        mediaType = "anime",
+                        posterUrl = posterUrl,
+                        backdropUrl = backdropUrl,
+                        releaseYear = releaseYear,
+                        overview = item.synopsis,
+                        genres = genres,
+                        watchProviders = emptyList(),
+                        trailerUrl = trailerUrl
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("SecondBrainRepo", "Jikan searchAnime failed: ${e.message}")
+        }
+
+        results
+    }
 
     suspend fun updateItems(items: List<SavedItem>) = withContext(kotlinx.coroutines.Dispatchers.IO) {
         items.forEach {

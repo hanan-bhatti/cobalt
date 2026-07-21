@@ -411,6 +411,7 @@ BackHandler(enabled = activeDetailItem != null) {
                             if (currentRoute in routesWithExpandingFab) {
                                 com.example.ui.components.GlobalExpandingFab(viewModel = viewModel, hazeState = hazeState)
                             }
+                            com.example.ui.components.MediaSearchBottomSheet(viewModel = viewModel)
                         }
                     }
                 }

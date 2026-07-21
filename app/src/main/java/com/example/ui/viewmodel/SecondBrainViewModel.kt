@@ -31,6 +31,8 @@ import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.data.model.DeviceSession
 import com.example.data.repository.SecondBrainRepository
+import com.example.data.remote.MediaSearchResultItem
+import com.example.widget.WidgetUpdater
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
@@ -319,12 +321,61 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     private val _showMediaSearchBottomSheet = MutableStateFlow(false)
     val showMediaSearchBottomSheet: StateFlow<Boolean> = _showMediaSearchBottomSheet.asStateFlow()
 
+    private val _mediaSearchResults = MutableStateFlow<List<MediaSearchResultItem>>(emptyList())
+    val mediaSearchResults: StateFlow<List<MediaSearchResultItem>> = _mediaSearchResults.asStateFlow()
+
+    private val _isSearchingMedia = MutableStateFlow(false)
+    val isSearchingMedia: StateFlow<Boolean> = _isSearchingMedia.asStateFlow()
+
     fun openMediaSearchSheet() {
         _showMediaSearchBottomSheet.value = true
     }
 
     fun closeMediaSearchSheet() {
         _showMediaSearchBottomSheet.value = false
+    }
+
+    fun searchMedia(query: String) {
+        if (query.isBlank()) {
+            _mediaSearchResults.value = emptyList()
+            _isSearchingMedia.value = false
+            return
+        }
+        viewModelScope.launch {
+            _isSearchingMedia.value = true
+            try {
+                val results = repository.searchMedia(query.trim())
+                _mediaSearchResults.value = results
+            } catch (e: Exception) {
+                Log.e("SecondBrainVM", "searchMedia failed: ${e.message}")
+                _mediaSearchResults.value = emptyList()
+            } finally {
+                _isSearchingMedia.value = false
+            }
+        }
+    }
+
+    fun saveMediaItem(item: MediaSearchResultItem, watchStatus: String = "Plan to Watch", selectedFolders: List<String> = emptyList()) {
+        viewModelScope.launch {
+            val foldersToUse = if (selectedFolders.isNotEmpty()) selectedFolders else listOf("Media")
+            val newItem = SavedItem(
+                type = SavedItemType.MEDIA,
+                title = item.title,
+                content = item.overview ?: "",
+                thumbnailPath = item.posterUrl,
+                backdropUrl = item.backdropUrl,
+                mediaType = item.mediaType,
+                watchStatus = watchStatus,
+                genres = item.genres,
+                watchProviders = item.watchProviders,
+                trailerUrl = item.trailerUrl,
+                folders = foldersToUse
+            )
+            repository.saveItem(newItem)
+            WidgetUpdater.update(context)
+            closeMediaSearchSheet()
+            showToast("Saved ${item.title} to Second Brain!")
+        }
     }
 
     // ----------------------------------------------------
