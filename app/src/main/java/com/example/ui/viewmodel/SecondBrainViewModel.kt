@@ -502,6 +502,15 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     ?.filter { it.contains("gemini") && (it.contains("pro") || it.contains("flash") || it.contains("vision")) }
                     ?: emptyList()
                 _availableModels.value = models
+
+                if (models.isNotEmpty()) {
+                    val currentSelected = settingsRepository.selectedModel.value
+                    if (currentSelected.isBlank() || !models.contains(currentSelected)) {
+                        val defaultModel = models.firstOrNull { it.contains("1.5-flash") || it.contains("2.0-flash") || it.contains("flash") } ?: models.first()
+                        settingsRepository.setSelectedModel(defaultModel)
+                    }
+                }
+
                 if (isUserTriggered) {
                     showToast("Refreshed ${models.size} models successfully.")
                 }
@@ -707,6 +716,15 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             _userName.value = prefs.getString("simulated_name", null)
             _userPhotoUrl.value = prefs.getString("simulated_photo", null)
             _isInitialLoading.value = false
+        }
+
+        // Auto-fetch models when API key is available or updated
+        viewModelScope.launch {
+            settingsRepository.geminiApiKey.collect { key ->
+                if (key.isNotBlank() && key != "MY_GEMINI_API_KEY") {
+                    fetchAvailableModels(isUserTriggered = false)
+                }
+            }
         }
     }
 
