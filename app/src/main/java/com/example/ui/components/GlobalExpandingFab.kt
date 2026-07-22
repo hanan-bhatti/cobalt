@@ -481,10 +481,10 @@ fun GlobalExpandingFab(viewModel: SecondBrainViewModel, hazeState: HazeState) {
                             modifier = Modifier.weight(1f)
                         ) {
                             if (isSaving) {
-                                CircularProgressIndicator(
+                                @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+                                CircularWavyProgressIndicator(
                                     modifier = Modifier.size(16.dp),
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    strokeWidth = 2.dp
+                                    color = MaterialTheme.colorScheme.onPrimary
                                 )
                             } else {
                                 Text("Save Note")

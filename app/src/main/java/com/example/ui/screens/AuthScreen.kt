@@ -338,10 +338,10 @@ fun AuthScreen(
                                 .testTag("submit_password_reset_button")
                         ) {
                             if (authLoading) {
-                                CircularProgressIndicator(
+                                @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+                                CircularWavyProgressIndicator(
                                     modifier = Modifier.size(24.dp),
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    strokeWidth = 2.dp
+                                    color = MaterialTheme.colorScheme.onPrimary
                                 )
                             } else {
                                 Text(
@@ -483,10 +483,10 @@ fun AuthScreen(
                                         .testTag("submit_auth_button")
                                 ) {
                                     if (authLoading) {
-                                        CircularProgressIndicator(
+                                        @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+                                        CircularWavyProgressIndicator(
                                             modifier = Modifier.size(24.dp),
-                                            color = MaterialTheme.colorScheme.onPrimary,
-                                            strokeWidth = 2.dp
+                                            color = MaterialTheme.colorScheme.onPrimary
                                         )
                                     } else {
                                         Text(
@@ -514,10 +514,10 @@ fun AuthScreen(
                                         .testTag("submit_email_link_button")
                                 ) {
                                     if (authLoading) {
-                                        CircularProgressIndicator(
+                                        @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+                                        CircularWavyProgressIndicator(
                                             modifier = Modifier.size(24.dp),
-                                            color = MaterialTheme.colorScheme.onPrimary,
-                                            strokeWidth = 2.dp
+                                            color = MaterialTheme.colorScheme.onPrimary
                                         )
                                     } else {
                                         Text(
@@ -573,10 +573,10 @@ fun AuthScreen(
                             .testTag("google_sign_in_button")
                     ) {
                         if (authLoading) {
-                            CircularProgressIndicator(
+                            @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+                            CircularWavyProgressIndicator(
                                 modifier = Modifier.size(24.dp),
-                                color = MaterialTheme.colorScheme.primary,
-                                strokeWidth = 2.dp
+                                color = MaterialTheme.colorScheme.primary
                             )
                         } else {
                             Row(
