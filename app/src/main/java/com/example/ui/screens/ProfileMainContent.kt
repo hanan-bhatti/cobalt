@@ -49,6 +49,7 @@ import androidx.compose.ui.res.painterResource
 import java.util.Locale
 import com.example.ui.viewmodel.SecondBrainViewModel
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.example.ui.components.bounceClick
 import androidx.compose.ui.platform.LocalContext
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -141,6 +142,8 @@ fun ProfileMainContent(
         )
     }
 
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
     val pullToRefreshState = rememberPullToRefreshState()
     androidx.compose.material3.pulltorefresh.PullToRefreshBox(
         isRefreshing = isSyncing,
@@ -155,14 +158,54 @@ fun ProfileMainContent(
             )
         }
     ) {
-        Column(
+        Scaffold(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .verticalScroll(rememberScrollState())
-                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
+                .nestedScroll(scrollBehavior.nestedScrollConnection),
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_profile),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "Profile",
+                                    fontSize = 24.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                                Text(
+                                    text = "SETTINGS, STORAGE & DEVICES",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    letterSpacing = 1.sp
+                                )
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background
+                    ),
+                    scrollBehavior = scrollBehavior
+                )
+            },
+            containerColor = MaterialTheme.colorScheme.background
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
+            ) {
             // DOWNLOAD PROGRESS
             if (downloadProgress.isDownloading) {
                 Card(
@@ -946,6 +989,7 @@ fun ProfileMainContent(
                     }
                 }
             )
+        }
         }
     }
 }

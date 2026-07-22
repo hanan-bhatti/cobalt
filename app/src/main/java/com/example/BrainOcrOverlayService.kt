@@ -484,7 +484,7 @@ class BrainOcrOverlayService : Service() {
         // ── Root panel ──
         val panel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dpToPx(14), dpToPx(14), dpToPx(14), dpToPx(12))
+            setPadding(dpToPx(14), dpToPx(14), dpToPx(14), 0)
             background = null
             elevation = 0f
             alpha = 0f
@@ -1129,6 +1129,7 @@ class BrainOcrOverlayService : Service() {
                                 SavedItemType.IMAGE -> R.drawable.ic_custom_image
                                 SavedItemType.VIDEO -> R.drawable.ic_custom_video
                                 SavedItemType.AUDIO -> R.drawable.ic_custom_voice
+                                SavedItemType.MEDIA -> R.drawable.ic_custom_movie
                                 else -> R.drawable.ic_custom_text
                             }
                             val iconTint = when (item.type) {
@@ -1136,6 +1137,7 @@ class BrainOcrOverlayService : Service() {
                                 SavedItemType.IMAGE -> Color.parseColor("#66BB6A")
                                 SavedItemType.VIDEO -> Color.parseColor("#AB47BC")
                                 SavedItemType.AUDIO -> accent
+                                SavedItemType.MEDIA -> Color.parseColor("#E91E63")
                                 else -> accent
                             }
 

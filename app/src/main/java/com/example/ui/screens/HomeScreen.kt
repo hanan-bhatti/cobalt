@@ -85,6 +85,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.geometry.Offset
 import coil.compose.AsyncImage
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.data.model.getBestImagePath
@@ -207,9 +208,11 @@ fun HomeScreen(
         }
     }
 
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
         snackbarHost = { com.example.ui.components.AppSnackbarHost(snackbarHostState) },
         topBar = {
             if (isSelectionMode) {
@@ -309,16 +312,6 @@ fun HomeScreen(
                     },
                     actions = {
                         IconButton(
-                            onClick = onNavigateToMediaHub,
-                            modifier = Modifier.testTag("media_hub_button")
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_movie),
-                                contentDescription = "Movies & Anime Hub",
-                                tint = MaterialTheme.colorScheme.onBackground
-                            )
-                        }
-                        IconButton(
                             onClick = { viewModel.settingsRepository.setIsListView(!isListView) },
                             modifier = Modifier.testTag("toggle_view_button")
                         ) {
@@ -331,7 +324,8 @@ fun HomeScreen(
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background
-                    )
+                    ),
+                    scrollBehavior = scrollBehavior
                 )
             }
         },
@@ -489,12 +483,7 @@ fun HomeScreen(
             }
 
             // Items Grid list
-            if (selectedFolder == "Movies & Anime") {
-                MediaHubContent(
-                    viewModel = viewModel,
-                    onMediaClick = { item -> viewModel.showDetailItem(item) }
-                )
-            } else if (items.isEmpty()) {
+            if (items.isEmpty()) {
                 if (searchQuery.isNotEmpty()) {
                     Box(
                         modifier = Modifier

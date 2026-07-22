@@ -599,10 +599,20 @@ private fun RecentItemsCustomizationSection(
             val categories = listOf("All", "LINK", "TEXT", "IMAGE", "AUDIO", "CODE", "MEDIA")
             categories.forEach { cat ->
                 val isSelected = categoryFilter.equals(cat, ignoreCase = true)
+                val labelText = when (cat) {
+                    "All" -> "All"
+                    "LINK" -> "Links"
+                    "TEXT" -> "Notes"
+                    "IMAGE" -> "Images"
+                    "AUDIO" -> "Audio"
+                    "CODE" -> "Code"
+                    "MEDIA" -> "Movies & Anime"
+                    else -> cat
+                }
                 FilterChip(
                     selected = isSelected,
                     onClick = { onCategorySelected(cat) },
-                    label = { Text(if (cat == "All") "All" else cat.lowercase().replaceFirstChar { it.uppercase() }, fontSize = 12.sp) }
+                    label = { Text(labelText, fontSize = 12.sp) }
                 )
             }
         }

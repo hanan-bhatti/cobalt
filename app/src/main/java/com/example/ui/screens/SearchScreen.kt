@@ -31,6 +31,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Description
@@ -83,6 +84,7 @@ fun SearchScreen(
     val prefs = remember { context.getSharedPreferences("draft_prefs", android.content.Context.MODE_PRIVATE) }
     var historyList by remember { mutableStateOf(getSearchHistory(prefs)) }
     var selectedFilter by remember { mutableStateOf<SavedItemType?>(null) }
+    var sortOrder by remember { mutableStateOf(SearchSortOrder.NEWEST) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
 
@@ -222,26 +224,38 @@ fun SearchScreen(
             }
 
             val displayItems = items.filter { selectedFilter == null || it.type == selectedFilter }
+                .let { filteredList ->
+                    when (sortOrder) {
+                        SearchSortOrder.NEWEST -> filteredList.sortedByDescending { it.timestamp }
+                        SearchSortOrder.OLDEST -> filteredList.sortedBy { it.timestamp }
+                        SearchSortOrder.ALPHABETICAL -> filteredList.sortedBy { it.title.lowercase() }
+                    }
+                }
 
             if (searchQuery.isEmpty()) {
-                if (historyList.isNotEmpty()) {
-                    Text(
-                        text = "RECENT SEARCHES",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        letterSpacing = 1.sp,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                    LazyColumn {
+                LazyColumn(
+                    contentPadding = PaddingValues(bottom = 100.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    if (historyList.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "RECENT SEARCHES",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                letterSpacing = 1.sp,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
                         items(historyList) { query ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                         viewModel.setSearchQuery(query)
-                                         focusManager.clearFocus()
-                                         AnalyticsHelper.logSearchPerformed(context)
+                                        viewModel.setSearchQuery(query)
+                                        focusManager.clearFocus()
+                                        AnalyticsHelper.logSearchPerformed(context)
                                     }
                                     .padding(horizontal = 16.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -269,18 +283,133 @@ fun SearchScreen(
                             ) {
                                 Text("Clear History")
                             }
+                            HorizontalDivider(
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                                thickness = 0.5.dp,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
+                    }
+                    
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "SUGGESTED ITEMS",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                letterSpacing = 1.sp
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = sortOrder.displayName,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                IconButton(
+                                    onClick = {
+                                        sortOrder = when (sortOrder) {
+                                            SearchSortOrder.NEWEST -> SearchSortOrder.OLDEST
+                                            SearchSortOrder.OLDEST -> SearchSortOrder.ALPHABETICAL
+                                            SearchSortOrder.ALPHABETICAL -> SearchSortOrder.NEWEST
+                                        }
+                                    },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Sort,
+                                        contentDescription = "Sort",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (displayItems.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 48.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "No items saved yet",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    } else {
+                        items(displayItems, key = { it.id }) { item ->
+                            SearchItemRow(
+                                item = item,
+                                onClick = { onItemClick(item) }
+                            )
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 76.dp, end = 16.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                                thickness = 0.5.dp
+                            )
                         }
                     }
                 }
             } else {
-                Text(
-                    text = "${displayItems.size} RESULTS",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    letterSpacing = 1.sp,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${displayItems.size} RESULTS",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        letterSpacing = 1.sp
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = sortOrder.displayName,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                        IconButton(
+                            onClick = {
+                                sortOrder = when (sortOrder) {
+                                    SearchSortOrder.NEWEST -> SearchSortOrder.OLDEST
+                                    SearchSortOrder.OLDEST -> SearchSortOrder.ALPHABETICAL
+                                    SearchSortOrder.ALPHABETICAL -> SearchSortOrder.NEWEST
+                                }
+                            },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Sort,
+                                contentDescription = "Sort",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
 
                 if (displayItems.isEmpty()) {
                     Box(
@@ -492,4 +621,10 @@ fun formatRelativeTime(timestamp: Long): String {
             sdf.format(Date(timestamp))
         }
     }
+}
+
+enum class SearchSortOrder(val displayName: String) {
+    NEWEST("Newest"),
+    OLDEST("Oldest"),
+    ALPHABETICAL("A-Z")
 }

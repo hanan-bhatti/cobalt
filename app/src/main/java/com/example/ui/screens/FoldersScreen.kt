@@ -228,20 +228,29 @@ fun FoldersScreen(
                     topBar = {
                         TopAppBar(
                             title = {
-                                Column {
-                                    Text(
-                                        text = "Folders",
-                                        fontSize = 24.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onBackground
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_folder),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(24.dp)
                                     )
-                                    Text(
-                                        text = "CATEGORIES & DIRECTORIES",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.secondary,
-                                        letterSpacing = 1.sp
-                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = "Folders",
+                                            fontSize = 24.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onBackground
+                                        )
+                                        Text(
+                                            text = "CATEGORIES & DIRECTORIES",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.secondary,
+                                            letterSpacing = 1.sp
+                                        )
+                                    }
                                 }
                             },
                             colors = TopAppBarDefaults.topAppBarColors(
