@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -38,7 +39,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -50,7 +53,14 @@ import com.example.R
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.data.model.getBestImagePath
+import com.example.ui.theme.CategoryMedia
 import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.utils.DevicePerformance
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -64,9 +74,36 @@ fun MediaHubScreen(
 ) {
     val isSyncing by viewModel.isSyncing.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
+    val context = LocalContext.current
+    val hazeState = remember { HazeState() }
+    val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
+    val blurRadius by viewModel.blurRadius.collectAsState()
+    val blurOpacity by viewModel.blurOpacity.collectAsState()
+
+    val fabColor = MaterialTheme.colorScheme.surfaceVariant
+    val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
+    val fabModifier = if (useBlur) {
+        Modifier
+            .size(56.dp)
+            .clip(CircleShape)
+            .hazeEffect(state = hazeState, style = HazeStyle(
+                backgroundColor = fabColor,
+                tint = HazeTint(fabColor.copy(alpha = blurOpacity)),
+                blurRadius = blurRadius.dp,
+                noiseFactor = 0.02f
+            ))
+    } else {
+        Modifier
+            .size(56.dp)
+            .clip(CircleShape)
+    }
+
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
                 title = {
@@ -85,34 +122,32 @@ fun MediaHubScreen(
                         )
                     }
                 },
-                actions = {
-                    IconButton(onClick = { viewModel.openMediaSearchSheet() }) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_search),
-                            contentDescription = "Search Media",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
-                )
+                ),
+                scrollBehavior = scrollBehavior
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
+            FloatingActionButton(
                 onClick = { viewModel.openMediaSearchSheet() },
-                icon = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_custom_search),
-                        contentDescription = "Search Media"
-                    )
-                },
-                text = { Text("Search Media", fontWeight = FontWeight.SemiBold) },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.padding(bottom = 80.dp)
-            )
+                shape = CircleShape,
+                containerColor = if (useBlur) Color.Transparent else fabColor.copy(alpha = 0.92f),
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = 0.dp,
+                    pressedElevation = 0.dp,
+                    focusedElevation = 0.dp,
+                    hoveredElevation = 0.dp
+                ),
+                modifier = fabModifier
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_custom_search),
+                    contentDescription = "Search Movies & Anime",
+                    modifier = Modifier.size(24.dp)
+                )
+            }
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
@@ -122,7 +157,8 @@ fun MediaHubScreen(
             state = pullToRefreshState,
             modifier = Modifier
                 .padding(innerPadding)
-                .fillMaxSize(),
+                .fillMaxSize()
+                .hazeSource(state = hazeState),
             indicator = {
                 PullToRefreshDefaults.LoadingIndicator(
                     state = pullToRefreshState,
@@ -150,7 +186,7 @@ fun MediaHubContent(
     var selectedType by rememberSaveable { mutableStateOf("All Types") }
 
     val statusFilters = remember { listOf("All", "Plan to Watch", "Watching", "Completed", "Dropped") }
-    val typeFilters = remember { listOf("All Types", "Movies", "TV Shows", "Anime") }
+    val typeFilters = remember { listOf("All Types", "Movies", "TV", "Anime") }
 
     val mediaItems = remember(allItems, selectedStatus, selectedType) {
         allItems.filter { item ->
@@ -162,7 +198,7 @@ fun MediaHubContent(
             when (selectedType) {
                 "All Types" -> true
                 "Movies" -> item.mediaType?.lowercase() == "movie"
-                "TV Shows" -> item.mediaType?.lowercase() in listOf("tv", "tv show", "tv_show")
+                "TV" -> item.mediaType?.lowercase() in listOf("tv", "tv show", "tv_show")
                 "Anime" -> item.mediaType?.lowercase() == "anime"
                 else -> true
             }
@@ -329,7 +365,7 @@ fun MediaItemCard(
     val imagePath = item.getBestImagePath()
     val formattedType = when (item.mediaType?.lowercase()) {
         "movie" -> "Movie"
-        "tv", "tv show", "tv_show" -> "TV Show"
+        "tv", "tv show", "tv_show" -> "TV"
         "anime" -> "Anime"
         else -> item.mediaType?.replaceFirstChar { it.uppercase() } ?: "Media"
     }
@@ -347,7 +383,7 @@ fun MediaItemCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
@@ -398,6 +434,25 @@ fun MediaItemCard(
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
+                }
+
+                // Rating Badge overlay (Top-Right)
+                if (item.rating != null && item.rating > 0.0) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(6.dp)
+                    ) {
+                        Text(
+                            text = "★ ${String.format(java.util.Locale.US, "%.1f", item.rating)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFFB300),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
                 }
             }
 
