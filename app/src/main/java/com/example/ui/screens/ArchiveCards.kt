@@ -63,6 +63,7 @@ import com.example.ui.theme.ArchiveImageVideoColor
 import com.example.ui.theme.ArchiveCodeColor
 import com.example.ui.theme.ArchiveTextColor
 import com.example.ui.theme.ArchiveAudioColor
+import com.example.ui.theme.ArchiveMediaColor
 
 private fun Any?.isNotNullOrBlank(): Boolean {
     return this != null && this.toString().isNotBlank()
@@ -97,10 +98,11 @@ fun ArchiveItemCard(
     // Dynamic coloring based on type
     val typeColor = when (item.type) {
         SavedItemType.LINK -> ArchiveLinkColor
-        SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.MEDIA -> ArchiveImageVideoColor
+        SavedItemType.IMAGE, SavedItemType.VIDEO -> ArchiveImageVideoColor
         SavedItemType.CODE -> ArchiveCodeColor
         SavedItemType.TEXT -> ArchiveTextColor
         SavedItemType.AUDIO -> ArchiveAudioColor
+        SavedItemType.MEDIA -> ArchiveMediaColor
     }
 
     Box(
@@ -142,16 +144,18 @@ fun ArchiveItemCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier
+                            .weight(1f, fill = false)
                             .background(typeColor.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         val iconResId = when (item.type) {
                             SavedItemType.LINK -> R.drawable.ic_custom_link
                             SavedItemType.IMAGE -> R.drawable.ic_custom_image
-                            SavedItemType.VIDEO, SavedItemType.MEDIA -> R.drawable.ic_custom_video
+                            SavedItemType.VIDEO -> R.drawable.ic_custom_video
                             SavedItemType.CODE -> R.drawable.ic_custom_code
                             SavedItemType.TEXT -> R.drawable.ic_custom_text
                             SavedItemType.AUDIO -> R.drawable.ic_custom_voice
+                            SavedItemType.MEDIA -> R.drawable.ic_custom_movie
                         }
                         Icon(
                             painter = painterResource(id = iconResId),
@@ -163,9 +167,13 @@ fun ArchiveItemCard(
                             text = item.type.displayName,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = typeColor
+                            color = typeColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
+
+                    Spacer(modifier = Modifier.width(6.dp))
 
                     val formattedDate = remember(item.timestamp) {
                         SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(item.timestamp))
@@ -174,7 +182,8 @@ fun ArchiveItemCard(
                         text = formattedDate,
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1
                     )
                 }
 
@@ -221,7 +230,7 @@ fun ArchiveItemCard(
                 if (cDesc.isNotBlank() && cDesc.lowercase() != item.title.trim().lowercase()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = parseMarkdown(cDesc),
+                        text = parseMarkdown(cDesc, MaterialTheme.colorScheme.primary),
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                         maxLines = 2,
@@ -503,10 +512,11 @@ fun ArchiveItemRow(
 
     val typeColor = when (item.type) {
         SavedItemType.LINK -> ArchiveLinkColor
-        SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.MEDIA -> ArchiveImageVideoColor
+        SavedItemType.IMAGE, SavedItemType.VIDEO -> ArchiveImageVideoColor
         SavedItemType.CODE -> ArchiveCodeColor
         SavedItemType.TEXT -> ArchiveTextColor
         SavedItemType.AUDIO -> ArchiveAudioColor
+        SavedItemType.MEDIA -> ArchiveMediaColor
     }
 
     Box(
@@ -609,9 +619,10 @@ fun ArchiveItemRow(
                         SavedItemType.LINK -> R.drawable.ic_custom_link
                         SavedItemType.TEXT -> R.drawable.ic_custom_text
                         SavedItemType.AUDIO -> R.drawable.ic_custom_voice
-                        SavedItemType.VIDEO, SavedItemType.MEDIA -> R.drawable.ic_custom_video
+                        SavedItemType.VIDEO -> R.drawable.ic_custom_video
                         SavedItemType.IMAGE -> R.drawable.ic_custom_image
                         SavedItemType.CODE -> R.drawable.ic_custom_code
+                        SavedItemType.MEDIA -> R.drawable.ic_custom_movie
                     }
                     val placeholderBg = typeColor.copy(alpha = 0.15f)
                     val placeholderTint = typeColor
@@ -673,7 +684,7 @@ fun ArchiveItemRow(
                     if (cDesc.isNotBlank() && cDesc.lowercase() != item.title.trim().lowercase()) {
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = parseMarkdown(cDesc),
+                            text = parseMarkdown(cDesc, MaterialTheme.colorScheme.primary),
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                             maxLines = 1,

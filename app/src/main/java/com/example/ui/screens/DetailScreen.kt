@@ -83,6 +83,7 @@ import com.example.ui.theme.CategoryVideo
 import com.example.ui.theme.CategoryText
 import com.example.ui.theme.CategoryCode
 import com.example.ui.theme.CategoryAudio
+import com.example.ui.theme.CategoryMedia
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -117,10 +118,11 @@ fun DetailScreen(
         } ?: when (item.type) {
             SavedItemType.LINK -> CategoryLink
             SavedItemType.IMAGE -> CategoryImage
-            SavedItemType.VIDEO, SavedItemType.MEDIA -> CategoryVideo
+            SavedItemType.VIDEO -> CategoryVideo
             SavedItemType.TEXT -> CategoryText
             SavedItemType.CODE -> CategoryCode
             SavedItemType.AUDIO -> CategoryAudio
+            SavedItemType.MEDIA -> CategoryMedia
         }
     }
 
@@ -320,83 +322,85 @@ fun DetailScreen(
                     .padding(horizontal = 24.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(28.dp)
             ) {
-            // HEADER SECTION
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                // Title
-                val displayTitle = item.title.ifBlank { item.linkTitle ?: "Untitled Memory" }
-                Text(
-                    text = displayTitle,
-                    style = MaterialTheme.typography.displayMedium,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-
-                // Meta row
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
+            // HEADER SECTION (Only for non-MEDIA types; MEDIA items use redesigned MediaDetailSection hero header)
+            if (item.type != SavedItemType.MEDIA) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    // Title
+                    val displayTitle = item.title.ifBlank { item.linkTitle ?: "Untitled Memory" }
                     Text(
-                        text = formattedDate,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = displayTitle,
+                        style = MaterialTheme.typography.displayMedium,
+                        color = MaterialTheme.colorScheme.onBackground
                     )
-                    Text("•", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+
+                    // Meta row
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        val iconResId = when (item.type) {
-                            SavedItemType.LINK -> R.drawable.ic_custom_link
-                            SavedItemType.IMAGE -> R.drawable.ic_custom_image
-                            SavedItemType.VIDEO, SavedItemType.MEDIA -> R.drawable.ic_custom_video
-                            SavedItemType.CODE -> R.drawable.ic_custom_code
-                            SavedItemType.TEXT -> R.drawable.ic_custom_text
-                            SavedItemType.AUDIO -> R.drawable.ic_custom_voice
-                        }
-                        Icon(
-                            painter = painterResource(id = iconResId),
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                         Text(
-                            text = item.type.displayName,
+                            text = formattedDate,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    }
-                    if (!item.isSynced) {
                         Text("•", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_cloud_queue),
-                            contentDescription = "Local Only",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            val iconResId = when (item.type) {
+                                SavedItemType.LINK -> R.drawable.ic_custom_link
+                                SavedItemType.IMAGE -> R.drawable.ic_custom_image
+                                SavedItemType.VIDEO, SavedItemType.MEDIA -> R.drawable.ic_custom_video
+                                SavedItemType.CODE -> R.drawable.ic_custom_code
+                                SavedItemType.TEXT -> R.drawable.ic_custom_text
+                                SavedItemType.AUDIO -> R.drawable.ic_custom_voice
+                            }
+                            Icon(
+                                painter = painterResource(id = iconResId),
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = item.type.displayName,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (!item.isSynced) {
+                            Text("•", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_cloud_queue),
+                                contentDescription = "Local Only",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
-                }
 
-                // Folders
-                if (item.folders.isNotEmpty()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        item.folders.forEach { folder ->
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            ) {
-                                Text(
-                                    text = folder,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                    // Folders
+                    if (item.folders.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            item.folders.forEach { folder ->
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                ) {
+                                    Text(
+                                        text = folder,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }
@@ -581,7 +585,7 @@ fun DetailScreen(
                         )
                     } else {
                         Text(
-                            text = parseMarkdown(descriptionToShow),
+                            text = parseMarkdown(descriptionToShow, MaterialTheme.colorScheme.primary),
                             fontSize = 17.sp,
                             lineHeight = 26.sp,
                             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
@@ -650,7 +654,7 @@ fun DetailScreen(
                                 com.example.ui.components.CodeHighlighter.highlight(item.content, isDark)
                             }
                         } else {
-                            parseMarkdown(item.content)
+                            parseMarkdown(item.content, MaterialTheme.colorScheme.primary)
                         }
 
                         Text(

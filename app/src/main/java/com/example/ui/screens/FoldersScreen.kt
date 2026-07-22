@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
@@ -74,6 +75,7 @@ import com.example.ui.theme.CategoryVideo
 import com.example.ui.theme.CategoryText
 import com.example.ui.theme.CategoryCode
 import com.example.ui.theme.CategoryAudio
+import com.example.ui.theme.CategoryMedia
 
 // Preset Palette of aesthetic Pastel/Vibrant Colors
 val folderPresetColors = listOf(
@@ -217,8 +219,12 @@ fun FoldersScreen(
             )
         } else {
             // MAIN FOLDERS DIRECTORY LIST VIEW
+            val mainScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
             Box(modifier = Modifier.fillMaxSize()) {
                 Scaffold(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(mainScrollBehavior.nestedScrollConnection),
                     topBar = {
                         TopAppBar(
                             title = {
@@ -240,7 +246,8 @@ fun FoldersScreen(
                             },
                             colors = TopAppBarDefaults.topAppBarColors(
                                 containerColor = MaterialTheme.colorScheme.background
-                            )
+                            ),
+                            scrollBehavior = mainScrollBehavior
                         )
                     },
                     containerColor = MaterialTheme.colorScheme.background
@@ -256,55 +263,56 @@ fun FoldersScreen(
                         }
                     }
 
-                    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+                    Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .hazeSource(state = gridHazeState)
                             .padding(innerPadding)
-                            .padding(horizontal = 16.dp),
-                        contentPadding = PaddingValues(bottom = 100.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Search bar
-                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-                            OutlinedTextField(
-                                value = folderSearchQuery,
-                                onValueChange = { folderSearchQuery = it },
-                                placeholder = { Text("Search folders...", style = MaterialTheme.typography.bodyMedium) },
-                                leadingIcon = {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_custom_search),
-                                        contentDescription = "Search icon",
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                },
-                                trailingIcon = {
-                                    if (folderSearchQuery.isNotEmpty()) {
-                                        IconButton(onClick = { folderSearchQuery = "" }) {
-                                            Icon(
-                                                painter = painterResource(id = R.drawable.ic_custom_close),
-                                                contentDescription = "Clear search",
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                    }
-                                },
-                                singleLine = true,
-                                shape = RoundedCornerShape(14.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 8.dp),
-                                colors = TextFieldDefaults.colors(
-                                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                    focusedIndicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                    unfocusedIndicatorColor = Color.Transparent
+                        OutlinedTextField(
+                            value = folderSearchQuery,
+                            onValueChange = { folderSearchQuery = it },
+                            placeholder = { Text("Search folders...", style = MaterialTheme.typography.bodyMedium) },
+                            leadingIcon = {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_search),
+                                    contentDescription = "Search icon",
+                                    modifier = Modifier.size(18.dp)
                                 )
+                            },
+                            trailingIcon = {
+                                if (folderSearchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { folderSearchQuery = "" }) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_custom_close),
+                                            contentDescription = "Clear search",
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                focusedIndicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                unfocusedIndicatorColor = Color.Transparent
                             )
-                        }
+                        )
 
+                        androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                            columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(2),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .hazeSource(state = gridHazeState)
+                                .padding(horizontal = 16.dp),
+                            contentPadding = PaddingValues(bottom = 100.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
                         if (folderSearchQuery.isBlank()) {
                             // System Built-in Categories Section
                             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
@@ -423,6 +431,7 @@ fun FoldersScreen(
                         }
                     }
                 }
+            }
 
                 val useBlurGrid = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
                 val folderFabModifier = if (useBlurGrid) {
@@ -670,6 +679,7 @@ fun SystemCategoryCard(
         "Text" -> CategoryText
         "Code" -> CategoryCode
         "Audio" -> CategoryAudio
+        "Movies & Anime" -> CategoryMedia
         else -> MaterialTheme.colorScheme.primary
     }
     Surface(
@@ -900,7 +910,12 @@ fun FolderContentsBrowser(
         }
     }
 
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
     Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             TopAppBar(
                 title = {
@@ -928,7 +943,8 @@ fun FolderContentsBrowser(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
-                )
+                ),
+                scrollBehavior = scrollBehavior
             )
         },
         floatingActionButton = {
@@ -939,10 +955,11 @@ fun FolderContentsBrowser(
             val fabColor = when (targetType) {
                 SavedItemType.LINK -> CategoryLink
                 SavedItemType.IMAGE -> CategoryImage
-                SavedItemType.VIDEO, SavedItemType.MEDIA -> CategoryVideo
+                SavedItemType.VIDEO -> CategoryVideo
                 SavedItemType.TEXT -> CategoryText
                 SavedItemType.CODE -> CategoryCode
                 SavedItemType.AUDIO -> CategoryAudio
+                SavedItemType.MEDIA -> CategoryMedia
             }
 
             val useBlurDetail = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
@@ -965,7 +982,9 @@ fun FolderContentsBrowser(
             val detailInteractionSource = remember { MutableInteractionSource() }
             FloatingActionButton(
                 onClick = {
-                    if (systemCategory != null) {
+                    if (systemCategory == SavedItemType.MEDIA) {
+                        viewModel.openMediaSearchSheet()
+                    } else if (systemCategory != null) {
                         viewModel.startManualCapture(systemCategory)
                     } else {
                         viewModel.startManualCapture(SavedItemType.TEXT, listOf(folderName))
@@ -988,10 +1007,11 @@ fun FolderContentsBrowser(
                 val iconRes = when (targetType) {
                     SavedItemType.LINK -> R.drawable.ic_custom_link
                     SavedItemType.IMAGE -> R.drawable.ic_custom_image
-                    SavedItemType.VIDEO, SavedItemType.MEDIA -> R.drawable.ic_custom_video
+                    SavedItemType.VIDEO -> R.drawable.ic_custom_video
                     SavedItemType.TEXT -> R.drawable.ic_custom_text
                     SavedItemType.CODE -> R.drawable.ic_custom_code
                     SavedItemType.AUDIO -> R.drawable.ic_custom_voice
+                    SavedItemType.MEDIA -> R.drawable.ic_custom_movie
                 }
                 Icon(
                     painter = painterResource(id = iconRes),
@@ -1019,12 +1039,7 @@ fun FolderContentsBrowser(
                 )
             }
         ) {
-            if (folderName == "Movies & Anime") {
-                MediaHubContent(
-                    viewModel = viewModel,
-                    onMediaClick = { item -> viewModel.showDetailItem(item) }
-                )
-            } else if (folderItems.isEmpty()) {
+            if (folderItems.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -1088,10 +1103,11 @@ fun FolderBrowseItemRow(
     val iconResId = when (item.type) {
         SavedItemType.LINK -> R.drawable.ic_custom_link
         SavedItemType.IMAGE -> R.drawable.ic_custom_image
-        SavedItemType.VIDEO, SavedItemType.MEDIA -> R.drawable.ic_custom_video
+        SavedItemType.VIDEO -> R.drawable.ic_custom_video
         SavedItemType.CODE -> R.drawable.ic_custom_code
         SavedItemType.TEXT -> R.drawable.ic_custom_text
         SavedItemType.AUDIO -> R.drawable.ic_custom_voice
+        SavedItemType.MEDIA -> R.drawable.ic_custom_movie
     }
 
     if (showMoveDialog) {

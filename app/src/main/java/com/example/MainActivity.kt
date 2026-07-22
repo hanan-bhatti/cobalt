@@ -389,7 +389,7 @@ BackHandler(enabled = activeDetailItem != null) {
                             val items = listOf(
                                 BottomBarItem("home", R.drawable.ic_custom_home, "Home"),
                                 BottomBarItem("search", R.drawable.ic_custom_search, "Search"),
-                                BottomBarItem("media_hub", R.drawable.ic_custom_movie, "Media"),
+                                BottomBarItem("media_hub", R.drawable.ic_custom_movie, "Hub"),
                                 BottomBarItem("folders", R.drawable.ic_custom_folder, "Folders"),
                                 BottomBarItem("profile", R.drawable.ic_custom_profile, "Profile")
                             )
@@ -415,7 +415,7 @@ BackHandler(enabled = activeDetailItem != null) {
                                 )
                             }
 
-                            val routesWithExpandingFab = listOf("home", "search", "profile", "media_hub")
+                            val routesWithExpandingFab = listOf("home", "search", "profile")
                             if (currentRoute in routesWithExpandingFab) {
                                 com.example.ui.components.GlobalExpandingFab(viewModel = viewModel, hazeState = hazeState)
                             }
@@ -475,6 +475,8 @@ BackHandler(enabled = activeDetailItem != null) {
             viewModel.startManualCapture(com.example.data.model.SavedItemType.CODE)
         } else if ("com.example.ACTION_QUICK_AUDIO" == action) {
             viewModel.startManualCapture(com.example.data.model.SavedItemType.AUDIO)
+        } else if ("com.example.ACTION_QUICK_MEDIA" == action) {
+            viewModel.openMediaSearchSheet()
         } else if ("com.example.ACTION_QUICK_OCR" == action) {
             val ocrIntent = Intent(this, OcrCaptureActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK

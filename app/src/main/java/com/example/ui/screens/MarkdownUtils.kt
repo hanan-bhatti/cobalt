@@ -30,11 +30,11 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
-import com.example.ui.theme.LinkPurple
+import com.example.ui.theme.LinkBlue
 
 import androidx.compose.ui.unit.sp
 
-fun parseMarkdown(text: String, primaryColor: Color = LinkPurple): AnnotatedString {
+fun parseMarkdown(text: String, primaryColor: Color = LinkBlue): AnnotatedString {
     return buildAnnotatedString {
         val lines = text.split("\n")
         lines.forEachIndexed { i, line ->
@@ -96,7 +96,7 @@ fun parseMarkdown(text: String, primaryColor: Color = LinkPurple): AnnotatedStri
     }
 }
 
-class MarkdownVisualTransformation : VisualTransformation {
+class MarkdownVisualTransformation(val primaryColor: Color = LinkBlue) : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         // We will just return the original text styled, without replacing characters
         // to maintain 1:1 offset mapping and not crash the text field cursor.
@@ -116,7 +116,7 @@ class MarkdownVisualTransformation : VisualTransformation {
                         append(match.value) 
                     }
                 } else if (match.groups[4] != null && match.groups[5] != null) {
-                    withStyle(SpanStyle(color = LinkPurple, textDecoration = TextDecoration.Underline)) {
+                    withStyle(SpanStyle(color = primaryColor, textDecoration = TextDecoration.Underline)) {
                         append(match.value)
                     }
                 } else if (match.groups[6] != null) {

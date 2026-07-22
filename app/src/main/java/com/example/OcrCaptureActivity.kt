@@ -136,13 +136,14 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
 
         setContent {
             val themeMode by viewModel.settingsRepository.themeMode.collectAsState()
+            val dynamicColorEnabled by viewModel.settingsRepository.dynamicColor.collectAsState()
             val isDarkTheme = when (themeMode) {
                 "Dark" -> true
                 "Light" -> false
                 else -> isSystemInDarkTheme()
             }
 
-            MyApplicationTheme(darkTheme = isDarkTheme) {
+            MyApplicationTheme(darkTheme = isDarkTheme, dynamicColor = dynamicColorEnabled) {
                 OcrOverlayUI()
             }
         }

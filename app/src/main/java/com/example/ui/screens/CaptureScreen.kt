@@ -19,6 +19,7 @@
 package com.example.ui.screens
 
 import android.widget.Toast
+import kotlinx.coroutines.delay
 import androidx.compose.ui.platform.LocalContext
 import androidx.activity.compose.BackHandler
 import android.graphics.Bitmap
@@ -220,31 +221,33 @@ fun CaptureScreen(
                 }
             }
 
-            // TITLE FIELD
-            Text(
-                text = "Title",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.padding(bottom = 6.dp)
-            )
-            OutlinedTextField(
-                value = item.title,
-                onValueChange = { viewModel.updateActiveCaptureItem { item -> item.copy(title = it) } },
-                placeholder = { Text("Add an archive title...") },
-                singleLine = true,
-                shape = RoundedCornerShape(20.dp),
-                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                    focusedContainerColor = MaterialTheme.colorScheme.surface,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp)
-                    .testTag("capture_title_input")
-            )
+            if (item.type != SavedItemType.MEDIA) {
+                // TITLE FIELD
+                Text(
+                    text = "Title",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+                OutlinedTextField(
+                    value = item.title,
+                    onValueChange = { viewModel.updateActiveCaptureItem { item -> item.copy(title = it) } },
+                    placeholder = { Text("Add an archive title...") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(20.dp),
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                        .testTag("capture_title_input")
+                )
+            }
 
             // MEDIA DRAWING CANVAS (OCR Region Selection)
             if (item.type == SavedItemType.IMAGE && capturedBitmap != null) {
@@ -424,419 +427,669 @@ fun CaptureScreen(
                 }
             }
 
-            // MAIN CONTENT EDITOR
-            Text(
-                text = when (item.type) {
-                    SavedItemType.LINK -> "URL / Link"
-                    SavedItemType.CODE -> "Code Snippet Source"
-                    SavedItemType.IMAGE, SavedItemType.VIDEO -> "Media File"
-                    SavedItemType.AUDIO -> "Voice Memo"
-                    else -> "Note Content"
-                },
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.padding(bottom = 6.dp)
-            )
+            if (item.type == SavedItemType.MEDIA) {
+                // Media capture view
+                val searchResults by viewModel.mediaSearchResults.collectAsState()
+                val isSearchingMedia by viewModel.isSearchingMedia.collectAsState()
+                var searchQuery by remember { mutableStateOf("") }
 
-            val mediaPicker = androidx.activity.compose.rememberLauncherForActivityResult(
-                androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
-            ) { uri ->
-                if (uri != null) {
-                    viewModel.handleMediaSelected(uri, item.type)
+                LaunchedEffect(searchQuery) {
+                    delay(350)
+                    viewModel.searchMedia(searchQuery)
                 }
-            }
 
-            val editorFont = if (item.type == SavedItemType.CODE) FontFamily.Monospace else FontFamily.SansSerif
-            val isMultiLine = item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE
-
-            if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO) {
-                val mediaUrl = item.content
-
-                // native media picker
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(
-                        onClick = {
-                            mediaPicker.launch(
-                                androidx.activity.result.PickVisualMediaRequest(
-                                    if (item.type == SavedItemType.IMAGE) androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
-                                    else androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.VideoOnly
-                                )
-                            )
-                        },
-                        modifier = Modifier.weight(1f),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    ) {
-                        Icon(
-                            painter = painterResource(id = if (item.type == SavedItemType.IMAGE) R.drawable.ic_custom_image else R.drawable.ic_custom_video),
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = if (item.content.isBlank()) "Select Media" else "Change Media",
-                            maxLines = 1,
-                            fontSize = 13.sp,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    if (item.content.isNotBlank() && item.type == SavedItemType.IMAGE) {
-                        Button(
-                            onClick = {
-                                val uri = android.net.Uri.parse(item.content)
-                                viewModel.performFullImageOcr(uri, context)
-                            },
-                            modifier = Modifier.weight(1.1f),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_text),
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = "Extract Links",
-                                maxLines = 1,
-                                fontSize = 13.sp,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                }
-                if (item.type == SavedItemType.VIDEO && item.content.isNotBlank()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
-                            .background(MaterialTheme.colorScheme.surface)
-                    ) {
-                        if (item.type == SavedItemType.IMAGE) {
-                            AsyncImage(
-                                model = mediaUrl,
-                                contentDescription = "Selected Image",
-                                modifier = Modifier.fillMaxWidth().height(200.dp),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            VideoPlayer(
-                                videoUri = mediaUrl,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(16.dp))
-                }
-            } else if (item.type == SavedItemType.AUDIO) {
-                AudioRecorderComponent(
-                    onRecordComplete = { file: java.io.File ->
-                        viewModel.transcribeAudioMemo(file)
-                    },
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-                if (isOcrLoading) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
-                            .background(MaterialTheme.colorScheme.surface)
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                "Gemini AI transcribing audio...",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                } else if (item.content.isNotBlank()) {
-                    Text("Transcription:", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    RichTextEditor(
-                        value = item.content,
-                        onValueChange = { newContent -> viewModel.updateActiveCaptureItem { it.copy(content = newContent) } },
-                        placeholder = { Text("Audio transcription will appear here...") },
-                        minLines = 5,
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
-                    )
-                }
-            } else if (item.type == SavedItemType.TEXT) {
-                RichTextEditor(
-                    value = item.content,
-                    onValueChange = { newContent ->
-                        viewModel.updateActiveCaptureItem { captured ->
-                            captured.copy(
-                                content = newContent
-                            )
-                        }
-                    },
-                    placeholder = { Text("Capture your thoughts or paste clipboard contents...") },
-                    minLines = if (isMultiLine) 5 else 1,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp)
-                        .testTag("capture_content_input")
-                )
-            } else {
-                OutlinedTextField(
-                    value = item.content,
-                    onValueChange = { viewModel.updateActiveCaptureItem { captured -> captured.copy(content = it) } },
-                    visualTransformation = if (item.type == SavedItemType.CODE) {
-                        com.example.ui.components.CodeSyntaxHighlightTransformation(androidx.compose.foundation.isSystemInDarkTheme())
-                    } else {
-                        androidx.compose.ui.text.input.VisualTransformation.None
-                    },
-                    keyboardOptions = if (item.type == SavedItemType.LINK) {
-                        KeyboardOptions(keyboardType = KeyboardType.Uri)
-                    } else {
-                        KeyboardOptions.Default
-                    },
-                    placeholder = {
-                        Text(
-                            when (item.type) {
-                                SavedItemType.LINK -> "https://example.com/shared-resource"
-                                SavedItemType.CODE -> "Write or paste source code..."
-                                else -> ""
-                            }
-                        )
-                    },
-                    shape = RoundedCornerShape(20.dp),
-                    minLines = if (isMultiLine) 5 else 1,
-                    maxLines = Int.MAX_VALUE,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = editorFont),
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp)
-                        .testTag("capture_content_input")
-                )
-            }
-            if (item.type == SavedItemType.LINK && item.content.isNotBlank()) {
-                val isExtracting by viewModel.isMetadataExtracting.collectAsState()
-                val metadataError by viewModel.metadataError.collectAsState()
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 6.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .clickable {
-                            viewModel.updateActiveCaptureItem {
-                                it.copy(
-                                    linkTitle = null,
-                                    linkDescription = null,
-                                    linkImage = null
-                                )
-                            }
-                            viewModel.fetchLinkPreviewForActiveItem(item.content)
-                        }
-                        .testTag("retry_link_extraction")
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_custom_sync),
-                        contentDescription = "Retry Extraction",
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
+                if (item.title.isBlank()) {
+                    // Show search bar and results list
                     Text(
-                        text = "Retry Extraction",
+                        text = "Search Movies, TV Shows & Anime",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.secondary
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.padding(bottom = 6.dp)
                     )
-                }
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp)
-                ) {
-                    if (isExtracting) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.5.dp,
-                                strokeCap = StrokeCap.Round,
-                                color = MaterialTheme.colorScheme.primary
+
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Type to search (e.g., Inception, Naruto)...") },
+                        singleLine = true,
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search"
                             )
-                            Text(
-                                text = "Extracting real-time link preview...",
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.secondary,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    } else if (metadataError != null) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            horizontalAlignment = Alignment.Start
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Warning,
-                                    contentDescription = "Error",
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Text(
-                                    text = "Extraction Failed",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.error
-                                )
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Clear,
+                                        contentDescription = "Clear search"
+                                    )
+                                }
                             }
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp)
+                    )
+
+                    if (isSearchingMedia) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    } else if (searchQuery.isNotBlank() && searchResults.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
-                                text = metadataError!!,
-                                fontSize = 12.sp,
+                                text = "No results found for \"$searchQuery\"",
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                    } else if (!item.linkTitle.isNullOrBlank()) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            if (!item.linkImage.isNullOrBlank()) {
-                                AsyncImage(
-                                    model = item.linkImage,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier
-                                        .size(56.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                )
-                            } else {
-                                Box(
-                                    modifier = Modifier
-                                        .size(56.dp)
-                                        .background(
-                                            MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
-                                            RoundedCornerShape(12.dp)
-                                        ),
-                                    contentAlignment = Alignment.Center
+                    } else {
+                        // Render Search Results List
+                        searchResults.forEach { result ->
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                border = BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .clickable {
+                                        viewModel.updateActiveCaptureItem { current ->
+                                            current.copy(
+                                                id = result.id,
+                                                title = result.title,
+                                                content = result.overview ?: "",
+                                                thumbnailPath = result.posterUrl,
+                                                backdropUrl = result.backdropUrl,
+                                                mediaType = result.mediaType,
+                                                watchStatus = "Plan to Watch",
+                                                releaseYear = result.releaseYear,
+                                                genres = result.genres,
+                                                watchProviders = result.watchProviders,
+                                                trailerUrl = result.trailerUrl,
+                                                folders = listOf("Media")
+                                            )
+                                        }
+                                        val tempItem = item.copy(
+                                            id = result.id,
+                                            title = result.title,
+                                            content = result.overview ?: "",
+                                            thumbnailPath = result.posterUrl,
+                                            backdropUrl = result.backdropUrl,
+                                            mediaType = result.mediaType,
+                                            watchStatus = "Plan to Watch",
+                                            releaseYear = result.releaseYear,
+                                            genres = result.genres,
+                                            watchProviders = result.watchProviders,
+                                            trailerUrl = result.trailerUrl,
+                                            folders = listOf("Media")
+                                        )
+                                        viewModel.enrichMediaItem(tempItem, saveToDb = false)
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_custom_globe),
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.secondary,
-                                        modifier = Modifier.size(24.dp)
-                                    )
+                                    // Poster
+                                    if (!result.posterUrl.isNullOrBlank()) {
+                                        coil.compose.AsyncImage(
+                                            model = result.posterUrl,
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .size(width = 60.dp, height = 90.dp)
+                                                .clip(RoundedCornerShape(8.dp)),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                    }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = result.title,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        val typeLabel = when (result.mediaType.lowercase()) {
+                                            "movie" -> "Movie"
+                                            "tv" -> "TV Show"
+                                            "anime" -> "Anime"
+                                            else -> result.mediaType
+                                        }
+                                        Text(
+                                            text = "${result.releaseYear ?: "N/A"} • $typeLabel",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.SemiBold,
+                                            modifier = Modifier.padding(top = 2.dp)
+                                        )
+                                        if (!result.overview.isNullOrBlank()) {
+                                            Text(
+                                                text = result.overview,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.padding(top = 4.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = item.linkTitle ?: "",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                if (!item.linkDescription.isNullOrBlank()) {
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = item.linkDescription ?: "",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.secondary,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
+                        }
+                    }
+                } else {
+                    // Show Preview with a nice "Change" Button
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Selected Media Preview",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.updateActiveCaptureItem { current ->
+                                    current.copy(
+                                        title = "",
+                                        content = "",
+                                        thumbnailPath = null,
+                                        backdropUrl = null,
+                                        mediaType = null,
+                                        watchStatus = null,
+                                        releaseYear = null,
+                                        genres = emptyList(),
+                                        watchProviders = emptyList(),
+                                        trailerUrl = null,
+                                        folders = emptyList()
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                val uri = try {
-                                    android.net.Uri.parse(item.content)
-                                } catch (e: Exception) {
-                                    null
-                                }
-                                val domain = uri?.host ?: item.content
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Change",
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Change", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // Render the full rich MediaDetailSection
+                    MediaDetailSection(
+                        item = item,
+                        viewModel = viewModel,
+                        onWatchStatusChanged = { status ->
+                            viewModel.updateActiveCaptureItem { current ->
+                                current.copy(watchStatus = status)
+                            }
+                        }
+                    )
+                }
+            } else {
+                // MAIN CONTENT EDITOR
+                Text(
+                    text = when (item.type) {
+                        SavedItemType.LINK -> "URL / Link"
+                        SavedItemType.CODE -> "Code Snippet Source"
+                        SavedItemType.IMAGE, SavedItemType.VIDEO -> "Media File"
+                        SavedItemType.AUDIO -> "Voice Memo"
+                        else -> "Note Content"
+                    },
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+
+                val mediaPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+                    androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
+                ) { uri ->
+                    if (uri != null) {
+                        viewModel.handleMediaSelected(uri, item.type)
+                    }
+                }
+
+                val editorFont = if (item.type == SavedItemType.CODE) FontFamily.Monospace else FontFamily.SansSerif
+                val isMultiLine = item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE
+
+                if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO) {
+                    val mediaUrl = item.content
+
+                    // native media picker
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(
+                            onClick = {
+                                mediaPicker.launch(
+                                    androidx.activity.result.PickVisualMediaRequest(
+                                        if (item.type == SavedItemType.IMAGE) androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                                        else androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.VideoOnly
+                                    )
+                                )
+                            },
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        ) {
+                            Icon(
+                                painter = painterResource(id = if (item.type == SavedItemType.IMAGE) R.drawable.ic_custom_image else R.drawable.ic_custom_video),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (item.type == SavedItemType.IMAGE) "Select Image File" else "Select Video File",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        if (mediaUrl.isNotBlank()) {
+                            IconButton(
+                                onClick = {
+                                    viewModel.updateActiveCaptureItem { it.copy(content = "") }
+                                },
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.errorContainer,
+                                        RoundedCornerShape(12.dp)
+                                    )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete File",
+                                    tint = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            }
+                        }
+                    }
+
+                    if (mediaUrl.isNotBlank() && item.type == SavedItemType.IMAGE) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.outlineVariant,
+                                    RoundedCornerShape(20.dp)
+                                )
+                        ) {
+                            AsyncImage(
+                                model = mediaUrl,
+                                contentDescription = "Selected Image",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                        Spacer(Modifier.height(16.dp))
+                    }
+
+                    if (item.type == SavedItemType.VIDEO && mediaUrl.isNotBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .border(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.outlineVariant,
+                                    RoundedCornerShape(20.dp)
+                                )
+                                .background(Color.Black),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_video),
+                                contentDescription = "Video Loaded",
+                                tint = Color.White,
+                                modifier = Modifier.size(48.dp)
+                            )
+                        }
+                        Spacer(Modifier.height(16.dp))
+                    }
+                } else if (item.type == SavedItemType.AUDIO) {
+                    AudioRecorderComponent(
+                        onRecordComplete = { file: java.io.File ->
+                            viewModel.transcribeAudioMemo(file)
+                        },
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    if (isOcrLoading) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(100.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
+                                .background(MaterialTheme.colorScheme.surface)
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = domain,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Medium,
+                                    "Gemini AI transcribing audio...",
+                                    fontSize = 12.sp,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
-                    } else {
-                        // Empty state (no data, not extracting)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    viewModel.fetchLinkPreviewForActiveItem(item.content)
+                        Spacer(modifier = Modifier.height(16.dp))
+                    } else if (item.content.isNotBlank()) {
+                        Text("Transcription:", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        RichTextEditor(
+                            value = item.content,
+                            onValueChange = { newContent -> viewModel.updateActiveCaptureItem { it.copy(content = newContent) } },
+                            placeholder = { Text("Audio transcription will appear here...") },
+                            minLines = 5,
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                        )
+                    }
+                } else if (item.type == SavedItemType.TEXT) {
+                    RichTextEditor(
+                        value = item.content,
+                        onValueChange = { newContent ->
+                            viewModel.updateActiveCaptureItem { captured ->
+                                captured.copy(
+                                    content = newContent
+                                )
+                            }
+                        },
+                        placeholder = { Text("Capture your thoughts or paste clipboard contents...") },
+                        minLines = if (isMultiLine) 5 else 1,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
+                            .testTag("capture_content_input")
+                    )
+                } else {
+                    OutlinedTextField(
+                        value = item.content,
+                        onValueChange = { viewModel.updateActiveCaptureItem { captured -> captured.copy(content = it) } },
+                        visualTransformation = if (item.type == SavedItemType.CODE) {
+                            com.example.ui.components.CodeSyntaxHighlightTransformation(androidx.compose.foundation.isSystemInDarkTheme())
+                        } else {
+                            androidx.compose.ui.text.input.VisualTransformation.None
+                        },
+                        keyboardOptions = if (item.type == SavedItemType.LINK) {
+                            KeyboardOptions(keyboardType = KeyboardType.Uri)
+                        } else {
+                            KeyboardOptions.Default
+                        },
+                        placeholder = {
+                            Text(
+                                when (item.type) {
+                                    SavedItemType.LINK -> "https://example.com/shared-resource"
+                                    SavedItemType.CODE -> "Write or paste source code..."
+                                    else -> ""
                                 }
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_link),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
                             )
-                            Column {
-                                Text(
-                                    text = "No preview available",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        minLines = if (isMultiLine) 5 else 1,
+                        maxLines = Int.MAX_VALUE,
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = editorFont),
+                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
+                            .testTag("capture_content_input")
+                    )
+                }
+                if (item.type == SavedItemType.LINK && item.content.isNotBlank()) {
+                    val isExtracting by viewModel.isMetadataExtracting.collectAsState()
+                    val metadataError by viewModel.metadataError.collectAsState()
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 6.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .clickable {
+                                viewModel.updateActiveCaptureItem {
+                                    it.copy(
+                                        linkTitle = null,
+                                        linkDescription = null,
+                                        linkImage = null
+                                    )
+                                }
+                                viewModel.fetchLinkPreviewForActiveItem(item.content)
+                            }
+                            .testTag("retry_link_extraction")
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_sync),
+                            contentDescription = "Retry Extraction",
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Retry Extraction",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
+                    ) {
+                        if (isExtracting) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.5.dp,
+                                    strokeCap = StrokeCap.Round,
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                                 Text(
-                                    text = "Click to attempt metadata extraction",
-                                    fontSize = 11.sp,
+                                    text = "Extracting real-time link preview...",
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        } else if (metadataError != null) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalAlignment = Alignment.Start
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = "Error",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = "Extraction Failed",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                                Text(
+                                    text = metadataError!!,
+                                    fontSize = 12.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
+                            }
+                        } else if (!item.linkTitle.isNullOrBlank()) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                if (!item.linkImage.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = item.linkImage,
+                                        contentDescription = null,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(56.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(56.dp)
+                                            .background(
+                                                MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                                                RoundedCornerShape(12.dp)
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_custom_globe),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.secondary,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                }
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = item.linkTitle ?: "",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    if (!item.linkDescription.isNullOrBlank()) {
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = item.linkDescription ?: "",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.secondary,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    val uri = try {
+                                        android.net.Uri.parse(item.content)
+                                    } catch (e: Exception) {
+                                        null
+                                    }
+                                    val domain = uri?.host ?: item.content
+                                    Text(
+                                        text = domain,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        } else {
+                            // Empty state (no data, not extracting)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        viewModel.fetchLinkPreviewForActiveItem(item.content)
+                                    }
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_link),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Column {
+                                    Text(
+                                        text = "No preview available",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Click to attempt metadata extraction",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     }

@@ -74,6 +74,7 @@ import com.example.ui.theme.CategoryVideo
 import com.example.ui.theme.CategoryText
 import com.example.ui.theme.CategoryCode
 import com.example.ui.theme.CategoryAudio
+import com.example.ui.theme.CategoryMedia
 
 data class StorageBreakdownItem(
     val name: String,
@@ -398,18 +399,20 @@ fun ManageStorageScreen(
                             val baseColor = when (type) {
                                 SavedItemType.LINK -> CategoryLink
                                 SavedItemType.IMAGE -> CategoryImage
-                                SavedItemType.VIDEO, SavedItemType.MEDIA -> CategoryVideo
+                                SavedItemType.VIDEO -> CategoryVideo
                                 SavedItemType.TEXT -> CategoryText
                                 SavedItemType.CODE -> CategoryCode
                                 SavedItemType.AUDIO -> CategoryAudio
+                                SavedItemType.MEDIA -> CategoryMedia
                             }
                             val iconResId = when (type) {
                                 SavedItemType.LINK -> R.drawable.ic_custom_link
                                 SavedItemType.IMAGE -> R.drawable.ic_custom_image
-                                SavedItemType.VIDEO, SavedItemType.MEDIA -> R.drawable.ic_custom_video
+                                SavedItemType.VIDEO -> R.drawable.ic_custom_video
                                 SavedItemType.CODE -> R.drawable.ic_custom_code
                                 SavedItemType.TEXT -> R.drawable.ic_custom_text
                                 SavedItemType.AUDIO -> R.drawable.ic_custom_voice
+                                SavedItemType.MEDIA -> R.drawable.ic_custom_movie
                             }
 
                             val isExpanded = expandedStates[type] ?: false
@@ -594,18 +597,20 @@ fun ManageStorageScreen(
                                                                 val itemIconResId = when (item.type) {
                                                                     SavedItemType.LINK -> R.drawable.ic_custom_link
                                                                     SavedItemType.IMAGE -> R.drawable.ic_custom_image
-                                                                    SavedItemType.VIDEO, SavedItemType.MEDIA -> R.drawable.ic_custom_video
+                                                                    SavedItemType.VIDEO -> R.drawable.ic_custom_video
                                                                     SavedItemType.CODE -> R.drawable.ic_custom_code
                                                                     SavedItemType.TEXT -> R.drawable.ic_custom_text
                                                                     SavedItemType.AUDIO -> R.drawable.ic_custom_voice
+                                                                    SavedItemType.MEDIA -> R.drawable.ic_custom_movie
                                                                 }
                                                                 val itemBaseColor = when (item.type) {
                                                                     SavedItemType.LINK -> CategoryLink
                                                                     SavedItemType.IMAGE -> CategoryImage
-                                                                    SavedItemType.VIDEO, SavedItemType.MEDIA -> CategoryVideo
+                                                                    SavedItemType.VIDEO -> CategoryVideo
                                                                     SavedItemType.TEXT -> CategoryText
                                                                     SavedItemType.CODE -> CategoryCode
                                                                     SavedItemType.AUDIO -> CategoryAudio
+                                                                    SavedItemType.MEDIA -> CategoryMedia
                                                                 }
                                                                 Box(
                                                                     modifier = Modifier
@@ -760,10 +765,11 @@ fun ManageStorageScreen(
                     val baseColor = when (item.type) {
                         SavedItemType.LINK -> CategoryLink
                         SavedItemType.IMAGE -> CategoryImage
-                        SavedItemType.VIDEO, SavedItemType.MEDIA -> CategoryVideo
+                        SavedItemType.VIDEO -> CategoryVideo
                         SavedItemType.TEXT -> CategoryText
                         SavedItemType.CODE -> CategoryCode
                         SavedItemType.AUDIO -> CategoryAudio
+                        SavedItemType.MEDIA -> CategoryMedia
                     }
                     Box(
                         modifier = Modifier
@@ -868,10 +874,11 @@ fun ManageStorageScreen(
         val baseColor = when (type) {
             SavedItemType.LINK -> CategoryLink
             SavedItemType.IMAGE -> CategoryImage
-            SavedItemType.VIDEO, SavedItemType.MEDIA -> CategoryVideo
+            SavedItemType.VIDEO -> CategoryVideo
             SavedItemType.TEXT -> CategoryText
             SavedItemType.CODE -> CategoryCode
             SavedItemType.AUDIO -> CategoryAudio
+            SavedItemType.MEDIA -> CategoryMedia
         }
 
         AlertDialog(
