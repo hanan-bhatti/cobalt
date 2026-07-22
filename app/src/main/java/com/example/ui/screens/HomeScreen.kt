@@ -138,12 +138,6 @@ fun HomeScreen(
         else -> isSystemInDarkTheme()
     }
 
-    var isDragging by remember { mutableStateOf(false) }
-    var draggingItemId by remember { mutableStateOf<String?>(null) }
-    var mutableItems by remember { mutableStateOf(items) }
-    LaunchedEffect(items) {
-        if (!isDragging) mutableItems = items
-    }
 
     var showBulkTagDialog by remember { mutableStateOf(false) }
     var showAddFolderDialog by remember { mutableStateOf(false) }
@@ -633,80 +627,119 @@ fun HomeScreen(
                         if (targetIsList) {
                             LazyColumn(
                                 state = listState,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .dragToReorder(
-                                        lazyListState = listState,
-                                        onMove = { from, to ->
-                                            isDragging = true
-                                            mutableItems = mutableItems.toMutableList().apply {
-                                                add(to, removeAt(from))
-                                            }
-                                        },
-                                        onDragEnd = {
-                                            isDragging = false
-                                            draggingItemId = null
-                                            viewModel.updateOrderIndices(mutableItems)
-                                        },
-                                        draggingItemId = draggingItemId?.let { mutableItems.indexOfFirst { item -> item.id == draggingItemId } },
-                                        onDraggingItemChange = { newIndex ->
-                                            if (newIndex != null) {
-                                                draggingItemId = mutableItems.getOrNull(newIndex)?.id
-                                            } else {
-                                                draggingItemId = null
-                                            }
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 100.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
+                                    val animDelay = (index % 10) * 50
+                                    val entryAlpha = remember { Animatable(0f) }
+                                    val entryOffsetY = remember { Animatable(40f) }
+                                    LaunchedEffect(item.id) {
+                                        delay(animDelay.toLong())
+                                        launch {
+                                            entryAlpha.animateTo(
+                                                targetValue = 1f,
+                                                animationSpec = tween(durationMillis = 350, easing = LinearOutSlowInEasing)
+                                            )
                                         }
-                                    ),
-                        contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 100.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        itemsIndexed(mutableItems, key = { _, item -> item.id }) { index, item ->
-                            val animDelay = (index % 10) * 50
-                            val entryAlpha = remember { Animatable(0f) }
-                            val entryOffsetY = remember { Animatable(40f) }
-                            LaunchedEffect(item.id) {
-                                delay(animDelay.toLong())
-                                launch {
-                                    entryAlpha.animateTo(
-                                        targetValue = 1f,
-                                        animationSpec = tween(durationMillis = 350, easing = LinearOutSlowInEasing)
-                                    )
-                                }
-                                launch {
-                                    entryOffsetY.animateTo(
-                                        targetValue = 0f,
-                                        animationSpec = tween(durationMillis = 350, easing = LinearOutSlowInEasing)
+                                        launch {
+                                            entryOffsetY.animateTo(
+                                                targetValue = 0f,
+                                                animationSpec = tween(durationMillis = 350, easing = LinearOutSlowInEasing)
+                                            )
+                                        }
+                                    }
+
+                                    SwipeToDismissWrapper(
+                                        item = item,
+                                        enable = !isSelectionMode,
+                                        isScrolling = listState.isScrollInProgress,
+                                        isDark = isDark,
+                                        onDismissToDelete = {
+                                            itemToDelete = item
+                                        },
+                                        onDismissToArchive = {
+                                            if (item.folders.contains("Archive")) {
+                                                viewModel.unarchiveItem(item)
+                                            } else {
+                                                viewModel.archiveItem(item)
+                                            }
+                                        },
+                                        modifier = Modifier
+                                            .graphicsLayer {
+                                                alpha = entryAlpha.value
+                                                translationY = entryOffsetY.value
+                                            }
+                                            .animateItem(),
+                                        content = {
+                                            ArchiveItemRow(
+                                                item = item,
+                                                onClick = {
+                                                    if (isSelectionMode) {
+                                                        viewModel.toggleSelection(item.id)
+                                                    } else {
+                                                        viewModel.showDetailItem(item)
+                                                    }
+                                                },
+                                                onDelete = {
+                                                    itemToDelete = item
+                                                },
+                                                onManageFolders = { itemToManageFolders = item },
+                                                onArchive = {
+                                                    if (item.folders.contains("Archive")) {
+                                                        viewModel.unarchiveItem(item)
+                                                    } else {
+                                                        viewModel.archiveItem(item)
+                                                    }
+                                                },
+                                                isSelected = selectedItemIds.contains(item.id),
+                                                isSelectionMode = isSelectionMode,
+                                                folderColors = folderColorsMap,
+                                                onLongClick = {
+                                                    if (isSelectionMode) {
+                                                        viewModel.toggleSelection(item.id)
+                                                    } else {
+                                                        viewModel.enterSelectionMode(item.id)
+                                                    }
+                                                },
+                                                sharedTransitionScope = sharedTransitionScope,
+                                                animatedVisibilityScope = animatedVisibilityScope
+                                            )
+                                        }
                                     )
                                 }
                             }
+                        } else {
+                            LazyVerticalStaggeredGrid(
+                                columns = StaggeredGridCells.Fixed(2),
+                                state = gridState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 100.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalItemSpacing = 12.dp
+                            ) {
+                                itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
+                                    val animDelay = (index % 10) * 50
+                                    val entryAlpha = remember { Animatable(0f) }
+                                    val entryOffsetY = remember { Animatable(40f) }
+                                    LaunchedEffect(item.id) {
+                                        delay(animDelay.toLong())
+                                        launch {
+                                            entryAlpha.animateTo(
+                                                targetValue = 1f,
+                                                animationSpec = tween(durationMillis = 350, easing = LinearOutSlowInEasing)
+                                            )
+                                        }
+                                        launch {
+                                            entryOffsetY.animateTo(
+                                                targetValue = 0f,
+                                                animationSpec = tween(durationMillis = 350, easing = LinearOutSlowInEasing)
+                                            )
+                                        }
+                                    }
 
-                            SwipeToDismissWrapper(
-                                item = item,
-                                enable = !isSelectionMode,
-                                isScrolling = listState.isScrollInProgress,
-                                isDark = isDark,
-                                onDismissToDelete = {
-                                    itemToDelete = item
-                                },
-                                onDismissToArchive = {
-                                    if (item.folders.contains("Archive")) {
-                                        viewModel.unarchiveItem(item)
-                                    } else {
-                                        viewModel.archiveItem(item)
-                                    }
-                                },
-                                modifier = Modifier
-                                    .draggedItemVisuals(
-                                        isDragging = draggingItemId == item.id,
-                                        reduceMotion = false
-                                    )
-                                    .graphicsLayer {
-                                        alpha = entryAlpha.value
-                                        translationY = entryOffsetY.value
-                                    }
-                                    .animateItem(),
-                                content = {
-                                    ArchiveItemRow(
+                                    ArchiveItemCard(
                                         item = item,
                                         onClick = {
                                             if (isSelectionMode) {
@@ -737,115 +770,21 @@ fun HomeScreen(
                                             }
                                         },
                                         sharedTransitionScope = sharedTransitionScope,
-                                        animatedVisibilityScope = animatedVisibilityScope
-                                    )
-                                }
-                            )
-                        }
-                    }
-                } else {
-                    LazyVerticalStaggeredGrid(
-                        columns = StaggeredGridCells.Fixed(2),
-                        state = gridState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .dragToReorderStaggeredGrid(
-                                lazyStaggeredGridState = gridState,
-                                onMove = { from, to ->
-                                    isDragging = true
-                                    mutableItems = mutableItems.toMutableList().apply {
-                                        add(to, removeAt(from))
-                                    }
-                                },
-                                onDragEnd = {
-                                    isDragging = false
-                                    draggingItemId = null
-                                    viewModel.updateOrderIndices(mutableItems)
-                                },
-                                draggingItemId = draggingItemId?.let { mutableItems.indexOfFirst { item -> item.id == draggingItemId } },
-                                onDraggingItemChange = { newIndex ->
-                                    if (newIndex != null) {
-                                        draggingItemId = mutableItems.getOrNull(newIndex)?.id
-                                    } else {
-                                        draggingItemId = null
-                                    }
-                                }
-                            ),
-                        contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 100.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalItemSpacing = 12.dp
-                    ) {
-                        itemsIndexed(mutableItems, key = { _, item -> item.id }) { index, item ->
-                            val animDelay = (index % 10) * 50
-                            val entryAlpha = remember { Animatable(0f) }
-                            val entryOffsetY = remember { Animatable(40f) }
-                            LaunchedEffect(item.id) {
-                                delay(animDelay.toLong())
-                                launch {
-                                    entryAlpha.animateTo(
-                                        targetValue = 1f,
-                                        animationSpec = tween(durationMillis = 350, easing = LinearOutSlowInEasing)
-                                    )
-                                }
-                                launch {
-                                    entryOffsetY.animateTo(
-                                        targetValue = 0f,
-                                        animationSpec = tween(durationMillis = 350, easing = LinearOutSlowInEasing)
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        modifier = Modifier
+                                            .graphicsLayer {
+                                                alpha = entryAlpha.value
+                                                translationY = entryOffsetY.value
+                                            }
+                                            .animateItem()
                                     )
                                 }
                             }
-
-                            ArchiveItemCard(
-                                item = item,
-                                onClick = {
-                                    if (isSelectionMode) {
-                                        viewModel.toggleSelection(item.id)
-                                    } else {
-                                        viewModel.showDetailItem(item)
-                                    }
-                                },
-                                onDelete = {
-                                    itemToDelete = item
-                                },
-                                onManageFolders = { itemToManageFolders = item },
-                                onArchive = {
-                                    if (item.folders.contains("Archive")) {
-                                        viewModel.unarchiveItem(item)
-                                    } else {
-                                        viewModel.archiveItem(item)
-                                    }
-                                },
-                                isSelected = selectedItemIds.contains(item.id),
-                                isSelectionMode = isSelectionMode,
-                                folderColors = folderColorsMap,
-                                onLongClick = {
-                                    if (isSelectionMode) {
-                                        viewModel.toggleSelection(item.id)
-                                    } else {
-                                        viewModel.enterSelectionMode(item.id)
-                                    }
-                                },
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = animatedVisibilityScope,
-                                modifier = Modifier
-                                    .draggedItemVisuals(
-                                        isDragging = draggingItemId == item.id,
-                                        reduceMotion = false
-                                    )
-                                    .graphicsLayer {
-                                        alpha = entryAlpha.value
-                                        translationY = entryOffsetY.value
-                                    }
-                                    .animateItem()
-                            )
                         }
                     }
                 }
             }
         }
-        }
-        }
-
         // Beautiful interactive Undo Toast UI overlay
         AnimatedVisibility(
             visible = showUndoToast && deletedItemForUndo != null,
@@ -904,6 +843,7 @@ fun HomeScreen(
             }
         }
     }
+}
 }
 
     // Add Custom Folder Dialog
@@ -1471,12 +1411,8 @@ fun HomeScreen(
             containerColor = MaterialTheme.colorScheme.surface
         )
     }
-
 }
-
         // The FAB overlay has been moved to MainActivity via GlobalExpandingFab
-
-}
 
 
 
