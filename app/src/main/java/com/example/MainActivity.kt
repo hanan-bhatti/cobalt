@@ -207,9 +207,10 @@ BackHandler(enabled = activeDetailItem != null) {
                             modifier = Modifier.padding(bottom = 96.dp)
                         )
                     },
+                    contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
                     modifier = Modifier.fillMaxSize()
                 ) { innerPadding ->
-                    Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+                    Box(modifier = Modifier.fillMaxSize()) {
                         @OptIn(ExperimentalSharedTransitionApi::class)
                         SharedTransitionLayout {
                             Surface(modifier = Modifier.fillMaxSize().hazeSource(hazeState)) {
