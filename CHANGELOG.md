@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.3-beta01] - 2026-07-22
+
+### Added
+- **Global Dynamic Light/Dark Theme Color Adaptation:** Implemented HSL-based color transformation (`Color.toThemeColor(isDark)`) across all folders, categories, widgets, OCR overlay, and settings screens to adapt colors for dark mode without losing brand presets.
+- **Header Top Inset Cleanups:** Consolidated top bar header spacing immediately below the system status bar across all main screens.
+
 ## [0.9.2-beta01] - 2026-07-22
 
 ### Added
