@@ -40,6 +40,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
@@ -68,6 +69,7 @@ fun WidgetSettingsScreen(
     viewModel: SecondBrainViewModel,
     onNavigateBack: () -> Unit
 ) {
+    val isDark = isSystemInDarkTheme()
     val context = LocalContext.current
     val appWidgetManager = remember { AppWidgetManager.getInstance(context) }
 
@@ -212,6 +214,7 @@ private fun AnimatedCapsuleDotIndicator(
 private fun QuickCaptureCustomizationSection(
     viewModel: SecondBrainViewModel
 ) {
+    val isDark = isSystemInDarkTheme()
     val context = LocalContext.current
     val appWidgetManager = remember { AppWidgetManager.getInstance(context) }
     val quickWidgetIds = remember {
@@ -227,15 +230,18 @@ private fun QuickCaptureCustomizationSection(
         )
     }
 
-    val actions = listOf(
-        QuickActionOption("TEXT", "Add Note", "Create quick text note", R.drawable.ic_custom_text, CategoryText),
-        QuickActionOption("LINK", "Save Link", "Bookmark URL or web page", R.drawable.ic_custom_link, CategoryLink),
-        QuickActionOption("IMAGE", "Photo Capture", "Snap photo or select image", R.drawable.ic_custom_image, CategoryImage),
-        QuickActionOption("AUDIO", "Voice Memo", "Record audio memo instantly", R.drawable.ic_custom_voice, CategoryAudio),
-        QuickActionOption("CODE", "Add Code", "Save code snippet", R.drawable.ic_custom_code, CategoryCode),
-        QuickActionOption("MEDIA", "Add Movie / Show", "Search movies, TV & anime", R.drawable.ic_custom_movie, CategoryMedia),
-        QuickActionOption("OCR", "Screen OCR", "Capture & extract text from screen", R.drawable.ic_custom_ocr, MaterialTheme.colorScheme.primary)
-    )
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val actions = remember(isDark, primaryColor) {
+        listOf(
+            QuickActionOption("TEXT", "Add Note", "Create quick text note", R.drawable.ic_custom_text, CategoryText),
+            QuickActionOption("LINK", "Save Link", "Bookmark URL or web page", R.drawable.ic_custom_link, CategoryLink),
+            QuickActionOption("IMAGE", "Photo Capture", "Snap photo or select image", R.drawable.ic_custom_image, CategoryImage),
+            QuickActionOption("AUDIO", "Voice Memo", "Record audio memo instantly", R.drawable.ic_custom_voice, CategoryAudio),
+            QuickActionOption("CODE", "Add Code", "Save code snippet", R.drawable.ic_custom_code, CategoryCode),
+            QuickActionOption("MEDIA", "Add Movie / Show", "Search movies, TV & anime", R.drawable.ic_custom_movie, CategoryMedia),
+            QuickActionOption("OCR", "Screen OCR", "Capture & extract text from screen", R.drawable.ic_custom_ocr, primaryColor)
+        ).map { it.copy(accentColor = it.accentColor.toThemeColor(isDark)) }
+    }
 
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -406,6 +412,7 @@ private fun RecentItemsCustomizationSection(
     maxItems: Int,
     onMaxItemsSelected: (Int) -> Unit
 ) {
+    val isDark = isSystemInDarkTheme()
     val context = LocalContext.current
     val cachedItems = remember {
         try { com.example.widget.WidgetCache.getCachedItems(context) } catch (e: Exception) { emptyList() }
@@ -526,7 +533,7 @@ private fun RecentItemsCustomizationSection(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 itemsToDisplay.forEach { item ->
-                                    val (iconRes, categoryColor) = when (item.type) {
+                                    val (iconRes, rawColor) = when (item.type) {
                                         com.example.data.model.SavedItemType.LINK -> Pair(R.drawable.ic_custom_link, CategoryLink)
                                         com.example.data.model.SavedItemType.IMAGE, com.example.data.model.SavedItemType.VIDEO -> Pair(R.drawable.ic_custom_image, CategoryImage)
                                         com.example.data.model.SavedItemType.CODE -> Pair(R.drawable.ic_custom_code, CategoryCode)
@@ -534,6 +541,7 @@ private fun RecentItemsCustomizationSection(
                                         com.example.data.model.SavedItemType.MEDIA -> Pair(R.drawable.ic_custom_movie, CategoryMedia)
                                         else -> Pair(R.drawable.ic_custom_text, CategoryText)
                                     }
+                                    val categoryColor = rawColor.toThemeColor(isDark)
 
                                     Row(
                                         modifier = Modifier

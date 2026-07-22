@@ -75,6 +75,8 @@ import com.example.ui.theme.CategoryText
 import com.example.ui.theme.CategoryCode
 import com.example.ui.theme.CategoryAudio
 import com.example.ui.theme.CategoryMedia
+import androidx.compose.foundation.isSystemInDarkTheme
+import com.example.ui.theme.toThemeColor
 
 data class StorageBreakdownItem(
     val name: String,
@@ -88,6 +90,7 @@ fun ManageStorageScreen(
     onNavigateBack: () -> Unit,
     viewModel: SecondBrainViewModel
 ) {
+    val isDark = isSystemInDarkTheme()
     val isSyncing by viewModel.isSyncing.collectAsState()
     val allItems by viewModel.allItems.collectAsState()
     val cloudUsedStorageBytes by viewModel.cloudUsedStorageBytes.collectAsState()
@@ -105,13 +108,13 @@ fun ManageStorageScreen(
 
     val customFolders by viewModel.customFolders.collectAsState()
 
-    val breakdownColors = remember {
+    val breakdownColors = remember(isDark) {
         listOf(
             CategoryLink, CategoryCode, CategoryImage,
             CategoryText, CategoryVideo, CategoryAudio,
             PaletteColor1, PaletteColor2, PaletteColor3,
             PaletteColor4
-        )
+        ).map { it.toThemeColor(isDark) }
     }
 
     // --- Storage helpers (mirrors ViewModel logic) ---
@@ -396,15 +399,15 @@ fun ManageStorageScreen(
                                 0L
                             }
 
-                            val baseColor = when (type) {
-                                SavedItemType.LINK -> CategoryLink
-                                SavedItemType.IMAGE -> CategoryImage
-                                SavedItemType.VIDEO -> CategoryVideo
-                                SavedItemType.TEXT -> CategoryText
-                                SavedItemType.CODE -> CategoryCode
-                                SavedItemType.AUDIO -> CategoryAudio
-                                SavedItemType.MEDIA -> CategoryMedia
-                            }
+                             val baseColor = when (type) {
+                                 SavedItemType.LINK -> CategoryLink
+                                 SavedItemType.IMAGE -> CategoryImage
+                                 SavedItemType.VIDEO -> CategoryVideo
+                                 SavedItemType.TEXT -> CategoryText
+                                 SavedItemType.CODE -> CategoryCode
+                                 SavedItemType.AUDIO -> CategoryAudio
+                                 SavedItemType.MEDIA -> CategoryMedia
+                             }.toThemeColor(isDark)
                             val iconResId = when (type) {
                                 SavedItemType.LINK -> R.drawable.ic_custom_link
                                 SavedItemType.IMAGE -> R.drawable.ic_custom_image
@@ -611,12 +614,13 @@ fun ManageStorageScreen(
                                                                     SavedItemType.CODE -> CategoryCode
                                                                     SavedItemType.AUDIO -> CategoryAudio
                                                                     SavedItemType.MEDIA -> CategoryMedia
-                                                                }
+                                                                }.toThemeColor(isDark)
+                                                                val boxAlpha = if (isDark) 0.25f else 0.15f
                                                                 Box(
                                                                     modifier = Modifier
                                                                         .size(36.dp)
                                                                         .clip(RoundedCornerShape(8.dp))
-                                                                        .background(itemBaseColor.copy(alpha = 0.15f)),
+                                                                        .background(itemBaseColor.copy(alpha = boxAlpha)),
                                                                     contentAlignment = Alignment.Center
                                                                 ) {
                                                                     Icon(
@@ -770,7 +774,7 @@ fun ManageStorageScreen(
                         SavedItemType.CODE -> CategoryCode
                         SavedItemType.AUDIO -> CategoryAudio
                         SavedItemType.MEDIA -> CategoryMedia
-                    }
+                    }.toThemeColor(isDark)
                     Box(
                         modifier = Modifier
                             .size(24.dp)
@@ -879,7 +883,7 @@ fun ManageStorageScreen(
             SavedItemType.CODE -> CategoryCode
             SavedItemType.AUDIO -> CategoryAudio
             SavedItemType.MEDIA -> CategoryMedia
-        }
+        }.toThemeColor(isDark)
 
         AlertDialog(
             onDismissRequest = { longClickedCategory = null },

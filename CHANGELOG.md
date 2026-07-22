@@ -9,18 +9,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [0.9.2-beta01] - 2026-07-22
 
 ### Added
-- **Movie & TV (Media) Type:** Native `MEDIA` item type support across all databases, repositories, widgets, and UI screens.
-- **Media Hub & Search Screen:** A dedicated Media Hub featuring status filters ("Plan to Watch", "Watching", "Completed", "Dropped") and a newly added horizontal Genre Filter chips bar.
-- **East Asian Anime Auto-Detection:** Automatically overrides Jikan/TMDb media type metadata to "anime" when detecting Japanese/Korean/Chinese animation.
-- **Media Search Bottom Sheet:** Supports direct search matching, expand/collapse list item details (like full summaries), rating badges (★ 8.5), and customizable watch status buttons.
-- **Overlay Media Integration:** Adds direct media search and one-tap save actions inside the edge OCR overlay panel.
-- **Vector Drawables:** Brand logo vector assets for streaming providers (Netflix, Prime Video, Hulu, Disney+, HBO, Crunchyroll, Apple TV, YouTube) with corresponding brand colors.
+- **Media Hub Screen:** Built dedicated Media Hub featuring watch status filter chips, category tabs, poster cards, and pull-to-refresh.
+- **Auto-Complete Media Search:** Interactive bottom sheet search for real-time movie, TV show, and anime queries.
+- **TMDb Media Enrichment:** Automated fetching of streaming watch providers, genres, release years, vote ratings, and trailers for movies, TV, and anime.
+- **Anime Auto-Detection:** Built East Asian anime auto-detection algorithms and added genre filter chips to the Hub.
+- **OCR Overlay Media Integration:** Direct media searching and single-tap saving directly from inside the OCR overlay panel.
+- **Global FAB & Navigation:** Added Media tab to bottom navigation, top bar media action icon, system folder category entry, and a Movies & Anime action to the Global Expanding FAB.
+- **Streaming Provider Branding:** Embedded vector icons and theme colors for streaming providers.
+- **Data Domain & Storage Extensions:** Updated Room entities, domain models, and repository mappings to store `releaseYear`, `rating`, and media metadata.
 
 ### Changed
-- **Staggered Grid Home Layout:** Refactored the Home Screen grid list layout to embed the Search Bar, Filter Chips, and Collapsible Recent Captures carousel directly inside the staggered grid itself, correcting nested scroll performance.
-- **Profile Screen Statistics:** Displays Movie & TV archive counts and renamed the API settings integration row to "Movie & TV Integration".
-- **YouTube WebView Player:** Migrated from custom inline HTML structures to clean YouTube embed `loadUrl` calls, adjusting wide-viewport and user-agent properties to resolve mobile playback warnings.
+- **Staggered Grid Layout:** Embedded section headers and filter chips directly into the home screen staggered grid layout.
+- **TMDb Settings Organization:** Relocated TMDb API key configuration to a dedicated subscreen inside the App settings section.
+- **Widget Category Support:** Updated capture and recent item widgets to support media category items.
 
+### Fixed
+- **OCR Tab Save Separation:** Separated save button logic per tab to allow independent saving for links and note items.
+- **Instant Local Saving:** Enabled instant DB saves for extracted links prior to background metadata fetching.
+- **Widget Sync on Edge Notes:** Triggered instant widget recomposition when saving quick edge notes from the overlay.
+- **Firestore Sync Path Formatting:** Resolved Firestore folder document path slashes and fixed early exit bugs in `syncUnsyncedItems`.
+- 
 ### Fixed
 - **Active State Update Syncing:** Updated `updateSavedItem` to instantly update state metrics inside the active detail view when modifying properties.
 - **Dynamic System Category Coloring:** Fixed the edge panel and capture widgets' coloring logic to support dynamic/system theme color schemes.

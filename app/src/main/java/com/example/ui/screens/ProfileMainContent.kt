@@ -61,6 +61,8 @@ import android.content.Context
 import com.example.service.DataDownloadManager
 import com.example.service.DataDownloadService
 import com.example.ui.theme.SuccessGreen
+import com.example.ui.theme.toThemeColor
+import androidx.compose.foundation.isSystemInDarkTheme
 import com.example.ui.theme.CategoryLink
 import com.example.ui.theme.CategoryImage
 import com.example.ui.theme.CategoryVideo
@@ -1025,22 +1027,26 @@ fun ArchiveStatRow(
     baseColor: Color,
     modifier: Modifier = Modifier
 ) {
+    val isDark = isSystemInDarkTheme()
+    val resolvedColor = baseColor.toThemeColor(isDark)
+    val cardAlpha = if (isDark) 0.20f else 0.12f
+    val iconBgAlpha = if (isDark) 0.30f else 0.20f
     Row(
         modifier = modifier
-            .background(baseColor.copy(alpha = 0.12f), CircleShape)
+            .background(resolvedColor.copy(alpha = cardAlpha), CircleShape)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
                 .size(32.dp)
-                .background(baseColor.copy(alpha = 0.2f), CircleShape),
+                .background(resolvedColor.copy(alpha = iconBgAlpha), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 painter = painterResource(id = iconResId),
                 contentDescription = null,
-                tint = baseColor,
+                tint = resolvedColor,
                 modifier = Modifier.size(16.dp)
             )
         }

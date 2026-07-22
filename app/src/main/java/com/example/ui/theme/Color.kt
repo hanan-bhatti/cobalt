@@ -19,6 +19,7 @@
  package com.example.ui.theme
 
  import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.graphics.toArgb
 
  // Color definitions
  val CreamPaper = Color(0xFFFDFBF9)
@@ -155,3 +156,14 @@ val LinkPurple = LinkBlue
  val OnSurfaceVariantDark = Color(0xFFD7C2B9)
  val OutlineDark = Color(0xFFA08D84)
  val OutlineVariantDark = OnSurfaceDark.copy(alpha = 0.2f)
+
+ fun Color.toThemeColor(isDark: Boolean): Color {
+     if (!isDark) return this
+     val hsl = FloatArray(3)
+     androidx.core.graphics.ColorUtils.colorToHSL(this.toArgb(), hsl)
+     // Coerce saturation to soft values (e.g. 0.35f to 0.7f) so it's not overly neon
+     hsl[1] = hsl[1].coerceIn(0.35f, 0.70f)
+     // Boost lightness to ensure it's glowing and readable on dark backgrounds
+     hsl[2] = hsl[2].coerceIn(0.60f, 0.85f)
+     return Color(androidx.core.graphics.ColorUtils.HSLToColor(hsl))
+ }

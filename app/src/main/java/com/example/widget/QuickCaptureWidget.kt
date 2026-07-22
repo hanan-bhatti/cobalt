@@ -55,6 +55,7 @@ import com.example.ui.theme.CategoryImage
 import com.example.ui.theme.CategoryLink
 import com.example.ui.theme.CategoryMedia
 import com.example.ui.theme.CategoryText
+import com.example.ui.theme.toThemeColor
 
 class QuickCaptureWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = QuickCaptureWidget()
@@ -102,15 +103,16 @@ class QuickCaptureWidget : GlanceAppWidget() {
 @Composable
 fun QuickCaptureContent(actionType: String = "TEXT") {
     val context = LocalContext.current
+    val isNightMode = (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
 
     val (iconRes, intentAction, desc, colorProvider) = when (actionType) {
-        "LINK" -> Quadruple(R.drawable.ic_custom_link, "com.example.ACTION_QUICK_LINK", "Quick Add Link", ColorProvider(CategoryLink))
-        "IMAGE" -> Quadruple(R.drawable.ic_custom_image, "com.example.ACTION_QUICK_IMAGE", "Quick Capture Photo", ColorProvider(CategoryImage))
-        "AUDIO" -> Quadruple(R.drawable.ic_custom_voice, "com.example.ACTION_QUICK_AUDIO", "Quick Voice Memo", ColorProvider(CategoryAudio))
-        "CODE" -> Quadruple(R.drawable.ic_custom_code, "com.example.ACTION_QUICK_CODE", "Quick Add Code", ColorProvider(CategoryCode))
-        "MEDIA" -> Quadruple(R.drawable.ic_custom_movie, "com.example.ACTION_QUICK_MEDIA", "Quick Add Movie / Show", ColorProvider(CategoryMedia))
+        "LINK" -> Quadruple(R.drawable.ic_custom_link, "com.example.ACTION_QUICK_LINK", "Quick Add Link", ColorProvider(CategoryLink.toThemeColor(isNightMode)))
+        "IMAGE" -> Quadruple(R.drawable.ic_custom_image, "com.example.ACTION_QUICK_IMAGE", "Quick Capture Photo", ColorProvider(CategoryImage.toThemeColor(isNightMode)))
+        "AUDIO" -> Quadruple(R.drawable.ic_custom_voice, "com.example.ACTION_QUICK_AUDIO", "Quick Voice Memo", ColorProvider(CategoryAudio.toThemeColor(isNightMode)))
+        "CODE" -> Quadruple(R.drawable.ic_custom_code, "com.example.ACTION_QUICK_CODE", "Quick Add Code", ColorProvider(CategoryCode.toThemeColor(isNightMode)))
+        "MEDIA" -> Quadruple(R.drawable.ic_custom_movie, "com.example.ACTION_QUICK_MEDIA", "Quick Add Movie / Show", ColorProvider(CategoryMedia.toThemeColor(isNightMode)))
         "OCR" -> Quadruple(R.drawable.ic_custom_ocr, "com.example.ACTION_QUICK_OCR", "Quick Screen OCR", GlanceTheme.colors.primary)
-        else -> Quadruple(R.drawable.ic_custom_text, "com.example.ACTION_QUICK_TEXT", "Quick Add Note", ColorProvider(CategoryText))
+        else -> Quadruple(R.drawable.ic_custom_text, "com.example.ACTION_QUICK_TEXT", "Quick Add Note", ColorProvider(CategoryText.toThemeColor(isNightMode)))
     }
 
     val targetIntent = Intent(context, MainActivity::class.java).apply {

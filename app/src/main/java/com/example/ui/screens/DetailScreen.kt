@@ -84,6 +84,8 @@ import com.example.ui.theme.CategoryText
 import com.example.ui.theme.CategoryCode
 import com.example.ui.theme.CategoryAudio
 import com.example.ui.theme.CategoryMedia
+import androidx.compose.foundation.isSystemInDarkTheme
+import com.example.ui.theme.toThemeColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,14 +102,15 @@ fun DetailScreen(
     val localHazeState = remember { HazeState() }
 
     val customFolders by viewModel.customFolderEntities.collectAsState()
-    val folderColor = remember(item, customFolders) {
+    val isDark = isSystemInDarkTheme()
+    val folderColor = remember(item, customFolders, isDark) {
         val firstFolder = item.folders.firstOrNull()
         val customFolder = if (firstFolder != null) {
             customFolders.find { it.name.equals(firstFolder, ignoreCase = true) }
         } else {
             null
         }
-        if (customFolder != null && !customFolder.colorHex.isNullOrBlank()) {
+        (if (customFolder != null && !customFolder.colorHex.isNullOrBlank()) {
             try {
                 Color(android.graphics.Color.parseColor(customFolder.colorHex))
             } catch (e: Exception) {
@@ -123,7 +126,7 @@ fun DetailScreen(
             SavedItemType.CODE -> CategoryCode
             SavedItemType.AUDIO -> CategoryAudio
             SavedItemType.MEDIA -> CategoryMedia
-        }
+        }).toThemeColor(isDark)
     }
 
     val scrollState = rememberScrollState()

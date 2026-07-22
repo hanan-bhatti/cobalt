@@ -64,6 +64,8 @@ import com.example.ui.theme.ArchiveCodeColor
 import com.example.ui.theme.ArchiveTextColor
 import com.example.ui.theme.ArchiveAudioColor
 import com.example.ui.theme.ArchiveMediaColor
+import androidx.compose.foundation.isSystemInDarkTheme
+import com.example.ui.theme.toThemeColor
 
 private fun Any?.isNotNullOrBlank(): Boolean {
     return this != null && this.toString().isNotBlank()
@@ -96,6 +98,7 @@ fun ArchiveItemCard(
     )
 
     // Dynamic coloring based on type
+    val isDark = isSystemInDarkTheme()
     val typeColor = when (item.type) {
         SavedItemType.LINK -> ArchiveLinkColor
         SavedItemType.IMAGE, SavedItemType.VIDEO -> ArchiveImageVideoColor
@@ -103,7 +106,7 @@ fun ArchiveItemCard(
         SavedItemType.TEXT -> ArchiveTextColor
         SavedItemType.AUDIO -> ArchiveAudioColor
         SavedItemType.MEDIA -> ArchiveMediaColor
-    }
+    }.toThemeColor(isDark)
 
     Box(
         modifier = modifier
@@ -407,11 +410,12 @@ fun ArchiveItemCard(
                                 MaterialTheme.colorScheme.secondary
                             } else {
                                 val hex = folderColors[folder]
-                                parseHexColor(hex, MaterialTheme.colorScheme.primary)
+                                parseHexColor(hex, MaterialTheme.colorScheme.primary, isDark = isDark)
                             }
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = folderColor
+                                color = folderColor.copy(alpha = 0.15f),
+                                border = BorderStroke(0.5.dp, folderColor.copy(alpha = 0.3f))
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -422,14 +426,14 @@ fun ArchiveItemCard(
                                             painter = painterResource(id = R.drawable.ic_custom_archive),
                                             contentDescription = null,
                                             modifier = Modifier.size(10.dp).padding(end = 2.dp),
-                                            tint = Color.White
+                                            tint = folderColor
                                         )
                                     }
                                     Text(
                                         text = folder,
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color.White,
+                                        color = folderColor,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.widthIn(max = 60.dp)

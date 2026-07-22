@@ -297,6 +297,8 @@ fun RecentItemRow(item: SavedItem) {
         }
     }
 
+    val isNightMode = (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+
     val (iconRes, categoryColor) = when (item.type) {
         SavedItemType.LINK -> Pair(R.drawable.ic_custom_link, CategoryLink)
         SavedItemType.IMAGE, SavedItemType.VIDEO -> Pair(R.drawable.ic_custom_image, CategoryImage)
@@ -323,7 +325,7 @@ fun RecentItemRow(item: SavedItem) {
                 .size(32.dp)
                 .background(
                     imageProvider = ImageProvider(R.drawable.widget_bg_oval),
-                    colorFilter = ColorFilter.tint(ColorProvider(categoryColor))
+                    colorFilter = ColorFilter.tint(ColorProvider(categoryColor.toThemeColor(isNightMode)))
                 ),
             contentAlignment = Alignment.Center
         ) {

@@ -1132,13 +1132,23 @@ class BrainOcrOverlayService : Service() {
                                 SavedItemType.MEDIA -> R.drawable.ic_custom_movie
                                 else -> R.drawable.ic_custom_text
                             }
-                            val iconTint = when (item.type) {
-                                SavedItemType.LINK -> Color.parseColor("#42A5F5")
-                                SavedItemType.IMAGE -> Color.parseColor("#66BB6A")
-                                SavedItemType.VIDEO -> Color.parseColor("#AB47BC")
+                            val isNightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+                            val rawTint = when (item.type) {
+                                SavedItemType.LINK -> android.graphics.Color.parseColor("#42A5F5")
+                                SavedItemType.IMAGE -> android.graphics.Color.parseColor("#66BB6A")
+                                SavedItemType.VIDEO -> android.graphics.Color.parseColor("#AB47BC")
                                 SavedItemType.AUDIO -> accent
-                                SavedItemType.MEDIA -> Color.parseColor("#E91E63")
+                                SavedItemType.MEDIA -> android.graphics.Color.parseColor("#E91E63")
                                 else -> accent
+                            }
+                            val iconTint = if (isNightMode) {
+                                val hsl = FloatArray(3)
+                                androidx.core.graphics.ColorUtils.colorToHSL(rawTint, hsl)
+                                hsl[1] = hsl[1].coerceIn(0.35f, 0.70f)
+                                hsl[2] = hsl[2].coerceIn(0.60f, 0.85f)
+                                androidx.core.graphics.ColorUtils.HSLToColor(hsl)
+                            } else {
+                                rawTint
                             }
 
                             val iconWrap = FrameLayout(applicationContext).apply {

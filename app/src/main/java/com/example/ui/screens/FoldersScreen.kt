@@ -40,6 +40,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.*
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Alignment
@@ -69,6 +70,7 @@ import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import com.example.utils.DevicePerformance
 import com.example.ui.theme.DefaultFolderColor
+import com.example.ui.theme.toThemeColor
 import com.example.ui.theme.CategoryLink
 import com.example.ui.theme.CategoryImage
 import com.example.ui.theme.CategoryVideo
@@ -116,12 +118,12 @@ val folderPresetIcons = listOf(
     "tools"
 )
 
-fun parseHexColor(hex: String?, defaultColor: Color = DefaultFolderColor): Color {
-    if (hex.isNullOrBlank()) return defaultColor
+fun parseHexColor(hex: String?, defaultColor: Color = DefaultFolderColor, isDark: Boolean = false): Color {
+    if (hex.isNullOrBlank()) return defaultColor.toThemeColor(isDark)
     return try {
-        Color(android.graphics.Color.parseColor(hex))
+        Color(android.graphics.Color.parseColor(hex)).toThemeColor(isDark)
     } catch (e: Exception) {
-        defaultColor
+        defaultColor.toThemeColor(isDark)
     }
 }
 
@@ -163,6 +165,7 @@ fun FoldersScreen(
     val allItems by viewModel.allItems.collectAsState()
     val customFolderEntities by viewModel.customFolderEntities.collectAsState()
 
+    val isDark = isSystemInDarkTheme()
     val gridHazeState = remember { HazeState() }
 
     var activeBrowseFolder by remember { mutableStateOf<String?>(null) }
@@ -530,7 +533,7 @@ fun FoldersScreen(
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_custom_pin),
                                 contentDescription = null,
-                                tint = if (newFolderPinned) parseHexColor(newFolderColorHex) else MaterialTheme.colorScheme.secondary,
+                                tint = if (newFolderPinned) parseHexColor(newFolderColorHex, isDark = isDark) else MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -574,12 +577,12 @@ fun FoldersScreen(
                                         .size(38.dp)
                                         .clip(CircleShape)
                                         .background(
-                                            if (isSelected) parseHexColor(newFolderColorHex).copy(alpha = 0.2f)
+                                            if (isSelected) parseHexColor(newFolderColorHex, isDark = isDark).copy(alpha = 0.2f)
                                             else Color.Transparent
                                         )
                                         .border(
                                             1.5.dp,
-                                            if (isSelected) parseHexColor(newFolderColorHex)
+                                            if (isSelected) parseHexColor(newFolderColorHex, isDark = isDark)
                                             else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
                                             CircleShape
                                         )
@@ -588,7 +591,7 @@ fun FoldersScreen(
                                 ) {
                                     FolderIcon(
                                         iconName = iconName,
-                                        tint = if (isSelected) parseHexColor(newFolderColorHex) else MaterialTheme.colorScheme.secondary,
+                                        tint = if (isSelected) parseHexColor(newFolderColorHex, isDark = isDark) else MaterialTheme.colorScheme.secondary,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -610,7 +613,7 @@ fun FoldersScreen(
                             contentPadding = PaddingValues(vertical = 4.dp)
                         ) {
                             items(folderPresetColors) { (hex, name) ->
-                                val color = parseHexColor(hex)
+                                val color = parseHexColor(hex, isDark = isDark)
                                 val isSelected = newFolderColorHex == hex
                                 Box(
                                     modifier = Modifier
@@ -681,6 +684,7 @@ fun SystemCategoryCard(
     onClick: () -> Unit
 ) {
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val isDark = isSystemInDarkTheme()
     val baseColor = when (name) {
         "Links" -> CategoryLink
         "Images" -> CategoryImage
@@ -690,12 +694,14 @@ fun SystemCategoryCard(
         "Audio" -> CategoryAudio
         "Movies & Anime" -> CategoryMedia
         else -> MaterialTheme.colorScheme.primary
-    }
+    }.toThemeColor(isDark)
+    val cardAlpha = if (isDark) 0.16f else 0.08f
+    val borderAlpha = if (isDark) 0.35f else 0.20f
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
-        color = baseColor.copy(alpha = 0.08f),
-        border = BorderStroke(1.dp, baseColor.copy(alpha = 0.2f)),
+        color = baseColor.copy(alpha = cardAlpha),
+        border = BorderStroke(1.dp, baseColor.copy(alpha = borderAlpha)),
         modifier = modifier
             .height(72.dp)
             .bounceClick(interactionSource)
@@ -742,12 +748,15 @@ fun PinnedFolderCard(
     onCustomize: () -> Unit
 ) {
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    val themeColor = parseHexColor(folder.colorHex, MaterialTheme.colorScheme.primary)
+    val isDark = isSystemInDarkTheme()
+    val themeColor = parseHexColor(folder.colorHex, MaterialTheme.colorScheme.primary, isDark)
+    val cardAlpha = if (isDark) 0.22f else 0.12f
+    val borderAlpha = if (isDark) 0.55f else 0.40f
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
-        color = themeColor.copy(alpha = 0.12f),
-        border = BorderStroke(1.5.dp, themeColor.copy(alpha = 0.4f)),
+        color = themeColor.copy(alpha = cardAlpha),
+        border = BorderStroke(1.5.dp, themeColor.copy(alpha = borderAlpha)),
         modifier = modifier
             .height(115.dp)
             .bounceClick(interactionSource)
@@ -821,13 +830,17 @@ fun FolderDirectoryItem(
     onCustomize: () -> Unit
 ) {
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    val themeColor = parseHexColor(folder.colorHex, MaterialTheme.colorScheme.primary)
+    val isDark = isSystemInDarkTheme()
+    val themeColor = parseHexColor(folder.colorHex, MaterialTheme.colorScheme.primary, isDark)
+    val cardAlpha = if (isDark) 0.16f else 0.08f
+    val borderAlpha = if (isDark) 0.35f else 0.20f
+    val boxAlpha = if (isDark) 0.25f else 0.15f
 
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(16.dp),
-        color = themeColor.copy(alpha = 0.08f),
-        border = BorderStroke(1.dp, themeColor.copy(alpha = 0.2f)),
+        color = themeColor.copy(alpha = cardAlpha),
+        border = BorderStroke(1.dp, themeColor.copy(alpha = borderAlpha)),
         modifier = modifier
             .height(72.dp)
             .bounceClick(interactionSource)
@@ -848,7 +861,7 @@ fun FolderDirectoryItem(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(themeColor.copy(alpha = 0.15f)),
+                        .background(themeColor.copy(alpha = boxAlpha)),
                     contentAlignment = Alignment.Center
                 ) {
                     FolderIcon(
@@ -1503,6 +1516,7 @@ fun FolderCustomizerDialog(
     viewModel: SecondBrainViewModel,
     onDismiss: () -> Unit
 ) {
+    val isDark = isSystemInDarkTheme()
     var folderNameInput by remember { mutableStateOf(folder.name) }
     var selectedColorHex by remember { mutableStateOf(folder.colorHex ?: folderPresetColors.first().first) }
     var selectedIconName by remember { mutableStateOf(folder.iconName ?: "folder") }
@@ -1568,7 +1582,7 @@ fun FolderCustomizerDialog(
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_custom_pin),
                                 contentDescription = null,
-                                tint = if (isPinned) parseHexColor(selectedColorHex) else MaterialTheme.colorScheme.secondary,
+                                 tint = if (isPinned) parseHexColor(selectedColorHex, isDark = isDark) else MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -1613,12 +1627,12 @@ fun FolderCustomizerDialog(
                                         .size(38.dp)
                                         .clip(CircleShape)
                                         .background(
-                                            if (isSelected) parseHexColor(selectedColorHex).copy(alpha = 0.2f)
+                                            if (isSelected) parseHexColor(selectedColorHex, isDark = isDark).copy(alpha = 0.2f)
                                             else Color.Transparent
                                         )
                                         .border(
                                             1.5.dp,
-                                            if (isSelected) parseHexColor(selectedColorHex)
+                                            if (isSelected) parseHexColor(selectedColorHex, isDark = isDark)
                                             else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
                                             CircleShape
                                         )
@@ -1627,7 +1641,7 @@ fun FolderCustomizerDialog(
                                 ) {
                                     FolderIcon(
                                         iconName = iconName,
-                                        tint = if (isSelected) parseHexColor(selectedColorHex) else MaterialTheme.colorScheme.secondary,
+                                        tint = if (isSelected) parseHexColor(selectedColorHex, isDark = isDark) else MaterialTheme.colorScheme.secondary,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -1649,7 +1663,7 @@ fun FolderCustomizerDialog(
                             contentPadding = PaddingValues(vertical = 4.dp)
                         ) {
                             items(folderPresetColors) { (hex, name) ->
-                                val color = parseHexColor(hex)
+                                val color = parseHexColor(hex, isDark = isDark)
                                 val isSelected = selectedColorHex == hex
                                 Box(
                                     modifier = Modifier
