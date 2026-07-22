@@ -302,6 +302,7 @@ fun RecentItemRow(item: SavedItem) {
         SavedItemType.IMAGE, SavedItemType.VIDEO -> Pair(R.drawable.ic_custom_image, CategoryImage)
         SavedItemType.CODE -> Pair(R.drawable.ic_custom_code, CategoryCode)
         SavedItemType.AUDIO -> Pair(R.drawable.ic_custom_voice, CategoryAudio)
+        SavedItemType.MEDIA -> Pair(R.drawable.ic_custom_movie, CategoryMedia)
         else -> Pair(R.drawable.ic_custom_text, CategoryText)
     }
 

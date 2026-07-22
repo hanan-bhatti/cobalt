@@ -53,6 +53,7 @@ import com.example.ui.theme.CategoryAudio
 import com.example.ui.theme.CategoryCode
 import com.example.ui.theme.CategoryImage
 import com.example.ui.theme.CategoryLink
+import com.example.ui.theme.CategoryMedia
 import com.example.ui.theme.CategoryText
 
 class QuickCaptureWidgetReceiver : GlanceAppWidgetReceiver() {
@@ -107,6 +108,7 @@ fun QuickCaptureContent(actionType: String = "TEXT") {
         "IMAGE" -> Quadruple(R.drawable.ic_custom_image, "com.example.ACTION_QUICK_IMAGE", "Quick Capture Photo", ColorProvider(CategoryImage))
         "AUDIO" -> Quadruple(R.drawable.ic_custom_voice, "com.example.ACTION_QUICK_AUDIO", "Quick Voice Memo", ColorProvider(CategoryAudio))
         "CODE" -> Quadruple(R.drawable.ic_custom_code, "com.example.ACTION_QUICK_CODE", "Quick Add Code", ColorProvider(CategoryCode))
+        "MEDIA" -> Quadruple(R.drawable.ic_custom_movie, "com.example.ACTION_QUICK_MEDIA", "Quick Add Movie / Show", ColorProvider(CategoryMedia))
         "OCR" -> Quadruple(R.drawable.ic_custom_ocr, "com.example.ACTION_QUICK_OCR", "Quick Screen OCR", GlanceTheme.colors.primary)
         else -> Quadruple(R.drawable.ic_custom_text, "com.example.ACTION_QUICK_TEXT", "Quick Add Note", ColorProvider(CategoryText))
     }

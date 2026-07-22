@@ -233,6 +233,7 @@ private fun QuickCaptureCustomizationSection(
         QuickActionOption("IMAGE", "Photo Capture", "Snap photo or select image", R.drawable.ic_custom_image, CategoryImage),
         QuickActionOption("AUDIO", "Voice Memo", "Record audio memo instantly", R.drawable.ic_custom_voice, CategoryAudio),
         QuickActionOption("CODE", "Add Code", "Save code snippet", R.drawable.ic_custom_code, CategoryCode),
+        QuickActionOption("MEDIA", "Add Movie / Show", "Search movies, TV & anime", R.drawable.ic_custom_movie, CategoryMedia),
         QuickActionOption("OCR", "Screen OCR", "Capture & extract text from screen", R.drawable.ic_custom_ocr, MaterialTheme.colorScheme.primary)
     )
 
@@ -530,6 +531,7 @@ private fun RecentItemsCustomizationSection(
                                         com.example.data.model.SavedItemType.IMAGE, com.example.data.model.SavedItemType.VIDEO -> Pair(R.drawable.ic_custom_image, CategoryImage)
                                         com.example.data.model.SavedItemType.CODE -> Pair(R.drawable.ic_custom_code, CategoryCode)
                                         com.example.data.model.SavedItemType.AUDIO -> Pair(R.drawable.ic_custom_voice, CategoryAudio)
+                                        com.example.data.model.SavedItemType.MEDIA -> Pair(R.drawable.ic_custom_movie, CategoryMedia)
                                         else -> Pair(R.drawable.ic_custom_text, CategoryText)
                                     }
 
@@ -594,7 +596,7 @@ private fun RecentItemsCustomizationSection(
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            val categories = listOf("All", "LINK", "TEXT", "IMAGE", "AUDIO", "CODE")
+            val categories = listOf("All", "LINK", "TEXT", "IMAGE", "AUDIO", "CODE", "MEDIA")
             categories.forEach { cat ->
                 val isSelected = categoryFilter.equals(cat, ignoreCase = true)
                 FilterChip(
