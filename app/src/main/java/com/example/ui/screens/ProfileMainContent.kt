@@ -463,7 +463,7 @@ fun ProfileMainContent(
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             ArchiveStatRow(
-                                iconResId = R.drawable.ic_custom_movie, count = totalMedia, label = "Movies",
+                                iconResId = R.drawable.ic_custom_movie, count = totalMedia, label = "Movies & Anime",
                                 baseColor = CategoryMedia,
                                 modifier = Modifier.weight(1f)
                             )

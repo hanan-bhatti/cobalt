@@ -22,7 +22,7 @@ object LegalDocs {
     val privacyPolicy = """
         **Privacy Policy**
 
-        Last updated: 18 July 2026
+        Last updated: 22 July 2026
 
         **1. Data storage**
         Second Brain stores your data locally on your device by default. If you turn on cloud sync, your data is stored using Firebase. Nothing leaves your device unless you enable sync yourself.
@@ -30,26 +30,29 @@ object LegalDocs {
         **2. AI features**
         The OCR and smart-organization features send your images or notes to the Gemini API for processing. Google does not use this data to train its models.
 
-        **3. Analytics**
+        **3. Third-party integrations**
+        If you enable the Movie & TV Integration by entering your TMDb API key, the app queries the TMDb API to search and retrieve movie and TV show metadata (such as titles, overviews, ratings, and streaming provider details). These requests are governed by TMDb's privacy policy. Anime metadata is queried via the public Jikan API.
+
+        **4. Analytics**
         Second Brain uses Firebase Analytics to understand how the app is used, things like which screens are opened, whether a note was created, edited, or deleted, whether a search happened, and whether sign-in succeeded. This helps identify bugs and prioritize what to improve. We do not send the content of your notes or your search text, only that an action occurred. Firebase Analytics also collects standard device and usage data (device model, OS version, country, session length) automatically, as governed by Google's privacy policy.
 
-        **4. Crash reporting**
+        **5. Crash reporting**
         Second Brain uses Firebase Crashlytics to detect and diagnose app crashes. If the app crashes, technical details (stack trace, device model, OS version, app version) are sent to help fix the bug. No note content is included in crash reports.
 
-        **5. Third-party services**
+        **6. Third-party services**
         Firebase handles authentication, database storage, analytics, and crash reporting. Google's privacy policy covers whatever is processed or stored on their servers.
 
-        **6. Open source**
+        **7. Open source**
         Second Brain is free, open-source software licensed under AGPL-3.0-or-later. You can read every line of code, verify these claims yourself, or fork it, at [github.com/hanan-bhatti/second-brain](https://github.com/hanan-bhatti/second-brain).
 
-        **7. Deleting your data**
+        **8. Deleting your data**
         Delete your account from the settings panel and your remote data is erased.
     """.trimIndent()
 
     val termsOfConditions = """
         **Terms and Conditions**
 
-        Last updated: 18 July 2026
+        Last updated: 22 July 2026
 
         **1. Agreement**
         Using Second Brain means you agree to these terms.
@@ -57,22 +60,31 @@ object LegalDocs {
         **2. Your content**
         Whatever you save, notes, links, images, stays yours. You're responsible for what you store in the app.
 
-        **3. Fair use**
+        **3. Third-party integrations & keys**
+        To search movies and TV shows, you may choose to supply your own TMDb API key. You are solely responsible for obtaining your key and complying with TMDb's terms of service. Second Brain provides this integration as a convenience and is not affiliated with TMDb.
+
+        **4. Fair use**
         Don't use the app to store illegal content or abuse the AI/API integrations it relies on.
 
-        **4. Uptime**
-        Cloud sync, analytics, crash reporting, and AI features depend on third-party services (Firebase, Gemini), so they're provided as-is. Interruptions can happen and aren't guaranteed against.
+        **5. Uptime**
+        Cloud sync, analytics, crash reporting, and AI/integration features depend on third-party services (Firebase, Gemini, TMDb, Jikan), so they're provided as-is. Interruptions can happen and aren't guaranteed against.
 
-        **5. License**
+        **6. License**
         The app is licensed under AGPL-3.0-or-later. Source code, issues, and license text are all at [github.com/hanan-bhatti/second-brain](https://github.com/hanan-bhatti/second-brain).
 
-        **6. Termination**
+        **7. Termination**
         Accounts that abuse the service or violate these terms can be suspended.
     """.trimIndent()
 
     val faq = """
         Q: How do I save a link quickly?
         A: Use the home screen widget, or share directly from your browser using the "Share to" menu.
+
+        Q: How does Movie & TV (Media) search work?
+        A: To search movies and TV shows, you need to set your free TMDb API key in the 'Movie & TV Integration' profile settings. Anime search is powered by Jikan and works offline or online without any API key.
+
+        Q: Can I save media directly from the OCR overlay?
+        A: Yes! When you capture text on your screen, the overlay panel offers a direct media search and a one-tap save action.
 
         Q: Does OCR work offline?
         A: No. OCR runs through the Gemini API, so it needs an internet connection.

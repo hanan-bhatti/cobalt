@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.9.2-beta01] - 2026-07-22
+
+### Added
+- **Movie & TV (Media) Type:** Native `MEDIA` item type support across all databases, repositories, widgets, and UI screens.
+- **Media Hub & Search Screen:** A dedicated Media Hub featuring status filters ("Plan to Watch", "Watching", "Completed", "Dropped") and a newly added horizontal Genre Filter chips bar.
+- **East Asian Anime Auto-Detection:** Automatically overrides Jikan/TMDb media type metadata to "anime" when detecting Japanese/Korean/Chinese animation.
+- **Media Search Bottom Sheet:** Supports direct search matching, expand/collapse list item details (like full summaries), rating badges (★ 8.5), and customizable watch status buttons.
+- **Overlay Media Integration:** Adds direct media search and one-tap save actions inside the edge OCR overlay panel.
+- **Vector Drawables:** Brand logo vector assets for streaming providers (Netflix, Prime Video, Hulu, Disney+, HBO, Crunchyroll, Apple TV, YouTube) with corresponding brand colors.
+
+### Changed
+- **Staggered Grid Home Layout:** Refactored the Home Screen grid list layout to embed the Search Bar, Filter Chips, and Collapsible Recent Captures carousel directly inside the staggered grid itself, correcting nested scroll performance.
+- **Profile Screen Statistics:** Displays Movie & TV archive counts and renamed the API settings integration row to "Movie & TV Integration".
+- **YouTube WebView Player:** Migrated from custom inline HTML structures to clean YouTube embed `loadUrl` calls, adjusting wide-viewport and user-agent properties to resolve mobile playback warnings.
+
+### Fixed
+- **Active State Update Syncing:** Updated `updateSavedItem` to instantly update state metrics inside the active detail view when modifying properties.
+- **Dynamic System Category Coloring:** Fixed the edge panel and capture widgets' coloring logic to support dynamic/system theme color schemes.
+
 ## [0.9.1-beta02] - 2026-07-21
 
 ### Added
