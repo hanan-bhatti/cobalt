@@ -243,7 +243,8 @@ class SecondBrainRepository(private val context: Context) {
             watchProviders = watchProvidersList,
             trailerUrl = trailerUrl,
             backdropUrl = backdropUrl,
-            releaseYear = releaseYear
+            releaseYear = releaseYear,
+            rating = rating
         )
     }
 
@@ -276,7 +277,8 @@ class SecondBrainRepository(private val context: Context) {
             watchProvidersJson = watchProvidersJsonStr,
             trailerUrl = trailerUrl,
             backdropUrl = backdropUrl,
-            releaseYear = releaseYear
+            releaseYear = releaseYear,
+            rating = rating
         )
     }
 
@@ -345,7 +347,8 @@ class SecondBrainRepository(private val context: Context) {
                                 overview = item.overview,
                                 genres = emptyList(),
                                 watchProviders = emptyList(),
-                                trailerUrl = null
+                                trailerUrl = null,
+                                rating = item.voteAverage
                             )
                         )
                     }
@@ -379,7 +382,8 @@ class SecondBrainRepository(private val context: Context) {
                         overview = item.synopsis,
                         genres = genres,
                         watchProviders = emptyList(),
-                        trailerUrl = trailerUrl
+                        trailerUrl = trailerUrl,
+                        rating = item.score
                     )
                 )
             }
@@ -397,6 +401,7 @@ class SecondBrainRepository(private val context: Context) {
         var watchProviders = item.watchProviders
         var trailerUrl = item.trailerUrl
         var backdropUrl = item.backdropUrl
+        var rating = item.rating
 
         var updated = false
 
@@ -411,6 +416,11 @@ class SecondBrainRepository(private val context: Context) {
                         MediaApiClient.tmdbApiService.getTvDetails(tmdbId, apiKey)
                     } else {
                         MediaApiClient.tmdbApiService.getMovieDetails(tmdbId, apiKey)
+                    }
+
+                    if (rating == null && details.voteAverage != null) {
+                        rating = details.voteAverage
+                        updated = true
                     }
 
                     if (genres.isEmpty()) {
@@ -481,7 +491,8 @@ class SecondBrainRepository(private val context: Context) {
                 genres = genres,
                 watchProviders = watchProviders,
                 trailerUrl = trailerUrl,
-                backdropUrl = backdropUrl
+                backdropUrl = backdropUrl,
+                rating = rating
             )
             savedItemDao.insertItem(newItem.toEntity())
             return@withContext newItem

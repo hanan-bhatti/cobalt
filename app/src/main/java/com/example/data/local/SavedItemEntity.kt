@@ -46,5 +46,6 @@ data class SavedItemEntity(
     val watchProvidersJson: String = "[]",
     val trailerUrl: String? = null,
     val backdropUrl: String? = null,
-    val releaseYear: String? = null
+    val releaseYear: String? = null,
+    val rating: Double? = null
 )

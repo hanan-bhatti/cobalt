@@ -54,7 +54,8 @@ data class SavedItem(
     val watchProviders: List<String> = emptyList(),
     val trailerUrl: String? = null,
     val backdropUrl: String? = null,
-    val releaseYear: String? = null
+    val releaseYear: String? = null,
+    val rating: Double? = null
 )
 
 fun SavedItem.getBestImagePath(): String? {

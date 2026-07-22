@@ -32,7 +32,8 @@ data class MediaSearchResultItem(
     val overview: String? = null,
     val genres: List<String> = emptyList(),
     val watchProviders: List<String> = emptyList(),
-    val trailerUrl: String? = null
+    val trailerUrl: String? = null,
+    val rating: Double? = null
 )
 
 // TMDb DTOs
@@ -53,7 +54,8 @@ data class TmdbSearchResult(
     @param:Json(name = "release_date") val releaseDate: String? = null,
     @param:Json(name = "first_air_date") val firstAirDate: String? = null,
     @param:Json(name = "overview") val overview: String? = null,
-    @param:Json(name = "genre_ids") val genreIds: List<Int>? = null
+    @param:Json(name = "genre_ids") val genreIds: List<Int>? = null,
+    @param:Json(name = "vote_average") val voteAverage: Double? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -68,7 +70,8 @@ data class TmdbDetailsResponse(
     @param:Json(name = "overview") val overview: String? = null,
     @param:Json(name = "genres") val genres: List<TmdbGenre>? = null,
     @param:Json(name = "videos") val videos: TmdbVideosResponse? = null,
-    @param:Json(name = "watch/providers") val watchProviders: TmdbWatchProvidersResponse? = null
+    @param:Json(name = "watch/providers") val watchProviders: TmdbWatchProvidersResponse? = null,
+    @param:Json(name = "vote_average") val voteAverage: Double? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -122,7 +125,8 @@ data class JikanAnimeResult(
     @param:Json(name = "year") val year: Int? = null,
     @param:Json(name = "aired") val aired: JikanAired? = null,
     @param:Json(name = "genres") val genres: List<JikanGenre>? = null,
-    @param:Json(name = "trailer") val trailer: JikanTrailer? = null
+    @param:Json(name = "trailer") val trailer: JikanTrailer? = null,
+    @param:Json(name = "score") val score: Double? = null
 )
 
 @JsonClass(generateAdapter = true)
