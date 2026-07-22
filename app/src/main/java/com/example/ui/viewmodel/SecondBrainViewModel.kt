@@ -356,35 +356,43 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun saveMediaItem(item: MediaSearchResultItem, watchStatus: String = "Plan to Watch", selectedFolders: List<String> = emptyList()) {
+        val foldersToUse = if (selectedFolders.isNotEmpty()) selectedFolders else listOf("Media")
+        val newItem = SavedItem(
+            id = item.id,
+            type = SavedItemType.MEDIA,
+            title = item.title,
+            content = item.overview ?: "",
+            thumbnailPath = item.posterUrl,
+            backdropUrl = item.backdropUrl,
+            mediaType = item.mediaType,
+            watchStatus = watchStatus,
+            genres = item.genres,
+            watchProviders = item.watchProviders,
+            trailerUrl = item.trailerUrl,
+            folders = foldersToUse,
+            releaseYear = item.releaseYear,
+            rating = item.rating
+        )
+
+        // 1. Instantly close sheet and notify user
+        closeMediaSearchSheet()
+        showToast("Saved ${item.title} to Second Brain!")
+
+        // 2. Save locally and launch background enrichment
         viewModelScope.launch {
-            val foldersToUse = if (selectedFolders.isNotEmpty()) selectedFolders else listOf("Media")
-            var newItem = SavedItem(
-                id = item.id,
-                type = SavedItemType.MEDIA,
-                title = item.title,
-                content = item.overview ?: "",
-                thumbnailPath = item.posterUrl,
-                backdropUrl = item.backdropUrl,
-                mediaType = item.mediaType,
-                watchStatus = watchStatus,
-                genres = item.genres,
-                watchProviders = item.watchProviders,
-                trailerUrl = item.trailerUrl,
-                folders = foldersToUse,
-                releaseYear = item.releaseYear
-            )
-            newItem = repository.enrichMediaItemDetails(newItem)
             repository.saveItem(newItem)
             WidgetUpdater.update(context)
-            closeMediaSearchSheet()
-            showToast("Saved ${item.title} to Second Brain!")
+            repository.enrichMediaItemDetails(newItem)
         }
     }
 
-    fun enrichMediaItem(item: SavedItem) {
+    fun enrichMediaItem(item: SavedItem, saveToDb: Boolean = true) {
         if (item.type != SavedItemType.MEDIA) return
         viewModelScope.launch {
-            repository.enrichMediaItemDetails(item)
+            val enriched = repository.enrichMediaItemDetails(item, saveToDb)
+            if (!saveToDb) {
+                _activeCaptureItem.value = enriched
+            }
         }
     }
 
@@ -1824,6 +1832,9 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun updateSavedItem(item: SavedItem) {
+        if (_activeDetailItem.value?.id == item.id) {
+            _activeDetailItem.value = item
+        }
         viewModelScope.launch {
             repository.saveItem(item, null)
             AnalyticsHelper.logNoteEdited(context, item.id, item.type.name)
