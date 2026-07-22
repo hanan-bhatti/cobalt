@@ -18,11 +18,7 @@
 
 package com.example.widget
 
-import android.appwidget.AppWidgetManager
-import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
-import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,49 +26,13 @@ import kotlinx.coroutines.launch
 
 object WidgetUpdater {
     fun update(context: Context) {
+        val appContext = context.applicationContext
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val glanceManager = GlanceAppWidgetManager(context)
-
-                val quickGlanceIds = glanceManager.getGlanceIds(QuickCaptureWidget::class.java)
-                val quickWidget = QuickCaptureWidget()
-                quickGlanceIds.forEach { glanceId ->
-                    try { androidx.glance.appwidget.state.updateAppWidgetState(context, glanceId) { } } catch (e: Exception) {}
-                    quickWidget.update(context, glanceId)
-                }
-                quickWidget.updateAll(context)
-
-                val recentGlanceIds = glanceManager.getGlanceIds(RecentItemsWidget::class.java)
-                val recentWidget = RecentItemsWidget()
-                recentGlanceIds.forEach { glanceId ->
-                    try { androidx.glance.appwidget.state.updateAppWidgetState(context, glanceId) { } } catch (e: Exception) {}
-                    recentWidget.update(context, glanceId)
-                }
-                recentWidget.updateAll(context)
-
-                val appWidgetManager = AppWidgetManager.getInstance(context)
-
-                val recentComponent = ComponentName(context, RecentItemsWidgetReceiver::class.java)
-                val recentIds = appWidgetManager.getAppWidgetIds(recentComponent)
-                if (recentIds.isNotEmpty()) {
-                    val updateIntent = Intent(context, RecentItemsWidgetReceiver::class.java).apply {
-                        action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, recentIds)
-                    }
-                    context.sendBroadcast(updateIntent)
-                }
-
-                val quickComponent = ComponentName(context, QuickCaptureWidgetReceiver::class.java)
-                val quickIds = appWidgetManager.getAppWidgetIds(quickComponent)
-                if (quickIds.isNotEmpty()) {
-                    val updateIntent = Intent(context, QuickCaptureWidgetReceiver::class.java).apply {
-                        action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, quickIds)
-                    }
-                    context.sendBroadcast(updateIntent)
-                }
+                QuickCaptureWidget().updateAll(appContext)
+                RecentItemsWidget().updateAll(appContext)
             } catch (e: Exception) {
-                // Ignore
+                // Ignore background widget update failures safely
             }
         }
     }

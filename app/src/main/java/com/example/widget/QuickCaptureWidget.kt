@@ -63,12 +63,10 @@ class QuickCaptureWidgetReceiver : GlanceAppWidgetReceiver() {
     override fun onEnabled(context: Context) {
         super.onEnabled(context)
         AnalyticsHelper.logWidgetAdded(context)
-        WidgetUpdater.update(context)
     }
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         super.onUpdate(context, appWidgetManager, appWidgetIds)
-        WidgetUpdater.update(context)
     }
 }
 
