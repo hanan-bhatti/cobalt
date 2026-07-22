@@ -207,28 +207,31 @@ fun RichTextEditor(
                 )
 
                 // Input field (borderless standard TextField)
-                TextField(
-                    value = textFieldValue,
-                    onValueChange = {
-                        textFieldValue = it
-                        onValueChange(it.text)
-                    },
-                    placeholder = placeholder,
-                    minLines = minLines,
-                    maxLines = maxLines,
-                    visualTransformation = MarkdownVisualTransformation(),
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        disabledContainerColor = Color.Transparent,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        disabledIndicatorColor = Color.Transparent
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
-                )
+                val layoutDirection = remember(textFieldValue.text) { com.example.utils.getLayoutDirectionForText(textFieldValue.text) }
+                androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides layoutDirection) {
+                    TextField(
+                        value = textFieldValue,
+                        onValueChange = {
+                            textFieldValue = it
+                            onValueChange(it.text)
+                        },
+                        placeholder = placeholder,
+                        minLines = minLines,
+                        maxLines = maxLines,
+                        visualTransformation = MarkdownVisualTransformation(),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            disabledContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            disabledIndicatorColor = Color.Transparent
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+                    )
+                }
             } else {
                 // Live Preview Mode
                 Box(
