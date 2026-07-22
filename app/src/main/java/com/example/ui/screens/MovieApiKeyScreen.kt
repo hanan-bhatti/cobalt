@@ -81,7 +81,7 @@ fun MovieApiKeyScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Movies API Key", style = MaterialTheme.typography.titleLarge) },
+                title = { Text("Movie & TV Integration", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
@@ -142,14 +142,14 @@ fun MovieApiKeyScreen(
                         }
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "TMDb API Key (Movies & TV)",
+                                text = "Movie & TV Integration (TMDb)",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Search Movies & TV Shows. Anime search works without a key.",
+                                text = "Enable movies and TV shows autocompletion, trailers, and streaming provider lookup by setting your free TMDb account API key. Anime search works out of the box without any key.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -163,7 +163,7 @@ fun MovieApiKeyScreen(
                     OutlinedTextField(
                         value = tmdbKeyInput,
                         onValueChange = { tmdbKeyInput = it },
-                        placeholder = { Text("Enter TMDb API Key") },
+                        placeholder = { Text("Enter TMDb API Key (v3 auth)") },
                         singleLine = true,
                         visualTransformation = if (keyVisibility) VisualTransformation.None else PasswordVisualTransformation(),
                         trailingIcon = {
@@ -201,13 +201,13 @@ fun MovieApiKeyScreen(
                             .bounceClick()
                     ) {
                         Text(
-                            text = "Save TMDb Key",
+                            text = "Save Integration Key",
                             fontWeight = FontWeight.Bold
                         )
                     }
 
                     Text(
-                        text = "Get free API key on TMDb",
+                        text = "Get your free API Key on TMDb",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.SemiBold,

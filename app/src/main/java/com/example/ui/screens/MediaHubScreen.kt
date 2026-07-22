@@ -184,14 +184,56 @@ fun MediaHubContent(
     val allItems by viewModel.allItems.collectAsState()
     var selectedStatus by rememberSaveable { mutableStateOf("All") }
     var selectedType by rememberSaveable { mutableStateOf("All Types") }
+    var selectedGenre by rememberSaveable { mutableStateOf("All Genres") }
 
-    val statusFilters = remember { listOf("All", "Plan to Watch", "Watching", "Completed", "Dropped") }
-    val typeFilters = remember { listOf("All Types", "Movies", "TV", "Anime") }
-
-    val mediaItems = remember(allItems, selectedStatus, selectedType) {
+    val allMediaItems = remember(allItems) {
         allItems.filter { item ->
             item.type == SavedItemType.MEDIA && !item.folders.contains("Archive")
-        }.filter { item ->
+        }
+    }
+
+    val statusFilters = remember { listOf("All", "Plan to Watch", "Watching", "Completed", "Dropped") }
+
+    val typeFilters = remember(allMediaItems) {
+        val types = allMediaItems.mapNotNull { it.mediaType?.lowercase() }.toSet()
+        val list = mutableListOf("All Types")
+        if (types.contains("movie")) list.add("Movies")
+        if (types.contains("tv") || types.contains("tv show") || types.contains("tv_show")) list.add("TV")
+        if (types.contains("anime")) list.add("Anime")
+        list
+    }
+
+    val genreFilters = remember(allMediaItems, selectedType) {
+        val filteredForType = allMediaItems.filter { item ->
+            when (selectedType) {
+                "All Types" -> true
+                "Movies" -> item.mediaType?.lowercase() == "movie"
+                "TV" -> item.mediaType?.lowercase() in listOf("tv", "tv show", "tv_show")
+                "Anime" -> item.mediaType?.lowercase() == "anime"
+                else -> true
+            }
+        }
+        val uniqueGenres = filteredForType.flatMap { it.genres }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+        listOf("All Genres") + uniqueGenres
+    }
+
+    LaunchedEffect(genreFilters) {
+        if (!genreFilters.contains(selectedGenre)) {
+            selectedGenre = "All Genres"
+        }
+    }
+
+    LaunchedEffect(typeFilters) {
+        if (!typeFilters.contains(selectedType)) {
+            selectedType = "All Types"
+        }
+    }
+
+    val mediaItems = remember(allMediaItems, selectedStatus, selectedType, selectedGenre) {
+        allMediaItems.filter { item ->
             if (selectedStatus == "All") true
             else item.watchStatus?.equals(selectedStatus, ignoreCase = true) == true
         }.filter { item ->
@@ -202,6 +244,9 @@ fun MediaHubContent(
                 "Anime" -> item.mediaType?.lowercase() == "anime"
                 else -> true
             }
+        }.filter { item ->
+            if (selectedGenre == "All Genres") true
+            else item.genres.contains(selectedGenre)
         }
     }
 
@@ -258,7 +303,36 @@ fun MediaHubContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Genre Filter Row (Horizontal scroll)
+        if (genreFilters.size > 1) {
+            Text(
+                text = "Genre Filter",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 4.dp)
+            )
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                items(genreFilters, key = { "genre_$it" }) { genre ->
+                    val isSelected = selectedGenre == genre
+                    FilterChipItem(
+                        label = genre,
+                        isSelected = isSelected,
+                        onClick = { selectedGenre = genre }
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        } else {
+            Spacer(modifier = Modifier.height(6.dp))
+        }
 
         // Content Grid or Empty State
         if (mediaItems.isEmpty()) {

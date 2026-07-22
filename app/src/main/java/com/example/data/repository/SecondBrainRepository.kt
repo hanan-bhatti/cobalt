@@ -397,6 +397,7 @@ class SecondBrainRepository(private val context: Context) {
     suspend fun enrichMediaItemDetails(item: SavedItem, saveToDb: Boolean = true): SavedItem = withContext(Dispatchers.IO) {
         if (item.type != SavedItemType.MEDIA) return@withContext item
 
+        var mediaType = item.mediaType
         var genres = item.genres
         var watchProviders = item.watchProviders
         var trailerUrl = item.trailerUrl
@@ -423,12 +424,18 @@ class SecondBrainRepository(private val context: Context) {
                         updated = true
                     }
 
-                    if (genres.isEmpty()) {
-                        val fetchedGenres = details.genres?.mapNotNull { it.name } ?: emptyList()
-                        if (fetchedGenres.isNotEmpty()) {
-                            genres = fetchedGenres
-                            updated = true
-                        }
+                    val fetchedGenres = details.genres?.mapNotNull { it.name } ?: emptyList()
+                    val isEastAsianAnimation = details.originalLanguage?.lowercase() in listOf("ja", "zh", "ko", "cn") &&
+                            (fetchedGenres.any { it.equals("Animation", ignoreCase = true) } ||
+                             genres.any { it.equals("Animation", ignoreCase = true) })
+                    if (isEastAsianAnimation && mediaType?.lowercase() != "anime") {
+                        mediaType = "anime"
+                        updated = true
+                    }
+
+                    if (genres.isEmpty() && fetchedGenres.isNotEmpty()) {
+                        genres = fetchedGenres
+                        updated = true
                     }
 
                     if (backdropUrl.isNullOrBlank()) {
@@ -488,6 +495,7 @@ class SecondBrainRepository(private val context: Context) {
 
         if (updated) {
             val newItem = item.copy(
+                mediaType = mediaType,
                 genres = genres,
                 watchProviders = watchProviders,
                 trailerUrl = trailerUrl,

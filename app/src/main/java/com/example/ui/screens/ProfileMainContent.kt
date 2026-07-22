@@ -66,6 +66,7 @@ import com.example.ui.theme.CategoryVideo
 import com.example.ui.theme.CategoryText
 import com.example.ui.theme.CategoryCode
 import com.example.ui.theme.CategoryAudio
+import com.example.ui.theme.CategoryMedia
 import com.example.ui.theme.CloudStorageBlue
 import com.example.ui.theme.LocalStorageGreen
 import android.net.Uri
@@ -102,6 +103,7 @@ fun ProfileMainContent(
     val totalText = allItems.count { it.type == SavedItemType.TEXT }
     val totalCode = allItems.count { it.type == SavedItemType.CODE }
     val totalAudio = allItems.count { it.type == SavedItemType.AUDIO }
+    val totalMedia = allItems.count { it.type == SavedItemType.MEDIA }
 
     val isSyncing by viewModel.isSyncing.collectAsState()
 
@@ -456,6 +458,17 @@ fun ProfileMainContent(
                                 modifier = Modifier.weight(1f)
                             )
                         }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            ArchiveStatRow(
+                                iconResId = R.drawable.ic_custom_movie, count = totalMedia, label = "Movies",
+                                baseColor = CategoryMedia,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
             }
@@ -472,7 +485,7 @@ fun ProfileMainContent(
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
-                ClickableRow(title = "Movies API Key", onClick = onNavigateToMovieApiKey)
+                ClickableRow(title = "Movie & TV Integration", onClick = onNavigateToMovieApiKey)
             }
 
             // STORAGE SECTION

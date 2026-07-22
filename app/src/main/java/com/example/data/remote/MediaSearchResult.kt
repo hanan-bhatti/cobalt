@@ -71,7 +71,8 @@ data class TmdbDetailsResponse(
     @param:Json(name = "genres") val genres: List<TmdbGenre>? = null,
     @param:Json(name = "videos") val videos: TmdbVideosResponse? = null,
     @param:Json(name = "watch/providers") val watchProviders: TmdbWatchProvidersResponse? = null,
-    @param:Json(name = "vote_average") val voteAverage: Double? = null
+    @param:Json(name = "vote_average") val voteAverage: Double? = null,
+    @param:Json(name = "original_language") val originalLanguage: String? = null
 )
 
 @JsonClass(generateAdapter = true)

@@ -451,7 +451,13 @@ fun CaptureScreen(
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        placeholder = { Text("Type to search (e.g., Inception, Naruto)...") },
+                        placeholder = {
+                            Text(
+                                text = "Search movies, TV shows, anime...",
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
                         singleLine = true,
                         leadingIcon = {
                             Icon(
