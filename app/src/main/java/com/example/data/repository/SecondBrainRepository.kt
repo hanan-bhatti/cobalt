@@ -394,7 +394,7 @@ class SecondBrainRepository(private val context: Context) {
         results
     }
 
-    suspend fun enrichMediaItemDetails(item: SavedItem): SavedItem = withContext(Dispatchers.IO) {
+    suspend fun enrichMediaItemDetails(item: SavedItem, saveToDb: Boolean = true): SavedItem = withContext(Dispatchers.IO) {
         if (item.type != SavedItemType.MEDIA) return@withContext item
 
         var genres = item.genres
@@ -494,7 +494,9 @@ class SecondBrainRepository(private val context: Context) {
                 backdropUrl = backdropUrl,
                 rating = rating
             )
-            savedItemDao.insertItem(newItem.toEntity())
+            if (saveToDb) {
+                savedItemDao.insertItem(newItem.toEntity())
+            }
             return@withContext newItem
         }
 
