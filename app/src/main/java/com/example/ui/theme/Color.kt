@@ -40,6 +40,7 @@
  val CategoryText = Color(0xFFFFA726)
  val CategoryCode = Color(0xFF66BB6A)
  val CategoryAudio = Color(0xFF26A69A)
+ val CategoryMedia = Color(0xFFE91E63)
 
  // Archive card type colors (alternative palette)
  val ArchiveLinkColor = Color(0xFF2196F3)
@@ -47,6 +48,34 @@
  val ArchiveCodeColor = Color(0xFF4CAF50)
  val ArchiveTextColor = Color(0xFF9C27B0)
  val ArchiveAudioColor = Color(0xFFE91E63)
+ val ArchiveMediaColor = Color(0xFFE91E63)
+
+ // Streaming provider brand colors
+ val StreamingNetflix = Color(0xFFE50914)
+ val StreamingPrime = Color(0xFF00A8E1)
+ val StreamingDisney = Color(0xFF113CCF)
+ val StreamingCrunchyroll = Color(0xFFFF6600)
+ val StreamingHulu = Color(0xFF1CE783)
+ val StreamingHuluDark = Color(0xFF0B0C0E)
+ val StreamingApple = Color(0xFF1C1C1E)
+ val StreamingMax = Color(0xFF5822B4)
+ val StreamingParamount = Color(0xFF0064FF)
+ val StreamingPeacock = Color(0xFF00A3E0)
+ val StreamingYouTube = Color(0xFFFF0000)
+ val StreamingSony = Color(0xFF00509E)
+ val StreamingZee5 = Color(0xFF6F00FF)
+ val StreamingHotstar = Color(0xFF0F172A)
+ val StreamingJio = Color(0xFFD8006E)
+ val StreamingFunimation = Color(0xFF5B0099)
+ val StreamingVudu = Color(0xFF027BFF)
+ val StreamingGooglePlay = Color(0xFFEA4335)
+ val StreamingTubi = Color(0xFFFF2F00)
+ val StreamingPluto = Color(0xFFFAD02C)
+ val StreamingStarz = Color(0xFF1A1A1A)
+ val StreamingShowtime = Color(0xFFCC0000)
+ val StreamingBbc = Color(0xFFFF005A)
+ val StreamingHidive = Color(0xFF00A0EA)
+ val StarGold = Color(0xFFFFB300)
 
  // Code highlighting colors
  val CodeKeywordDark = Color(0xFFF07178)
@@ -67,7 +96,8 @@
  val SuccessLightGreen = Color(0xFFE8F5E9)
  val SuccessDarkGreen = Color(0xFF1B5E20)
  val SuccessBorderGreen = Color(0xFF2E7D32)
- val LinkPurple = Color(0xFF6B4EFF)
+ val LinkBlue = Color(0xFF2563EB)
+val LinkPurple = LinkBlue
 
  // Default theme color for unset folders
  val DefaultFolderColor = Color(0xFF6750A4)
