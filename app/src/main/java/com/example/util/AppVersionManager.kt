@@ -61,6 +61,7 @@ data class ReleaseNote(
 
 /**
  * Central manager for App Version information, release history, and update checks.
+ * Synchronized directly with root CHANGELOG.md.
  */
 object AppVersionManager {
 
@@ -75,7 +76,7 @@ object AppVersionManager {
             lower.contains("nightly") -> AppVersionTag.NIGHTLY
             lower.contains("rc") -> AppVersionTag.RC
             lower.contains("dev") -> AppVersionTag.DEV
-            else -> AppVersionTag.BETA // Default if unrecognized pre-release
+            else -> AppVersionTag.STABLE // Default to STABLE for official production releases
         }
     }
 
@@ -89,28 +90,30 @@ object AppVersionManager {
         get() = com.example.BuildConfig.VERSION_CODE
 
     /**
-     * Complete history of releases for Second Brain.
+     * Authentic release history of Second Brain synchronized with CHANGELOG.md.
      */
     val releaseHistory: List<ReleaseNote> = listOf(
         ReleaseNote(
-            versionName = "0.9.4-beta02",
+            versionName = "1.0.0-rc01",
             versionCode = 7,
-            releaseDate = "July 24, 2026",
-            tag = AppVersionTag.BETA,
-            isCurrent = false,
+            releaseDate = "July 23, 2026",
+            tag = AppVersionTag.RC,
+            isCurrent = true,
             isLatest = true,
             highlights = listOf(
-                "Dynamic Versioning & Expressive Release Notes",
+                "First Official Release Candidate (1.0.0-rc01)",
                 "App-wide RTL support for Urdu, Arabic, & Hebrew text",
+                "Dynamic Version Channel Badges & Expressive Release Notes Hub",
                 "Unified Material 3 Expressive Dialogs & Wavy Progress Indicators"
             ),
             features = listOf(
+                "Release Candidate build status with dynamic channel colors",
                 "New 'App Updates & Release Notes' hub in Settings",
-                "Dynamic build badge colors (Beta, Nightly, Alpha, Stable)",
-                "Interactive update checker with real-time feedback"
+                "Interactive update checker with real-time feedback",
+                "Voice Memo AI Transcription and recording waveform"
             ),
             improvements = listOf(
-                "Full RTL alignment in Markdown renderers and Rich Text editor",
+                "Full RTL text direction in Markdown renderers and Rich Text editor",
                 "Seamless model list refresh upon API key update",
                 "Unified dialog corner radii to 28.dp surface container high"
             ),
@@ -122,41 +125,136 @@ object AppVersionManager {
         ReleaseNote(
             versionName = "0.9.3-beta01",
             versionCode = 6,
-            releaseDate = "July 23, 2026",
+            releaseDate = "July 22, 2026",
             tag = AppVersionTag.BETA,
-            isCurrent = true,
+            isCurrent = false,
             isLatest = false,
             highlights = listOf(
-                "Voice Memo AI Transcription",
-                "Material 3 Expressive UI Polish",
-                "Multi-folder management for saved memories"
+                "Global Dynamic Light/Dark Theme Color Adaptation",
+                "Header Top Inset Spacing Cleanups"
             ),
             features = listOf(
-                "Audio recording to AI note conversion with automatic transcriptions",
-                "Global expanding action button with animated speed dial",
-                "Advanced search filtering with tags and cloud media indicators"
+                "Implemented HSL-based color transformation (Color.toThemeColor(isDark)) across all folders, categories, widgets, OCR overlay, and settings"
             ),
             improvements = listOf(
-                "Haptic feedback on item swipe gestures",
-                "Optimized database queries for fast search performance"
-            ),
-            bugFixes = listOf(
-                "Fixed cloud sync state initialization bug",
-                "Corrected audio playback progress bar accuracy"
+                "Consolidated top bar header spacing immediately below system status bar across all main screens"
             )
         ),
         ReleaseNote(
-            versionName = "0.9.0-alpha01",
+            versionName = "0.9.2-beta01",
             versionCode = 5,
-            releaseDate = "July 10, 2026",
-            tag = AppVersionTag.ALPHA,
+            releaseDate = "July 22, 2026",
+            tag = AppVersionTag.BETA,
             isCurrent = false,
             isLatest = false,
-            highlights = listOf("Initial Alpha Release of Second Brain"),
+            highlights = listOf(
+                "Media Hub Screen & TMDb Movie/TV/Anime Enrichment",
+                "Auto-Complete Media Search & OCR Integration"
+            ),
             features = listOf(
-                "Local-first memory architecture",
-                "Gemini AI integration for note summarization",
-                "Folder organization and tagging system"
+                "Built dedicated Media Hub featuring watch status filter chips, category tabs, poster cards, and pull-to-refresh",
+                "Interactive bottom sheet search for real-time movie, TV show, and anime queries",
+                "Automated fetching of TMDb streaming watch providers, genres, release years, vote ratings, and trailers",
+                "East Asian anime auto-detection algorithms and genre filter chips",
+                "OCR Overlay direct media searching and single-tap saving"
+            ),
+            improvements = listOf(
+                "Embedded section headers and filter chips directly into home screen staggered grid",
+                "Relocated TMDb API key configuration to a dedicated subscreen inside Settings",
+                "Updated capture and recent item widgets to support media category items"
+            ),
+            bugFixes = listOf(
+                "Separated OCR tab save button logic to allow independent link and note saving",
+                "Enabled instant DB saves for extracted links prior to background metadata fetching",
+                "Resolved Firestore folder document path slashes and early exit bugs in syncUnsyncedItems"
+            )
+        ),
+        ReleaseNote(
+            versionName = "0.9.1-beta02",
+            versionCode = 4,
+            releaseDate = "July 21, 2026",
+            tag = AppVersionTag.BETA,
+            isCurrent = false,
+            isLatest = false,
+            highlights = listOf(
+                "Edge Panel Animation Studio",
+                "Dynamic Category Tinting & Real-Time Widget Sync"
+            ),
+            features = listOf(
+                "Subpage featuring 5 animation presets, custom duration/scale/easing controls, and live hot-reloading",
+                "QuickCapture action button background tinting using category accent colors",
+                "Real-Time Widget Sync mirroring app theme with WidgetUpdater"
+            ),
+            improvements = listOf(
+                "Synchronous Preference Persistence with commit() for immediate writes",
+                "Added bottom padding across subpages and horizontal scrolling for filter chips"
+            ),
+            bugFixes = listOf(
+                "Clamped color, alpha, radii, and layout fraction bounds in expandPanel/collapsePanel to eliminate color extrapolation artifacts",
+                "Replaced deprecated TabRow with SecondaryTabRow in WidgetSettingsScreen"
+            )
+        ),
+        ReleaseNote(
+            versionName = "0.9.1-beta01",
+            versionCode = 3,
+            releaseDate = "July 21, 2026",
+            tag = AppVersionTag.BETA,
+            isCurrent = false,
+            isLatest = false,
+            highlights = listOf(
+                "Widget Customizer Engine",
+                "Settings UI Redesign"
+            ),
+            features = listOf(
+                "Production-grade WidgetSettingsScreen with live interactive previews, user archive rendering, category filtering, and opacity controls"
+            ),
+            improvements = listOf(
+                "Redesigned main Settings screen into clean, logical section groups with clear visual badges",
+                "Corrected collapse corner radii math and morph curve interpolation for edge panel"
+            ),
+            bugFixes = listOf(
+                "Replaced reflection-based Moshi JSON parsing in Glance widgets with org.json for ROM stability",
+                "Restored FLAG_NOT_FOCUSABLE window flag upon overlay collapse to fix Android back-swipe gesture blocking"
+            )
+        ),
+        ReleaseNote(
+            versionName = "0.9.0-beta02",
+            versionCode = 2,
+            releaseDate = "July 20, 2026",
+            tag = AppVersionTag.BETA,
+            isCurrent = false,
+            isLatest = false,
+            highlights = listOf(
+                "Glance Widgets & Background Data Downloader",
+                "Fuzzy Levenshtein Search & Code Highlighting"
+            ),
+            features = listOf(
+                "Glance Widgets: RecentItemsWidget and QuickCaptureWidget components",
+                "DataDownloadService for asynchronous background media retrieval",
+                "Fuzzy and synonym-aware search ranking utilizing Levenshtein distance scoring",
+                "Custom CodeHighlighter utility for real-time Markdown code block styling"
+            ),
+            improvements = listOf(
+                "Cloud quota logic treats text/link items as free against 512MB limit",
+                "Performance-gated dynamic background blur (Haze) with OS capability detection"
+            )
+        ),
+        ReleaseNote(
+            versionName = "0.9.0-beta01",
+            versionCode = 1,
+            releaseDate = "July 18, 2026",
+            tag = AppVersionTag.BETA,
+            isCurrent = false,
+            isLatest = false,
+            highlights = listOf(
+                "Initial Beta Release of Second Brain",
+                "Floating OCR & System Share Sheet Capture"
+            ),
+            features = listOf(
+                "System share sheet support for text, images, videos, and links",
+                "Swipeable floating edge-handle panel over any application for OCR scanning",
+                "Automated Gemini image text extraction and speech-to-text voice memos",
+                "Offline-first Room database storage with Firebase cloud sync"
             )
         )
     )
