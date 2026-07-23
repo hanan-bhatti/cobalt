@@ -3,10 +3,12 @@ package com.example.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,7 +25,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SystemUpdate
@@ -52,6 +53,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -59,12 +61,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.AppVersionBadge
 import com.example.ui.components.ReleaseNoteItemCard
+import com.example.ui.components.bounceClick
 import com.example.util.AppVersionManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Dedicated App Updates & Release Notes Screen in Settings.
+ * Custom Expressive App Updates & Release Notes Screen in Settings.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,11 +84,38 @@ fun ReleaseUpdatesScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "App Updates & Release Notes",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.NewReleases,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Updates & Release Notes",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Text(
+                                text = "CHANGELOG & VERSION HISTORY",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary,
+                                letterSpacing = 1.sp
+                            )
+                        }
+                    }
                 },
                 navigationIcon = {
                     IconButton(
@@ -110,132 +140,142 @@ fun ReleaseUpdatesScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(top = 12.dp, bottom = 32.dp)
         ) {
+            // Glowing Expressive Installed Version Banner Card
             item {
-                Spacer(modifier = Modifier.height(4.dp))
-                // Current Installed Version Card
                 Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                    ),
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                     shape = RoundedCornerShape(24.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Surface(
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    shape = CircleShape,
-                                    modifier = Modifier.size(48.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = Icons.Default.SystemUpdate,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(26.dp)
-                                        )
-                                    }
-                                }
-                                Column {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Text(
-                                            text = "Second Brain",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        AppVersionBadge(
-                                            tag = AppVersionManager.currentTag,
-                                            fontSize = 10.sp,
-                                            horizontalPadding = 8.dp,
-                                            verticalPadding = 3.dp
-                                        )
-                                    }
-                                    Text(
-                                        text = "Version ${AppVersionManager.currentVersionName} (Build #${AppVersionManager.currentVersionCode})",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        MaterialTheme.colorScheme.primaryContainer,
+                                        MaterialTheme.colorScheme.surfaceContainerHigh
                                     )
+                                ),
+                                shape = RoundedCornerShape(24.dp)
+                            )
+                            .padding(20.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = CircleShape,
+                                        modifier = Modifier.size(50.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Default.SystemUpdate,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onPrimary,
+                                                modifier = Modifier.size(26.dp)
+                                            )
+                                        }
+                                    }
+                                    Column {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Text(
+                                                text = "Second Brain",
+                                                style = MaterialTheme.typography.titleLarge,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            AppVersionBadge(
+                                                tag = AppVersionManager.currentTag,
+                                                fontSize = 10.sp,
+                                                horizontalPadding = 8.dp,
+                                                verticalPadding = 3.dp
+                                            )
+                                        }
+                                        Text(
+                                            text = "Version ${AppVersionManager.currentVersionName} (Build #${AppVersionManager.currentVersionCode})",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                             }
-                        }
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-                        // Status & Check for Updates Button
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
+                            // Status & Check for Updates Button
                             Row(
+                                modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.weight(1f)
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Icon(
-                                    imageVector = if (AppVersionManager.isUpdateAvailable()) Icons.Default.Download else Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = if (AppVersionManager.isUpdateAvailable()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    text = updateCheckResult ?: if (AppVersionManager.isUpdateAvailable()) "Update v${AppVersionManager.getLatestRelease().versionName} available" else "You are on the latest version",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-
-                            if (isCheckingUpdates) {
-                                CircularWavyProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            } else {
-                                Button(
-                                    onClick = {
-                                        isCheckingUpdates = true
-                                        updateCheckResult = null
-                                        coroutineScope.launch {
-                                            delay(1200)
-                                            isCheckingUpdates = false
-                                            updateCheckResult = if (AppVersionManager.isUpdateAvailable()) {
-                                                "Found v${AppVersionManager.getLatestRelease().versionName}"
-                                            } else {
-                                                "Latest version installed!"
-                                            }
-                                        }
-                                    },
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary
-                                    ),
-                                    modifier = Modifier.testTag("check_updates_screen_button")
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.weight(1f)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Refresh,
+                                        imageVector = if (AppVersionManager.isUpdateAvailable()) Icons.Default.Download else Icons.Default.CheckCircle,
                                         contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
+                                        tint = if (AppVersionManager.isUpdateAvailable()) MaterialTheme.colorScheme.primary else Color(0xFF10B981),
+                                        modifier = Modifier.size(20.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Check Now", fontSize = 13.sp)
+                                    Text(
+                                        text = updateCheckResult ?: if (AppVersionManager.isUpdateAvailable()) "Update v${AppVersionManager.getLatestRelease().versionName} available" else "You are on the latest version",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+
+                                if (isCheckingUpdates) {
+                                    CircularWavyProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                } else {
+                                    Button(
+                                        onClick = {
+                                            isCheckingUpdates = true
+                                            updateCheckResult = null
+                                            coroutineScope.launch {
+                                                delay(1200)
+                                                isCheckingUpdates = false
+                                                updateCheckResult = if (AppVersionManager.isUpdateAvailable()) {
+                                                    "Found v${AppVersionManager.getLatestRelease().versionName}"
+                                                } else {
+                                                    "Latest version installed!"
+                                                }
+                                            }
+                                        },
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary
+                                        ),
+                                        modifier = Modifier.bounceClick().testTag("check_updates_screen_button")
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Refresh,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Check Now", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             }
                         }
@@ -245,11 +285,12 @@ fun ReleaseUpdatesScreen(
 
             item {
                 Text(
-                    text = "Release History & Changelogs",
-                    style = MaterialTheme.typography.titleMedium,
+                    text = "RELEASE HISTORY & CHANGELOGS",
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                    color = MaterialTheme.colorScheme.secondary,
+                    letterSpacing = 1.sp,
+                    modifier = Modifier.padding(top = 4.dp)
                 )
             }
 
@@ -261,10 +302,6 @@ fun ReleaseUpdatesScreen(
                         expandedRelease = if (expandedRelease == note.versionName) null else note.versionName
                     }
                 )
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
