@@ -279,7 +279,6 @@ private fun ExpressiveHelpCenterContent(
     val expandedItems = remember { mutableStateMapOf<Int, Boolean>() }
     val helpfulFeedback = remember { mutableStateMapOf<Int, Boolean>() }
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
 
     val categories = remember {
         listOf(
@@ -554,7 +553,9 @@ private fun ExpressiveHelpCenterContent(
 
                             OutlinedButton(
                                 onClick = {
-                                    clipboardManager.setText(AnnotatedString("${item.question}\n\n${item.answer}"))
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                    val clip = android.content.ClipData.newPlainText("FAQ Answer", "${item.question}\n\n${item.answer}")
+                                    clipboard.setPrimaryClip(clip)
                                 },
                                 shape = RoundedCornerShape(10.dp),
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
@@ -626,11 +627,9 @@ private fun ExpressiveHelpCenterContent(
     }
 }
 
-@Suppress("DEPRECATION")
 @Composable
 private fun ExpressiveSystemDiagnosticsContent() {
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
     val envReport = remember(context) { collectEnvironmentReport(context) }
 
@@ -853,7 +852,9 @@ private fun ExpressiveSystemDiagnosticsContent() {
                         Database Status: Room SQLite OK (Schema v7)
                         Cloud Sync: Firebase Firestore Operational
                     """.trimIndent()
-                    clipboardManager.setText(AnnotatedString(info))
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    val clip = android.content.ClipData.newPlainText("Diagnostic Report", info)
+                    clipboard.setPrimaryClip(clip)
                     isCopied = true
                     coroutineScope.launch {
                         delay(2000)
