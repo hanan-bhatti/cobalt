@@ -118,17 +118,26 @@ jobs:
           VERSION="${{ needs.check-version.outputs.version_name }}"
           mkdir -p release-artifacts
 
-          FOSS_APK=$(find app/build/outputs/apk/fossRelease -name "*.apk" | head -n1)
-          PLAY_APK=$(find app/build/outputs/apk/playRelease -name "*.apk" | head -n1)
+          # Search broadly since AGP output layout can be either
+          # apk/fossRelease/... or apk/foss/release/... depending on version.
+          FOSS_APK=$(find app/build/outputs/apk -path "*foss*" -path "*release*" -iname "*.apk" ! -iname "*unsigned*" | head -n1)
+          PLAY_APK=$(find app/build/outputs/apk -path "*play*" -path "*release*" -iname "*.apk" ! -iname "*unsigned*" | head -n1)
 
           if [ -z "$FOSS_APK" ]; then
-            echo "::error::No FOSS release APK found in app/build/outputs/apk/fossRelease"
+            echo "::error::No FOSS release APK found under app/build/outputs/apk"
+            echo "Directory contents:"
+            find app/build/outputs/apk -type f
             exit 1
           fi
           if [ -z "$PLAY_APK" ]; then
-            echo "::error::No Play release APK found in app/build/outputs/apk/playRelease"
+            echo "::error::No Play release APK found under app/build/outputs/apk"
+            echo "Directory contents:"
+            find app/build/outputs/apk -type f
             exit 1
           fi
+
+          echo "Found FOSS APK: $FOSS_APK"
+          echo "Found Play APK: $PLAY_APK"
 
           FOSS_NAME="second-brain-foss-v${VERSION}.apk"
           PLAY_NAME="second-brain-play-v${VERSION}.apk"
