@@ -539,20 +539,9 @@ fun FoldersScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Pin to top", fontWeight = FontWeight.Medium)
                         }
-                        Switch(
+                        com.example.ui.components.ExpressiveSwitch(
                             checked = newFolderPinned,
-                            onCheckedChange = { newFolderPinned = it },
-                            thumbContent = if (newFolderPinned) {
-                                {
-                                    Icon(
-                                        imageVector = Icons.Filled.Check,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            } else {
-                                null
-                            }
+                            onCheckedChange = { newFolderPinned = it }
                         )
                     }
 
@@ -1588,20 +1577,9 @@ fun FolderCustomizerDialog(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Pin to top", fontWeight = FontWeight.Medium)
                         }
-                        Switch(
+                        com.example.ui.components.ExpressiveSwitch(
                             checked = isPinned,
-                            onCheckedChange = { isPinned = it },
-                            thumbContent = if (isPinned) {
-                                {
-                                    Icon(
-                                        imageVector = Icons.Filled.Check,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                                    )
-                                }
-                            } else {
-                                null
-                            }
+                            onCheckedChange = { isPinned = it }
                         )
                     }
 

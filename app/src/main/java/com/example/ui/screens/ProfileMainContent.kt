@@ -701,9 +701,19 @@ fun ProfileMainContent(
                         onClick = { onNavigateToLegal("release_updates") }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))
-                    ClickableRow(title = "About Second Brain", onClick = { onNavigateToLegal("about") })
+                    ClickableRow(
+                        title = "Help & Support Diagnostics",
+                        subtitle = "System health, FAQs, & diagnostic tests",
+                        onClick = { onNavigateToLegal("support") }
+                    )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))
-                    ClickableRow(title = "Frequently Asked Questions", onClick = { onNavigateToLegal("faq") })
+                    ClickableRow(
+                        title = "Feedback & Bug Reports",
+                        subtitle = "Report bugs or request new features",
+                        onClick = { onNavigateToLegal("feedback") }
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))
+                    ClickableRow(title = "About Second Brain", onClick = { onNavigateToLegal("about") })
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))
                     ClickableRow(title = "Privacy Policy", onClick = { onNavigateToLegal("privacy") })
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))

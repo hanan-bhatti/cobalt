@@ -309,11 +309,22 @@ BackHandler(enabled = activeDetailItem != null) {
                                             viewModel = viewModel
                                         )
                                     }
-                                    composable("release_updates") {
-                                        com.example.ui.screens.ReleaseUpdatesScreen(
-                                            onNavigateBack = { navController.popBackStack() }
-                                        )
-                                    }
+                                     composable("release_updates") {
+                                         com.example.ui.screens.ReleaseUpdatesScreen(
+                                             onNavigateBack = { navController.popBackStack() }
+                                         )
+                                     }
+                                     composable("support") {
+                                         com.example.ui.screens.SupportScreen(
+                                             onNavigateBack = { navController.popBackStack() },
+                                             onNavigateToFeedback = { tabIndex -> navController.navigate("feedback") }
+                                         )
+                                     }
+                                     composable("feedback") {
+                                         com.example.ui.screens.FeedbackScreen(
+                                             onNavigateBack = { navController.popBackStack() }
+                                         )
+                                     }
                                      composable("about") {
                                          com.example.ui.screens.LegalScreen(
                                              title = "About",

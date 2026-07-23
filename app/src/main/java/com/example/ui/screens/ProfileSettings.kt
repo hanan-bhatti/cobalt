@@ -762,20 +762,9 @@ fun SettingsToggleRow(title: String, subtitle: String? = null, checked: Boolean,
                 Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        Switch(
+        com.example.ui.components.ExpressiveSwitch(
             checked = checked,
-            onCheckedChange = onCheckedChange,
-            thumbContent = if (checked) {
-                {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(SwitchDefaults.IconSize)
-                    )
-                }
-            } else {
-                null
-            }
+            onCheckedChange = onCheckedChange
         )
     }
 }

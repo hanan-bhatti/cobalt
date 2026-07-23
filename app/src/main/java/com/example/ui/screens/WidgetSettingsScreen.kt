@@ -677,7 +677,7 @@ private fun RecentItemsCustomizationSection(
                 Text("Show Greeting Header", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text("Displays 'Good morning, User' header on the widget.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Switch(
+            com.example.ui.components.ExpressiveSwitch(
                 checked = showHeader,
                 onCheckedChange = onHeaderToggled
             )
