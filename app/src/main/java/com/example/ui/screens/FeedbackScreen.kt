@@ -1,6 +1,8 @@
 package com.example.ui.screens
 
+import android.content.Context
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -33,12 +35,12 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Feedback
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -82,8 +84,49 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.AppVersionBadge
 import com.example.util.AppVersionManager
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.Locale
+import java.util.TimeZone
+
+/**
+ * Helper utility to collect comprehensive diagnostic metadata (user email, device model, OS, app version, locale).
+ */
+data class FeedbackEnvironmentReport(
+    val userEmail: String,
+    val userId: String,
+    val appVersion: String,
+    val buildCode: Int,
+    val buildTag: String,
+    val deviceModel: String,
+    val osVersion: String,
+    val locale: String,
+    val timezone: String
+)
+
+fun collectEnvironmentReport(context: Context): FeedbackEnvironmentReport {
+    val currentUser = try { FirebaseAuth.getInstance().currentUser } catch (e: Exception) { null }
+    val userEmail = currentUser?.email ?: if (currentUser?.isAnonymous == true) "Anonymous User" else "Guest User"
+    val userId = currentUser?.uid ?: "guest_session"
+
+    val deviceModel = "${Build.MANUFACTURER.uppercase()} ${Build.MODEL}"
+    val osVersion = "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})"
+    val locale = Locale.getDefault().toString()
+    val timezone = TimeZone.getDefault().id
+
+    return FeedbackEnvironmentReport(
+        userEmail = userEmail,
+        userId = userId,
+        appVersion = AppVersionManager.currentVersionName,
+        buildCode = AppVersionManager.currentVersionCode,
+        buildTag = AppVersionManager.currentTag.label,
+        deviceModel = deviceModel,
+        osVersion = osVersion,
+        locale = locale,
+        timezone = timezone
+    )
+}
 
 /**
  * Modern Feedback & Bug Reporting Screen featuring Bug Report and Feature Request tabs.
@@ -165,7 +208,9 @@ fun FeedbackScreen(
 private fun BugReportTabContent(
     onSuccess: () -> Unit
 ) {
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val envReport = remember(context) { collectEnvironmentReport(context) }
 
     var bugTitle by remember { mutableStateOf("") }
     var bugDescription by remember { mutableStateOf("") }
@@ -182,9 +227,6 @@ private fun BugReportTabContent(
         attachmentUri = uri
     }
 
-    val deviceModel = remember { "${android.os.Build.MANUFACTURER.uppercase()} ${android.os.Build.MODEL}" }
-    val osVersion = remember { android.os.Build.VERSION.RELEASE }
-
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -192,7 +234,7 @@ private fun BugReportTabContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(top = 16.dp, bottom = 32.dp)
     ) {
-        // Device Info Banner
+        // Device & User Environment Info Banner
         item {
             Card(
                 colors = CardDefaults.cardColors(
@@ -207,20 +249,20 @@ private fun BugReportTabContent(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.BugReport,
+                        imageVector = Icons.Default.AccountCircle,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(22.dp)
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
                     )
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Auto-attached Environment Info",
+                            text = "Report Origin: ${envReport.userEmail}",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "$deviceModel • Android $osVersion • App v${AppVersionManager.currentVersionName}",
+                            text = "${envReport.deviceModel} • ${envReport.osVersion} • v${envReport.appVersion}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -505,7 +547,9 @@ private fun BugReportTabContent(
 private fun FeatureRequestTabContent(
     onSuccess: () -> Unit
 ) {
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val envReport = remember(context) { collectEnvironmentReport(context) }
 
     var featureTitle by remember { mutableStateOf("") }
     var problemStatement by remember { mutableStateOf("") }
@@ -527,6 +571,44 @@ private fun FeatureRequestTabContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(top = 16.dp, bottom = 32.dp)
     ) {
+        // User Info Header Card
+        item {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                ),
+                shape = RoundedCornerShape(18.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Author: ${envReport.userEmail}",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Targeting ${envReport.deviceModel} • v${envReport.appVersion}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    AppVersionBadge(tag = AppVersionManager.currentTag, fontSize = 9.sp)
+                }
+            }
+        }
+
         // Feature Title
         item {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

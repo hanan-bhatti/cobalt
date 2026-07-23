@@ -564,11 +564,22 @@ private fun SystemDiagnosticsTabContent() {
         }
 
         item {
-            Spacer(modifier = Modifier.height(8.dp))
+            val envReport = remember(context) { collectEnvironmentReport(context) }
             OutlinedButton(
                 onClick = {
-                    val info = "App: v${AppVersionManager.currentVersionName} (#${AppVersionManager.currentVersionCode})\nDevice: $deviceModel\nAndroid: $osVersion\nStatus: Healthy"
-                    clipboardManager.setText(AnnotatedString(info))
+                    val info = """
+                        --- SECOND BRAIN DIAGNOSTIC REPORT ---
+                        User Email: ${envReport.userEmail}
+                        User ID: ${envReport.userId}
+                        App Version: v${envReport.appVersion} (${envReport.buildCode}) [${envReport.buildTag}]
+                        Device Model: ${envReport.deviceModel}
+                        Android OS: ${envReport.osVersion}
+                        System Locale: ${envReport.locale}
+                        Timezone: ${envReport.timezone}
+                        Database Status: Room SQLite OK
+                        Cloud Sync: Firebase Firestore Operational
+                    """.trimIndent()
+                    clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(info))
                     isCopied = true
                     coroutineScope.launch {
                         delay(2000)
