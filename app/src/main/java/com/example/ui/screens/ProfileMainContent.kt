@@ -98,6 +98,7 @@ fun ProfileMainContent(
     val allItems by viewModel.allItems.collectAsState()
     val usedStorageBytes by viewModel.usedStorageBytes.collectAsState()
     val tmdbApiKey by viewModel.tmdbApiKey.collectAsState()
+    var showSurveySheet by remember { mutableStateOf(false) }
 
     val totalItems = allItems.size
     val totalLinks = allItems.count { it.type == SavedItemType.LINK }
@@ -712,6 +713,11 @@ fun ProfileMainContent(
                         subtitle = "Report bugs or request new features",
                         onClick = { onNavigateToLegal("feedback") }
                     )
+                    ClickableRow(
+                        title = "Take App Experience Survey",
+                        subtitle = "Help shape v1.0 • Earn Contributor Badge",
+                        onClick = { showSurveySheet = true }
+                    )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))
                     ClickableRow(title = "About Second Brain", onClick = { onNavigateToLegal("about") })
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))
@@ -719,6 +725,12 @@ fun ProfileMainContent(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))
                     ClickableRow(title = "Terms & Conditions", onClick = { onNavigateToLegal("terms") })
                 }
+            }
+
+            if (showSurveySheet) {
+                com.example.ui.components.SurveyBottomSheet(
+                    onDismissRequest = { showSurveySheet = false }
+                )
             }
 
             // App Version Info
