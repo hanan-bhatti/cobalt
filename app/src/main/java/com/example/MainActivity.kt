@@ -55,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -438,6 +439,15 @@ BackHandler(enabled = activeDetailItem != null) {
                             }
                             com.example.ui.components.MediaSearchBottomSheet(viewModel = viewModel)
                         }
+
+                        val userFeedback by viewModel.userFeedback.collectAsState()
+                        com.example.ui.components.AppFeedbackBanner(
+                            feedbackMessage = userFeedback,
+                            onDismiss = { viewModel.dismissFeedback() },
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .statusBarsPadding()
+                        )
                     }
                 }
             }

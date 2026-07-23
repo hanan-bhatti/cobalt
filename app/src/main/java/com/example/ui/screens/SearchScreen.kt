@@ -516,6 +516,23 @@ fun SearchItemRow(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                SavedItemType.MEDIA -> {
+                    val poster = item.getBestImagePath()
+                    if (!poster.isNullOrBlank()) {
+                        AsyncImage(
+                            model = poster,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_movie),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
                 SavedItemType.AUDIO -> {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_custom_voice),
@@ -523,7 +540,7 @@ fun SearchItemRow(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                else -> { // TEXT
+                SavedItemType.TEXT -> {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_custom_text),
                         contentDescription = null,

@@ -69,9 +69,17 @@ object MediaApiClient {
         .addLast(KotlinJsonAdapterFactory())
         .build()
 
+    private val okHttpClient = okhttp3.OkHttpClient.Builder()
+        .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(12, java.util.concurrent.TimeUnit.SECONDS)
+        .writeTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+        .callTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+        .build()
+
     val tmdbApiService: TmdbApiService by lazy {
         Retrofit.Builder()
             .baseUrl(TMDB_BASE_URL)
+            .client(okHttpClient)
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(TmdbApiService::class.java)
@@ -80,6 +88,7 @@ object MediaApiClient {
     val jikanApiService: JikanApiService by lazy {
         Retrofit.Builder()
             .baseUrl(JIKAN_BASE_URL)
+            .client(okHttpClient)
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(JikanApiService::class.java)

@@ -344,11 +344,36 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         viewModelScope.launch {
             _isSearchingMedia.value = true
             try {
-                val results = repository.searchMedia(query.trim())
-                _mediaSearchResults.value = results
+                if (!isNetworkAvailable()) {
+                    postFeedback("Offline mode • Searching cached & anime items", com.example.util.FeedbackSeverity.WARNING)
+                } else if (repository.getTmdbApiKey().isBlank()) {
+                    postFeedback("TMDb API key missing • Searching anime via Jikan. Add TMDb key in Profile for Movies & TV", com.example.util.FeedbackSeverity.WARNING)
+                }
+
+                val results = kotlinx.coroutines.withTimeoutOrNull(12_000L) {
+                    repository.searchMedia(query.trim())
+                }
+
+                if (results != null) {
+                    _mediaSearchResults.value = results
+                } else {
+                    _mediaSearchResults.value = emptyList()
+                    postFeedback(
+                        message = "Media search timed out • Check connection and try again",
+                        severity = com.example.util.FeedbackSeverity.ERROR,
+                        actionLabel = "Retry",
+                        onAction = { searchMedia(query) }
+                    )
+                }
             } catch (e: Exception) {
                 Log.e("SecondBrainVM", "searchMedia failed: ${e.message}")
                 _mediaSearchResults.value = emptyList()
+                postFeedback(
+                    message = "Media search error: ${e.localizedMessage ?: "Unknown error"}",
+                    severity = com.example.util.FeedbackSeverity.ERROR,
+                    actionLabel = "Retry",
+                    onAction = { searchMedia(query) }
+                )
             } finally {
                 _isSearchingMedia.value = false
             }
@@ -433,15 +458,44 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     private val _availableModels = MutableStateFlow<List<String>>(emptyList())
     val availableModels: StateFlow<List<String>> = _availableModels.asStateFlow()
 
+    private val _userFeedback = MutableStateFlow<com.example.util.UserFeedbackMessage?>(null)
+    val userFeedback: StateFlow<com.example.util.UserFeedbackMessage?> = _userFeedback.asStateFlow()
+
+    fun postFeedback(
+        message: String,
+        severity: com.example.util.FeedbackSeverity = com.example.util.FeedbackSeverity.INFO,
+        actionLabel: String? = null,
+        onAction: (() -> Unit)? = null
+    ) {
+        _userFeedback.value = com.example.util.UserFeedbackMessage(
+            message = message,
+            severity = severity,
+            actionLabel = actionLabel,
+            onAction = onAction
+        )
+        _uiToast.value = message
+    }
+
+    fun dismissFeedback() {
+        _userFeedback.value = null
+    }
+
     private val _uiToast = MutableStateFlow<String?>(null)
     val uiToast: StateFlow<String?> = _uiToast.asStateFlow()
 
     fun showToast(message: String) {
-        _uiToast.value = message
+        val severity = when {
+            message.contains("failed", ignoreCase = true) || message.contains("error", ignoreCase = true) -> com.example.util.FeedbackSeverity.ERROR
+            message.contains("no internet", ignoreCase = true) || message.contains("please sign in", ignoreCase = true) || message.contains("warning", ignoreCase = true) || message.contains("offline", ignoreCase = true) -> com.example.util.FeedbackSeverity.WARNING
+            message.contains("success", ignoreCase = true) || message.contains("saved", ignoreCase = true) || message.contains("synced", ignoreCase = true) || message.contains("renamed", ignoreCase = true) -> com.example.util.FeedbackSeverity.SUCCESS
+            else -> com.example.util.FeedbackSeverity.INFO
+        }
+        postFeedback(message, severity)
     }
 
     fun clearUiToast() {
         _uiToast.value = null
+        _userFeedback.value = null
     }
 
     fun syncData() {
