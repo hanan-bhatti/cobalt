@@ -663,8 +663,14 @@ private fun ExpressiveSystemDiagnosticsContent() {
                 val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
                 firebaseAccountLabel = user?.email ?: if (user?.isAnonymous == true) "Anonymous Session" else "Guest Mode"
                 val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
-                val activeNet = cm?.activeNetworkInfo
-                isFirebaseConnected = activeNet?.isConnectedOrConnecting == true
+                isFirebaseConnected = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    val network = cm?.activeNetwork
+                    val capabilities = cm?.getNetworkCapabilities(network)
+                    capabilities?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+                } else {
+                    @Suppress("DEPRECATION")
+                    cm?.activeNetworkInfo?.isConnectedOrConnecting == true
+                }
             } catch (e: Exception) { isFirebaseConnected = false }
 
             val ocrStart = System.currentTimeMillis()
