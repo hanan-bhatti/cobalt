@@ -45,13 +45,14 @@ import com.example.util.ReleaseNote
  * Modern M3 Expressive Sheet notifying user when a new app version is available.
  */
 @OptIn(ExperimentalMaterial3Api::class)
+@Suppress("DEPRECATION")
 @Composable
 fun UpdateAvailableBottomSheet(
     latestRelease: ReleaseNote = AppVersionManager.getLatestRelease(),
     onDismissRequest: () -> Unit,
     onUpdateClick: () -> Unit = {},
     onViewChangelogClick: () -> Unit = {},
-    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    sheetState: SheetState = rememberModalBottomSheetState()
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,

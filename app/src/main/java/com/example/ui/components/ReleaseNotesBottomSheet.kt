@@ -76,10 +76,11 @@ import kotlinx.coroutines.launch
  * Modern M3 Expressive Release Notes & Updates Bottom Sheet.
  */
 @OptIn(ExperimentalMaterial3Api::class)
+@Suppress("DEPRECATION")
 @Composable
 fun ReleaseNotesBottomSheet(
     onDismissRequest: () -> Unit,
-    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    sheetState: SheetState = rememberModalBottomSheetState(),
     onNavigateToFullUpdates: (() -> Unit)? = null
 ) {
     val coroutineScope = rememberCoroutineScope()
