@@ -192,6 +192,7 @@ fun HomeScreen(
     var undoDismissJob by remember { mutableStateOf<Job?>(null) }
     var itemToDelete by remember { mutableStateOf<SavedItem?>(null) }
     var showBulkDeleteConfirm by remember { mutableStateOf(false) }
+    var showReleaseNotesSheet by remember { mutableStateOf(false) }
 
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val gridState = rememberLazyStaggeredGridState()
@@ -288,19 +289,10 @@ fun HomeScreen(
                                     fontFamily = FontFamily.SansSerif,
                                     color = MaterialTheme.colorScheme.onBackground
                                 )
-                                Surface(
-                                    color = MaterialTheme.colorScheme.primaryContainer,
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.padding(top = 4.dp)
-                                ) {
-                                    Text(
-                                        text = "BETA",
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
+                                com.example.ui.components.AppVersionBadge(
+                                    onClick = { showReleaseNotesSheet = true },
+                                    modifier = Modifier.padding(top = 4.dp).testTag("topbar_version_badge")
+                                )
                             }
                             Text(
                                 text = "${items.size} items captured",
@@ -842,93 +834,78 @@ fun HomeScreen(
                 showAddFolderDialog = false
                 newFolderName = ""
             },
-            title = { Text("New Custom Folder", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
+            title = { Text("New Custom Folder", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
             text = {
                 OutlinedTextField(
                     value = newFolderName,
                     onValueChange = { newFolderName = it },
                     placeholder = { Text("Work, Inspiration, Books...") },
                     singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth().testTag("folder_name_input")
                 )
             },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
                         viewModel.createFolder(newFolderName)
                         showAddFolderDialog = false
                         newFolderName = ""
                     },
+                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.testTag("confirm_folder_button")
                 ) {
-                    Text("Create", color = MaterialTheme.colorScheme.primary)
+                    Text("Create")
                 }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    showAddFolderDialog = false
-                    newFolderName = ""
-                }) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.secondary)
+                TextButton(
+                    onClick = {
+                        showAddFolderDialog = false
+                        newFolderName = ""
+                    },
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
-            shape = RoundedCornerShape(20.dp),
-            containerColor = MaterialTheme.colorScheme.surface
+            shape = RoundedCornerShape(28.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 6.dp
         )
     }
 
     // Delete Confirmation Dialog
     if (itemToDelete != null) {
-        AlertDialog(
+        com.example.ui.components.ExpressiveConfirmationDialog(
             onDismissRequest = { itemToDelete = null },
-            title = { Text("Delete Item") },
-            text = { Text("Are you sure you want to delete this item? This action cannot be undone.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        itemToDelete?.let {
-                            viewModel.deleteSavedItem(it)
-                            showUndoToastWithItem(it)
-                        }
-                        itemToDelete = null
-                    }
-                ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+            title = "Delete Item",
+            message = "Are you sure you want to delete this item? This action cannot be undone.",
+            confirmButtonText = "Delete",
+            onConfirm = {
+                itemToDelete?.let {
+                    viewModel.deleteSavedItem(it)
+                    showUndoToastWithItem(it)
                 }
+                itemToDelete = null
             },
-            dismissButton = {
-                TextButton(onClick = { itemToDelete = null }) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surface,
-            shape = RoundedCornerShape(24.dp)
+            dismissButtonText = "Cancel",
+            isDestructive = true
         )
     }
 
     if (showBulkDeleteConfirm) {
-        AlertDialog(
+        com.example.ui.components.ExpressiveConfirmationDialog(
             onDismissRequest = { showBulkDeleteConfirm = false },
-            title = { Text("Delete Selected Items") },
-            text = { Text("Are you sure you want to delete these selected items? This action cannot be undone.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteSelectedItems()
-                        showBulkDeleteConfirm = false
-                    }
-                ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
-                }
+            title = "Delete Selected Items",
+            message = "Are you sure you want to delete these selected items? This action cannot be undone.",
+            confirmButtonText = "Delete",
+            onConfirm = {
+                viewModel.deleteSelectedItems()
+                showBulkDeleteConfirm = false
             },
-            dismissButton = {
-                TextButton(onClick = { showBulkDeleteConfirm = false }) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surface,
-            shape = RoundedCornerShape(24.dp)
+            dismissButtonText = "Cancel",
+            isDestructive = true
         )
     }
 
@@ -1396,8 +1373,14 @@ fun HomeScreen(
                     Text("Cancel", color = MaterialTheme.colorScheme.secondary)
                 }
             },
-            shape = RoundedCornerShape(24.dp),
-            containerColor = MaterialTheme.colorScheme.surface
+            shape = RoundedCornerShape(28.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        )
+    }
+
+    if (showReleaseNotesSheet) {
+        com.example.ui.components.ReleaseNotesBottomSheet(
+            onDismissRequest = { showReleaseNotesSheet = false }
         )
     }
 }

@@ -695,6 +695,12 @@ fun ProfileMainContent(
             // INFORMATION & LEGAL
             SectionContainer(title = "INFORMATION & LEGAL") {
                 Column {
+                    ClickableRow(
+                        title = "App Updates & Release Notes",
+                        subtitle = "v${com.example.util.AppVersionManager.currentVersionName} • Check for updates",
+                        onClick = { onNavigateToLegal("release_updates") }
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))
                     ClickableRow(title = "About Second Brain", onClick = { onNavigateToLegal("about") })
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))
                     ClickableRow(title = "Frequently Asked Questions", onClick = { onNavigateToLegal("faq") })
@@ -709,18 +715,29 @@ fun ProfileMainContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .clickable { onNavigateToLegal("release_updates") }
                     .padding(vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Second Brain",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    com.example.ui.components.AppVersionBadge(
+                        tag = com.example.util.AppVersionManager.currentTag,
+                        fontSize = 10.sp
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Second Brain Beta",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "Version ${com.example.BuildConfig.VERSION_NAME} (Build #${com.example.BuildConfig.VERSION_CODE})",
+                    text = "Version ${com.example.util.AppVersionManager.currentVersionName} (Build #${com.example.util.AppVersionManager.currentVersionCode})",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
@@ -1070,7 +1087,7 @@ fun ArchiveStatRow(
 }
 
 @Composable
-fun ClickableRow(title: String, onClick: () -> Unit) {
+fun ClickableRow(title: String, subtitle: String? = null, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1079,7 +1096,17 @@ fun ClickableRow(title: String, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+            }
+        }
         Icon(
             painter = painterResource(id = R.drawable.ic_custom_chevron_right),
             contentDescription = null,

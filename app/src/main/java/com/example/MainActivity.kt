@@ -309,6 +309,11 @@ BackHandler(enabled = activeDetailItem != null) {
                                             viewModel = viewModel
                                         )
                                     }
+                                    composable("release_updates") {
+                                        com.example.ui.screens.ReleaseUpdatesScreen(
+                                            onNavigateBack = { navController.popBackStack() }
+                                        )
+                                    }
                                      composable("about") {
                                          com.example.ui.screens.LegalScreen(
                                              title = "About",

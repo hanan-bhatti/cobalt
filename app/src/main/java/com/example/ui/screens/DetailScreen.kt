@@ -678,32 +678,23 @@ fun DetailScreen(
             Spacer(modifier = Modifier.height(40.dp))
             
             if (showLeaveAppDialog) {
-                AlertDialog(
+                com.example.ui.components.ExpressiveConfirmationDialog(
                     onDismissRequest = { showLeaveAppDialog = false },
-                    title = { Text("Leaving App") },
-                    text = { Text("You are about to visit an external link in your browser. Do you want to leave the application?") },
-                    confirmButton = {
-                        Button(
-                            onClick = {
-                                showLeaveAppDialog = false
-                                try {
-                                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(urlToOpen))
-                                    context.startActivity(browserIntent)
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "Invalid URL", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        ) {
-                            Text("Leave App")
+                    title = "Leaving App",
+                    message = "You are about to visit an external link in your browser. Do you want to leave the application?",
+                    confirmButtonText = "Leave App",
+                    onConfirm = {
+                        showLeaveAppDialog = false
+                        try {
+                            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(urlToOpen))
+                            context.startActivity(browserIntent)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Invalid URL", Toast.LENGTH_SHORT).show()
                         }
                     },
-                    dismissButton = {
-                        TextButton(
-                            onClick = { showLeaveAppDialog = false }
-                        ) {
-                            Text("Cancel")
-                        }
-                    }
+                    dismissButtonText = "Cancel",
+                    isDestructive = false,
+                    icon = painterResource(id = R.drawable.ic_custom_link_external)
                 )
             }
             Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding() + 16.dp))
