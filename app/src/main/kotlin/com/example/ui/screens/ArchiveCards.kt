@@ -219,7 +219,7 @@ fun ArchiveItemCard(
                             modifier = Modifier.size(24.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.OpenInBrowser,
+                                painter = painterResource(id = R.drawable.ic_custom_link_external),
                                 contentDescription = "Open in browser",
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(16.dp)

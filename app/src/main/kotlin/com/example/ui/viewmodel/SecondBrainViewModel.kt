@@ -473,15 +473,11 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             actionLabel = actionLabel,
             onAction = onAction
         )
-        _uiToast.value = message
     }
 
     fun dismissFeedback() {
         _userFeedback.value = null
     }
-
-    private val _uiToast = MutableStateFlow<String?>(null)
-    val uiToast: StateFlow<String?> = _uiToast.asStateFlow()
 
     fun showToast(message: String) {
         val severity = when {
@@ -491,11 +487,6 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             else -> com.example.util.FeedbackSeverity.INFO
         }
         postFeedback(message, severity)
-    }
-
-    fun clearUiToast() {
-        _uiToast.value = null
-        _userFeedback.value = null
     }
 
     fun syncData() {
@@ -657,7 +648,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 repository.backupSelectedItems(ids)
                 clearBackupSelection()
             } catch (e: Exception) {
-                _uiToast.value = "Backup failed: ${e.message}"
+                postFeedback("Backup failed: ${e.message}", com.example.util.FeedbackSeverity.ERROR)
             } finally {
                 _isSyncing.value = false
             }
@@ -671,7 +662,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             try {
                 repository.removeBackup(ids)
             } catch (e: Exception) {
-                _uiToast.value = "Remove backup failed: ${e.message}"
+                postFeedback("Remove backup failed: ${e.message}", com.example.util.FeedbackSeverity.ERROR)
             } finally {
                 _isSyncing.value = false
             }

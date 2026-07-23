@@ -222,7 +222,6 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
         val ocrError by viewModel.ocrError.collectAsState()
 
         val coroutineScope = rememberCoroutineScope()
-        val snackbarHostState = remember { SnackbarHostState() }
         val context = LocalContext.current
         var shownToast by remember { mutableStateOf(false) }
 
@@ -239,7 +238,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
 
         LaunchedEffect(ocrError) {
             ocrError?.let { error ->
-                snackbarHostState.showSnackbar(error)
+                Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -775,15 +774,6 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                     }
                 }
             }
-
-            com.example.ui.components.AppSnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 96.dp)
-            )
         }
     }
 }
-
-

@@ -46,8 +46,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Scaffold
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
@@ -148,16 +146,7 @@ class MainActivity : ComponentActivity() {
                 val activeCaptureItem by viewModel.activeCaptureItem.collectAsState()
                 val activeDetailItem by viewModel.activeDetailItem.collectAsState()
 
-                val snackbarHostState = remember { SnackbarHostState() }
-                val uiToast by viewModel.uiToast.collectAsState()
-                LaunchedEffect(uiToast) {
-                    uiToast?.let {
-                        snackbarHostState.showSnackbar(it)
-                        viewModel.clearUiToast()
-                    }
-                }
-
-BackHandler(enabled = activeDetailItem != null) {
+                BackHandler(enabled = activeDetailItem != null) {
                     viewModel.closeDetailItem()
                 }
 
@@ -214,12 +203,6 @@ BackHandler(enabled = activeDetailItem != null) {
                 }
 
                 Scaffold(
-                    snackbarHost = {
-                        com.example.ui.components.AppSnackbarHost(
-                            hostState = snackbarHostState,
-                            modifier = Modifier.padding(bottom = 96.dp)
-                        )
-                    },
                     contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
                     modifier = Modifier.fillMaxSize()
                 ) { innerPadding ->

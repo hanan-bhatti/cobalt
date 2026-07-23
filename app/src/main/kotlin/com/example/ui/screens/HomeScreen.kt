@@ -197,16 +197,9 @@ fun HomeScreen(
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val gridState = rememberLazyStaggeredGridState()
 
-    val snackbarHostState = remember { SnackbarHostState() }
-
     val showUndoToastWithItem = { item: SavedItem ->
         deletedItemForUndo = item
-        coroutineScope.launch {
-            val result = snackbarHostState.showSnackbar("Item deleted", "Undo", duration = SnackbarDuration.Short)
-            if (result == SnackbarResult.ActionPerformed) {
-                deletedItemForUndo?.let { viewModel.restoreDeletedItem(it) }
-            }
-        }
+        showUndoToast = true
     }
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
@@ -214,7 +207,6 @@ fun HomeScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
         modifier = modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
-        snackbarHost = { com.example.ui.components.AppSnackbarHost(snackbarHostState) },
         topBar = {
             if (isSelectionMode) {
                 TopAppBar(
