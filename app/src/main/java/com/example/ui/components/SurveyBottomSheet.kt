@@ -86,6 +86,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import com.example.ui.screens.collectEnvironmentReport
 import com.example.util.AppVersionManager
 import com.google.firebase.firestore.FirebaseFirestore
@@ -96,6 +98,11 @@ data class SurveyReaction(
     val emoji: String,
     val label: String,
     val color: Color
+)
+
+data class QuickPromptItem(
+    val text: String,
+    val iconResId: Int? = null
 )
 
 /**
@@ -170,10 +177,10 @@ fun SurveyBottomSheet(
 
     val quickCommentPrompts = remember {
         listOf(
-            "Blazing fast app! 🚀",
-            "Love the OCR feature! 📸",
-            "Add Obsidian sync 📝",
-            "Best knowledge archive app 🧠"
+            QuickPromptItem("Blazing fast app!", iconResId = R.drawable.ic_custom_code),
+            QuickPromptItem("Love the OCR feature!", iconResId = R.drawable.ic_custom_image),
+            QuickPromptItem("Add Obsidian sync", iconResId = R.drawable.ic_custom_link),
+            QuickPromptItem("Best knowledge archive app", iconResId = R.drawable.ic_custom_folder)
         )
     }
 
@@ -360,7 +367,7 @@ fun SurveyBottomSheet(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         reactions.forEach { reaction ->
                             val isSelected = selectedReaction?.label == reaction.label
@@ -373,6 +380,7 @@ fun SurveyBottomSheet(
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier
+                                    .weight(1f)
                                     .scale(scale)
                                     .clip(RoundedCornerShape(16.dp))
                                     .clickable {
@@ -380,15 +388,23 @@ fun SurveyBottomSheet(
                                         selectedReaction = reaction
                                     }
                                     .background(if (isSelected) reaction.color.copy(alpha = 0.2f) else Color.Transparent)
-                                    .padding(8.dp)
+                                    .padding(vertical = 8.dp, horizontal = 2.dp)
                             ) {
-                                Text(reaction.emoji, fontSize = 28.sp)
-                                Spacer(modifier = Modifier.height(4.dp))
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.height(36.dp)
+                                ) {
+                                    Text(reaction.emoji, fontSize = 26.sp)
+                                }
+                                Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = reaction.label,
-                                    fontSize = 10.sp,
+                                    fontSize = 9.5.sp,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) reaction.color else MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = if (isSelected) reaction.color else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
                                 )
                             }
                         }
@@ -483,20 +499,38 @@ fun SurveyBottomSheet(
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
                     // Q4: Recommendation Score (NPS 1-10 Rating Scale)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "4. How likely are you to recommend us? ($npsScore/10)",
+                            text = "4. How likely are you to recommend us?",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(16.dp))
-                            Text(" Highly Recommended", fontSize = 11.sp, color = Color(0xFFF59E0B), fontWeight = FontWeight.Bold)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Surface(
+                                color = Color(0xFFF59E0B).copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(13.dp))
+                                    Text(
+                                        text = "$npsScore/10 • ${if (npsScore >= 9) "Highly Recommended" else if (npsScore >= 7) "Passive" else "Needs Improvement"}",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFFF59E0B),
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -551,15 +585,29 @@ fun SurveyBottomSheet(
                                 shape = RoundedCornerShape(12.dp),
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                                 modifier = Modifier.clickable {
-                                    customFeedback = prompt
+                                    customFeedback = prompt.text
                                 }
                             ) {
-                                Text(
-                                    text = prompt,
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    if (prompt.iconResId != null) {
+                                        Icon(
+                                            painter = painterResource(id = prompt.iconResId),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                    Text(
+                                        text = prompt.text,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
                             }
                         }
                     }

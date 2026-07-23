@@ -94,6 +94,8 @@ import com.example.util.AppVersionManager
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import java.util.Locale
 import java.util.TimeZone
 
@@ -250,7 +252,10 @@ fun FeedbackScreen(
                                 text = title,
                                 style = MaterialTheme.typography.labelLarge,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                color = textColor
+                                color = textColor,
+                                maxLines = 1,
+                                fontSize = 13.sp,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -482,16 +487,29 @@ private fun ExpressiveBugReportContent(
                     OutlinedTextField(
                         value = stepText,
                         onValueChange = { stepsToReproduce[index] = it },
-                        placeholder = { Text("Step ${index + 1}...") },
+                        placeholder = { Text("Step ${index + 1}...", fontSize = 13.sp) },
                         singleLine = true,
+                        maxLines = 1,
+                        textStyle = MaterialTheme.typography.bodyMedium,
                         shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        ),
                         modifier = Modifier.weight(1f).testTag("step_input_$index")
                     )
                     IconButton(
                         onClick = { stepsToReproduce.removeAt(index) },
-                        modifier = Modifier.size(28.dp).testTag("delete_step_button_$index")
+                        modifier = Modifier.size(28.dp).bounceClick().testTag("delete_step_button_$index")
                     ) {
-                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete step", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_close),
+                            contentDescription = "Delete step",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(16.dp)
+                        )
                     }
                 }
             }
@@ -804,11 +822,15 @@ private fun ExpressiveFeatureRequestContent(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    priorities.forEach { priority ->
+                val priorityList = remember { listOf("Nice to Have", "Important", "Critical") }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    priorityList.forEach { priority ->
                         val isSelected = selectedPriority == priority
                         val chipColor = when (priority) {
-                            "Critical / Must-Have" -> MaterialTheme.colorScheme.error
+                            "Critical" -> MaterialTheme.colorScheme.error
                             "Important" -> MaterialTheme.colorScheme.primary
                             else -> Color(0xFF10B981)
                         }
@@ -816,12 +838,21 @@ private fun ExpressiveFeatureRequestContent(
                         FilterChip(
                             selected = isSelected,
                             onClick = { selectedPriority = priority },
-                            label = { Text(priority, fontSize = 12.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
+                            label = {
+                                Text(
+                                    text = priority,
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
                             shape = RoundedCornerShape(14.dp),
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = chipColor,
                                 selectedLabelColor = Color.White
-                            )
+                            ),
+                            modifier = Modifier.weight(1f)
                         )
                     }
                 }
