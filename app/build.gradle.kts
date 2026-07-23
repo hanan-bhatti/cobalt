@@ -27,6 +27,18 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
+  flavorDimensions += "distribution"
+  productFlavors {
+    create("foss") {
+      dimension = "distribution"
+      manifestPlaceholders["appName"] = "Second Brain"
+    }
+    create("play") {
+      dimension = "distribution"
+      manifestPlaceholders["appName"] = "Second Brain"
+    }
+  }
+
   signingConfigs {
     create("release") {
       val keystorePath = System.getenv("KEYSTORE_PATH")
@@ -168,3 +180,10 @@ dependencies {
   "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
 }
+
+tasks.register<Exec>("syncFdroidMetadata") {
+  description = "Auto-syncs F-Droid Fastlane metadata & changelog from version code and CHANGELOG.md"
+  group = "fdroid"
+  commandLine("python3", "${rootDir}/scripts/update_fdroid_metadata.py")
+}
+

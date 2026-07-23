@@ -14,7 +14,11 @@ import com.google.firebase.FirebaseApp
 class SecondBrainApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
-        FirebaseApp.initializeApp(this)
+        try {
+            FirebaseApp.initializeApp(this)
+        } catch (e: Exception) {
+            android.util.Log.w("SecondBrainApp", "FirebaseApp initialization skipped: ${e.message}")
+        }
     }
 
     override fun newImageLoader(): ImageLoader {

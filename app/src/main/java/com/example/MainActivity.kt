@@ -169,11 +169,15 @@ BackHandler(enabled = activeDetailItem != null) {
                 DisposableEffect(navController) {
                     val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
                         val route = destination.route ?: return@OnDestinationChangedListener
-                        val bundle = Bundle().apply {
-                            putString(FirebaseAnalytics.Param.SCREEN_NAME, route)
-                            putString(FirebaseAnalytics.Param.SCREEN_CLASS, "MainActivity")
+                        try {
+                            val bundle = Bundle().apply {
+                                putString(FirebaseAnalytics.Param.SCREEN_NAME, route)
+                                putString(FirebaseAnalytics.Param.SCREEN_CLASS, "MainActivity")
+                            }
+                            FirebaseAnalytics.getInstance(context).logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
+                        } catch (e: Exception) {
+                            // Analytics unavailable or disabled in FOSS build
                         }
-                        FirebaseAnalytics.getInstance(context).logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
                     }
                     navController.addOnDestinationChangedListener(listener)
                     onDispose {
@@ -183,21 +187,29 @@ BackHandler(enabled = activeDetailItem != null) {
 
                 LaunchedEffect(activeCaptureItem) {
                     if (activeCaptureItem != null) {
-                        val bundle = Bundle().apply {
-                            putString(FirebaseAnalytics.Param.SCREEN_NAME, "note_editor")
-                            putString(FirebaseAnalytics.Param.SCREEN_CLASS, "MainActivity")
+                        try {
+                            val bundle = Bundle().apply {
+                                putString(FirebaseAnalytics.Param.SCREEN_NAME, "note_editor")
+                                putString(FirebaseAnalytics.Param.SCREEN_CLASS, "MainActivity")
+                            }
+                            FirebaseAnalytics.getInstance(context).logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
+                        } catch (e: Exception) {
+                            // Analytics unavailable
                         }
-                        FirebaseAnalytics.getInstance(context).logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
                     }
                 }
 
                 LaunchedEffect(activeDetailItem) {
                     if (activeDetailItem != null) {
-                        val bundle = Bundle().apply {
-                            putString(FirebaseAnalytics.Param.SCREEN_NAME, "note_detail")
-                            putString(FirebaseAnalytics.Param.SCREEN_CLASS, "MainActivity")
+                        try {
+                            val bundle = Bundle().apply {
+                                putString(FirebaseAnalytics.Param.SCREEN_NAME, "note_detail")
+                                putString(FirebaseAnalytics.Param.SCREEN_CLASS, "MainActivity")
+                            }
+                            FirebaseAnalytics.getInstance(context).logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
+                        } catch (e: Exception) {
+                            // Analytics unavailable
                         }
-                        FirebaseAnalytics.getInstance(context).logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
                     }
                 }
 

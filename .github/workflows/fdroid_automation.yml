@@ -1,0 +1,44 @@
+name: F-Droid Metadata Auto-Sync & Verification
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  fdroid-metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Run F-Droid Metadata Auto-Sync
+        run: |
+          python3 scripts/update_fdroid_metadata.py
+
+      - name: Verify Fastlane Metadata Structure
+        run: |
+          echo "Checking Fastlane files..."
+          test -f fastlane/metadata/android/en-US/title.txt
+          test -f fastlane/metadata/android/en-US/short_description.txt
+          test -f fastlane/metadata/android/en-US/full_description.txt
+          test -f fdroid/com.hanan_bhatti.second_brain.yml
+          echo "All F-Droid submission files verified!"
+
+      - name: Check for Uncommitted Changes
+        run: |
+          git status --porcelain
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "Changes detected after F-Droid metadata sync."
+          fi

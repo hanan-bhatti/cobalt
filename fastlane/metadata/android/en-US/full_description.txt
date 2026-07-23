@@ -1,0 +1,9 @@
+Second Brain is a minimalist, offline-first personal knowledge archive and universal capture app for Android. Designed to eliminate the friction of digital hoarding and info fragmentation, Second Brain acts as your central repository for ideas, documents, audio clips, snapshots, and shared web content.
+
+Key Features:
+- Universal & Rapid Capture: Ingest plain text, markdown lists, images, video clips, and web URLs directly from any third-party app with Android's native share handler.
+- Floating OCR & Region Capture HUD: Tap and drag a bounding box on captured screen contents to convert visual information into searchable text notes.
+- Multi-Language & RTL Text Support: Automatically detects scripts like Urdu, Arabic, and Hebrew and adjusts text layout, alignment, and reading direction seamlessly.
+- AI Voice Memos & Transcripts: Record voice notes with visual waveform monitoring and local audio cache storage.
+- Privacy & Offline-First Architecture: Uses a secure local Room database as the primary source of truth, ensuring instant launch and data accessibility without network connection.
+- Material 3 Expressive UI: Custom themes, smooth animations, expressive dialogs, and clean card organization.

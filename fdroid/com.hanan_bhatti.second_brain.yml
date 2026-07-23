@@ -1,0 +1,33 @@
+Categories:
+  - Productivity
+  - Utility
+License: AGPL-3.0-or-later
+AuthorName: Hanan Bhatti
+WebSite: https://github.com/hanan-bhatti/second-brain
+SourceCode: https://github.com/hanan-bhatti/second-brain
+IssueTracker: https://github.com/hanan-bhatti/second-brain/issues
+
+AutoUpdateMode: Version v%v
+UpdateCheckMode: Tags
+CurrentVersion: 1.0.0-nightly01
+CurrentVersionCode: 8
+
+Builds:
+  - versionName: 1.0.0-nightly01
+    versionCode: 8
+    commit: v1.0.0-nightly01
+    subdir: app
+    gradle:
+      - assembleFossRelease
+
+AutoName: Second Brain
+Summary: Universal offline-first note capture and personal knowledge archive
+Description: |-
+  Second Brain is a minimalist, offline-first personal knowledge archive and universal capture app for Android. Designed to eliminate the friction of digital hoarding and info fragmentation, Second Brain acts as your central repository for ideas, documents, audio clips, snapshots, and shared web content.
+
+  Features:
+  - Universal & Rapid Capture: Ingest text, markdown, images, video clips, and web URLs directly.
+  - Floating OCR & Region Capture HUD: Select regions of screen contents to convert visual info into text notes.
+  - Multi-Language & RTL Text Support: Automatic detection and layout adjustment for RTL scripts (Urdu, Arabic, Hebrew).
+  - Voice Memos: Record audio notes with waveform visualization.
+  - Local-First Privacy: Powered by SQLite Room database, keeping data on device.
