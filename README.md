@@ -4,7 +4,7 @@ A universal capture and personal knowledge archive with minimalist design and Ge
 
 <p align="center">
   <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Android/android3.svg" alt="Android Platform" height="30">
-  <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Github/github3.svg" alt="Get it on GitHub" height="30">
+  <img src="https://img.shields.io/badge/Release-v1.0.0--rc01-00796B.svg" alt="Version 1.0.0-rc01" height="30">
   <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Kotlin/kotlin1.svg" alt="Kotlin" height="30">
   <img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg" alt="License: AGPL v3" height="30">
 </p>
@@ -31,6 +31,13 @@ The app features an automated, on-device OCR system driven by Google's Gemini AP
 
 ## Key Features
 
+### 🌍 Multi-Language & RTL Text Support
+*   **Automatic Right-to-Left (RTL) Detection:** Automatically detects scripts like Urdu, Arabic, and Hebrew and adjusts text layout, alignment, and reading direction seamlessly across Markdown renderers, Rich Text editors, and note detail views.
+
+### 🏷️ Dynamic Build Channels & Release Notes Hub
+*   **Color-Coded Build Badges:** Dynamic channel tagging (`RC`, `BETA`, `NIGHTLY`, `ALPHA`, `STABLE`) with curated Material 3 Expressive color palettes.
+*   **In-App Release Notes & Updates Page:** Tap the version badge or access Settings to check for updates in real time with animated `CircularWavyProgressIndicator` feedback and read full version changelogs.
+
 ### 📥 Universal & Rapid Capture
 *   **System Share Sheet Interceptor:** Ingest plain text, markdown lists, images, video clips, and web URLs directly from any third-party app with Android's native share handler.
 *   **Deep Linking Support:** Access specific notes and content folders directly via custom `secondbrain://item/` deep links.
@@ -48,11 +55,12 @@ The app features an automated, on-device OCR system driven by Google's Gemini AP
 *   **Gemini Audio Transcription:** Transcribe complex audio recordings directly into structured text using Gemini AI models.
 *   **Automatic Markdown Formatting:** Auto-format transcripts into polished markdown structures with dynamic heading/title extraction.
 
-### 🗂️ Intuitive Organization
+### 🎨 Material 3 Expressive UI & Unified Components
+*   **Unified Expressive Dialogs:** Standardized `ExpressiveAlertDialog` and `ExpressiveConfirmationDialog` with `28.dp` corner radii and surface container colors.
+*   **Wavy Progress Indicators:** Unified `CircularWavyProgressIndicator` loading spinners across Home, Auth, Capture, and Settings screens.
 *   **Sticker-Themed Folders:** Group your files into custom folders styled with curated Material Design sticker colors.
 *   **Drag-to-Reorder Gestures:** Sort and prioritize captured memory cards and custom folders on the fly using intuitive drag-and-drop lists.
 *   **Media Categories:** Automated system categorization organizes items by resource type (Links, Images, Videos, Code, Text, Audio).
-*   **Archive Feed:** Declutter your primary dashboard by moving items to the Archive folder without permanently deleting them.
 
 ### 🔒 Privacy & Cloud Synchronization
 *   **Offline-First Cache:** Uses a secure, local Room database as the primary source of truth, ensuring instant launch and data accessibility without network connection.

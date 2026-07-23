@@ -6,7 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-## [0.9.3-beta01] - 2026-07-22
+## [1.0.0-rc01] - 2026-07-23
+
+### Added
+- **First Release Candidate (1.0.0-rc01):** Promoted build to official Release Candidate status ahead of 1.0 STABLE.
+- **Dynamic Build Channels & Version Badging:** Added dynamic channel detection (ALPHA, BETA, NIGHTLY, RC, STABLE, DEV) with custom Material 3 Expressive tag colors (`AppVersionBadge`).
+- **Release Notes & Updates Hub:** Built `ReleaseNotesBottomSheet` and dedicated Settings subscreen (`ReleaseUpdatesScreen`) with real-time update checking and `CircularWavyProgressIndicator` loading animation.
+- **Update Notification Sheet:** Created `UpdateAvailableBottomSheet` to notify users of new version availability with highlights and direct update options.
+- **App-wide RTL Text Support:** Implemented automatic Right-to-Left (RTL) text direction detection (`RtlUtils.isRtl()`) for Urdu, Arabic, and Hebrew in Markdown renderers, Rich Text editor, and memory item screens.
+- **Unified Material 3 Expressive Dialogs:** Converted generic dialogs to standard `ExpressiveAlertDialog` and `ExpressiveConfirmationDialog` with `28.dp` corner radius and `surfaceContainerHigh` containers.
+- **Unified Loading Indicators:** Replaced plain progress bars across `HomeScreen`, `AuthScreen`, `CaptureScreen`, and `GlobalExpandingFab` with `CircularWavyProgressIndicator`.
+
+### Fixed
+- **API Key Gemini Model 404 Error:** Automatically re-fetched Gemini model list and validated `selectedModel` upon API key save to prevent 404 errors on initial AI requests.
+- **RTL Alignment Mismatch:** Fixed text layout direction for right-to-left scripts in detail views and note editing.
 
 ### Added
 - **Global Dynamic Light/Dark Theme Color Adaptation:** Implemented HSL-based color transformation (`Color.toThemeColor(isDark)`) across all folders, categories, widgets, OCR overlay, and settings screens to adapt colors for dark mode without losing brand presets.
