@@ -278,29 +278,76 @@ private fun ExpressiveHelpCenterContent(
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategoryId by remember { mutableStateOf<String?>(null) }
     val expandedItems = remember { mutableStateMapOf<Int, Boolean>() }
-    val helpfulFeedback = remember { mutableStateMapOf<Int, Boolean>() }
+    val helpfulFeedback = remember { mutableStateMapOf<String, Boolean>() }
     val context = LocalContext.current
 
     val categories = remember {
         listOf(
             FaqCategory("getting_started", "Getting Started", Icons.Default.AutoAwesome, Color(0xFF6366F1)),
+            FaqCategory("ai_ocr", "AI & ML Kit OCR", Icons.Default.Psychology, Color(0xFF8B5CF6)),
             FaqCategory("sync", "Sync & Storage", Icons.Default.CloudSync, Color(0xFF0EA5E9)),
-            FaqCategory("ai_ocr", "AI & OCR", Icons.Default.Psychology, Color(0xFF8B5CF6)),
             FaqCategory("voice", "Voice Memos", Icons.Default.Storage, Color(0xFFEC4899)),
-            FaqCategory("widgets", "Widgets & Customization", Icons.Default.Widgets, Color(0xFF10B981))
+            FaqCategory("widgets", "Widgets & Features", Icons.Default.Widgets, Color(0xFF10B981))
         )
     }
 
     val faqList = remember {
         listOf(
-            ExpressiveFaqItem("getting_started", "How do I capture my first item?", "Tap the floating '+' button or use Quick Capture from your home screen widget. You can capture URLs, images, audio memos, code snippets, or rich text notes in seconds."),
-            ExpressiveFaqItem("getting_started", "How does Second Brain organize my data?", "Your items are automatically tagged by type (Link, Image, Video, Text, Code, Audio) and can be grouped into custom color-coded Folders and Collections."),
-            ExpressiveFaqItem("sync", "Is my data stored locally or in the cloud?", "Second Brain operates with a local-first architecture using SQLite Room database. Cloud backup and multi-device sync seamlessly run via Firebase when enabled."),
-            ExpressiveFaqItem("sync", "Can I export my entire personal knowledge archive?", "Yes! Go to Profile -> Manage Storage -> Export Data. You can download a complete ZIP backup of all your notes, links, and media files anytime."),
-            ExpressiveFaqItem("ai_ocr", "How does instant OCR text extraction work?", "When you capture or upload an image containing text, our built-in ML Kit engine extracts all readable text instantly. You can copy or search it anytime."),
-            ExpressiveFaqItem("ai_ocr", "Are my AI searches processed locally?", "Semantic search and metadata extraction run securely using on-device ML models and optimized Firebase AI endpoints."),
-            ExpressiveFaqItem("voice", "How long can voice recordings be?", "Voice memos support up to 60 minutes per recording. Transcriptions automatically generate in real-time when enabled in Settings."),
-            ExpressiveFaqItem("widgets", "How do I add home screen widgets?", "Long-press your Android home screen -> select Widgets -> scroll to Second Brain -> choose Quick Capture, Recent Items, or Daily Stats widget.")
+            ExpressiveFaqItem(
+                "getting_started",
+                "How do I capture content into Second Brain?",
+                "Tap the floating '+' button, use the Floating OCR Overlay from any app, or use Quick Capture from your home screen widget. You can save URLs, images, voice memos, code snippets, rich notes, or movies."
+            ),
+            ExpressiveFaqItem(
+                "getting_started",
+                "How does Second Brain organize my items?",
+                "Your items are automatically classified into category tabs (Notes, Links, Media, Code, Audio) and can be grouped into custom color-coded Folders with drag-and-drop or custom index ordering."
+            ),
+            ExpressiveFaqItem(
+                "getting_started",
+                "What is the Floating OCR Overlay?",
+                "The Floating OCR Overlay allows you to select and capture text or links directly over any app on your phone. Enable 'Display over other apps' in Settings to trigger it anytime."
+            ),
+            ExpressiveFaqItem(
+                "ai_ocr",
+                "How do I configure my Gemini AI Key?",
+                "Go to Profile -> Settings -> Gemini AI Key. Paste your API key from Google AI Studio to unlock automated AI summaries, key takeaways, and custom model selection (such as Gemini 1.5 Flash or 2.0 Flash)."
+            ),
+            ExpressiveFaqItem(
+                "ai_ocr",
+                "How does instant image OCR text recognition work?",
+                "When you capture or upload photos or screenshots, on-device Google ML Kit automatically extracts all readable text instantly without requiring an internet connection."
+            ),
+            ExpressiveFaqItem(
+                "ai_ocr",
+                "How does Movie & Media lookup work?",
+                "When adding a movie or TV series, enter a title or TMDb API key to automatically fetch official posters, cast lists, release dates, genres, and trailer links."
+            ),
+            ExpressiveFaqItem(
+                "sync",
+                "Is my data stored locally or in the cloud?",
+                "Second Brain uses a local-first architecture powered by an SQLite Room database. Your data stays private on device, with optional multi-device cloud backup when signed into Firebase."
+            ),
+            ExpressiveFaqItem(
+                "sync",
+                "How do I back up or export my personal archive?",
+                "Go to Profile -> Manage Storage. You can monitor your 512MB cloud storage quota, perform manual cloud backups, or export your full offline database archive anytime."
+            ),
+            ExpressiveFaqItem(
+                "voice",
+                "How do voice recordings work in Second Brain?",
+                "Tap the microphone icon in Quick Capture to record high-quality voice notes. Audio files are saved locally with interactive waveform visualization, playback speed controls, and timestamp seeking."
+            ),
+            ExpressiveFaqItem(
+                "widgets",
+                "How do I add home screen widgets?",
+                "Long-press your Android home screen -> select Widgets -> scroll to Second Brain -> add Quick Capture or Recent Items widget for 1-tap capture access."
+            ),
+            ExpressiveFaqItem(
+                "widgets",
+                "Can I customize haptic feedback and app theme?",
+                "Yes! Open Profile -> Settings to toggle tuned Haptic Feedback (clicks, long-press thuds, swipe ticks) and customize dark mode or dynamic system colors."
+            )
         )
     }
 
@@ -531,24 +578,30 @@ private fun ExpressiveHelpCenterContent(
                             ) {
                                 Text("Was this helpful?", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
                                 IconButton(
-                                    onClick = { helpfulFeedback[index] = true },
+                                    onClick = {
+                                        helpfulFeedback[item.question] = true
+                                        com.example.util.HapticManager.performClick(context)
+                                    },
                                     modifier = Modifier.size(28.dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.ThumbUp,
                                         contentDescription = "Helpful",
-                                        tint = if (helpfulFeedback[index] == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                        tint = if (helpfulFeedback[item.question] == true) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
                                 IconButton(
-                                    onClick = { helpfulFeedback[index] = false },
+                                    onClick = {
+                                        helpfulFeedback[item.question] = false
+                                        com.example.util.HapticManager.performClick(context)
+                                    },
                                     modifier = Modifier.size(28.dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.ThumbDown,
                                         contentDescription = "Not helpful",
-                                        tint = if (helpfulFeedback[index] == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
+                                        tint = if (helpfulFeedback[item.question] == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
