@@ -4,7 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0-nightly01] - 2026-07-23
+
+### Added
+- **Bleeding-Edge Nightly Build Channel (1.0.0-nightly01):** Promoted build to official Nightly testing channel for unverified experimental feature testing.
+- **Android 12+ Tuned Haptic Engine Manager (`HapticManager`):** Implemented high-precision vibration composition primitives for presses, long presses, swipe ticks, and success actions (disabled by default with user toggle).
+- **App-wide User-Friendly Error Banners & Network Resilience (`AppFeedbackBanner`):** Built animated top feedback banner with non-infinite network call timeouts (15s hard ceiling) and human-friendly error messages.
+- **Gamified In-App Experience Survey Sheet (`SurveyBottomSheet`):** Built 2-step micro-wizard with reaction emojis, feature chips, 1-10 NPS rating scale, and Firestore persistence.
+- **Profile Sections Reorganization & Account Deletion Flow:** Restructured Profile settings into 4 distinct containers and added a deep Account Deletion button with confirmation checkbox.
+
+### Fixed
+- **Search Panel Movie Icon:** Fixed item icon mapping so movies, TV shows, and anime in the Search panel display movie icons and poster thumbnails instead of document/text icons.
+- **Deprecation Warnings Cleanup:** Replaced deprecated `Icons.Default.Send` with `Icons.AutoMirrored.Filled.Send` and replaced deprecated Compose `LocalClipboardManager` with native Android `ClipboardManager`.
 
 ## [1.0.0-rc01] - 2026-07-23
 

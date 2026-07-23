@@ -94,12 +94,43 @@ object AppVersionManager {
      */
     val releaseHistory: List<ReleaseNote> = listOf(
         ReleaseNote(
+            versionName = "1.0.0-nightly01",
+            versionCode = 8,
+            releaseDate = "July 23, 2026",
+            tag = AppVersionTag.NIGHTLY,
+            isCurrent = true,
+            isLatest = true,
+            highlights = listOf(
+                "Bleeding-Edge Nightly Build (1.0.0-nightly01)",
+                "Android 12+ Tuned Haptic Engine Manager (Disabled by default)",
+                "App-wide User-Friendly Error Banners & Network Timeout Protection",
+                "Search Panel Movie Icon & Gamified In-App Experience Survey Sheet"
+            ),
+            features = listOf(
+                "Bleeding-edge Nightly testing channel build",
+                "Tuned Haptic Feedback Engine for presses, long presses, and success actions",
+                "Tactile feedback toggle in Profile ➔ Settings ➔ Display & Interface",
+                "AppFeedbackBanner with non-infinite network call timeouts",
+                "Gamified 2-step In-App Experience Survey Sheet with Firestore sync",
+                "Profile sections reorganization & deep Account Deletion flow"
+            ),
+            improvements = listOf(
+                "Movie search results in Search panel now correctly render movie icons & poster art",
+                "Network calls bounded to maximum 15s timeouts to prevent hanging",
+                "Full RTL text direction in Markdown renderers and Rich Text editor"
+            ),
+            bugFixes = listOf(
+                "Fixed movie item type icon in SearchScreen panel",
+                "Fixed Send icon and Clipboard deprecation warnings with modern APIs"
+            )
+        ),
+        ReleaseNote(
             versionName = "1.0.0-rc01",
             versionCode = 7,
             releaseDate = "July 23, 2026",
             tag = AppVersionTag.RC,
-            isCurrent = true,
-            isLatest = true,
+            isCurrent = false,
+            isLatest = false,
             highlights = listOf(
                 "First Official Release Candidate (1.0.0-rc01)",
                 "App-wide RTL support for Urdu, Arabic, & Hebrew text",
