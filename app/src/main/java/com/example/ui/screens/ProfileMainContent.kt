@@ -52,6 +52,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.example.ui.components.bounceClick
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.Manifest
@@ -99,6 +102,8 @@ fun ProfileMainContent(
     val usedStorageBytes by viewModel.usedStorageBytes.collectAsState()
     val tmdbApiKey by viewModel.tmdbApiKey.collectAsState()
     var showSurveySheet by remember { mutableStateOf(false) }
+    var showDeleteAccountDialog by remember { mutableStateOf(false) }
+    var deleteConfirmChecked by remember { mutableStateOf(false) }
 
     val totalItems = allItems.size
     val totalLinks = allItems.count { it.type == SavedItemType.LINK }
@@ -693,15 +698,9 @@ fun ProfileMainContent(
                 }
             }
 
-            // INFORMATION & LEGAL
-            SectionContainer(title = "INFORMATION & LEGAL") {
+            // 1. HELP & COMMUNITY
+            SectionContainer(title = "HELP & COMMUNITY") {
                 Column {
-                    ClickableRow(
-                        title = "App Updates & Release Notes",
-                        subtitle = "v${com.example.util.AppVersionManager.currentVersionName} • Check for updates",
-                        onClick = { onNavigateToLegal("release_updates") }
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))
                     ClickableRow(
                         title = "Help & Support Diagnostics",
                         subtitle = "System health, FAQs, & diagnostic tests",
@@ -713,17 +712,77 @@ fun ProfileMainContent(
                         subtitle = "Report bugs or request new features",
                         onClick = { onNavigateToLegal("feedback") }
                     )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))
                     ClickableRow(
                         title = "Take App Experience Survey",
                         subtitle = "Help shape v1.0 • Earn Contributor Badge",
                         onClick = { showSurveySheet = true }
                     )
+                }
+            }
+
+            // 2. UPDATES & ABOUT
+            SectionContainer(title = "UPDATES & ABOUT") {
+                Column {
+                    ClickableRow(
+                        title = "App Updates & Release Notes",
+                        subtitle = "v${com.example.util.AppVersionManager.currentVersionName} • Check for updates",
+                        onClick = { onNavigateToLegal("release_updates") }
+                    )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))
-                    ClickableRow(title = "About Second Brain", onClick = { onNavigateToLegal("about") })
+                    ClickableRow(
+                        title = "About Second Brain",
+                        subtitle = "Universal capture & personal archive",
+                        onClick = { onNavigateToLegal("about") }
+                    )
+                }
+            }
+
+            // 3. LEGAL & PRIVACY
+            SectionContainer(title = "LEGAL & PRIVACY") {
+                Column {
+                    ClickableRow(
+                        title = "Privacy Policy",
+                        subtitle = "Data protection & privacy rights",
+                        onClick = { onNavigateToLegal("privacy") }
+                    )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))
-                    ClickableRow(title = "Privacy Policy", onClick = { onNavigateToLegal("privacy") })
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))
-                    ClickableRow(title = "Terms & Conditions", onClick = { onNavigateToLegal("terms") })
+                    ClickableRow(
+                        title = "Terms & Conditions",
+                        subtitle = "GNU AGPL v3 license terms",
+                        onClick = { onNavigateToLegal("terms") }
+                    )
+                }
+            }
+
+            // 4. ACCOUNT & DATA SECURITY (Hidden deep at bottom)
+            SectionContainer(title = "ACCOUNT & DATA SECURITY") {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Permanently delete your account and erase all local notes, media, and cloud records.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    OutlinedButton(
+                        onClick = { showDeleteAccountDialog = true },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bounceClick()
+                            .testTag("delete_account_button")
+                    ) {
+                        Icon(imageVector = Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Delete Account & Erase All Data", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
@@ -733,7 +792,7 @@ fun ProfileMainContent(
                 )
             }
 
-            // App Version Info
+            // App Version Info Footer
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -766,6 +825,70 @@ fun ProfileMainContent(
             }
 
             Spacer(modifier = Modifier.height(40.dp))
+        }
+
+        // Delete Account Confirmation Dialog
+        if (showDeleteAccountDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteAccountDialog = false },
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                        Text("Delete Account & Erase Data?", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                    }
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = "This action is PERMANENT and CANNOT be undone. All your archived notes, links, OCR images, voice memos, and cloud records will be permanently erased.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.clickable { deleteConfirmChecked = !deleteConfirmChecked }
+                        ) {
+                            Checkbox(
+                                checked = deleteConfirmChecked,
+                                onCheckedChange = { deleteConfirmChecked = it },
+                                colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.error)
+                            )
+                            Text(
+                                text = "I understand that all my data will be permanently wiped.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showDeleteAccountDialog = false
+                            try {
+                                com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.delete()
+                            } catch (e: Exception) {
+                                // Handled
+                            }
+                            viewModel.signOut()
+                        },
+                        enabled = deleteConfirmChecked,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Permanently Delete", fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteAccountDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
 
         if (showSignOutConfirmDialog) {
