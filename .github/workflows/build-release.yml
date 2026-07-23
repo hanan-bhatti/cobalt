@@ -104,7 +104,7 @@ jobs:
         run: |
           printf '%s' "$KEYSTORE_BASE64" | base64 -di > app/release-key.jks
 
-      - name: Build Release APK
+      - name: Build Release APKs
         env:
           KEYSTORE_PATH: "release-key.jks"
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -116,17 +116,41 @@ jobs:
         id: rename
         run: |
           VERSION="${{ needs.check-version.outputs.version_name }}"
-          APK_SRC=$(find app/build/outputs/apk/release -name "*.apk" | head -n1)
-          APK_NAME="second-brain-v${VERSION}.apk"
           mkdir -p release-artifacts
-          cp "$APK_SRC" "release-artifacts/$APK_NAME"
-          echo "apk_name=$APK_NAME" >> "$GITHUB_OUTPUT"
 
-      - name: Upload Release APK Artifact
+          FOSS_APK=$(find app/build/outputs/apk/fossRelease -name "*.apk" | head -n1)
+          PLAY_APK=$(find app/build/outputs/apk/playRelease -name "*.apk" | head -n1)
+
+          if [ -z "$FOSS_APK" ]; then
+            echo "::error::No FOSS release APK found in app/build/outputs/apk/fossRelease"
+            exit 1
+          fi
+          if [ -z "$PLAY_APK" ]; then
+            echo "::error::No Play release APK found in app/build/outputs/apk/playRelease"
+            exit 1
+          fi
+
+          FOSS_NAME="second-brain-foss-v${VERSION}.apk"
+          PLAY_NAME="second-brain-play-v${VERSION}.apk"
+
+          cp "$FOSS_APK" "release-artifacts/$FOSS_NAME"
+          cp "$PLAY_APK" "release-artifacts/$PLAY_NAME"
+
+          echo "apk_name_foss=$FOSS_NAME" >> "$GITHUB_OUTPUT"
+          echo "apk_name_play=$PLAY_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Upload FOSS APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.rename.outputs.apk_name }}
-          path: release-artifacts/${{ steps.rename.outputs.apk_name }}
+          name: ${{ steps.rename.outputs.apk_name_foss }}
+          path: release-artifacts/${{ steps.rename.outputs.apk_name_foss }}
+          retention-days: 90
+
+      - name: Upload Play APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.rename.outputs.apk_name_play }}
+          path: release-artifacts/${{ steps.rename.outputs.apk_name_play }}
           retention-days: 90
 
       - name: Create GitHub Release
@@ -140,4 +164,5 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            release-artifacts/${{ steps.rename.outputs.apk_name }}
+            release-artifacts/${{ steps.rename.outputs.apk_name_foss }}
+            release-artifacts/${{ steps.rename.outputs.apk_name_play }}
