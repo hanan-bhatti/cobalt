@@ -608,6 +608,7 @@ fun SurveyBottomSheet(
                                 delay(1200)
                                 isSubmitting = false
                                 submitSuccess = true
+                                com.example.util.HapticManager.performSuccess(context)
                             }
                         },
                         shape = RoundedCornerShape(16.dp),

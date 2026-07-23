@@ -39,6 +39,15 @@ fun Modifier.bounceClick(
     interactionSource: MutableInteractionSource
 ): Modifier = composed {
     val isPressed by interactionSource.collectIsPressedAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+
+    androidx.compose.runtime.LaunchedEffect(isPressed) {
+        if (isPressed) {
+            com.example.util.HapticManager.performClick(context, haptic)
+        }
+    }
+
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.90f else 1.0f,
         animationSpec = spring(

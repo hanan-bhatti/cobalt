@@ -603,6 +603,7 @@ private fun ExpressiveBugReportContent(
                             delay(1400)
                             isSubmitting = false
                             submitSuccess = true
+                            com.example.util.HapticManager.performSuccess(context)
                             delay(1500)
                             onSuccess()
                         }
@@ -901,6 +902,7 @@ private fun ExpressiveFeatureRequestContent(
                             delay(1400)
                             isSubmitting = false
                             submitSuccess = true
+                            com.example.util.HapticManager.performSuccess(context)
                             delay(1500)
                             onSuccess()
                         }

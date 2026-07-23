@@ -235,6 +235,25 @@ fun SettingsScreen(
                             )
                         }
                     }
+
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    var hapticsEnabled by remember { mutableStateOf(com.example.util.HapticManager.isHapticsEnabled(context)) }
+                    SettingsToggleRow(
+                        title = "Haptic Tactile Feedback",
+                        subtitle = "Tactile vibration engine for presses, swipes, and actions (Off by default)",
+                        checked = hapticsEnabled,
+                        onCheckedChange = { enabled ->
+                            com.example.util.HapticManager.setHapticsEnabled(context, enabled)
+                            hapticsEnabled = enabled
+                            if (enabled) {
+                                com.example.util.HapticManager.performSuccess(context)
+                            }
+                        }
+                    )
                 }
 
                 // GROUP 2: INTELLIGENCE & AI
