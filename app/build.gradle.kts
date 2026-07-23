@@ -21,8 +21,8 @@ android {
     applicationId = "com.hanan_bhatti.second_brain"
     minSdk = 24
     targetSdk = 37
-    versionCode = 8
-    versionName = "1.0.0-nightly01"
+    versionCode = 9
+    versionName = "1.0.0-rc02"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -186,4 +186,3 @@ tasks.register<Exec>("syncFdroidMetadata") {
   group = "fdroid"
   commandLine("python3", "${rootDir}/scripts/update_fdroid_metadata.py")
 }
-
