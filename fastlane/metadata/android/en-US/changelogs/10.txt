@@ -1,5 +1,1 @@
-Official Stable Release (v1.0.0):
-- Unified Feedback, Feature Request & Survey Data Persistence across FOSS & Play flavors
-- Guaranteed local data preservation for offline & guest users plus Firestore cloud sync
-- Real-time GitHub update checking & auto-notification engine
-- Harmonized M3 Expressive UI, single-line input field styling, and consistent theme surfaces
+Official Stable Release (v1.0.0):** Promoted Second Brain to official 1.0.0 Stable production release! Unified Local & Cloud Feedback Persistence (`FeedbackSubmissionManager`):** Built unified data persistence manager for bug reports, feature requests, and in-app surveys that writes locally to `context.filesDir/feedback/` and syncs with Firestore when online. Guaranteed Zero Data Loss Architecture:** Guaranteed data preservation across FOSS and Play builds for both Guest and Signed-...
