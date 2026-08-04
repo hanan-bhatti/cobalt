@@ -21,8 +21,8 @@ android {
     applicationId = "com.hanan_bhatti.second_brain"
     minSdk = 24
     targetSdk = 37
-    versionCode = 9
-    versionName = "1.0.0-rc02"
+    versionCode = 10
+    versionName = "1.0.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -49,6 +49,11 @@ android {
         keyPassword = System.getenv("KEY_PASSWORD")
         enableV1Signing = true
         enableV2Signing = true
+      } else {
+        storeFile = file("${rootDir}/debug.keystore")
+        storePassword = "android"
+        keyAlias = "androiddebugkey"
+        keyPassword = "android"
       }
     }
     create("debugConfig") {
@@ -66,6 +71,9 @@ android {
       isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
+      configure<com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension> {
+        mappingFileUploadEnabled = false
+      }
     }
     debug { signingConfig = signingConfigs.getByName("debugConfig") }
   }
@@ -109,7 +117,23 @@ dependencies {
   implementation(libs.jsoup)
   implementation(libs.commonmark)
   implementation(platform(libs.androidx.compose.bom))
-  implementation(platform(libs.firebase.bom))
+  "playImplementation"(platform(libs.firebase.bom))
+  "playImplementation"(libs.firebase.ai)
+  // Uncomment to use Firestore:
+  "playImplementation"(libs.firebase.firestore)
+  "playImplementation"("com.google.firebase:firebase-storage")
+
+  // Firebase Auth with Google Sign-In requires all of the following to be uncommented together.
+  // If you are using Firebase Auth with other providers (e.g. Email/Password), you may only need
+  // firebase-auth.
+  "playImplementation"(libs.firebase.auth)
+  "playImplementation"(libs.firebase.analytics)
+  "playImplementation"(libs.firebase.crashlytics)
+  "playImplementation"(libs.firebase.perf)
+  "playImplementation"(libs.androidx.credentials)
+  "playImplementation"(libs.androidx.credentials.play.services)
+  "playImplementation"(libs.googleid)
+  "playImplementation"(libs.firebase.appcheck.recaptcha)
   // implementation(libs.accompanist.permissions)
   implementation(libs.androidx.activity.compose)
   // implementation(libs.androidx.camera.camera2)
@@ -133,22 +157,7 @@ dependencies {
   implementation(libs.coil.compose)
   implementation(libs.coil.video)
   implementation(libs.converter.moshi)
-  implementation(libs.firebase.ai)
-  // Uncomment to use Firestore:
-  implementation(libs.firebase.firestore)
-  implementation("com.google.firebase:firebase-storage")
 
-  // Firebase Auth with Google Sign-In requires all of the following to be uncommented together.
-  // If you are using Firebase Auth with other providers (e.g. Email/Password), you may only need
-  // firebase-auth.
-  implementation(libs.firebase.auth)
-  implementation(libs.firebase.analytics)
-  implementation(libs.firebase.crashlytics)
-  implementation(libs.firebase.perf)
-  implementation(libs.androidx.credentials)
-  implementation(libs.androidx.credentials.play.services)
-  implementation(libs.googleid)
-  implementation(libs.firebase.appcheck.recaptcha)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.logging.interceptor)

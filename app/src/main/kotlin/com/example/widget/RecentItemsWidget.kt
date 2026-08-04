@@ -187,10 +187,14 @@ fun RecentItemsHeader(isFromCache: Boolean, isTimeout: Boolean) {
     val context = LocalContext.current
 
     val userName = try {
-        val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-        auth.currentUser?.displayName?.trim()?.ifBlank { null }
-            ?: auth.currentUser?.email?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
-    } catch (e: Exception) {
+        val clazz = Class.forName("com.google.firebase.auth.FirebaseAuth")
+        val instance = clazz.getMethod("getInstance").invoke(null)
+        val user = clazz.getMethod("getCurrentUser").invoke(instance)
+        val displayName = user?.javaClass?.getMethod("getDisplayName")?.invoke(user) as? String
+        val email = user?.javaClass?.getMethod("getEmail")?.invoke(user) as? String
+        displayName?.trim()?.ifBlank { null }
+            ?: email?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
+    } catch (e: Throwable) {
         null
     } ?: try {
         val prefs = context.getSharedPreferences("second_brain_prefs", Context.MODE_PRIVATE)

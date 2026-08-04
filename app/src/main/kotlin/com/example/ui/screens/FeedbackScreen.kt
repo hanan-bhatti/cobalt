@@ -91,7 +91,6 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.components.AppVersionBadge
 import com.example.ui.components.bounceClick
 import com.example.util.AppVersionManager
-import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.painterResource
@@ -112,9 +111,19 @@ data class FeedbackEnvironmentReport(
 )
 
 fun collectEnvironmentReport(context: Context): FeedbackEnvironmentReport {
-    val currentUser = try { FirebaseAuth.getInstance().currentUser } catch (e: Exception) { null }
-    val userEmail = currentUser?.email ?: if (currentUser?.isAnonymous == true) "Anonymous User" else "Guest User"
-    val userId = currentUser?.uid ?: "guest_session"
+    val (userEmail, userId) = try {
+        val clazz = Class.forName("com.google.firebase.auth.FirebaseAuth")
+        val instance = clazz.getMethod("getInstance").invoke(null)
+        val user = clazz.getMethod("getCurrentUser").invoke(instance)
+        if (user != null) {
+            val email = user.javaClass.getMethod("getEmail").invoke(user) as? String
+            val isAnon = user.javaClass.getMethod("isAnonymous").invoke(user) as? Boolean == true
+            val uid = user.javaClass.getMethod("getUid").invoke(user) as? String ?: "guest_session"
+            Pair(email ?: if (isAnon) "Anonymous User" else "Guest User", uid)
+        } else Pair("Guest User", "guest_session")
+    } catch (e: Throwable) {
+        Pair("Guest User", "guest_session")
+    }
 
     val deviceModel = "${Build.MANUFACTURER.uppercase()} ${Build.MODEL}"
     val osVersion = "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})"
@@ -384,12 +393,15 @@ private fun ExpressiveBugReportContent(
                         bugTitle = it
                         if (it.isNotBlank()) errorMessage = null
                     },
-                    placeholder = { Text("e.g. Image capture OCR preview freezes on rotation") },
+                    placeholder = { Text("e.g. OCR preview freezes on rotation", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
                     singleLine = true,
+                    maxLines = 1,
                     shape = RoundedCornerShape(16.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     ),
                     modifier = Modifier.fillMaxWidth().testTag("bug_title_input")
                 )
@@ -415,8 +427,10 @@ private fun ExpressiveBugReportContent(
                     minLines = 3,
                     shape = RoundedCornerShape(16.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     ),
                     modifier = Modifier.fillMaxWidth().testTag("bug_description_input")
                 )
@@ -461,7 +475,8 @@ private fun ExpressiveBugReportContent(
 
         itemsIndexed(stepsToReproduce) { index, stepText ->
             Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth().animateContentSize()
             ) {
@@ -527,7 +542,8 @@ private fun ExpressiveBugReportContent(
 
                 if (attachmentUri != null) {
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -618,7 +634,18 @@ private fun ExpressiveBugReportContent(
 
                         isSubmitting = true
                         coroutineScope.launch {
-                            delay(1400)
+                            com.example.util.FeedbackSubmissionManager.submitBugReport(
+                                context = context,
+                                title = bugTitle,
+                                description = bugDescription,
+                                steps = stepsToReproduce.toList(),
+                                attachmentUriStr = attachmentUri?.toString(),
+                                userEmail = envReport.userEmail,
+                                userId = envReport.userId,
+                                deviceModel = envReport.deviceModel,
+                                osVersion = envReport.osVersion,
+                                appVersion = envReport.appVersion
+                            )
                             isSubmitting = false
                             submitSuccess = true
                             com.example.util.HapticManager.performSuccess(context)
@@ -747,12 +774,15 @@ private fun ExpressiveFeatureRequestContent(
                         featureTitle = it
                         if (it.isNotBlank()) errorMessage = null
                     },
-                    placeholder = { Text("e.g. Direct Obsidian Vault sync & bidirectional markdown links") },
+                    placeholder = { Text("e.g. Obsidian Vault sync", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
                     singleLine = true,
+                    maxLines = 1,
                     shape = RoundedCornerShape(16.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     ),
                     modifier = Modifier.fillMaxWidth().testTag("feature_title_input")
                 )
@@ -778,8 +808,10 @@ private fun ExpressiveFeatureRequestContent(
                     minLines = 2,
                     shape = RoundedCornerShape(16.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     ),
                     modifier = Modifier.fillMaxWidth().testTag("feature_problem_input")
                 )
@@ -805,8 +837,10 @@ private fun ExpressiveFeatureRequestContent(
                     minLines = 3,
                     shape = RoundedCornerShape(16.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        focusedContainerColor = MaterialTheme.colorScheme.surface,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                     ),
                     modifier = Modifier.fillMaxWidth().testTag("feature_solution_input")
                 )
@@ -862,7 +896,8 @@ private fun ExpressiveFeatureRequestContent(
         // Consent Checkbox Card
         item {
             Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth().clickable { userConsent = !userConsent }
             ) {
@@ -930,7 +965,19 @@ private fun ExpressiveFeatureRequestContent(
 
                         isSubmitting = true
                         coroutineScope.launch {
-                            delay(1400)
+                            com.example.util.FeedbackSubmissionManager.submitFeatureRequest(
+                                context = context,
+                                title = featureTitle,
+                                problemStatement = problemStatement,
+                                proposedSolution = proposedSolution,
+                                priority = selectedPriority,
+                                userConsent = userConsent,
+                                userEmail = envReport.userEmail,
+                                userId = envReport.userId,
+                                deviceModel = envReport.deviceModel,
+                                osVersion = envReport.osVersion,
+                                appVersion = envReport.appVersion
+                            )
                             isSubmitting = false
                             submitSuccess = true
                             com.example.util.HapticManager.performSuccess(context)

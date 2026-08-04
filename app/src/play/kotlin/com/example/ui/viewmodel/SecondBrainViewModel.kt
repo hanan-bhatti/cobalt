@@ -62,6 +62,31 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET)
     }
 
+    private val _availableUpdate = MutableStateFlow<com.example.util.UpdateCheckResult.UpdateAvailable?>(null)
+    val availableUpdate: StateFlow<com.example.util.UpdateCheckResult.UpdateAvailable?> = _availableUpdate.asStateFlow()
+
+    init {
+        checkForAppUpdatesOnStartup()
+    }
+
+    fun checkForAppUpdatesOnStartup() {
+        viewModelScope.launch {
+            if (!isNetworkAvailable()) return@launch
+            when (val result = com.example.util.AppVersionManager.checkOnlineUpdates()) {
+                is com.example.util.UpdateCheckResult.UpdateAvailable -> {
+                    _availableUpdate.value = result
+                }
+                else -> {
+                    _availableUpdate.value = null
+                }
+            }
+        }
+    }
+
+    fun dismissUpdateBanner() {
+        _availableUpdate.value = null
+    }
+
     val isFloatingOcrEnabled = settingsRepository.isFloatingOcrEnabled
     fun setFloatingOcrEnabled(enabled: Boolean) {
         settingsRepository.setFloatingOcrEnabled(enabled)

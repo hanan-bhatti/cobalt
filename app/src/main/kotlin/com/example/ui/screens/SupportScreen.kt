@@ -713,8 +713,12 @@ private fun ExpressiveSystemDiagnosticsContent() {
             roomItemCount = itemCount
 
             try {
-                val user = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
-                firebaseAccountLabel = user?.email ?: if (user?.isAnonymous == true) "Anonymous Session" else "Guest Mode"
+                val clazz = Class.forName("com.google.firebase.auth.FirebaseAuth")
+                val instance = clazz.getMethod("getInstance").invoke(null)
+                val user = clazz.getMethod("getCurrentUser").invoke(instance)
+                val email = user?.javaClass?.getMethod("getEmail")?.invoke(user) as? String
+                val isAnon = user?.javaClass?.getMethod("isAnonymous")?.invoke(user) as? Boolean == true
+                firebaseAccountLabel = email ?: if (isAnon) "Anonymous Session" else "Guest Mode"
                 val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
                 isFirebaseConnected = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     val network = cm?.activeNetwork
@@ -724,7 +728,10 @@ private fun ExpressiveSystemDiagnosticsContent() {
                     @Suppress("DEPRECATION")
                     cm?.activeNetworkInfo?.isConnectedOrConnecting == true
                 }
-            } catch (e: Exception) { isFirebaseConnected = false }
+            } catch (e: Throwable) {
+                firebaseAccountLabel = "Local Mode"
+                isFirebaseConnected = false
+            }
 
             val ocrStart = System.currentTimeMillis()
             try {

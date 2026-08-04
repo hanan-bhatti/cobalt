@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-08-05
+
+### Added
+- **Official Stable Release (v1.0.0):** Promoted Second Brain to official 1.0.0 Stable production release!
+- **Unified Local & Cloud Feedback Persistence (`FeedbackSubmissionManager`):** Built unified data persistence manager for bug reports, feature requests, and in-app surveys that writes locally to `context.filesDir/feedback/` and syncs with Firestore when online.
+- **Guaranteed Zero Data Loss Architecture:** Guaranteed data preservation across FOSS and Play builds for both Guest and Signed-in users.
+- **Real-time Online GitHub Update Checking Engine:** Integrated `AppVersionManager.checkOnlineUpdates()` against GitHub Releases API with automatic startup update notifications and direct download links.
+- **Harmonized Material 3 Expressive UI & Theme Consistency:** Cleaned up input field container fill colors, title placeholder single-line bounds, and bottom sheet surface theme colors.
+
+### Fixed
+- **Dummy Feedback Submission Fix:** Replaced dummy delay simulations in `FeedbackScreen` and `SurveyBottomSheet` with authentic persistent storage.
+- **Title Placeholder Line Wrapping:** Enforced single-line constraints (`maxLines = 1`, `TextOverflow.Ellipsis`) on title text fields.
+
+## [1.0.0-rc02] - 2026-08-04
+
+### Added
+- **Second Release Candidate (1.0.0-rc02):** Promoted build to official RC02 channel.
+- **F-Droid Build Recipe & Fastlane Synchronization:** Formatted `.yml` metadata file, added commit SHA tracking, and aligned Fastlane changelog files.
+
 ## [1.0.0-nightly01] - 2026-07-23
 
 ### Added

@@ -58,9 +58,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.ui.screens.ProfileScreen
-import androidx.compose.runtime.DisposableEffect
-import com.google.firebase.analytics.FirebaseAnalytics
-import androidx.navigation.NavController
 import com.example.ui.screens.AuthScreen
 import com.example.ui.screens.CaptureScreen
 import com.example.ui.screens.DetailScreen
@@ -125,6 +122,7 @@ class MainActivity : ComponentActivity() {
         // Handle shared intent if starting via share-sheet capture
         handleIntent(intent)
 
+        @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
         setContent {
             val themeMode by viewModel.settingsRepository.themeMode.collectAsState()
             val dynamicColorEnabled by viewModel.settingsRepository.dynamicColor.collectAsState()
@@ -145,9 +143,31 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val activeCaptureItem by viewModel.activeCaptureItem.collectAsState()
                 val activeDetailItem by viewModel.activeDetailItem.collectAsState()
+                val availableUpdate by viewModel.availableUpdate.collectAsState()
 
                 BackHandler(enabled = activeDetailItem != null) {
                     viewModel.closeDetailItem()
+                }
+
+                if (availableUpdate != null) {
+                    com.example.ui.components.UpdateAvailableBottomSheet(
+                        latestRelease = com.example.util.ReleaseNote(
+                            versionName = availableUpdate!!.latestVersionName,
+                            versionCode = 999,
+                            releaseDate = "Latest Release",
+                            tag = com.example.util.AppVersionTag.RC,
+                            highlights = listOf(availableUpdate!!.releaseNotes.take(300).ifBlank { "New update v${availableUpdate!!.latestVersionName} is ready to download." })
+                        ),
+                        onDismissRequest = { viewModel.dismissUpdateBanner() },
+                        onUpdateClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(availableUpdate!!.releaseUrl))
+                            startActivity(intent)
+                        },
+                        onViewChangelogClick = {
+                            viewModel.dismissUpdateBanner()
+                            navController.navigate("profile")
+                        }
+                    )
                 }
 
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -155,18 +175,10 @@ class MainActivity : ComponentActivity() {
                 val hazeState = remember { HazeState() }
 
                 val context = androidx.compose.ui.platform.LocalContext.current
-                DisposableEffect(navController) {
-                    val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
+                androidx.compose.runtime.DisposableEffect(navController) {
+                    val listener = androidx.navigation.NavController.OnDestinationChangedListener { _, destination, _ ->
                         val route = destination.route ?: return@OnDestinationChangedListener
-                        try {
-                            val bundle = Bundle().apply {
-                                putString(FirebaseAnalytics.Param.SCREEN_NAME, route)
-                                putString(FirebaseAnalytics.Param.SCREEN_CLASS, "MainActivity")
-                            }
-                            FirebaseAnalytics.getInstance(context).logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
-                        } catch (e: Exception) {
-                            // Analytics unavailable or disabled in FOSS build
-                        }
+                        logScreenView(context, route)
                     }
                     navController.addOnDestinationChangedListener(listener)
                     onDispose {
@@ -176,29 +188,13 @@ class MainActivity : ComponentActivity() {
 
                 LaunchedEffect(activeCaptureItem) {
                     if (activeCaptureItem != null) {
-                        try {
-                            val bundle = Bundle().apply {
-                                putString(FirebaseAnalytics.Param.SCREEN_NAME, "note_editor")
-                                putString(FirebaseAnalytics.Param.SCREEN_CLASS, "MainActivity")
-                            }
-                            FirebaseAnalytics.getInstance(context).logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
-                        } catch (e: Exception) {
-                            // Analytics unavailable
-                        }
+                        logScreenView(context, "note_editor")
                     }
                 }
 
                 LaunchedEffect(activeDetailItem) {
                     if (activeDetailItem != null) {
-                        try {
-                            val bundle = Bundle().apply {
-                                putString(FirebaseAnalytics.Param.SCREEN_NAME, "note_detail")
-                                putString(FirebaseAnalytics.Param.SCREEN_CLASS, "MainActivity")
-                            }
-                            FirebaseAnalytics.getInstance(context).logEvent(FirebaseAnalytics.Event.SCREEN_VIEW, bundle)
-                        } catch (e: Exception) {
-                            // Analytics unavailable
-                        }
+                        logScreenView(context, "note_detail")
                     }
                 }
 
@@ -266,9 +262,9 @@ class MainActivity : ComponentActivity() {
                                         ProfileScreen(
                                             viewModel = viewModel,
                                             onNavigateBack = { navController.popBackStack() },
-                                            onNavigateToAuth = { navController.navigate("auth") },
+                                            onNavigateToAuth = { if (viewModel.isFirebaseAvailable) navController.navigate("auth") },
                                             onNavigateToLegal = { route -> navController.navigate(route) },
-                                            onNavigateToManageStorage = { navController.navigate("manage_storage") }
+                                            onNavigateToManageStorage = { if (viewModel.isFirebaseAvailable) navController.navigate("manage_storage") }
                                         )
                                     }
                                     composable("auth") {
@@ -505,5 +501,19 @@ class MainActivity : ComponentActivity() {
             }
             startActivity(ocrIntent)
         }
+    }
+}
+
+private fun logScreenView(context: android.content.Context, screenName: String) {
+    try {
+        val clazz = Class.forName("com.google.firebase.analytics.FirebaseAnalytics")
+        val instance = clazz.getMethod("getInstance", android.content.Context::class.java).invoke(null, context)
+        val bundle = android.os.Bundle().apply {
+            putString("screen_name", screenName)
+            putString("screen_class", "MainActivity")
+        }
+        clazz.getMethod("logEvent", String::class.java, android.os.Bundle::class.java).invoke(instance, "screen_view", bundle)
+    } catch (e: Throwable) {
+        // Analytics unavailable or disabled in FOSS build
     }
 }

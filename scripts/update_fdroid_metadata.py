@@ -77,12 +77,21 @@ def sync_fdroid_yml(version_code, version_name):
     content = re.sub(r'CurrentVersion:\s*.*', f'CurrentVersion: {version_name}', content)
     content = re.sub(r'CurrentVersionCode:\s*.*', f'CurrentVersionCode: {version_code}', content)
 
+    # Get current git commit hash
+    commit_hash = "HEAD"
+    try:
+        import subprocess
+        result = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True)
+        commit_hash = result.stdout.strip()
+    except Exception:
+        pass
+
     # Check if this build entry is already in Builds block
     build_pattern = f"versionName: {version_name}"
     if build_pattern not in content:
         new_build_entry = f"""  - versionName: {version_name}
     versionCode: {version_code}
-    commit: v{version_name}
+    commit: {commit_hash}
     subdir: app
     gradle:
       - assembleFossRelease

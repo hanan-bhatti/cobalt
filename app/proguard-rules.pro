@@ -32,3 +32,7 @@
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
 -keep class kotlin.reflect.jvm.internal.** { *; }
+
+# Ignore missing Firebase classes during R8 minification for FOSS build
+-dontwarn com.google.firebase.**
+

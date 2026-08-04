@@ -220,12 +220,19 @@ fun ReleaseNotesBottomSheet(
                                 isCheckingUpdates = true
                                 updateCheckResult = null
                                 coroutineScope.launch {
-                                    delay(1200) // Simulated update check
-                                    isCheckingUpdates = false
-                                    updateCheckResult = if (AppVersionManager.isUpdateAvailable()) {
-                                        "Found v${AppVersionManager.getLatestRelease().versionName}"
-                                    } else {
-                                        "Latest version installed"
+                                    when (val result = com.example.util.AppVersionManager.checkOnlineUpdates()) {
+                                        is com.example.util.UpdateCheckResult.UpdateAvailable -> {
+                                            isCheckingUpdates = false
+                                            updateCheckResult = "Found v${result.latestVersionName}"
+                                        }
+                                        is com.example.util.UpdateCheckResult.UpToDate -> {
+                                            isCheckingUpdates = false
+                                            updateCheckResult = "Latest version installed"
+                                        }
+                                        is com.example.util.UpdateCheckResult.Error -> {
+                                            isCheckingUpdates = false
+                                            updateCheckResult = result.message
+                                        }
                                     }
                                 }
                             },

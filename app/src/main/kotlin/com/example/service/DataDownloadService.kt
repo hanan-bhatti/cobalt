@@ -23,7 +23,6 @@ import com.example.R
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.data.repository.SecondBrainRepository
-import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -344,7 +343,7 @@ class DataDownloadService : Service() {
                                 isUnavailable = false
                             )
                         }
-                        repository.saveItemLocallyOnly(updatedItem)
+                        repository.saveItem(updatedItem)
 
                         // Update persisted completed list
                         synchronized(prefs) {
@@ -427,8 +426,10 @@ class DataDownloadService : Service() {
         
         // Firebase Auth sign-out
         try {
-            FirebaseAuth.getInstance().signOut()
-        } catch (e: Exception) {
+            val clazz = Class.forName("com.google.firebase.auth.FirebaseAuth")
+            val instance = clazz.getMethod("getInstance").invoke(null)
+            clazz.getMethod("signOut").invoke(instance)
+        } catch (e: Throwable) {
             Log.e(TAG, "Firebase Auth sign out error: ${e.message}")
         }
 

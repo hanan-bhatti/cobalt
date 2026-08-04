@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -55,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -63,7 +66,7 @@ import com.example.ui.components.AppVersionBadge
 import com.example.ui.components.ReleaseNoteItemCard
 import com.example.ui.components.bounceClick
 import com.example.util.AppVersionManager
-import kotlinx.coroutines.delay
+import com.example.util.UpdateCheckResult
 import kotlinx.coroutines.launch
 
 /**
@@ -75,9 +78,11 @@ fun ReleaseUpdatesScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var isCheckingUpdates by remember { mutableStateOf(false) }
     var updateCheckResult by remember { mutableStateOf<String?>(null) }
+    var latestReleaseUrl by remember { mutableStateOf<String?>(null) }
     var expandedRelease by remember { mutableStateOf<String?>(AppVersionManager.currentVersionName) }
 
     Scaffold(
@@ -229,9 +234,9 @@ fun ReleaseUpdatesScreen(
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Icon(
-                                        imageVector = if (AppVersionManager.isUpdateAvailable()) Icons.Default.Download else Icons.Default.CheckCircle,
+                                        imageVector = if (latestReleaseUrl != null || AppVersionManager.isUpdateAvailable()) Icons.Default.Download else Icons.Default.CheckCircle,
                                         contentDescription = null,
-                                        tint = if (AppVersionManager.isUpdateAvailable()) MaterialTheme.colorScheme.primary else Color(0xFF10B981),
+                                        tint = if (latestReleaseUrl != null || AppVersionManager.isUpdateAvailable()) MaterialTheme.colorScheme.primary else Color(0xFF10B981),
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Text(
@@ -247,18 +252,44 @@ fun ReleaseUpdatesScreen(
                                         modifier = Modifier.size(24.dp),
                                         color = MaterialTheme.colorScheme.primary
                                     )
+                                } else if (latestReleaseUrl != null) {
+                                    Button(
+                                        onClick = {
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(latestReleaseUrl))
+                                            context.startActivity(intent)
+                                        },
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.primary
+                                        ),
+                                        modifier = Modifier.bounceClick()
+                                    ) {
+                                        Icon(imageVector = Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Download", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                    }
                                 } else {
                                     Button(
                                         onClick = {
                                             isCheckingUpdates = true
                                             updateCheckResult = null
                                             coroutineScope.launch {
-                                                delay(1200)
-                                                isCheckingUpdates = false
-                                                updateCheckResult = if (AppVersionManager.isUpdateAvailable()) {
-                                                    "Found v${AppVersionManager.getLatestRelease().versionName}"
-                                                } else {
-                                                    "Latest version installed!"
+                                                when (val result = AppVersionManager.checkOnlineUpdates()) {
+                                                    is UpdateCheckResult.UpdateAvailable -> {
+                                                        isCheckingUpdates = false
+                                                        updateCheckResult = "Update v${result.latestVersionName} available!"
+                                                        latestReleaseUrl = result.releaseUrl
+                                                    }
+                                                    is UpdateCheckResult.UpToDate -> {
+                                                        isCheckingUpdates = false
+                                                        updateCheckResult = "Latest version installed!"
+                                                        latestReleaseUrl = null
+                                                    }
+                                                    is UpdateCheckResult.Error -> {
+                                                        isCheckingUpdates = false
+                                                        updateCheckResult = result.message
+                                                        latestReleaseUrl = null
+                                                    }
                                                 }
                                             }
                                         },

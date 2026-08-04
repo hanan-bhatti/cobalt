@@ -95,6 +95,7 @@ fun ProfileMainContent(
     onNavigateToMovieApiKey: () -> Unit = {},
     onNavigateToManageStorage: () -> Unit
 ) {
+    val isFirebaseAvailable = viewModel.isFirebaseAvailable
     val userEmail by viewModel.userEmail.collectAsState()
     val userName by viewModel.userName.collectAsState()
     val userPhotoUrl by viewModel.userPhotoUrl.collectAsState()
@@ -326,7 +327,39 @@ fun ProfileMainContent(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                if (userEmail == null) {
+                if (!isFirebaseAvailable) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(72.dp)
+                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_profile),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(48.dp)
+                            )
+                        }
+                        Text(
+                            text = userEmail ?: "Second Brain",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Local Knowledge Archive",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                } else if (userEmail == null) {
                     // Signed out
                     Column(
                         modifier = Modifier.padding(24.dp),
@@ -527,11 +560,13 @@ fun ProfileMainContent(
             // APP
             SectionContainer(title = "APP") {
                 ClickableRow(title = "Settings", onClick = onNavigateToSettings)
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                )
-                ClickableRow(title = "Devices", onClick = onNavigateToDevices)
+                if (isFirebaseAvailable) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                        modifier = Modifier.padding(horizontal = 20.dp)
+                    )
+                    ClickableRow(title = "Devices", onClick = onNavigateToDevices)
+                }
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
                     modifier = Modifier.padding(horizontal = 20.dp)
@@ -542,158 +577,181 @@ fun ProfileMainContent(
             // STORAGE SECTION
             SectionContainer(title = "STORAGE") {
                 Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-                    val cloudUsedStorageBytes by viewModel.cloudUsedStorageBytes.collectAsState()
-                    val maxStorageBytes = 512f * 1024f * 1024f
+                    if (isFirebaseAvailable) {
+                        val cloudUsedStorageBytes by viewModel.cloudUsedStorageBytes.collectAsState()
+                        val maxStorageBytes = 512f * 1024f * 1024f
 
-                    // Calculate fractions
-                    val cloudFraction = (cloudUsedStorageBytes.toFloat() / maxStorageBytes).coerceIn(0f, 1f)
-                    val localOnlyBytes = (usedStorageBytes - cloudUsedStorageBytes).coerceAtLeast(0L)
-                    val localFraction = (localOnlyBytes.toFloat() / maxStorageBytes).coerceIn(0f, 1f - cloudFraction)
-                    val freeFraction = (1f - cloudFraction - localFraction).coerceAtLeast(0f)
+                        // Calculate fractions
+                        val cloudFraction = (cloudUsedStorageBytes.toFloat() / maxStorageBytes).coerceIn(0f, 1f)
+                        val localOnlyBytes = (usedStorageBytes - cloudUsedStorageBytes).coerceAtLeast(0L)
+                        val localFraction = (localOnlyBytes.toFloat() / maxStorageBytes).coerceIn(0f, 1f - cloudFraction)
+                        val freeFraction = (1f - cloudFraction - localFraction).coerceAtLeast(0f)
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Storage Space",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "${formatStorageSize(usedStorageBytes.coerceAtLeast(cloudUsedStorageBytes))} of 512 MB",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Thick Segmented Progress Bar
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(16.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Row(modifier = Modifier.fillMaxSize()) {
-                            // Cloud backed up segment (Primary/Blue Accent)
-                            if (cloudFraction > 0.001f) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .weight(cloudFraction)
-                                        .background(CategoryLink) // Cloud blue color
-                                )
-                            }
-                            // Local-only segment (Secondary/Green Accent)
-                            if (localFraction > 0.001f) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .weight(localFraction)
-                                        .background(CategoryCode) // Local green color
-                                )
-                            }
-                            // Free segment
-                            if (freeFraction > 0.001f) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .weight(freeFraction)
-                                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Details Legend (Cloud vs Local Only)
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        // Cloud backed up detail
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(10.dp)
-                                        .clip(CircleShape)
-                                        .background(CategoryLink)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Cloud Backup",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
                             Text(
-                                text = formatStorageSize(cloudUsedStorageBytes),
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = "Storage Space",
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "${formatStorageSize(usedStorageBytes.coerceAtLeast(cloudUsedStorageBytes))} of 512 MB",
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
-                        // Local only detail
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(16.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            Row(modifier = Modifier.fillMaxSize()) {
+                                if (cloudFraction > 0.001f) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .weight(cloudFraction)
+                                            .background(CategoryLink)
+                                    )
+                                }
+                                if (localFraction > 0.001f) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .weight(localFraction)
+                                            .background(CategoryCode)
+                                    )
+                                }
+                                if (freeFraction > 0.001f) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .weight(freeFraction)
+                                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(10.dp)
+                                            .clip(CircleShape)
+                                            .background(CategoryLink)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Cloud Backup",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                Text(
+                                    text = formatStorageSize(cloudUsedStorageBytes),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(10.dp)
+                                            .clip(CircleShape)
+                                            .background(CategoryCode)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Local Only",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                Text(
+                                    text = formatStorageSize(localOnlyBytes),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        if (userEmail == null) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(text = "Sign in to back up your content to the cloud.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        Button(
+                            onClick = onNavigateToManageStorage,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .bounceClick()
+                                .height(50.dp),
+                            shape = MaterialTheme.shapes.large,
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                        ) {
+                            Text("Manage Storage", color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        // FOSS Pure Local Storage Display
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(10.dp)
-                                        .clip(CircleShape)
-                                        .background(CategoryCode)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Local Only",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
                             Text(
-                                text = formatStorageSize(localOnlyBytes),
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = "Local Storage",
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "${formatStorageSize(usedStorageBytes)} used",
+                                style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                    }
 
-                    if (userEmail == null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = "Sign in to back up your content to the cloud.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
-                    }
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    // Manage Storage Button with bounce effect animation (jelly click scale down)
-                    Button(
-                        onClick = onNavigateToManageStorage,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .bounceClick()
-                            .height(50.dp),
-                        shape = MaterialTheme.shapes.large,
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                    ) {
-                        Text("Manage Storage", color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(12.dp)
+                                .clip(CircleShape)
+                                .background(CategoryCode)
+                        )
                     }
                 }
             }
@@ -755,33 +813,35 @@ fun ProfileMainContent(
                 }
             }
 
-            // 4. ACCOUNT & DATA SECURITY (Hidden deep at bottom)
-            SectionContainer(title = "ACCOUNT & DATA SECURITY") {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(
-                        text = "Permanently delete your account and erase all local notes, media, and cloud records.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    OutlinedButton(
-                        onClick = { showDeleteAccountDialog = true },
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
-                        ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .bounceClick()
-                            .testTag("delete_account_button")
+            if (isFirebaseAvailable) {
+                // 4. ACCOUNT & DATA SECURITY (Hidden deep at bottom)
+                SectionContainer(title = "ACCOUNT & DATA SECURITY") {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Delete Account & Erase All Data", fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "Permanently delete your account and erase all local notes, media, and cloud records.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        OutlinedButton(
+                            onClick = { showDeleteAccountDialog = true },
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            ),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .bounceClick()
+                                .testTag("delete_account_button")
+                        ) {
+                            Icon(imageVector = Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Delete Account & Erase All Data", fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -870,9 +930,12 @@ fun ProfileMainContent(
                         onClick = {
                             showDeleteAccountDialog = false
                             try {
-                                com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.delete()
-                            } catch (e: Exception) {
-                                // Handled
+                                val clazz = Class.forName("com.google.firebase.auth.FirebaseAuth")
+                                val instance = clazz.getMethod("getInstance").invoke(null)
+                                val user = clazz.getMethod("getCurrentUser").invoke(instance)
+                                user?.javaClass?.getMethod("delete")?.invoke(user)
+                            } catch (e: Throwable) {
+                                // Handled or FOSS build
                             }
                             viewModel.signOut()
                         },

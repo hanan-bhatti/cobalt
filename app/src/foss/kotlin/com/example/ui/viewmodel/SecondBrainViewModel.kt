@@ -1,0 +1,1608 @@
+/*
+ * Second Brain - A universal capture and personal knowledge archive
+ * Copyright (C) 2026 Hanan Bhatti
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package com.example.ui.viewmodel
+
+import android.app.Application
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.util.Log
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.data.model.SavedItem
+import com.example.data.model.SavedItemType
+import com.example.data.repository.SecondBrainRepository
+import com.example.data.remote.MediaSearchResultItem
+import com.example.widget.WidgetUpdater
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.UUID
+
+class SecondBrainViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val context = application.applicationContext
+    private val repository = SecondBrainRepository(context)
+    val settingsRepository = com.example.data.repository.SettingsRepository(context)
+
+    /** Returns true when the device has an active internet-capable network. */
+    private fun isNetworkAvailable(): Boolean {
+        val cm = context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
+        return caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) ||
+               caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) ||
+               caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET)
+    }
+
+    private val _availableUpdate = MutableStateFlow<com.example.util.UpdateCheckResult.UpdateAvailable?>(null)
+    val availableUpdate: StateFlow<com.example.util.UpdateCheckResult.UpdateAvailable?> = _availableUpdate.asStateFlow()
+
+    init {
+        checkForAppUpdatesOnStartup()
+    }
+
+    fun checkForAppUpdatesOnStartup() {
+        viewModelScope.launch {
+            if (!isNetworkAvailable()) return@launch
+            when (val result = com.example.util.AppVersionManager.checkOnlineUpdates()) {
+                is com.example.util.UpdateCheckResult.UpdateAvailable -> {
+                    _availableUpdate.value = result
+                }
+                else -> {
+                    _availableUpdate.value = null
+                }
+            }
+        }
+    }
+
+    fun dismissUpdateBanner() {
+        _availableUpdate.value = null
+    }
+
+    val isFloatingOcrEnabled = settingsRepository.isFloatingOcrEnabled
+    fun setFloatingOcrEnabled(enabled: Boolean) {
+        settingsRepository.setFloatingOcrEnabled(enabled)
+    }
+
+    val edgePanelHeight = settingsRepository.edgePanelHeight
+    fun setEdgePanelHeight(height: Int) {
+        settingsRepository.setEdgePanelHeight(height)
+    }
+
+    val edgePanelThickness = settingsRepository.edgePanelThickness
+    fun setEdgePanelThickness(thickness: Int) {
+        settingsRepository.setEdgePanelThickness(thickness)
+    }
+
+    val edgePanelOpacity = settingsRepository.edgePanelOpacity
+    fun setEdgePanelOpacity(opacity: Float) {
+        settingsRepository.setEdgePanelOpacity(opacity)
+    }
+
+    val edgePanelSide = settingsRepository.edgePanelSide
+    fun setEdgePanelSide(side: String) {
+        settingsRepository.setEdgePanelSide(side)
+    }
+
+    val edgePanelYPercent = settingsRepository.edgePanelYPercent
+    fun setEdgePanelYPercent(yPercent: Float) {
+        settingsRepository.setEdgePanelYPercent(yPercent)
+    }
+
+    val hasDismissedOnboarding = settingsRepository.hasDismissedOnboarding
+    fun dismissOnboarding() {
+        settingsRepository.setHasDismissedOnboarding(true)
+    }
+
+    val forceDisableBlur = settingsRepository.forceDisableBlur
+    fun setForceDisableBlur(disabled: Boolean) {
+        settingsRepository.setForceDisableBlur(disabled)
+    }
+
+    val blurRadius = settingsRepository.blurRadius
+    fun setBlurRadius(radius: Int) {
+        settingsRepository.setBlurRadius(radius)
+    }
+
+    val blurOpacity = settingsRepository.blurOpacity
+    fun setBlurOpacity(opacity: Float) {
+        settingsRepository.setBlurOpacity(opacity)
+    }
+
+    val isRecentCapturesExpanded = settingsRepository.isRecentCapturesExpanded
+    fun setRecentCapturesExpanded(expanded: Boolean) {
+        settingsRepository.setRecentCapturesExpanded(expanded)
+    }
+
+    fun isApiKeySet(): Boolean {
+        val apiKey = settingsRepository.geminiApiKey.value
+        return apiKey.isNotEmpty() || com.example.BuildConfig.GEMINI_API_KEY.isNotEmpty()
+    }
+
+    private val _tmdbApiKey = MutableStateFlow(repository.getTmdbApiKey())
+    val tmdbApiKey: StateFlow<String> = _tmdbApiKey.asStateFlow()
+
+    fun updateTmdbApiKey(key: String) {
+        repository.setTmdbApiKey(key.trim())
+        _tmdbApiKey.value = key.trim()
+        showToast("TMDb API Key saved successfully")
+    }
+
+    // ----------------------------------------------------
+    // STATE FLOWS
+    // ----------------------------------------------------
+
+    val allItems: StateFlow<List<SavedItem>> = repository.getAllItemsFlow()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    val customFolders: StateFlow<List<String>> = repository.getAllFoldersFlow()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    val customFolderEntities: StateFlow<List<com.example.data.local.CustomFolderEntity>> = repository.getAllFolderEntitiesFlow()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    private val _selectedFolder = MutableStateFlow("All")
+    val selectedFolder: StateFlow<String> = _selectedFolder.asStateFlow()
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    // Filtered Items (computes search query and selected system/custom folders)
+    val filteredItems: StateFlow<List<SavedItem>> = combine(
+        allItems,
+        _selectedFolder,
+        _searchQuery
+    ) { items, folder, query ->
+        var filtered = items
+
+        // 1. Filter by Folder (System Category or Custom Folder)
+        if (folder != "All") {
+            val systemCategory = SavedItemType.entries.find { it.displayName == folder }
+            filtered = if (systemCategory != null) {
+                // System folder filter (e.g. Images, Links, Text, etc.) - hide archived
+                filtered.filter { it.type == systemCategory && !it.folders.contains("Archive") }
+            } else {
+                // Custom folder filter (e.g. "Work" or "Archive")
+                filtered.filter { it.folders.contains(folder) }
+            }
+        } else {
+            // Hide archived items from "All" main feed
+            filtered = filtered.filter { !it.folders.contains("Archive") }
+        }
+
+        // 2. Filter and rank by Search Query (fuzzy, synonym-aware search)
+        if (query.isNotBlank()) {
+            val queryTerms = query.lowercase().split(Regex("[^a-zA-Z0-9]")).filter { it.isNotBlank() }
+            if (queryTerms.isNotEmpty()) {
+                filtered = filtered
+                    .map { item -> item to calculateSearchScore(item, queryTerms) }
+                    .filter { it.second > 0 }
+                    .sortedByDescending { it.second }
+                    .map { it.first }
+            }
+        }
+
+        filtered
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    // ----------------------------------------------------
+    // SELECTION MODE STATE & BULK ACTIONS
+    // ----------------------------------------------------
+
+    private val _isSelectionMode = MutableStateFlow(false)
+    val isSelectionMode: StateFlow<Boolean> = _isSelectionMode.asStateFlow()
+
+    private val _selectedItemIds = MutableStateFlow<Set<String>>(emptySet())
+    val selectedItemIds: StateFlow<Set<String>> = _selectedItemIds.asStateFlow()
+
+    fun enterSelectionMode(firstItemId: String) {
+        _isSelectionMode.value = true
+        _selectedItemIds.value = setOf(firstItemId)
+    }
+
+    fun toggleSelection(itemId: String) {
+        val current = _selectedItemIds.value
+        if (current.contains(itemId)) {
+            val updated = current - itemId
+            _selectedItemIds.value = updated
+            if (updated.isEmpty()) {
+                _isSelectionMode.value = false
+            }
+        } else {
+            _selectedItemIds.value = current + itemId
+            _isSelectionMode.value = true
+        }
+    }
+
+    fun clearSelection() {
+        _isSelectionMode.value = false
+        _selectedItemIds.value = emptySet()
+    }
+
+    fun selectAll(itemIds: List<String>) {
+        _selectedItemIds.value = itemIds.toSet()
+        _isSelectionMode.value = itemIds.isNotEmpty()
+    }
+
+    fun deleteSelectedItems() {
+        val selectedIds = _selectedItemIds.value
+        if (selectedIds.isEmpty()) return
+        viewModelScope.launch {
+            val itemsToDelete = allItems.value.filter { selectedIds.contains(it.id) }
+            itemsToDelete.forEach { item ->
+                repository.deleteItem(item)
+            }
+            clearSelection()
+        }
+    }
+
+    fun updateOrderIndices(orderedItems: List<SavedItem>) {
+        viewModelScope.launch {
+            try {
+                // orderIndex descending, so first item has highest orderIndex
+                val size = orderedItems.size.toDouble()
+                val itemsToUpdate = orderedItems.mapIndexed { index, item ->
+                    item.copy(orderIndex = size - index)
+                }
+                repository.updateItems(itemsToUpdate)
+            } catch (e: Exception) {
+                Log.e("SecondBrainVM", "Failed to update order indices: ${e.message}")
+            }
+        }
+    }
+
+    fun reorderItem(itemToMove: SavedItem, prevItem: SavedItem?, nextItem: SavedItem?) {
+        val newOrderIndex = when {
+            prevItem != null && nextItem != null -> (prevItem.orderIndex + nextItem.orderIndex) / 2.0
+            prevItem != null -> prevItem.orderIndex - 1000.0
+            nextItem != null -> nextItem.orderIndex + 1000.0
+            else -> itemToMove.orderIndex
+        }
+        val updatedItem = itemToMove.copy(orderIndex = newOrderIndex)
+        viewModelScope.launch {
+            try {
+                repository.saveItem(updatedItem, null)
+            } catch (e: Exception) {
+                Log.e("SecondBrainVM", "Failed to reorder item: ${e.message}")
+            }
+        }
+    }
+
+    fun tagSelectedItems(folderName: String) {
+        val selectedIds = _selectedItemIds.value
+        if (selectedIds.isEmpty() || folderName.isBlank()) return
+        viewModelScope.launch {
+            val trimmed = folderName.trim()
+            if (!customFolders.value.contains(trimmed)) {
+                repository.addCustomFolder(trimmed)
+            }
+            val itemsToTag = allItems.value.filter { selectedIds.contains(it.id) }
+            itemsToTag.forEach { item ->
+                if (!item.folders.contains(trimmed)) {
+                    val updatedFolders = item.folders + trimmed
+                    repository.saveItem(item.copy(folders = updatedFolders))
+                }
+            }
+            clearSelection()
+        }
+    }
+
+    // ----------------------------------------------------
+    // DETAIL VIEW STATE
+    // ----------------------------------------------------
+
+    private val _activeDetailItem = MutableStateFlow<SavedItem?>(null)
+    val activeDetailItem: StateFlow<SavedItem?> = _activeDetailItem.asStateFlow()
+
+    fun showDetailItem(item: SavedItem) {
+        _activeDetailItem.value = item
+    }
+
+    fun closeDetailItem() {
+        _activeDetailItem.value = null
+    }
+
+    fun openItemById(itemId: String) {
+        viewModelScope.launch {
+            try {
+                val allItemsList = repository.getAllItemsFlow().first()
+                val item = allItemsList.find { it.id == itemId }
+                if (item != null) {
+                    _activeDetailItem.value = item
+                }
+            } catch (e: Exception) {}
+        }
+    }
+
+    private val _showMediaSearchBottomSheet = MutableStateFlow(false)
+    val showMediaSearchBottomSheet: StateFlow<Boolean> = _showMediaSearchBottomSheet.asStateFlow()
+
+    private val _mediaSearchResults = MutableStateFlow<List<MediaSearchResultItem>>(emptyList())
+    val mediaSearchResults: StateFlow<List<MediaSearchResultItem>> = _mediaSearchResults.asStateFlow()
+
+    private val _isSearchingMedia = MutableStateFlow(false)
+    val isSearchingMedia: StateFlow<Boolean> = _isSearchingMedia.asStateFlow()
+
+    fun openMediaSearchSheet() {
+        _showMediaSearchBottomSheet.value = true
+    }
+
+    fun closeMediaSearchSheet() {
+        _showMediaSearchBottomSheet.value = false
+    }
+
+    fun searchMedia(query: String) {
+        if (query.isBlank()) {
+            _mediaSearchResults.value = emptyList()
+            _isSearchingMedia.value = false
+            return
+        }
+        viewModelScope.launch {
+            _isSearchingMedia.value = true
+            try {
+                if (!isNetworkAvailable()) {
+                    postFeedback("Offline mode • Searching cached & anime items", com.example.util.FeedbackSeverity.WARNING)
+                } else if (repository.getTmdbApiKey().isBlank()) {
+                    postFeedback("TMDb API key missing • Searching anime via Jikan. Add TMDb key in Profile for Movies & TV", com.example.util.FeedbackSeverity.WARNING)
+                }
+
+                val results = kotlinx.coroutines.withTimeoutOrNull(12_000L) {
+                    repository.searchMedia(query.trim())
+                }
+
+                if (results != null) {
+                    _mediaSearchResults.value = results
+                } else {
+                    _mediaSearchResults.value = emptyList()
+                    postFeedback(
+                        message = "Media search timed out • Check connection and try again",
+                        severity = com.example.util.FeedbackSeverity.ERROR,
+                        actionLabel = "Retry",
+                        onAction = { searchMedia(query) }
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("SecondBrainVM", "searchMedia failed: ${e.message}")
+                _mediaSearchResults.value = emptyList()
+                postFeedback(
+                    message = "Media search error: ${e.localizedMessage ?: "Unknown error"}",
+                    severity = com.example.util.FeedbackSeverity.ERROR,
+                    actionLabel = "Retry",
+                    onAction = { searchMedia(query) }
+                )
+            } finally {
+                _isSearchingMedia.value = false
+            }
+        }
+    }
+
+    fun saveMediaItem(item: MediaSearchResultItem, watchStatus: String = "Plan to Watch", selectedFolders: List<String> = emptyList()) {
+        val foldersToUse = if (selectedFolders.isNotEmpty()) selectedFolders else listOf("Media")
+        val newItem = SavedItem(
+            id = item.id,
+            type = SavedItemType.MEDIA,
+            title = item.title,
+            content = item.overview ?: "",
+            thumbnailPath = item.posterUrl,
+            backdropUrl = item.backdropUrl,
+            mediaType = item.mediaType,
+            watchStatus = watchStatus,
+            genres = item.genres,
+            watchProviders = item.watchProviders,
+            trailerUrl = item.trailerUrl,
+            folders = foldersToUse,
+            releaseYear = item.releaseYear,
+            rating = item.rating
+        )
+
+        // 1. Instantly close sheet and notify user
+        closeMediaSearchSheet()
+        showToast("Saved ${item.title} to Second Brain!")
+
+        // 2. Save locally and launch background enrichment
+        viewModelScope.launch {
+            repository.saveItem(newItem)
+            WidgetUpdater.update(context)
+            repository.enrichMediaItemDetails(newItem)
+        }
+    }
+
+    fun enrichMediaItem(item: SavedItem, saveToDb: Boolean = true) {
+        if (item.type != SavedItemType.MEDIA) return
+        viewModelScope.launch {
+            val enriched = repository.enrichMediaItemDetails(item, saveToDb)
+            if (!saveToDb) {
+                _activeCaptureItem.value = enriched
+            }
+        }
+    }
+
+    // ----------------------------------------------------
+    // CAPTURE STATE
+    // ----------------------------------------------------
+
+    private val _activeCaptureItem = MutableStateFlow<SavedItem?>(null)
+    val activeCaptureItem: StateFlow<SavedItem?> = _activeCaptureItem.asStateFlow()
+    private val captureDrafts = mutableMapOf<SavedItemType, SavedItem>()
+
+    // Bitmap of captured image (used for freehand drawing & cropping for Gemini OCR)
+    private val _capturedBitmap = MutableStateFlow<Bitmap?>(null)
+    val capturedBitmap: StateFlow<Bitmap?> = _capturedBitmap.asStateFlow()
+
+    private val _isOcrLoading = MutableStateFlow(false)
+    val isOcrLoading: StateFlow<Boolean> = _isOcrLoading.asStateFlow()
+
+    private val _isSaving = MutableStateFlow(false)
+    val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
+
+    private val _isMetadataExtracting = MutableStateFlow(false)
+    val isMetadataExtracting: StateFlow<Boolean> = _isMetadataExtracting.asStateFlow()
+
+    private val _metadataError = MutableStateFlow<String?>(null)
+    val metadataError: StateFlow<String?> = _metadataError.asStateFlow()
+
+    private val _saveProgress = MutableStateFlow<Float?>(null)
+    val saveProgress: StateFlow<Float?> = _saveProgress.asStateFlow()
+
+    private val _ocrError = MutableStateFlow<String?>(null)
+    val ocrError: StateFlow<String?> = _ocrError.asStateFlow()
+
+    fun clearOcrError() {
+        _ocrError.value = null
+    }
+
+    private val _availableModels = MutableStateFlow<List<String>>(emptyList())
+    val availableModels: StateFlow<List<String>> = _availableModels.asStateFlow()
+
+    private val _userFeedback = MutableStateFlow<com.example.util.UserFeedbackMessage?>(null)
+    val userFeedback: StateFlow<com.example.util.UserFeedbackMessage?> = _userFeedback.asStateFlow()
+
+    fun postFeedback(
+        message: String,
+        severity: com.example.util.FeedbackSeverity = com.example.util.FeedbackSeverity.INFO,
+        actionLabel: String? = null,
+        onAction: (() -> Unit)? = null
+    ) {
+        _userFeedback.value = com.example.util.UserFeedbackMessage(
+            message = message,
+            severity = severity,
+            actionLabel = actionLabel,
+            onAction = onAction
+        )
+    }
+
+    fun dismissFeedback() {
+        _userFeedback.value = null
+    }
+
+    fun showToast(message: String) {
+        val severity = when {
+            message.contains("failed", ignoreCase = true) || message.contains("error", ignoreCase = true) -> com.example.util.FeedbackSeverity.ERROR
+            message.contains("no internet", ignoreCase = true) || message.contains("please sign in", ignoreCase = true) || message.contains("warning", ignoreCase = true) || message.contains("offline", ignoreCase = true) -> com.example.util.FeedbackSeverity.WARNING
+            message.contains("success", ignoreCase = true) || message.contains("saved", ignoreCase = true) || message.contains("synced", ignoreCase = true) || message.contains("renamed", ignoreCase = true) -> com.example.util.FeedbackSeverity.SUCCESS
+            else -> com.example.util.FeedbackSeverity.INFO
+        }
+        postFeedback(message, severity)
+    }
+
+    // FOSS build: no cloud sync
+    fun syncData() = Unit
+
+    private val _extractedLinksToReview = MutableStateFlow<List<ExtractedLinkReview>>(emptyList())
+    val extractedLinksToReview: StateFlow<List<ExtractedLinkReview>> = _extractedLinksToReview.asStateFlow()
+
+    fun fetchAvailableModels(isUserTriggered: Boolean = false) {
+        val apiKey = resolveValidApiKeyOrNull()
+        if (apiKey == null) {
+            if (isUserTriggered) {
+                showToast("Please save a valid Gemini API Key first.")
+            }
+            return
+        }
+        if (!isNetworkAvailable()) {
+            if (isUserTriggered) showToast("No internet connection. Cannot refresh models.")
+            return
+        }
+        viewModelScope.launch {
+            try {
+                val response = com.example.data.remote.RetrofitClient.geminiService.listModels(apiKey)
+                val models = response.models?.map { it.name.replace("models/", "") }
+                    ?.filter { it.contains("gemini") && (it.contains("pro") || it.contains("flash") || it.contains("vision")) }
+                    ?: emptyList()
+                _availableModels.value = models
+
+                if (models.isNotEmpty()) {
+                    val currentSelected = settingsRepository.selectedModel.value
+                    if (currentSelected.isBlank() || !models.contains(currentSelected)) {
+                        val defaultModel = models.firstOrNull { it.contains("1.5-flash") || it.contains("2.0-flash") || it.contains("flash") } ?: models.first()
+                        settingsRepository.setSelectedModel(defaultModel)
+                    }
+                }
+
+                if (isUserTriggered) {
+                    showToast("Refreshed ${models.size} models successfully.")
+                }
+            } catch (e: Exception) {
+                Log.e("SecondBrainVM", "Failed to fetch models: ${e.message}")
+                if (isUserTriggered) {
+                    showToast("Failed to refresh models: ${e.message ?: "Unknown error"}")
+                }
+            }
+        }
+    }
+
+    // Temporary bytes for the active capture (pending local save)
+    private var pendingMediaBytes: ByteArray? = null
+
+    // ----------------------------------------------------
+    // AUTH STATE
+    // ----------------------------------------------------
+
+    private val _userEmail = MutableStateFlow<String?>(null)
+    val userEmail: StateFlow<String?> = _userEmail.asStateFlow()
+
+    private val _userName = MutableStateFlow<String?>(null)
+    val userName: StateFlow<String?> = _userName.asStateFlow()
+
+    private val _userPhotoUrl = MutableStateFlow<String?>(null)
+    val userPhotoUrl: StateFlow<String?> = _userPhotoUrl.asStateFlow()
+
+    private val _isInitialLoading = MutableStateFlow(true)
+    val isInitialLoading: StateFlow<Boolean> = _isInitialLoading.asStateFlow()
+
+
+
+    // FOSS build: cloud & storage backup stubs for shared UI compatibility
+    val cloudUsedStorageBytes: StateFlow<Long> = MutableStateFlow(0L).asStateFlow()
+    val selectedForBackupIds: StateFlow<Set<String>> = MutableStateFlow(emptySet<String>()).asStateFlow()
+    val isSyncing: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
+    val maxStorageBytes: Long = 512L * 1024 * 1024 // 512 MB
+    val authSuccess: StateFlow<String?> = MutableStateFlow<String?>(null).asStateFlow()
+    val authLoading: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
+    val emailLinkSent: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
+    val pendingEmailLink: StateFlow<String?> = MutableStateFlow<String?>(null).asStateFlow()
+    val pendingPasswordResetCode: StateFlow<String?> = MutableStateFlow<String?>(null).asStateFlow()
+    val isFirebaseAvailable: Boolean = false
+
+    fun toggleBackupSelection(itemId: String) = Unit
+    fun selectItemsForBackup(ids: List<String>) = Unit
+    fun deselectItemsForBackup(ids: List<String>) = Unit
+    fun clearBackupSelection() = Unit
+    fun backupSelectedItems() = Unit
+    fun removeBackupItems(ids: List<String>) = Unit
+
+    val usedStorageBytes: StateFlow<Long> = allItems.map { items: List<com.example.data.model.SavedItem> ->
+        var total = 0L
+        items.forEach { item ->
+            // Try to get file size if it's a local file
+            val path = item.thumbnailPath ?: item.content
+            if (path.startsWith("/")) {
+                val file = java.io.File(path)
+                if (file.exists()) {
+                    total += file.length()
+                }
+            } else {
+                total += path.toByteArray().size
+            }
+        }
+        total
+    }.stateIn(viewModelScope, SharingStarted.Lazily, 0L)
+
+
+    private val _authError = MutableStateFlow<String?>(null)
+    val authError: StateFlow<String?> = _authError.asStateFlow()
+
+
+
+    private val prefs = context.getSharedPreferences("second_brain_prefs", android.content.Context.MODE_PRIVATE)
+
+
+    init {
+        // FOSS build: no Firebase auth, no cloud sync
+        _isInitialLoading.value = false
+
+        // Auto-fetch models when API key is available or updated
+        viewModelScope.launch {
+            settingsRepository.geminiApiKey.collect { key ->
+                if (key.isNotBlank() && key != "MY_GEMINI_API_KEY") {
+                    fetchAvailableModels(isUserTriggered = false)
+                }
+            }
+        }
+    }
+
+    // ----------------------------------------------------
+    // SEARCH & FILTER ACTIONS
+    // ----------------------------------------------------
+
+    fun setFolderFilter(folder: String) {
+        _selectedFolder.value = folder
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    // ----------------------------------------------------
+    // AUTH ACTIONS
+    // ----------------------------------------------------
+
+    // FOSS build: no cloud auth — stores a local display name only
+    fun setLocalProfile(email: String) {
+        if (email.isBlank()) { _authError.value = "Email cannot be empty."; return }
+        _authError.value = null
+        prefs.edit().putString("simulated_email", email).apply()
+        _userEmail.value = email
+        showToast("Profile saved as $email.")
+    }
+
+    // Keep these for API compatibility with shared UI screens
+    fun signUp(email: String, password: String) = setLocalProfile(email)
+    fun signIn(email: String, password: String) = setLocalProfile(email)
+    fun sendSignInLink(email: String) = setLocalProfile(email)
+    fun signInWithGoogle(activityContext: android.content.Context, onCompletion: (Boolean) -> Unit) {
+        showToast("Google Sign-In is not available in the FOSS build."); onCompletion(false)
+    }
+    fun signOut() { prefs.edit().remove("simulated_email").apply(); _userEmail.value = null }
+    fun setAuthError(error: String?) { _authError.value = error }
+    fun sendPasswordResetEmail(email: String) = Unit
+    fun handleDeepLink(linkStr: String) = Unit
+    fun resetPasswordWithCode(oobCode: String, newPassword: String) = Unit
+    fun completeEmailLinkSignIn(email: String, emailLink: String) = Unit
+    fun resetEmailLinkSent() = Unit
+
+    // ----------------------------------------------------
+    // CAPTURE FLOW
+    // ----------------------------------------------------
+
+    fun startManualCapture(type: SavedItemType, initialFolders: List<String> = emptyList()) {
+        _capturedBitmap.value = null
+        pendingMediaBytes = null
+        _extractedLinksToReview.value = emptyList()
+        _isMetadataExtracting.value = false
+        _metadataError.value = null
+        captureDrafts.clear()
+        _activeCaptureItem.value = SavedItem(
+            type = type,
+            title = "",
+            content = if (type == SavedItemType.CODE) "// Code snippet" else "",
+            folders = initialFolders
+        )
+        _activeCaptureItem.value?.let { captureDrafts[type] = it }
+    }
+
+    fun cancelCapture() {
+        _activeCaptureItem.value = null
+        _capturedBitmap.value = null
+        pendingMediaBytes = null
+        _extractedLinksToReview.value = emptyList()
+        _isMetadataExtracting.value = false
+        _metadataError.value = null
+        captureDrafts.clear()
+    }
+
+    /**
+     * Process content shared from other apps via Share Target (Intent.SEND)
+     */
+    fun handleSharedIntent(mimeType: String?, textContent: String?, mediaUri: Uri?, subject: String? = null) {
+        viewModelScope.launch {
+            captureDrafts.clear()
+            _capturedBitmap.value = null
+            pendingMediaBytes = null
+            _isMetadataExtracting.value = false
+            _metadataError.value = null
+
+            if (mimeType == null) return@launch
+
+            when {
+                // 1. Text Shared
+                mimeType.startsWith("text/") && textContent != null -> {
+                    // Extract URL from text using regex if it's not exclusively a URL
+                    val urlRegex = "(?i)\\b((?:https?://|www\\d{0,3}[.]|[a-z0-9.\\-]+[.][a-z]{2,4}/)(?:[^\\s()<>]+|\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\))+(?:\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\)|[^\\s`!()\\[\\]{};:'\".,<>?«»“”‘’]))".toRegex()
+                    val matchResult = urlRegex.find(textContent)
+                    val url = matchResult?.value
+
+                    if (url != null) {
+                        // Title might be in subject, or in the remaining text
+                        val title = subject?.takeIf { it.isNotBlank() } ?: "Shared Link"
+                        _activeCaptureItem.value = SavedItem(
+                            type = SavedItemType.LINK,
+                            title = title,
+                            content = url
+                        )
+                        _activeCaptureItem.value?.let { captureDrafts[SavedItemType.LINK] = it }
+                        fetchLinkPreviewForActiveItem(url)
+                    } else {
+                        // Check if looks like code
+                        val isCode = textContent.contains("class ") || textContent.contains("fun ") || textContent.contains("{") || textContent.contains("import ")
+                        _activeCaptureItem.value = SavedItem(
+                            type = if (isCode) SavedItemType.CODE else SavedItemType.TEXT,
+                            title = subject?.takeIf { it.isNotBlank() } ?: if (isCode) "Captured Code Snippet" else "Captured Text Note",
+                            content = textContent
+                        )
+                        _activeCaptureItem.value?.let { captureDrafts[it.type] = it }
+                    }
+                }
+
+                // 2. Image Shared
+                mimeType.startsWith("image/") && mediaUri != null -> {
+                    try {
+                        val bytes = readUriBytes(mediaUri) ?: return@launch
+                        pendingMediaBytes = bytes
+                        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        _capturedBitmap.value = bitmap
+
+                        // Save temporarily to cache file for display
+                        val localPath = repository.saveToLocalCache("shared_img_${UUID.randomUUID()}.jpg", bytes)
+
+                        _activeCaptureItem.value = SavedItem(
+                            type = SavedItemType.IMAGE,
+                            title = "Shared Screenshot/Image",
+                            content = localPath,
+                            thumbnailPath = localPath
+                        )
+                        _activeCaptureItem.value?.let { captureDrafts[SavedItemType.IMAGE] = it }
+                    } catch (e: Exception) {
+                        Log.e("SecondBrainVM", "Failed to load shared image: ${e.message}")
+                    }
+                }
+
+                // 3. Video Shared
+                mimeType.startsWith("video/") && mediaUri != null -> {
+                    try {
+                        val bytes = readUriBytes(mediaUri) ?: return@launch
+                        pendingMediaBytes = bytes
+
+                        // Save to cache file
+                        val localPath = repository.saveToLocalCache("shared_vid_${UUID.randomUUID()}.mp4", bytes)
+
+                        _activeCaptureItem.value = SavedItem(
+                            type = SavedItemType.VIDEO,
+                            title = "Shared Video",
+                            content = localPath,
+                            thumbnailPath = localPath // we can use localPath to play/display
+                        )
+                        _activeCaptureItem.value?.let { captureDrafts[SavedItemType.VIDEO] = it }
+                    } catch (e: Exception) {
+                        Log.e("SecondBrainVM", "Failed to load shared video: ${e.message}")
+                    }
+                }
+            }
+        }
+    }
+
+    // ----------------------------------------------------
+    // REGION OCR / GEMINI API
+    // ----------------------------------------------------
+
+    fun startFloatingOcrCapture(bitmap: Bitmap) {
+        captureDrafts.clear()
+        _capturedBitmap.value = bitmap
+        _activeCaptureItem.value = SavedItem(
+            type = SavedItemType.IMAGE,
+            title = "Floating OCR Capture",
+            content = "",
+            thumbnailPath = ""
+        )
+        _activeCaptureItem.value?.let { captureDrafts[it.type] = it }
+        _extractedLinksToReview.value = emptyList()
+        _isOcrLoading.value = false
+        _ocrError.value = null
+    }
+
+
+    fun transcribeAudioMemo(file: java.io.File) {
+        val currentItem = _activeCaptureItem.value ?: return
+        _isOcrLoading.value = true
+        _ocrError.value = null
+
+        viewModelScope.launch {
+            try {
+                val bytes = file.readBytes()
+                pendingMediaBytes = bytes
+                val localPath = repository.saveToLocalCache("audio_${java.util.UUID.randomUUID()}.mp4", bytes)
+
+                val base64Data = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                val apiKey = resolveValidApiKeyOrNull()
+                if (apiKey == null) {
+                    _ocrError.value = "Please save a valid Gemini API Key first."
+                    _isOcrLoading.value = false
+                    return@launch
+                }
+
+                val result = repository.extractTextFromAudio(
+                    base64Audio = base64Data,
+                    apiKey = apiKey,
+                    model = settingsRepository.selectedModel.value
+                )
+
+                if (result != null && !result.startsWith("Error")) {
+                    val extractedTitle = extractTitleFromMarkdown(result)
+                    _activeCaptureItem.value = _activeCaptureItem.value?.copy(
+                        content = result,
+                        title = extractedTitle ?: _activeCaptureItem.value?.title ?: "Voice Memo Transcription",
+                        thumbnailPath = localPath
+                    )
+                    _activeCaptureItem.value?.let { captureDrafts[SavedItemType.AUDIO] = it }
+                } else {
+                    _ocrError.value = result ?: "Failed to transcribe audio."
+                }
+            } catch (e: Exception) {
+                _ocrError.value = e.localizedMessage ?: "Unknown error"
+            } finally {
+                _isOcrLoading.value = false
+            }
+        }
+     }
+
+    fun formatSpeechWithGemini(speechText: String) {
+        val currentItem = _activeCaptureItem.value ?: return
+        _isOcrLoading.value = true
+        _ocrError.value = null
+
+        viewModelScope.launch {
+            try {
+                val apiKey = resolveValidApiKeyOrNull()
+                if (apiKey == null) {
+                    _ocrError.value = "Please save a valid Gemini API Key first."
+                    _isOcrLoading.value = false
+                    return@launch
+                }
+
+                val result = repository.formatSpeechText(
+                    speechText = speechText,
+                    apiKey = apiKey,
+                    model = settingsRepository.selectedModel.value
+                )
+
+                if (result != null && !result.startsWith("Error")) {
+                    val extractedTitle = extractTitleFromMarkdown(result)
+                    _activeCaptureItem.value = _activeCaptureItem.value?.copy(
+                        content = result,
+                        title = extractedTitle ?: _activeCaptureItem.value?.title ?: "Formatted Voice Memo"
+                    )
+                    _activeCaptureItem.value?.let { captureDrafts[it.type] = it }
+                } else {
+                    _ocrError.value = result ?: "Failed to format speech."
+                }
+            } catch (e: Exception) {
+                _ocrError.value = e.localizedMessage ?: "Unknown error"
+            } finally {
+                _isOcrLoading.value = false
+            }
+        }
+    }
+
+    private fun extractTitleFromMarkdown(markdown: String): String? {
+        val line = markdown.lines().firstOrNull { it.trim().startsWith("# ") }
+        return line?.trim()?.removePrefix("#")?.trim()
+    }
+
+    private fun resolveValidApiKeyOrNull(): String? {
+        val apiKey = settingsRepository.geminiApiKey.value.ifEmpty { com.example.BuildConfig.GEMINI_API_KEY }
+        return if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") null else apiKey
+    }
+
+    private fun parseGeminiOcrResult(raw: String): Pair<String, List<Pair<String, String>>> {
+        var parsedExtractedText = raw
+        val urlsList = mutableListOf<Pair<String, String>>()
+        try {
+            var cleanText = raw.trim()
+            val startRegex = Regex("^```(?:json)?\\s*")
+            val endRegex = Regex("\\s*```$")
+            cleanText = cleanText.replace(startRegex, "").replace(endRegex, "").trim()
+
+            val jsonObject = org.json.JSONObject(cleanText)
+            parsedExtractedText = jsonObject.optString("extractedText", raw)
+            val urlsArray = jsonObject.optJSONArray("urls")
+            if (urlsArray != null) {
+                for (i in 0 until urlsArray.length()) {
+                    val urlObj = urlsArray.getJSONObject(i)
+                    val url = urlObj.optString("url", "")
+                    val desc = urlObj.optString("description", "")
+                    if (url.isNotBlank()) {
+                        urlsList.add(Pair(url, desc))
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("SecondBrainVM", "Failed to parse OCR JSON, falling back to raw text.")
+        }
+        return Pair(parsedExtractedText, urlsList)
+    }
+
+    private suspend fun buildItemWithFetchedMetadata(item: SavedItem): SavedItem {
+        if (item.type != SavedItemType.LINK) return item
+        val metadata = repository.fetchLinkMetadata(item.content)
+        return item.copy(
+            linkTitle = metadata.title,
+            linkDescription = metadata.description,
+            linkImage = metadata.imageUrl,
+            title = metadata.title ?: item.title.ifBlank { "Shared Link" }
+        )
+    }
+
+
+    fun performFullImageOcr(uri: android.net.Uri, context: android.content.Context) {
+        val currentItem = _activeCaptureItem.value ?: return
+        _isOcrLoading.value = true
+        _ocrError.value = null
+        _activeCaptureItem.value = currentItem.copy(extractedText = null)
+        _extractedLinksToReview.value = emptyList()
+
+        viewModelScope.launch {
+            try {
+                // Use Coil to load the image robustly. This handles content://, file://, raw paths, and http:// / https:// (Firebase links)
+                val loader = coil.Coil.imageLoader(context)
+                val request = coil.request.ImageRequest.Builder(context)
+                    .data(uri)
+                    .allowHardware(false) // software bitmap is required for OCR / region selection
+                    .build()
+                val result = loader.execute(request)
+                val bitmap = if (result is coil.request.SuccessResult) {
+                    (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                } else {
+                    null
+                }
+
+                if (bitmap == null) {
+                    _ocrError.value = "Failed to decode image for OCR."
+                    _isOcrLoading.value = false
+                    return@launch
+                }
+
+                val apiKey = resolveValidApiKeyOrNull()
+                if (apiKey == null) {
+                    _ocrError.value = "Please save a valid Gemini API Key first."
+                    _isOcrLoading.value = false
+                    return@launch
+                }
+
+                val resultText = repository.extractTextFromRegion(
+                    bitmap = bitmap,
+                    x = 0, y = 0, width = bitmap.width, height = bitmap.height,
+                    apiKey = apiKey,
+                    model = settingsRepository.selectedModel.value,
+                    sensitivity = "High"
+                )
+
+                if (resultText != null) {
+                    val (parsedExtractedText, urlsList) = parseGeminiOcrResult(resultText)
+
+                    _activeCaptureItem.value = _activeCaptureItem.value?.copy(
+                        extractedText = parsedExtractedText
+                    )
+
+                    val reviews = urlsList.map { (urlStr, desc) ->
+                        ExtractedLinkReview(
+                            originalUrl = urlStr,
+                            url = urlStr,
+                            description = desc,
+                            isSelected = true
+                        )
+                    }
+                    _extractedLinksToReview.value = reviews
+                } else {
+                    _ocrError.value = "Gemini OCR returned an empty result."
+                }
+            } catch (e: Exception) {
+                _ocrError.value = "OCR Failed: ${e.localizedMessage}"
+            } finally {
+                _isOcrLoading.value = false
+            }
+        }
+    }
+
+    fun performRegionOcr(x: Int, y: Int, width: Int, height: Int) {
+        val bitmap = _capturedBitmap.value ?: return
+        val currentItem = _activeCaptureItem.value ?: return
+
+        _isOcrLoading.value = true
+        _ocrError.value = null
+
+        // Clear previous extraction results to ensure clean state and hide old bottom panel immediately during extraction
+        _activeCaptureItem.value = currentItem.copy(extractedText = null)
+        _extractedLinksToReview.value = emptyList()
+        viewModelScope.launch {
+            try {
+                val apiKey = resolveValidApiKeyOrNull()
+                if (apiKey == null) {
+                    _ocrError.value = "Please save a valid Gemini API Key first."
+                    _isOcrLoading.value = false
+                    return@launch
+                }
+                val model = settingsRepository.selectedModel.value
+                val sensitivity = settingsRepository.ocrSensitivity.value
+                val resultText = repository.extractTextFromRegion(bitmap, x, y, width, height, apiKey, model, sensitivity)
+                if (resultText != null) {
+                    val (parsedExtractedText, urlsList) = parseGeminiOcrResult(resultText)
+
+                    val isHttpLink = parsedExtractedText.startsWith("http://") || parsedExtractedText.startsWith("https://")
+                    _activeCaptureItem.value = currentItem.copy(
+                        extractedText = parsedExtractedText,
+                        // If it's a raw URL (fallback case)
+                        title = if (isHttpLink) "Extracted Shared URL" else currentItem.title,
+                        content = if (isHttpLink) parsedExtractedText else currentItem.content,
+                        type = if (isHttpLink) com.example.data.model.SavedItemType.LINK else currentItem.type
+                    )
+
+                    // Stage extracted URLs for review instead of auto-saving
+                    val reviews = urlsList.map { (urlStr, desc) ->
+                        ExtractedLinkReview(
+                            originalUrl = urlStr,
+                            url = urlStr,
+                            description = desc,
+                            isSelected = true
+                        )
+                    }
+                    _extractedLinksToReview.value = reviews
+                } else {
+                    _ocrError.value = "Gemini OCR was unable to read this region. Please select a clearer region."
+                }
+            } catch (e: Exception) {
+                Log.e("SecondBrainVM", "OCR region extraction failed: ${e.message}")
+                _ocrError.value = e.message ?: "OCR region extraction failed. Please try again."
+            } finally {
+                _isOcrLoading.value = false
+            }
+        }
+    }
+
+    fun updateExtractedLink(id: String, updatedUrl: String) {
+        _extractedLinksToReview.value = _extractedLinksToReview.value.map {
+            if (it.id == id) it.copy(url = updatedUrl) else it
+        }
+    }
+
+    fun toggleExtractedLinkSelection(id: String, isSelected: Boolean) {
+        _extractedLinksToReview.value = _extractedLinksToReview.value.map {
+            if (it.id == id) it.copy(isSelected = isSelected) else it
+        }
+    }
+
+    fun confirmAndSaveExtractedLinks(selectedFolders: List<String> = emptyList()) {
+        val linksToSave = _extractedLinksToReview.value.filter { it.isSelected && it.url.isNotBlank() }
+        _extractedLinksToReview.value = emptyList() // Clear review list
+        linksToSave.forEach { reviewItem ->
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    val newId = java.util.UUID.randomUUID().toString()
+                    val foldersToUse = if (selectedFolders.isNotEmpty()) selectedFolders else listOf("AI Extracted")
+                    val initialTitle = if (reviewItem.description.isNotBlank()) reviewItem.description else reviewItem.url
+
+                    val initialItem = com.example.data.model.SavedItem(
+                        id = newId,
+                        type = com.example.data.model.SavedItemType.LINK,
+                        title = initialTitle,
+                        content = reviewItem.url,
+                        folders = foldersToUse,
+                        linkDescription = reviewItem.description
+                    )
+
+                    // 1. Save IMMEDIATELY to DB so it appears instantly
+                    val savedItem = repository.saveItem(initialItem, null)
+                    withContext(Dispatchers.Main) {
+                        com.example.widget.WidgetUpdater.update(context)
+                    }
+
+                    // 2. Fetch metadata in background and update DB
+                    try {
+                        val meta = repository.fetchLinkMetadata(reviewItem.url)
+                        if (!meta.title.isNullOrBlank() || !meta.description.isNullOrBlank() || !meta.imageUrl.isNullOrBlank()) {
+                            val updatedItem = savedItem.copy(
+                                title = meta.title ?: savedItem.title,
+                                linkTitle = meta.title,
+                                linkDescription = reviewItem.description.ifBlank { meta.description },
+                                linkImage = meta.imageUrl
+                            )
+                            repository.saveItem(updatedItem, null)
+                            withContext(Dispatchers.Main) {
+                                com.example.widget.WidgetUpdater.update(context)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("SecondBrainVM", "Background link metadata fetch failed: ${e.message}")
+                    }
+
+                    try {
+                    } catch (e: Exception) {
+                        Log.e("SecondBrainVM", "Background sync failed: ${e.message}")
+                    }
+                } catch (e: Exception) {
+                    Log.e("SecondBrainVM", "Failed to save confirmed extracted link: ${e.message}")
+                }
+            }
+        }
+    }
+
+    // ----------------------------------------------------
+    // SAVING AND DELETING CO-ORDINATION
+    // ----------------------------------------------------
+
+    private var metadataFetchJob: kotlinx.coroutines.Job? = null
+
+    fun fetchLinkPreviewForActiveItem(url: String) {
+        val currentItem = _activeCaptureItem.value ?: return
+        if (currentItem.type != SavedItemType.LINK) return
+        if (url.isBlank()) return
+
+        metadataFetchJob?.cancel()
+        _isMetadataExtracting.value = true
+        _metadataError.value = null
+
+        metadataFetchJob = viewModelScope.launch {
+            try {
+                val metadata = repository.fetchLinkMetadata(url)
+                val updatedItem = _activeCaptureItem.value ?: return@launch
+                if (updatedItem.content == url) {
+                    _activeCaptureItem.value = updatedItem.copy(
+                        linkTitle = metadata.title,
+                        linkDescription = metadata.description,
+                        linkImage = metadata.imageUrl,
+                        title = metadata.title ?: updatedItem.title
+                    )
+
+                    if (metadata.title.isNullOrBlank() && metadata.description.isNullOrBlank() && metadata.imageUrl.isNullOrBlank()) {
+                        _metadataError.value = "No metadata details could be parsed from this page."
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("SecondBrainVM", "Failed to fetch link preview: ${e.message}")
+                _metadataError.value = "Extraction failed: ${e.localizedMessage ?: "Network error or invalid link"}"
+            } finally {
+                _isMetadataExtracting.value = false
+            }
+        }
+    }
+
+    fun startEditItem(item: SavedItem) {
+        _capturedBitmap.value = null
+        pendingMediaBytes = null
+        _extractedLinksToReview.value = emptyList()
+        _isMetadataExtracting.value = false
+        _metadataError.value = null
+        _activeCaptureItem.value = item
+
+        if (item.type == SavedItemType.IMAGE && item.content.isNotBlank()) {
+            _isOcrLoading.value = true
+            viewModelScope.launch {
+                try {
+                    val loader = coil.Coil.imageLoader(context)
+                    val request = coil.request.ImageRequest.Builder(context)
+                        .data(item.content)
+                        .allowHardware(false) // software bitmap is required for OCR / region selection
+                        .build()
+                    val result = loader.execute(request)
+                    if (result is coil.request.SuccessResult) {
+                        val bitmap = (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                        _capturedBitmap.value = bitmap
+                    }
+                } catch (e: Exception) {
+                    Log.e("SecondBrainVM", "Failed to pre-load image bitmap for edit: ${e.message}")
+                } finally {
+                    _isOcrLoading.value = false
+                }
+            }
+        }
+    }
+
+    fun handleMediaSelected(uri: android.net.Uri, type: SavedItemType) {
+        viewModelScope.launch {
+            try {
+                val bytes = readUriBytes(uri)
+                if (bytes != null) {
+                    pendingMediaBytes = bytes
+                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    _capturedBitmap.value = bitmap
+
+                    val extension = if (type == SavedItemType.IMAGE) "jpg" else "mp4"
+                    val localPath = repository.saveToLocalCache("media_${UUID.randomUUID()}.$extension", bytes)
+                    updateActiveCaptureItem { it.copy(content = localPath, thumbnailPath = localPath, type = type) }
+                } else {
+                    // Fallback to Uri string if bytes can't be read directly
+                    updateActiveCaptureItem { it.copy(content = uri.toString(), thumbnailPath = uri.toString(), type = type) }
+                }
+            } catch (e: Exception) {
+                Log.e("SecondBrainVM", "Error in handleMediaSelected: ${e.message}")
+                updateActiveCaptureItem { it.copy(content = uri.toString(), thumbnailPath = uri.toString(), type = type) }
+            }
+        }
+    }
+
+    fun updateActiveCaptureItem(updater: (SavedItem) -> SavedItem) {
+        val oldItem = _activeCaptureItem.value
+        val newItem = oldItem?.let(updater)
+        _activeCaptureItem.value = newItem
+        if (oldItem != null) {
+            captureDrafts[oldItem.type] = oldItem
+        }
+        if (newItem != null) {
+            captureDrafts[newItem.type] = newItem
+        }
+
+        if (oldItem != null && newItem != null && newItem.type == SavedItemType.LINK) {
+            if (oldItem.content != newItem.content && newItem.content.isNotBlank()) {
+                fetchLinkPreviewForActiveItem(newItem.content)
+            }
+        }
+    }
+
+    fun switchActiveCaptureType(type: SavedItemType) {
+        val currentItem = _activeCaptureItem.value ?: return
+        if (currentItem.type == type) return
+
+        captureDrafts[currentItem.type] = currentItem
+        _activeCaptureItem.value = captureDrafts[type]?.copy(type = type) ?: createCaptureDraft(type)
+    }
+
+    private fun createCaptureDraft(type: SavedItemType): SavedItem {
+        return SavedItem(
+            type = type,
+            title = "",
+            content = if (type == SavedItemType.CODE) "// Code snippet" else "",
+            folders = emptyList()
+        )
+    }
+
+    fun saveLocalTextItem(title: String, content: String, type: SavedItemType, selectedFolders: List<String>) {
+        viewModelScope.launch {
+            _isSaving.value = true
+            try {
+                val newItem = SavedItem(
+                    title = title,
+                    content = content,
+                    type = type,
+                    folders = selectedFolders,
+                    timestamp = System.currentTimeMillis()
+                )
+                val savedItem = repository.saveItem(newItem, null)
+                showToast("Item saved successfully.")
+
+                if (type == SavedItemType.LINK && content.isNotBlank()) {
+                    launch(kotlinx.coroutines.Dispatchers.IO) {
+                        try {
+                            val metadata = repository.fetchLinkMetadata(content)
+                            val updatedItem = savedItem.copy(
+                                linkTitle = metadata.title,
+                                linkDescription = metadata.description,
+                                linkImage = metadata.imageUrl,
+                                title = metadata.title ?: savedItem.title
+                            )
+                            repository.saveItem(updatedItem, null)
+                        } catch (e: Exception) {
+                            Log.e("SecondBrainVM", "Bg link preview error: ${e.message}")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("SecondBrainVM", "Failed to save quick note: ${e.message}")
+            } finally {
+                _isSaving.value = false
+            }
+        }
+    }
+
+    fun saveActiveItem() {
+        val item = _activeCaptureItem.value ?: return
+        viewModelScope.launch {
+            _isSaving.value = true
+            _saveProgress.value = 0f
+            try {
+                var finalItem = item
+                if (finalItem.type == SavedItemType.LINK && finalItem.linkTitle.isNullOrBlank()) {
+                    finalItem = buildItemWithFetchedMetadata(finalItem)
+                }
+                val isEdit = allItems.value.any { it.id == finalItem.id }
+                repository.saveItem(finalItem, pendingMediaBytes) { progress ->
+                    _saveProgress.value = progress
+                }
+                _saveProgress.value = 1.0f
+                kotlinx.coroutines.delay(200) // slight delay to show 100% progress state
+                cancelCapture()
+                showToast(if (isEdit) "Item updated successfully." else "Item saved successfully.")
+            } catch (e: Exception) {
+                Log.e("SecondBrainVM", "Failed to save item: ${e.message}")
+            } finally {
+                _isSaving.value = false
+                _saveProgress.value = null
+            }
+        }
+    }
+
+    fun deleteSavedItem(item: SavedItem) {
+        viewModelScope.launch {
+            repository.deleteItem(item)
+        }
+    }
+
+    fun restoreDeletedItem(item: SavedItem) {
+        viewModelScope.launch {
+            repository.saveItem(item)
+                        launch(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                } catch (e: Exception) {
+                    Log.e("SecondBrainVM", "Background sync failed: ${e.message}")
+                }
+            }
+        }
+    }
+
+    fun archiveItem(item: SavedItem) {
+        viewModelScope.launch {
+            // Pre-create "Archive" custom folder if it does not exist
+            if (!customFolders.value.contains("Archive")) {
+                repository.addCustomFolder("Archive")
+            }
+            val updatedFolders = if (item.folders.contains("Archive")) item.folders else item.folders + "Archive"
+            repository.saveItem(item.copy(folders = updatedFolders))
+            showToast("Item archived successfully.")
+        }
+    }
+
+    fun unarchiveItem(item: SavedItem) {
+        viewModelScope.launch {
+            val updatedFolders = item.folders.filter { it != "Archive" }
+            repository.saveItem(item.copy(folders = updatedFolders))
+            showToast("Item unarchived successfully.")
+        }
+    }
+
+    fun createFolder(name: String, colorHex: String? = null, iconName: String? = null, isPinned: Boolean = false) {
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            repository.addCustomFolder(name.trim(), colorHex, iconName, isPinned)
+        }
+    }
+
+    fun deleteFolder(name: String) {
+        viewModelScope.launch {
+            repository.deleteCustomFolder(name)
+        }
+    }
+
+    fun updateFolder(folder: com.example.data.local.CustomFolderEntity) {
+        viewModelScope.launch {
+            repository.updateCustomFolder(folder)
+        }
+    }
+
+    fun renameFolder(oldName: String, newName: String) {
+        if (newName.isBlank() || oldName == newName) return
+        viewModelScope.launch {
+            repository.renameCustomFolder(oldName, newName.trim())
+            showToast("Folder renamed to '${newName.trim()}' successfully.")
+        }
+    }
+
+    fun toggleFolderAssignment(item: SavedItem, folderName: String) {
+        viewModelScope.launch {
+            val updatedFolders = if (item.folders.contains(folderName)) {
+                item.folders.filter { it != folderName }
+            } else {
+                item.folders + folderName
+            }
+            repository.saveItem(item.copy(folders = updatedFolders))
+        }
+    }
+
+    fun updateSavedItem(item: SavedItem) {
+        if (_activeDetailItem.value?.id == item.id) {
+            _activeDetailItem.value = item
+        }
+        viewModelScope.launch {
+            repository.saveItem(item, null)
+            launch(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                } catch (e: Exception) {
+                    Log.e("SecondBrainVM", "Background sync failed: ${e.message}")
+                }
+            }
+        }
+    }
+
+    fun createAndAssignFolder(item: SavedItem, folderName: String) {
+        val trimmed = folderName.trim()
+        if (trimmed.isBlank()) return
+        viewModelScope.launch {
+            if (!customFolders.value.contains(trimmed)) {
+                repository.addCustomFolder(trimmed)
+            }
+            val updatedFolders = if (item.folders.contains(trimmed)) item.folders else item.folders + trimmed
+            repository.saveItem(item.copy(folders = updatedFolders))
+        }
+    }
+
+    // ----------------------------------------------------
+    // PRIVATE STORAGE HELPERS
+    // ----------------------------------------------------
+
+    private fun readUriBytes(uri: Uri): ByteArray? = try {
+        context.contentResolver.openInputStream(uri)?.readBytes()
+    } catch (e: Exception) {
+        Log.e("SecondBrainVM", "Failed to read URI bytes: ${e.message}"); null
+    }
+
+    private val synonymGroups = listOf(
+        setOf("image", "photo", "pic", "picture", "screenshot", "camera", "jpg", "png", "jpeg", "gallery"),
+        setOf("link", "web", "url", "website", "http", "www", "href", "bookmark", "internet"),
+        setOf("video", "movie", "clip", "recording", "mp4", "mkv", "mov", "film"),
+        setOf("audio", "music", "voice", "mic", "sound", "recording", "mp3", "m4a", "wav", "transcript", "podcast"),
+        setOf("code", "dev", "program", "kotlin", "java", "script", "json", "xml", "html", "css", "js", "coding", "developer"),
+        setOf("text", "note", "memo", "write", "content", "document", "doc", "pdf", "txt")
+    )
+
+    private fun levenshteinDistance(s1: String, s2: String): Int {
+        if (s1 == s2) return 0
+        if (s1.isEmpty()) return s2.length
+        if (s2.isEmpty()) return s1.length
+
+        var prev = IntArray(s2.length + 1) { it }
+        var curr = IntArray(s2.length + 1)
+
+        for (i in 1..s1.length) {
+            curr[0] = i
+            for (j in 1..s2.length) {
+                val cost = if (s1[i - 1] == s2[j - 1]) 0 else 1
+                curr[j] = minOf(
+                    prev[j] + 1,
+                    curr[j - 1] + 1,
+                    prev[j - 1] + cost
+                )
+            }
+            val temp = prev
+            prev = curr
+            curr = temp
+        }
+        return prev[s2.length]
+    }
+
+    private fun isFuzzyMatch(word1: String, word2: String): Boolean {
+        if (word1 == word2) return true
+        if (word1.contains(word2) || word2.contains(word1)) return true
+
+        val maxDistance = when {
+            word1.length <= 3 -> 0
+            word1.length <= 5 -> 1
+            else -> 2
+        }
+
+        return levenshteinDistance(word1, word2) <= maxDistance
+    }
+
+    private fun calculateSearchScore(item: SavedItem, queryTerms: List<String>): Int {
+        if (queryTerms.isEmpty()) return 0
+
+        var totalScore = 0
+
+        val titleWords = item.title.lowercase().split(Regex("[^a-zA-Z0-9]")).filter { it.isNotBlank() }
+        val contentWords = item.content.lowercase().split(Regex("[^a-zA-Z0-9]")).filter { it.isNotBlank() }
+        val extTextWords = item.extractedText?.lowercase()?.split(Regex("[^a-zA-Z0-9]"))?.filter { it.isNotBlank() } ?: emptyList()
+        val linkTitleWords = item.linkTitle?.lowercase()?.split(Regex("[^a-zA-Z0-9]"))?.filter { it.isNotBlank() } ?: emptyList()
+        val linkDescWords = item.linkDescription?.lowercase()?.split(Regex("[^a-zA-Z0-9]"))?.filter { it.isNotBlank() } ?: emptyList()
+        val folderWords = item.folders.flatMap { it.lowercase().split(Regex("[^a-zA-Z0-9]")) }.filter { it.isNotBlank() }
+        val itemTypeStr = item.type.displayName.lowercase()
+
+        for (term in queryTerms) {
+            var termMatched = false
+
+            val synonyms = synonymGroups.find { term in it } ?: emptySet()
+            val allSearchTerms = synonyms + term
+
+            for (st in allSearchTerms) {
+                // 1. Title match
+                if (item.title.contains(st, ignoreCase = true)) {
+                    totalScore += 20
+                    termMatched = true
+                } else {
+                    val fuzzyTitleMatch = titleWords.any { isFuzzyMatch(it, st) }
+                    if (fuzzyTitleMatch) {
+                        totalScore += 12
+                        termMatched = true
+                    }
+                }
+
+                // 2. Folder match
+                if (item.folders.any { it.contains(st, ignoreCase = true) }) {
+                    totalScore += 15
+                    termMatched = true
+                } else {
+                    val fuzzyFolderMatch = folderWords.any { isFuzzyMatch(it, st) }
+                    if (fuzzyFolderMatch) {
+                        totalScore += 10
+                        termMatched = true
+                    }
+                }
+
+                // 3. Item type match
+                if (itemTypeStr.contains(st) || isFuzzyMatch(itemTypeStr, st)) {
+                    totalScore += 10
+                    termMatched = true
+                }
+
+                // 4. Link title match
+                if (item.linkTitle?.contains(st, ignoreCase = true) == true) {
+                    totalScore += 12
+                    termMatched = true
+                } else {
+                    val fuzzyLinkTitleMatch = linkTitleWords.any { isFuzzyMatch(it, st) }
+                    if (fuzzyLinkTitleMatch) {
+                        totalScore += 8
+                        termMatched = true
+                    }
+                }
+
+                // 5. Main content match
+                if (item.content.contains(st, ignoreCase = true)) {
+                    totalScore += 8
+                    termMatched = true
+                } else {
+                    val fuzzyContentMatch = contentWords.any { isFuzzyMatch(it, st) }
+                    if (fuzzyContentMatch) {
+                        totalScore += 5
+                        termMatched = true
+                    }
+                }
+
+                // 6. Link description match
+                if (item.linkDescription?.contains(st, ignoreCase = true) == true) {
+                    totalScore += 8
+                    termMatched = true
+                } else {
+                    val fuzzyLinkDescMatch = linkDescWords.any { isFuzzyMatch(it, st) }
+                    if (fuzzyLinkDescMatch) {
+                        totalScore += 4
+                        termMatched = true
+                    }
+                }
+
+                // 7. Extracted text match (OCR, transcription, etc.)
+                if (item.extractedText?.contains(st, ignoreCase = true) == true) {
+                    totalScore += 6
+                    termMatched = true
+                } else {
+                    val fuzzyExtTextMatch = extTextWords.any { isFuzzyMatch(it, st) }
+                    if (fuzzyExtTextMatch) {
+                        totalScore += 3
+                        termMatched = true
+                    }
+                }
+            }
+
+            if (!termMatched) {
+                return 0
+            }
+        }
+
+        return totalScore
+    }
+
+    // FOSS build: device sessions not available
+    val devices: StateFlow<List<com.example.data.model.DeviceSession>> = MutableStateFlow(emptyList<com.example.data.model.DeviceSession>()).asStateFlow()
+    val isDevicesLoading: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
+    fun loadDeviceSessions() = Unit
+}
+
+data class ExtractedLinkReview(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val originalUrl: String,
+    val url: String,
+    val description: String,
+    val isSelected: Boolean = true
+)

@@ -1,0 +1,5 @@
+Official Stable Release (v1.0.0):
+- Unified Feedback, Feature Request & Survey Data Persistence across FOSS & Play flavors
+- Guaranteed local data preservation for offline & guest users plus Firestore cloud sync
+- Real-time GitHub update checking & auto-notification engine
+- Harmonized M3 Expressive UI, single-line input field styling, and consistent theme surfaces

@@ -3,6 +3,26 @@ package com.example.util
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
+import java.util.concurrent.TimeUnit
+
+/**
+ * Result model for real-time online update checks against GitHub releases.
+ */
+sealed class UpdateCheckResult {
+    data class UpdateAvailable(
+        val latestVersionName: String,
+        val releaseUrl: String,
+        val releaseNotes: String
+    ) : UpdateCheckResult()
+
+    object UpToDate : UpdateCheckResult()
+    data class Error(val message: String) : UpdateCheckResult()
+}
 
 /**
  * Supported release tags/channels with curated, high-contrast M3 colors.
@@ -65,6 +85,13 @@ data class ReleaseNote(
  */
 object AppVersionManager {
 
+    private val okHttpClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .build()
+    }
+
     /**
      * Parses the current version name from BuildConfig to extract the dynamic release tag.
      */
@@ -90,16 +117,73 @@ object AppVersionManager {
         get() = com.example.BuildConfig.VERSION_CODE
 
     /**
-     * Authentic release history of Second Brain synchronized with CHANGELOG.md.
+     * Authentic release history of Second Brain synchronized with CHANGELOG.md and BuildConfig.
      */
     val releaseHistory: List<ReleaseNote> = listOf(
+        ReleaseNote(
+            versionName = "1.0.0",
+            versionCode = 10,
+            releaseDate = "August 5, 2026",
+            tag = AppVersionTag.STABLE,
+            isCurrent = true,
+            isLatest = true,
+            highlights = listOf(
+                "Official Stable Release (v1.0.0)",
+                "Unified Local & Cloud Feedback, Feature Request & Survey Storage",
+                "Guaranteed Data Preservation Across FOSS & Play Builds for Guest & Signed-In Users",
+                "Real-Time GitHub Update Checking & Auto-Notification Engine",
+                "Material 3 Expressive UI & Clean Input Field Styling"
+            ),
+            features = listOf(
+                "Unified local JSON and cloud Firestore persistence for bug reports, feature requests, and surveys",
+                "Real-time GitHub online update checking with direct download and release notes bottom sheet",
+                "Harmonized Material 3 Expressive UI, single-line input field styling, and consistent surface themes"
+            ),
+            improvements = listOf(
+                "Bumped version to v1.0.0 Stable (Build #10)",
+                "Guaranteed zero data-loss architecture for FOSS, Play, and Guest user submissions",
+                "F-Droid recipe and Fastlane metadata synchronization"
+            ),
+            bugFixes = listOf(
+                "Fixed feedback and survey submissions saving to nowhere",
+                "Fixed input field container fill colors and title placeholder line wrapping",
+                "Fixed surface theme color inconsistencies across bottom sheets"
+            )
+        ),
+        ReleaseNote(
+            versionName = "1.0.0-rc02",
+            versionCode = 9,
+            releaseDate = "August 4, 2026",
+            tag = AppVersionTag.RC,
+            isCurrent = false,
+            isLatest = false,
+            highlights = listOf(
+                "Second Release Candidate (1.0.0-rc02)",
+                "Real GitHub API Update Checking Engine",
+                "F-Droid Build Recipe & Fastlane Metadata Auto-Sync Engine",
+                "Consolidated AppFeedbackBanner Feedback System"
+            ),
+            features = listOf(
+                "Real-time GitHub Releases update checking with direct download link",
+                "F-Droid metadata formatting and script auto-synchronization",
+                "App-wide network timeout bounds and error notification banners"
+            ),
+            improvements = listOf(
+                "Updated BuildConfig version to 1.0.0-rc02 (Build #9)",
+                "Dynamically bound release notes history to active build version"
+            ),
+            bugFixes = listOf(
+                "Fixed static release notes history mismatch with BuildConfig",
+                "Replaced simulated update check delay with authentic GitHub API queries"
+            )
+        ),
         ReleaseNote(
             versionName = "1.0.0-nightly01",
             versionCode = 8,
             releaseDate = "July 23, 2026",
             tag = AppVersionTag.NIGHTLY,
-            isCurrent = true,
-            isLatest = true,
+            isCurrent = false,
+            isLatest = false,
             highlights = listOf(
                 "Bleeding-Edge Nightly Build (1.0.0-nightly01)",
                 "Android 12+ Tuned Haptic Engine Manager (Disabled by default)",
@@ -294,6 +378,69 @@ object AppVersionManager {
 
     fun isUpdateAvailable(): Boolean {
         val latest = getLatestRelease()
-        return latest.versionCode > currentVersionCode
+        return latest.versionCode > currentVersionCode || isVersionNewer(latest.versionName, currentVersionName)
+    }
+
+    /**
+     * Performs a real HTTP network query against GitHub Releases API to check for updates.
+     */
+    suspend fun checkOnlineUpdates(): UpdateCheckResult = withContext(Dispatchers.IO) {
+        try {
+            val request = Request.Builder()
+                .url("https://api.github.com/repos/hanan-bhatti/second-brain/releases/latest")
+                .header("User-Agent", "SecondBrain-AndroidApp")
+                .header("Accept", "application/vnd.github+json")
+                .build()
+
+            okHttpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    if (response.code == 404) {
+                        return@withContext UpdateCheckResult.UpToDate
+                    }
+                    return@withContext UpdateCheckResult.Error("HTTP ${response.code}: ${response.message}")
+                }
+
+                val responseBody = response.body?.string() ?: return@withContext UpdateCheckResult.Error("Empty response from server")
+                val json = JSONObject(responseBody)
+
+                val tagName = json.optString("tag_name", "").removePrefix("v").trim()
+                val htmlUrl = json.optString("html_url", "https://github.com/hanan-bhatti/second-brain/releases")
+                val bodyText = json.optString("body", "")
+
+                if (tagName.isNotBlank() && isVersionNewer(tagName, currentVersionName)) {
+                    UpdateCheckResult.UpdateAvailable(
+                        latestVersionName = tagName,
+                        releaseUrl = htmlUrl,
+                        releaseNotes = bodyText
+                    )
+                } else {
+                    UpdateCheckResult.UpToDate
+                }
+            }
+        } catch (e: Exception) {
+            UpdateCheckResult.Error(e.localizedMessage ?: "Failed to connect to update server")
+        }
+    }
+
+    /**
+     * Compares remote and local version strings to check if remote is newer.
+     */
+    fun isVersionNewer(remoteVersion: String, localVersion: String): Boolean {
+        val cleanRemote = remoteVersion.removePrefix("v").trim()
+        val cleanLocal = localVersion.removePrefix("v").trim()
+        if (cleanRemote == cleanLocal) return false
+
+        val remoteParts = cleanRemote.split("-", ".").mapNotNull { it.filter { char -> char.isDigit() }.toIntOrNull() }
+        val localParts = cleanLocal.split("-", ".").mapNotNull { it.filter { char -> char.isDigit() }.toIntOrNull() }
+
+        val maxLen = maxOf(remoteParts.size, localParts.size)
+        for (i in 0 until maxLen) {
+            val r = remoteParts.getOrElse(i) { 0 }
+            val l = localParts.getOrElse(i) { 0 }
+            if (r > l) return true
+            if (r < l) return false
+        }
+        return false
     }
 }
+

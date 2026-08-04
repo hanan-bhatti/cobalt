@@ -90,7 +90,6 @@ import androidx.compose.ui.res.painterResource
 import com.example.R
 import com.example.ui.screens.collectEnvironmentReport
 import com.example.util.AppVersionManager
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -194,7 +193,7 @@ fun SurveyBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        containerColor = MaterialTheme.colorScheme.surface,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         modifier = modifier
     ) {
@@ -338,7 +337,8 @@ fun SurveyBottomSheet(
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     // Pre-filled Account Pill
                     Surface(
-                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -581,7 +581,7 @@ fun SurveyBottomSheet(
                     ) {
                         quickCommentPrompts.forEach { prompt ->
                             Surface(
-                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                color = MaterialTheme.colorScheme.surface,
                                 shape = RoundedCornerShape(12.dp),
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                                 modifier = Modifier.clickable {
@@ -619,8 +619,10 @@ fun SurveyBottomSheet(
                         minLines = 2,
                         shape = RoundedCornerShape(14.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                         ),
                         modifier = Modifier.fillMaxWidth().testTag("survey_custom_comment_input")
                     )
@@ -632,28 +634,19 @@ fun SurveyBottomSheet(
                         onClick = {
                             isSubmitting = true
                             coroutineScope.launch {
-                                // Save to Firebase Firestore under "surveys" collection
-                                try {
-                                    val db = FirebaseFirestore.getInstance()
-                                    val payload = hashMapOf(
-                                        "userEmail" to envReport.userEmail,
-                                        "userId" to envReport.userId,
-                                        "deviceModel" to envReport.deviceModel,
-                                        "osVersion" to envReport.osVersion,
-                                        "appVersion" to envReport.appVersion,
-                                        "reaction" to (selectedReaction?.label ?: "Loving It"),
-                                        "favoriteFeatures" to favoriteFeatures.toList(),
-                                        "desiredImprovements" to desiredImprovements.toList(),
-                                        "npsScore" to npsScore,
-                                        "customFeedback" to customFeedback,
-                                        "timestamp" to com.google.firebase.Timestamp.now()
-                                    )
-                                    db.collection("surveys").add(payload)
-                                } catch (e: Exception) {
-                                    // Fallback log
-                                }
-
-                                delay(1200)
+                                com.example.util.FeedbackSubmissionManager.submitSurvey(
+                                    context = context,
+                                    reaction = selectedReaction?.label ?: "Loving It",
+                                    favoriteFeatures = favoriteFeatures.toList(),
+                                    desiredImprovements = desiredImprovements.toList(),
+                                    npsScore = npsScore,
+                                    customFeedback = customFeedback,
+                                    userEmail = envReport.userEmail,
+                                    userId = envReport.userId,
+                                    deviceModel = envReport.deviceModel,
+                                    osVersion = envReport.osVersion,
+                                    appVersion = envReport.appVersion
+                                )
                                 isSubmitting = false
                                 submitSuccess = true
                                 com.example.util.HapticManager.performSuccess(context)

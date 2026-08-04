@@ -1,0 +1,5 @@
+Official Release Candidate (1.0.0-rc02):
+- Real-time GitHub API update checking engine with direct browser downloads
+- F-Droid build recipe & Fastlane metadata auto-sync script
+- Fixed update check delays and hardcoded version tags
+- Enhanced Material 3 Expressive UI and dialogs
