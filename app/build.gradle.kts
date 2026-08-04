@@ -195,3 +195,7 @@ tasks.register<Exec>("syncFdroidMetadata") {
   group = "fdroid"
   commandLine("python3", "${rootDir}/scripts/update_fdroid_metadata.py")
 }
+
+configure<com.google.gms.googleservices.GoogleServicesPlugin.GoogleServicesPluginConfig> {
+  missingGoogleServicesStrategy = MissingGoogleServicesStrategy.IGNORE
+}
