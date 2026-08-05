@@ -8,12 +8,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 - **Official Stable Release (v1.0.0):** Promoted Second Brain to official 1.0.0 Stable production release!
+- **Dynamic Ergonomic Edge Panel & Landscape Mode:** Built dynamic Fitts's law thumb reachability engine for the Edge Panel. High handle positions (< 50% height) dynamically move Quick Actions (`OCR`, `Note`, `Shows`, `Link`, `Open`) and Quick Note to the bottom of the card directly under the thumb. Added landscape mode dimension scaling (`300dp × 280dp`).
+- **FOSS Offline Crash Handler & Email Reporting System (`FossCrashReporter`):** Implemented native uncaught crash interceptor saving device info and full stacktraces to local storage, with an automatic Material 3 `ExpressiveCrashReportDialog` on next launch supporting direct email reports to `hannanbhatti2006@gmail.com`.
 - **Unified Local & Cloud Feedback Persistence (`FeedbackSubmissionManager`):** Built unified data persistence manager for bug reports, feature requests, and in-app surveys that writes locally to `context.filesDir/feedback/` and syncs with Firestore when online.
 - **Guaranteed Zero Data Loss Architecture:** Guaranteed data preservation across FOSS and Play builds for both Guest and Signed-in users.
 - **Real-time Online GitHub Update Checking Engine:** Integrated `AppVersionManager.checkOnlineUpdates()` against GitHub Releases API with automatic startup update notifications and direct download links.
 - **Harmonized Material 3 Expressive UI & Theme Consistency:** Cleaned up input field container fill colors, title placeholder single-line bounds, and bottom sheet surface theme colors.
 
 ### Fixed
+- **`BrainOcrOverlayService` Range Coercion Crash:** Resolved `IllegalArgumentException: Cannot coerce value to an empty range` when calculating Y positions in landscape or small screen heights by enforcing `maxCenterY.coerceAtLeast(minCenterY)`.
 - **Dummy Feedback Submission Fix:** Replaced dummy delay simulations in `FeedbackScreen` and `SurveyBottomSheet` with authentic persistent storage.
 - **Title Placeholder Line Wrapping:** Enforced single-line constraints (`maxLines = 1`, `TextOverflow.Ellipsis`) on title text fields.
 

@@ -129,15 +129,18 @@ object AppVersionManager {
             isLatest = true,
             highlights = listOf(
                 "Official Stable Release (v1.0.0)",
+                "Dynamic Thumb-Reachable Edge Panel Layout & Landscape Scaling",
+                "FOSS Offline Crash Handler & Email Reporting Dialog",
                 "Unified Local & Cloud Feedback, Feature Request & Survey Storage",
-                "Guaranteed Data Preservation Across FOSS & Play Builds for Guest & Signed-In Users",
-                "Real-Time GitHub Update Checking & Auto-Notification Engine",
-                "Material 3 Expressive UI & Clean Input Field Styling"
+                "Guaranteed Zero Data Loss Across FOSS & Play Builds",
+                "Real-Time GitHub Update Checking & Auto-Notification Engine"
             ),
             features = listOf(
+                "Dynamic Fitts's Law thumb reachability in Edge Panel (moves actions to bottom when handle Y is high)",
+                "Adaptive landscape mode layout scaling (300dp × 280dp) and recents scroll optimization",
+                "FOSS uncaught exception handler with next-launch Material 3 crash email report dialog",
                 "Unified local JSON and cloud Firestore persistence for bug reports, feature requests, and surveys",
-                "Real-time GitHub online update checking with direct download and release notes bottom sheet",
-                "Harmonized Material 3 Expressive UI, single-line input field styling, and consistent surface themes"
+                "Real-time GitHub online update checking with direct download and release notes bottom sheet"
             ),
             improvements = listOf(
                 "Bumped version to v1.0.0 Stable (Build #10)",
@@ -145,9 +148,9 @@ object AppVersionManager {
                 "F-Droid recipe and Fastlane metadata synchronization"
             ),
             bugFixes = listOf(
+                "Fixed BrainOcrOverlayService Y-position coercion crash on landscape/small screen heights",
                 "Fixed feedback and survey submissions saving to nowhere",
-                "Fixed input field container fill colors and title placeholder line wrapping",
-                "Fixed surface theme color inconsistencies across bottom sheets"
+                "Fixed input field container fill colors and title placeholder line wrapping"
             )
         ),
         ReleaseNote(

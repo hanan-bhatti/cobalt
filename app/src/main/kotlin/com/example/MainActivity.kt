@@ -44,6 +44,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.material3.Scaffold
@@ -144,9 +146,26 @@ class MainActivity : ComponentActivity() {
                 val activeCaptureItem by viewModel.activeCaptureItem.collectAsState()
                 val activeDetailItem by viewModel.activeDetailItem.collectAsState()
                 val availableUpdate by viewModel.availableUpdate.collectAsState()
+                val context = androidx.compose.ui.platform.LocalContext.current
+                var pendingCrashReport by remember { mutableStateOf(com.example.util.FossCrashReporter.getPendingCrashReport(context)) }
 
                 BackHandler(enabled = activeDetailItem != null) {
                     viewModel.closeDetailItem()
+                }
+
+                if (pendingCrashReport != null) {
+                    com.example.ui.components.ExpressiveCrashReportDialog(
+                        crashReportText = pendingCrashReport!!,
+                        onDismiss = {
+                            com.example.util.FossCrashReporter.clearCrashReport(context)
+                            pendingCrashReport = null
+                        },
+                        onSendEmail = {
+                            com.example.util.FossCrashReporter.sendCrashReportEmail(context, pendingCrashReport!!)
+                            com.example.util.FossCrashReporter.clearCrashReport(context)
+                            pendingCrashReport = null
+                        }
+                    )
                 }
 
                 if (availableUpdate != null) {
@@ -174,7 +193,6 @@ class MainActivity : ComponentActivity() {
                 val currentRoute = navBackStackEntry?.destination?.route
                 val hazeState = remember { HazeState() }
 
-                val context = androidx.compose.ui.platform.LocalContext.current
                 androidx.compose.runtime.DisposableEffect(navController) {
                     val listener = androidx.navigation.NavController.OnDestinationChangedListener { _, destination, _ ->
                         val route = destination.route ?: return@OnDestinationChangedListener

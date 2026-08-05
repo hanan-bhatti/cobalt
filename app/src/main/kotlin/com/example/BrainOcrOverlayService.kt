@@ -567,7 +567,9 @@ class BrainOcrOverlayService : Service() {
         }
         closeBtn.addView(closeIcon)
         header.addView(closeBtn)
-        mainContainerView.addView(header)
+
+        val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val isHighPosition = yPercent < 0.5f
 
         // ═══════════════════════════════════════════════════
         // 2. QUICK ACTIONS — 5-column icon grid
@@ -649,8 +651,6 @@ class BrainOcrOverlayService : Service() {
             actionsGrid.addView(actionCol)
         }
 
-        mainContainerView.addView(actionsGrid)
-
         // ═══════════════════════════════════════════════════
         // 3. QUICK NOTE — inline compact input bar
         // ═══════════════════════════════════════════════════
@@ -724,7 +724,6 @@ class BrainOcrOverlayService : Service() {
         }
         sendBtn.addView(sendIcon)
         noteBar.addView(sendBtn)
-        mainContainerView.addView(noteBar)
 
         // ═══════════════════════════════════════════════════
         // 4. RECENTS — section label + slim list
@@ -737,12 +736,12 @@ class BrainOcrOverlayService : Service() {
             letterSpacing = 0.08f
             setPadding(dpToPx(2), 0, 0, dpToPx(4))
         }
-        mainContainerView.addView(recentsLabel)
 
+        val scrollHeightDp = if (isLandscape) 95 else 175
         val scrollView = ScrollView(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dpToPx(175)
+                dpToPx(scrollHeightDp)
             )
             isVerticalScrollBarEnabled = false
         }
@@ -750,7 +749,25 @@ class BrainOcrOverlayService : Service() {
             orientation = LinearLayout.VERTICAL
         }
         scrollView.addView(recentContainer)
-        mainContainerView.addView(scrollView)
+
+        // ═══════════════════════════════════════════════════
+        // DYNAMIC ERGONOMIC THUMB-REACHABLE ASSEMBLY
+        // ═══════════════════════════════════════════════════
+        // If handle Y position is HIGH (< 50% height): place Quick Actions & Quick Note at BOTTOM for easy thumb reach.
+        // If handle Y position is LOW (>= 50% height): place Quick Actions & Quick Note at TOP.
+        mainContainerView.addView(header)
+
+        if (isHighPosition) {
+            mainContainerView.addView(recentsLabel)
+            mainContainerView.addView(scrollView)
+            mainContainerView.addView(noteBar)
+            mainContainerView.addView(actionsGrid)
+        } else {
+            mainContainerView.addView(actionsGrid)
+            mainContainerView.addView(noteBar)
+            mainContainerView.addView(recentsLabel)
+            mainContainerView.addView(scrollView)
+        }
 
         // ═══════════════════════════════════════════════════
         // 5. MEDIA SEARCH SUBPAGE (LIVE MOVIES, TV & ANIME)
@@ -1211,8 +1228,10 @@ class BrainOcrOverlayService : Service() {
         }
 
         panelView = panel
-        val endWidth = dpToPx(260)
-        val endHeight = dpToPx(400)
+        val endWidthDp = if (isLandscape) 300 else 260
+        val endHeightDp = if (isLandscape) 280 else 400
+        val endWidth = dpToPx(endWidthDp)
+        val endHeight = dpToPx(endHeightDp)
         val expandedMargin = dpToPx(EXPANDED_MARGIN_DP)
         val endWinWidth = endWidth + expandedMargin
 
@@ -1230,7 +1249,7 @@ class BrainOcrOverlayService : Service() {
         cancelPanelAnimation()
 
         val startY = params.y
-        val targetY = calculateYPosition(yPercent, 400)
+        val targetY = calculateYPosition(yPercent, endHeightDp)
         val startWinWidth = params.width
         val startWinHeight = params.height
 
@@ -1532,6 +1551,10 @@ class BrainOcrOverlayService : Service() {
         val opacity = getEdgePanelOpacity()
 
         val expandedMargin = dpToPx(EXPANDED_MARGIN_DP)
+        val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val expandedWidthDp = if (isLandscape) 300 else 260
+        val expandedHeightDp = if (isLandscape) 280 else 400
+
         // Reapply background shape style to handle
         handleView?.let { h ->
             val bgShape = GradientDrawable().apply {
@@ -1547,8 +1570,8 @@ class BrainOcrOverlayService : Service() {
             h.alpha = opacity
 
             h.layoutParams = FrameLayout.LayoutParams(
-                if (isExpanded) dpToPx(260) else dpToPx(thickness),
-                if (isExpanded) dpToPx(400) else dpToPx(height)
+                if (isExpanded) dpToPx(expandedWidthDp) else dpToPx(thickness),
+                if (isExpanded) dpToPx(expandedHeightDp) else dpToPx(height)
             ).apply {
                 gravity = (if (side == "Right") Gravity.END else Gravity.START) or Gravity.CENTER_VERTICAL
                 val m = if (isExpanded) expandedMargin else 0
@@ -1564,14 +1587,14 @@ class BrainOcrOverlayService : Service() {
 
         val params = root.layoutParams as WindowManager.LayoutParams
         params.gravity = Gravity.CENTER_VERTICAL or (if (side == "Right") Gravity.END else Gravity.START)
-        params.y = calculateYPosition(yPercent, if (isExpanded) 400 else height)
+        params.y = calculateYPosition(yPercent, if (isExpanded) expandedHeightDp else height)
 
         if (!isExpanded) {
             params.width = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
             params.height = dpToPx(height)
         } else {
-            params.width = dpToPx(260) + expandedMargin
-            params.height = dpToPx(400)
+            params.width = dpToPx(expandedWidthDp) + expandedMargin
+            params.height = dpToPx(expandedHeightDp)
         }
 
         params.flags = if (isExpanded) {
@@ -1639,7 +1662,7 @@ class BrainOcrOverlayService : Service() {
         val targetCenterY = screenHeight * yPercent
         val halfHeight = dpToPx(heightDp) / 2
         val minCenterY = halfHeight.toFloat() + dpToPx(24)
-        val maxCenterY = screenHeight.toFloat() - halfHeight - dpToPx(24)
+        val maxCenterY = (screenHeight.toFloat() - halfHeight - dpToPx(24)).coerceAtLeast(minCenterY)
         val clampedCenterY = targetCenterY.coerceIn(minCenterY, maxCenterY)
         return (clampedCenterY - (screenHeight / 2f)).toInt()
     }

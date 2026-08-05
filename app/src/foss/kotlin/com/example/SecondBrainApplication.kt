@@ -13,7 +13,8 @@ import coil.decode.VideoFrameDecoder
 class SecondBrainApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
-        // FOSS build: no Firebase initialization
+        // Initialize FOSS local crash reporter
+        com.example.util.FossCrashReporter.init(this)
     }
 
     override fun newImageLoader(): ImageLoader {
