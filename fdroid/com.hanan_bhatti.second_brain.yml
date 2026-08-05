@@ -14,7 +14,7 @@ AutoName: Second Brain
 Builds:
   - versionName: 1.0.0
     versionCode: 10
-    commit: c7cae039a655eb6138b4d9ab9c0237053f370148
+    commit: 5f49486ddab2f6345d5d184156d1083de448063e
     subdir: app
     gradle:
       - assembleFossRelease
