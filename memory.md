@@ -1,0 +1,3 @@
+* When modifying Android backup rules (`data_extraction_rules.xml`), it is better to provide explicit `<exclude>` rules for caches, device-specific data, and temporary states, while relying on the system default behavior (backing everything else up). By explicitly defining `<include>` rules, we restrict the backup solely to those items, which can silently drop other important application data.
+* `backup_rules.xml` should be kept in sync with `data_extraction_rules.xml` for legacy device backup compatibility.
+* If a keystore issue comes up on a test or debug build, generating a self-signed key to the `app/debug.keystore` file usually resolves the error.
