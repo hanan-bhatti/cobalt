@@ -540,12 +540,16 @@ class SecondBrainRepository(private val context: Context) {
 
         // 2. Fetch all saved items and update their foldersJson if they contain oldName
         val allItemsList = savedItemDao.getAllItems()
+        val itemsToUpdate = mutableListOf<com.example.data.local.SavedItemEntity>()
         allItemsList.forEach { entity ->
             val domain = entity.toDomain()
             if (domain.folders.contains(oldName)) {
                 val updatedFolders = domain.folders.map { if (it == oldName) newName else it }
-                savedItemDao.insertItem(domain.copy(folders = updatedFolders).toEntity())
+                itemsToUpdate.add(domain.copy(folders = updatedFolders).toEntity())
             }
+        }
+        if (itemsToUpdate.isNotEmpty()) {
+            savedItemDao.insertItems(itemsToUpdate)
         }
 
         // 3. Delete old folder
