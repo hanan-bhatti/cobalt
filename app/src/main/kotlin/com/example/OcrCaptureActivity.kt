@@ -262,43 +262,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
 
                     // OCR Progress Overlay
                     if (isOcrLoading) {
-                        Surface(
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .padding(32.dp)
-                                .widthIn(max = 280.dp),
-                            shape = RoundedCornerShape(28.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
-                            tonalElevation = 8.dp
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 28.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(20.dp)
-                            ) {
-                                CircularWavyProgressIndicator(
-                                    modifier = Modifier.size(48.dp),
-                                    color = MaterialTheme.colorScheme.primary,
-                                    trackColor = MaterialTheme.colorScheme.surfaceVariant
-                                )
-                                Text(
-                                    text = "Reading Region\nwith Gemini...",
-                                    fontWeight = FontWeight.ExtraBold,
-                                    textAlign = TextAlign.Center,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    lineHeight = 22.sp,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Analyzing visual layout\nto locate text and hyperlinks.",
-                                    textAlign = TextAlign.Center,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    lineHeight = 16.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
+                        OcrProgressOverlay(modifier = Modifier.align(Alignment.Center))
                     }
 
                     // Extracted Results bottom review panel
@@ -774,6 +738,48 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                     }
                 }
             }
+        }
+    }
+}
+
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun OcrProgressOverlay(modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier
+            .padding(32.dp)
+            .widthIn(max = 280.dp),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+        tonalElevation = 8.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            CircularWavyProgressIndicator(
+                modifier = Modifier.size(48.dp),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+            Text(
+                text = "Reading Region\nwith Gemini...",
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.titleMedium,
+                lineHeight = 22.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "Analyzing visual layout\nto locate text and hyperlinks.",
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodySmall,
+                lineHeight = 16.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
