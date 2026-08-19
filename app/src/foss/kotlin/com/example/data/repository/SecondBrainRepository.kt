@@ -66,7 +66,7 @@ class SecondBrainRepository(private val context: Context) {
         apiKey: String,
         model: String
     ): String? = withContext(Dispatchers.IO) {
-        if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
+        if (apiKey.isEmpty() || !apiKey.startsWith("AIza")) {
             return@withContext "API Key Missing. Enter your key in the AI Studio Secrets panel or the Profile page."
         }
 
@@ -96,7 +96,7 @@ class SecondBrainRepository(private val context: Context) {
         apiKey: String,
         model: String
     ): String? = withContext(Dispatchers.IO) {
-        if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
+        if (apiKey.isEmpty() || !apiKey.startsWith("AIza")) {
             return@withContext "API Key Missing. Enter your key in the AI Studio Secrets panel or the Profile page."
         }
 
@@ -602,7 +602,7 @@ class SecondBrainRepository(private val context: Context) {
         model: String,
         sensitivity: String = "Medium"
     ): String? = withContext(Dispatchers.IO) {
-        if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") {
+        if (apiKey.isEmpty() || !apiKey.startsWith("AIza")) {
             Log.e("SecondBrainRepo", "Gemini API key is missing or is the placeholder.")
             return@withContext "API Key Missing. Enter your key in the AI Studio Secrets panel or the Profile page."
         }
