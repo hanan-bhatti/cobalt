@@ -266,7 +266,7 @@ class SecondBrainRepository(private val context: Context) {
                 null
             }
         } catch (e: Exception) {
-            Log.e("SecondBrainRepo", "Failed to read file bytes from path $filePath: ${e.message}")
+            Log.e("SecondBrainRepo", "Failed to read file bytes: ${e.message}")
             null
         }
     }
@@ -320,7 +320,7 @@ class SecondBrainRepository(private val context: Context) {
                     }
                 }
             } catch (e: Exception) {
-                Log.e("SecondBrainRepo", "TMDb searchMulti failed: ${e.message}")
+                Log.e("SecondBrainRepo", "TMDb searchMulti failed")
             }
         }
 
@@ -354,7 +354,7 @@ class SecondBrainRepository(private val context: Context) {
                 )
             }
         } catch (e: Exception) {
-            Log.e("SecondBrainRepo", "Jikan searchAnime failed: ${e.message}")
+            Log.e("SecondBrainRepo", "Jikan searchAnime failed")
         }
 
         results
