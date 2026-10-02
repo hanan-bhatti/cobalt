@@ -1041,6 +1041,7 @@ class BrainOcrOverlayService : Service() {
                                         setOnClickListener {
                                             serviceScope.launch {
                                                 val savedItem = SavedItem(
+                                                    id = item.id,
                                                     type = SavedItemType.MEDIA,
                                                     title = item.title,
                                                     content = item.overview ?: "",
@@ -1052,6 +1053,7 @@ class BrainOcrOverlayService : Service() {
                                                     genres = item.genres,
                                                     watchProviders = item.watchProviders,
                                                     trailerUrl = item.trailerUrl,
+                                                    rating = item.rating,
                                                     folders = listOf("Media")
                                                 )
                                                 repository.saveItem(savedItem)

@@ -695,6 +695,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         _extractedLinksToReview.value = emptyList()
         _isMetadataExtracting.value = false
         _metadataError.value = null
+        editOriginalId = null
         captureDrafts.clear()
     }
 
@@ -983,7 +984,9 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     sensitivity = "High"
                 )
 
-                if (resultText != null) {
+                if (resultText?.startsWith("Error") == true) {
+                    _ocrError.value = resultText
+                } else if (resultText != null) {
                     val (parsedExtractedText, urlsList) = parseGeminiOcrResult(resultText)
 
                     _activeCaptureItem.value = _activeCaptureItem.value?.copy(
@@ -1031,7 +1034,9 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 val model = settingsRepository.selectedModel.value
                 val sensitivity = settingsRepository.ocrSensitivity.value
                 val resultText = repository.extractTextFromRegion(bitmap, x, y, width, height, apiKey, model, sensitivity)
-                if (resultText != null) {
+                if (resultText?.startsWith("Error") == true) {
+                    _ocrError.value = resultText
+                } else if (resultText != null) {
                     val (parsedExtractedText, urlsList) = parseGeminiOcrResult(resultText)
 
                     val isHttpLink = parsedExtractedText.startsWith("http://") || parsedExtractedText.startsWith("https://")
@@ -1172,12 +1177,15 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    private var editOriginalId: String? = null
+
     fun startEditItem(item: SavedItem) {
         _capturedBitmap.value = null
         pendingMediaBytes = null
         _extractedLinksToReview.value = emptyList()
         _isMetadataExtracting.value = false
         _metadataError.value = null
+        editOriginalId = item.id
         _activeCaptureItem.value = item
 
         if (item.type == SavedItemType.IMAGE && item.content.isNotBlank()) {
@@ -1309,13 +1317,22 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 if (finalItem.type == SavedItemType.LINK && finalItem.linkTitle.isNullOrBlank()) {
                     finalItem = buildItemWithFetchedMetadata(finalItem)
                 }
-                val isEdit = allItems.value.any { it.id == finalItem.id }
+                val isEdit = allItems.value.any { it.id == finalItem.id } || editOriginalId != null
                 repository.saveItem(finalItem, pendingMediaBytes) { progress ->
                     _saveProgress.value = progress
                 }
+                
+                if (editOriginalId != null && editOriginalId != finalItem.id) {
+                    val oldItem = allItems.value.find { it.id == editOriginalId }
+                    if (oldItem != null) {
+                        repository.deleteItem(oldItem)
+                    }
+                }
+                
                 _saveProgress.value = 1.0f
                 kotlinx.coroutines.delay(200) // slight delay to show 100% progress state
                 cancelCapture()
+                editOriginalId = null
                 showToast(if (isEdit) "Item updated successfully." else "Item saved successfully.")
             } catch (e: Exception) {
                 Log.e("SecondBrainVM", "Failed to save item: ${e.message}")
