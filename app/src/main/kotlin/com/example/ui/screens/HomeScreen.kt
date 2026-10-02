@@ -765,7 +765,7 @@ fun HomeScreen(
             exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp, start = 16.dp, end = 16.dp)
+                .padding(bottom = 100.dp, start = 16.dp, end = 16.dp)
         ) {
             Surface(
                 shape = RoundedCornerShape(20.dp),

@@ -1,3 +1,4 @@
+import com.google.firebase.perf.plugin.FirebasePerfExtension
 import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -32,6 +33,10 @@ android {
     create("foss") {
       dimension = "distribution"
       manifestPlaceholders["appName"] = "Second Brain"
+      // Disable Firebase Performance instrumentation for foss builds
+      configure<FirebasePerfExtension> {
+        setInstrumentationEnabled(false)
+      }
     }
     create("play") {
       dimension = "distribution"
