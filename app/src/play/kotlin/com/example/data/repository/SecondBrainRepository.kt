@@ -300,7 +300,7 @@ class SecondBrainRepository(private val context: Context) {
                 null
             }
         } catch (e: Exception) {
-            Log.e("SecondBrainRepo", "Failed to read file bytes from path $filePath: ${e.message}")
+            Log.e("SecondBrainRepo", "Failed to read file bytes: ${e.message}")
             null
         }
     }
@@ -354,7 +354,7 @@ class SecondBrainRepository(private val context: Context) {
                     }
                 }
             } catch (e: Exception) {
-                Log.e("SecondBrainRepo", "TMDb searchMulti failed: ${e.message}")
+                Log.e("SecondBrainRepo", "TMDb searchMulti failed")
             }
         }
 
@@ -388,7 +388,7 @@ class SecondBrainRepository(private val context: Context) {
                 )
             }
         } catch (e: Exception) {
-            Log.e("SecondBrainRepo", "Jikan searchAnime failed: ${e.message}")
+            Log.e("SecondBrainRepo", "Jikan searchAnime failed")
         }
 
         results
@@ -645,7 +645,7 @@ class SecondBrainRepository(private val context: Context) {
                 }
                 onProgress(1.0f)
             } catch (e: Exception) {
-                Log.e("SecondBrainRepo", "Background Firebase sync failed for item ${item.id}: ${e.message}")
+                Log.e("SecondBrainRepo", "Background Firebase sync failed: ${e.message}")
             }
         }
 
@@ -741,7 +741,7 @@ class SecondBrainRepository(private val context: Context) {
                     savedItemDao.insertItem(finalItem.toEntity())
                 }
             } catch (e: Exception) {
-                Log.e("SecondBrainRepo", "Background Firebase backup failed for item ${entity.id}: ${e.message}")
+                Log.e("SecondBrainRepo", "Background Firebase backup failed: ${e.message}")
             }
         }
         com.example.widget.WidgetUpdater.update(context)
@@ -788,7 +788,7 @@ class SecondBrainRepository(private val context: Context) {
                             }
                         }
                     } catch (downloadEx: Exception) {
-                        Log.e("SecondBrainRepo", "Failed to download media blob for item $id: ${downloadEx.message}")
+                        Log.e("SecondBrainRepo", "Failed to download media blob: ${downloadEx.message}")
                         // Abort for this item to avoid data loss
                         continue
                     }
@@ -828,7 +828,7 @@ class SecondBrainRepository(private val context: Context) {
                         val storageRef = storage.getReferenceFromUrl(mediaUrl!!)
                         storageRef.delete().await()
                     } catch (storageEx: Exception) {
-                        Log.w("SecondBrainRepo", "Failed to delete storage blob for item $id: ${storageEx.message}")
+                        Log.w("SecondBrainRepo", "Failed to delete storage blob: ${storageEx.message}")
                     }
                 }
 
@@ -852,7 +852,7 @@ class SecondBrainRepository(private val context: Context) {
                 }
 
             } catch (e: Exception) {
-                Log.e("SecondBrainRepo", "Failed to remove backup for item $id: ${e.message}")
+                Log.e("SecondBrainRepo", "Failed to remove backup: ${e.message}")
             }
         }
     }
@@ -969,10 +969,10 @@ class SecondBrainRepository(private val context: Context) {
                         // picked up above); leave the flag as-is for non-media items.
                         finalItem = finalItem.copy(isSynced = true)
                         savedItemDao.insertItem(finalItem.toEntity())
-                        Log.d("SecondBrainRepo", "Successfully synced item: ${finalItem.id}")
+                        Log.d("SecondBrainRepo", "Successfully synced item")
                     }
                 } catch (e: Exception) {
-                    Log.e("SecondBrainRepo", "Failed to sync item ${entity.id}: ${e.message}")
+                    Log.e("SecondBrainRepo", "Failed to sync item: ${e.message}")
                 }
             }
         }
@@ -994,10 +994,10 @@ class SecondBrainRepository(private val context: Context) {
                         .set(folderMap).await()
 
                     customFolderDao.insertFolder(folder.copy(isSynced = true))
-                    Log.d("SecondBrainRepo", "Successfully synced folder: ${folder.name}")
+                    Log.d("SecondBrainRepo", "Successfully synced folder")
                 }
             } catch (e: Exception) {
-                Log.e("SecondBrainRepo", "Failed to sync folder ${folder.name}: ${e.message}")
+                Log.e("SecondBrainRepo", "Failed to sync folder: ${e.message}")
             }
         }
     }
