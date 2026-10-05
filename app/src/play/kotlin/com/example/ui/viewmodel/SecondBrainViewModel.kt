@@ -791,7 +791,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         // Auto-fetch models when API key is available or updated
         viewModelScope.launch {
             settingsRepository.geminiApiKey.collect { key ->
-                if (key.isNotBlank() && key != "MY_GEMINI_API_KEY") {
+                if (key.isNotBlank() && key.startsWith("AIza")) {
                     fetchAvailableModels(isUserTriggered = false)
                 }
             }
@@ -1382,7 +1382,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
 
     private fun resolveValidApiKeyOrNull(): String? {
         val apiKey = settingsRepository.geminiApiKey.value.ifEmpty { com.example.BuildConfig.GEMINI_API_KEY }
-        return if (apiKey.isEmpty() || apiKey == "MY_GEMINI_API_KEY") null else apiKey
+        return if (apiKey.isEmpty() || !apiKey.startsWith("AIza")) null else apiKey
     }
 
     private fun parseGeminiOcrResult(raw: String): Pair<String, List<Pair<String, String>>> {
