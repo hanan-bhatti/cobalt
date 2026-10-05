@@ -32,6 +32,9 @@ interface SavedItemDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertItem(item: SavedItemEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertItems(items: List<SavedItemEntity>)
+
     @Delete
     suspend fun deleteItem(item: SavedItemEntity)
 
