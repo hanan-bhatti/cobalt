@@ -435,7 +435,7 @@ fun CaptureScreen(
 
                 LaunchedEffect(searchQuery) {
                     delay(350)
-                    viewModel.searchMedia(searchQuery)
+                    if (searchQuery.isNotBlank()) { viewModel.searchMedia(searchQuery) }
                 }
 
                 if (item.title.isBlank()) {
