@@ -217,7 +217,16 @@ fun CaptureScreen(
                 color = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.padding(bottom = 6.dp)
             )
+            val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+            androidx.compose.runtime.LaunchedEffect(item.type) {
+                val index = SavedItemType.entries.indexOf(item.type)
+                if (index >= 0) {
+                    listState.animateScrollToItem(index)
+                }
+            }
+
             androidx.compose.foundation.lazy.LazyRow(
+                state = listState,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
             ) {
@@ -246,6 +255,30 @@ fun CaptureScreen(
                 }
             }
 
+            var totalDrag by remember { mutableStateOf(0f) }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .pointerInput(Unit) {
+                        androidx.compose.foundation.gestures.detectHorizontalDragGestures(
+                            onDragStart = { totalDrag = 0f },
+                            onDragEnd = { 
+                                val currentIndex = SavedItemType.entries.indexOf(item.type)
+                                if (totalDrag > 100f && currentIndex > 0) {
+                                    viewModel.switchActiveCaptureType(SavedItemType.entries[currentIndex - 1])
+                                } else if (totalDrag < -100f && currentIndex < SavedItemType.entries.size - 1) {
+                                    viewModel.switchActiveCaptureType(SavedItemType.entries[currentIndex + 1])
+                                }
+                                totalDrag = 0f
+                            },
+                            onHorizontalDrag = { change, dragAmount ->
+                                change.consume()
+                                totalDrag += dragAmount
+                            }
+                        )
+                    }
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
             if (item.type != SavedItemType.MEDIA) {
                 // TITLE FIELD
                 Text(
@@ -1184,6 +1217,9 @@ fun CaptureScreen(
                 }
             }
 
+            } // End of Swipe Box Column
+            } // End of Swipe Box
+            
             // AUTO-CATEGORIZATION ASSURANCE BOX (Design polish)
             Surface(
                 shape = RoundedCornerShape(20.dp),
