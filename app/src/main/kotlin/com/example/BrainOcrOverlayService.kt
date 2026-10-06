@@ -737,11 +737,11 @@ class BrainOcrOverlayService : Service() {
             setPadding(dpToPx(2), 0, 0, dpToPx(4))
         }
 
-        val scrollHeightDp = if (isLandscape) 95 else 175
         val scrollView = ScrollView(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dpToPx(scrollHeightDp)
+                0,
+                1f
             )
             isVerticalScrollBarEnabled = false
         }
@@ -760,8 +760,8 @@ class BrainOcrOverlayService : Service() {
         if (isHighPosition) {
             mainContainerView.addView(recentsLabel)
             mainContainerView.addView(scrollView)
-            mainContainerView.addView(noteBar)
             mainContainerView.addView(actionsGrid)
+            mainContainerView.addView(noteBar)
         } else {
             mainContainerView.addView(actionsGrid)
             mainContainerView.addView(noteBar)

@@ -51,6 +51,7 @@ import com.example.util.FossCrashReporter
 /**
  * Material 3 Expressive Crash Report Dialog shown on app startup after an unexpected crash.
  */
+@Suppress("DEPRECATION")
 @Composable
 fun ExpressiveCrashReportDialog(
     crashReportText: String,

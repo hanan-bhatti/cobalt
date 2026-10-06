@@ -1566,6 +1566,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
+    @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
     fun confirmAndSaveExtractedLinks(selectedFolders: List<String> = emptyList()) {
         val linksToSave = _extractedLinksToReview.value.filter { it.isSelected && it.url.isNotBlank() }
         _extractedLinksToReview.value = emptyList() // Clear review list
