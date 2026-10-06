@@ -121,12 +121,43 @@ object AppVersionManager {
      */
     val releaseHistory: List<ReleaseNote> = listOf(
         ReleaseNote(
+            versionName = "1.1.0-beta01",
+            versionCode = 11,
+            releaseDate = "October 6, 2026",
+            tag = AppVersionTag.BETA,
+            isCurrent = true,
+            isLatest = true,
+            highlights = listOf(
+                "Beta Release (v1.1.0-beta01)",
+                "Tab Swiping & Auto-Scroll in Capture Screen",
+                "Save Progress Shimmer Animation",
+                "Swipe-to-Dismiss Feedback Banners"
+            ),
+            features = listOf(
+                "Horizontal swipe gesture in Capture Screen to fluidly switch between item types",
+                "Auto-scrolling to the active tab in the SavedItemType row",
+                "Sleek shimmering progress animation on the Save button matching rounded corners",
+                "Redesigned AppFeedbackBanner with slimmer height and swipe-to-dismiss"
+            ),
+            improvements = listOf(
+                "Bumped version to v1.1.0-beta01 (Build #11)"
+            ),
+            bugFixes = listOf(
+                "Fixed massive empty layout gap in the Edge Panel overlay",
+                "Properly anchored the Quick thought bar to the bottom edge during high-anchor interactions",
+                "Fixed OCR link previews being killed immediately after Activity closure using app-level scope",
+                "Relaxed Gemini API key validation to support enterprise and regional keys without 'AIza' prefix",
+                "Prevented silent media search timeouts by blocking empty queries on Capture screen load"
+            )
+        ),
+
+        ReleaseNote(
             versionName = "1.0.0",
             versionCode = 10,
             releaseDate = "August 5, 2026",
             tag = AppVersionTag.STABLE,
-            isCurrent = true,
-            isLatest = true,
+            isCurrent = false,
+            isLatest = false,
             highlights = listOf(
                 "Official Stable Release (v1.0.0)",
                 "Dynamic Thumb-Reachable Edge Panel Layout & Landscape Scaling",
