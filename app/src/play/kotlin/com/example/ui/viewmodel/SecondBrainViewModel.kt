@@ -791,7 +791,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         // Auto-fetch models when API key is available or updated
         viewModelScope.launch {
             settingsRepository.geminiApiKey.collect { key ->
-                if (key.isNotBlank() && key.startsWith("AIza")) {
+                if (key.isNotBlank()) {
                     fetchAvailableModels(isUserTriggered = false)
                 }
             }
