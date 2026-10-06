@@ -1382,7 +1382,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
 
     private fun resolveValidApiKeyOrNull(): String? {
         val apiKey = settingsRepository.geminiApiKey.value.ifEmpty { com.example.BuildConfig.GEMINI_API_KEY }
-        return if (apiKey.isEmpty() || !apiKey.startsWith("AIza")) null else apiKey
+        return if (apiKey.isEmpty() ) null else apiKey
     }
 
     private fun parseGeminiOcrResult(raw: String): Pair<String, List<Pair<String, String>>> {
