@@ -261,7 +261,7 @@ fun CaptureScreen(
                     .fillMaxWidth()
                     .pointerInput(Unit) {
                         androidx.compose.foundation.gestures.detectHorizontalDragGestures(
-                            onDragStart = { totalDrag = 0f },
+                            onDragStart = { _ -> totalDrag = 0f },
                             onDragEnd = { 
                                 val currentIndex = SavedItemType.entries.indexOf(item.type)
                                 if (totalDrag > 100f && currentIndex > 0) {

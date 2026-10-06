@@ -1,6 +1,9 @@
 package com.example.ui.components
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -77,14 +80,15 @@ fun AppFeedbackBanner(
                     .offset { androidx.compose.ui.unit.IntOffset(animatedOffsetX.toInt(), 0) }
                     .padding(horizontal = 16.dp, vertical = 6.dp)
                     .pointerInput(Unit) {
-                        androidx.compose.foundation.gestures.detectHorizontalDragGestures(
+                        val containerWidth = size.width.toFloat()
+                        detectHorizontalDragGestures(
                             onHorizontalDrag = { _, dragAmount ->
                                 offsetX += dragAmount
                             },
                             onDragEnd = {
-                                if (kotlin.math.abs(offsetX) > size.width * 0.3f) {
+                                if (kotlin.math.abs(offsetX) > containerWidth * 0.3f) {
                                     // Dismiss if swiped more than 30%
-                                    offsetX = if (offsetX > 0) size.width.toFloat() else -size.width.toFloat()
+                                    offsetX = if (offsetX > 0) containerWidth else -containerWidth
                                     onDismiss()
                                 } else {
                                     offsetX = 0f
