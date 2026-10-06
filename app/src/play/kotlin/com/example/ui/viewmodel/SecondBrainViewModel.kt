@@ -1570,7 +1570,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
         val linksToSave = _extractedLinksToReview.value.filter { it.isSelected && it.url.isNotBlank() }
         _extractedLinksToReview.value = emptyList() // Clear review list
         linksToSave.forEach { reviewItem ->
-            viewModelScope.launch(Dispatchers.IO) {
+            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                 try {
                     val newId = java.util.UUID.randomUUID().toString()
                     val foldersToUse = if (selectedFolders.isNotEmpty()) selectedFolders else listOf("AI Extracted")
