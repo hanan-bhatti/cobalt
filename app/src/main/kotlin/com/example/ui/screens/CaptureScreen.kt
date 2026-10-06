@@ -30,6 +30,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
@@ -260,7 +261,7 @@ fun CaptureScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .pointerInput(Unit) {
-                        androidx.compose.foundation.gestures.detectHorizontalDragGestures(
+                        detectHorizontalDragGestures(
                             onDragStart = { _ -> totalDrag = 0f },
                             onDragEnd = { 
                                 val currentIndex = SavedItemType.entries.indexOf(item.type)
