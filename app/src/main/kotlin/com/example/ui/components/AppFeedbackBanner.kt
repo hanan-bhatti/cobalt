@@ -62,32 +62,56 @@ fun AppFeedbackBanner(
                 FeedbackSeverity.ERROR -> MaterialTheme.colorScheme.onErrorContainer
             }
 
+
+            var offsetX by remember { mutableStateOf(0f) }
+            val animatedOffsetX by animateFloatAsState(targetValue = offsetX)
+            
             Surface(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(12.dp),
                 color = containerColor,
                 contentColor = contentColor,
                 tonalElevation = 6.dp,
                 shadowElevation = 4.dp,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .offset { androidx.compose.ui.unit.IntOffset(animatedOffsetX.toInt(), 0) }
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .pointerInput(Unit) {
+                        androidx.compose.foundation.gestures.detectHorizontalDragGestures(
+                            onHorizontalDrag = { _, dragAmount ->
+                                offsetX += dragAmount
+                            },
+                            onDragEnd = {
+                                if (kotlin.math.abs(offsetX) > size.width * 0.3f) {
+                                    // Dismiss if swiped more than 30%
+                                    offsetX = if (offsetX > 0) size.width.toFloat() else -size.width.toFloat()
+                                    onDismiss()
+                                } else {
+                                    offsetX = 0f
+                                }
+                            },
+                            onDragCancel = {
+                                offsetX = 0f
+                            }
+                        )
+                    }
                     .bounceClick()
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = feedbackMessage.icon,
                         contentDescription = null,
                         tint = contentColor,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = feedbackMessage.message,
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Medium
                         ),
                         modifier = Modifier.weight(1f)
