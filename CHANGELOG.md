@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0-beta01] - 2026-10-06
+
+### Added
+- **Beta Release (v1.1.0-beta01):** Promoted Second Brain to 1.1.0-beta01!
+- **Tab Swiping & Auto-Scroll:** Added horizontal swipe gesture in Capture Screen to fluidly switch between item types (OCR, Note, Shows, Link), and added auto-scrolling to the active tab.
+- **Save Progress Shimmer:** Added a sleek shimmering progress animation to the Save button on the Capture Screen, perfectly matching the rounded corner styling.
+- **Swipe-to-Dismiss Banners:** Redesigned `AppFeedbackBanner` to have a slimmer height and added swipe-to-dismiss gesture for quick clearing.
+
+### Fixed
+- **Floating Panel Ergonomic Layout Gap:** Fixed a massive empty gap in the Edge Panel overlay and ensured the "Quick thought..." bar is properly anchored at the bottom edge during high-anchor interactions.
+- **OCR Background Link Previews:** Fixed a lifecycle issue where saving a link via the OCR overlay immediately killed the metadata extraction process. Moved preview scraping to an app-level scope to guarantee extraction completes in the background.
+- **Gemini Key Validation:** Relaxed the hardcoded "AIza" prefix validation check for Gemini API keys to properly support valid enterprise and specific regional keys.
+- **Blank Media Search Timeout:** Fixed a bug causing silent timeout hangs when editing existing items by preventing empty media search queries on screen load.
+
 ## [1.0.0] - 2026-08-05
 
 ### Added
