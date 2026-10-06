@@ -137,6 +137,16 @@ fun CaptureScreen(
                         ),
                         label = "saveProgress"
                     )
+                    val transition = rememberInfiniteTransition(label = "shimmer")
+                    val shimmerTranslate by transition.animateFloat(
+                        initialValue = -1000f,
+                        targetValue = 1000f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1200, easing = LinearEasing),
+                            repeatMode = RepeatMode.Restart
+                        ),
+                        label = "shimmerTranslate"
+                    )
                     val primaryColor = MaterialTheme.colorScheme.primary
                     val onPrimaryColor = MaterialTheme.colorScheme.onPrimary
 
@@ -154,9 +164,24 @@ fun CaptureScreen(
                             .clip(RoundedCornerShape(20.dp))
                             .drawWithContent {
                                 if (isSavingActive) {
-                                    drawRect(
+                                    drawRoundRect(
                                         color = primaryColor,
-                                        size = size.copy(width = size.width * animatedProgress)
+                                        size = size.copy(width = size.width * animatedProgress),
+                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(20.dp.toPx())
+                                    )
+                                    val shimmerBrush = androidx.compose.ui.graphics.Brush.linearGradient(
+                                        colors = listOf(
+                                            androidx.compose.ui.graphics.Color.Transparent,
+                                            androidx.compose.ui.graphics.Color.White.copy(alpha = 0.3f),
+                                            androidx.compose.ui.graphics.Color.Transparent
+                                        ),
+                                        start = androidx.compose.ui.geometry.Offset(shimmerTranslate, 0f),
+                                        end = androidx.compose.ui.geometry.Offset(shimmerTranslate + 300f, size.height)
+                                    )
+                                    drawRoundRect(
+                                        brush = shimmerBrush,
+                                        size = size.copy(width = size.width * animatedProgress),
+                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(20.dp.toPx())
                                     )
                                 }
                                 drawContent()
