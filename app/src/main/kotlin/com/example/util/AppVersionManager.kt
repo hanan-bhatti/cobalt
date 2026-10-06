@@ -121,14 +121,14 @@ object AppVersionManager {
      */
     val releaseHistory: List<ReleaseNote> = listOf(
         ReleaseNote(
-            versionName = "1.1.0-beta02",
-            versionCode = 12,
+            versionName = "1.1.0-beta01",
+            versionCode = 11,
             releaseDate = "October 6, 2026",
             tag = AppVersionTag.BETA,
             isCurrent = true,
             isLatest = true,
             highlights = listOf(
-                "Beta Release (v1.1.0-beta02)",
+                "Beta Release (v1.1.0-beta01)",
                 "Tab Swiping & Auto-Scroll in Capture Screen",
                 "Save Progress Shimmer Animation",
                 "Swipe-to-Dismiss Feedback Banners"
@@ -140,7 +140,7 @@ object AppVersionManager {
                 "Redesigned AppFeedbackBanner with slimmer height and swipe-to-dismiss"
             ),
             improvements = listOf(
-                "Bumped version to v1.1.0-beta02 (Build #12)"
+                "Bumped version to v1.1.0-beta01 (Build #11)"
             ),
             bugFixes = listOf(
                 "Fixed massive empty layout gap in the Edge Panel overlay",
