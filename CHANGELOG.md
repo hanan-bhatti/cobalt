@@ -30,7 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Harmonized Material 3 Expressive UI & Theme Consistency:** Cleaned up input field container fill colors, title placeholder single-line bounds, and bottom sheet surface theme colors.
 
 ### Fixed
-- **`BrainOcrOverlayService` Range Coercion Crash:** Resolved `IllegalArgumentException: Cannot coerce value to an empty range` when calculating Y positions in landscape or small screen heights by enforcing `maxCenterY.coerceAtLeast(minCenterY)`.
+- **`CobaltOcrOverlayService` Range Coercion Crash:** Resolved `IllegalArgumentException: Cannot coerce value to an empty range` when calculating Y positions in landscape or small screen heights by enforcing `maxCenterY.coerceAtLeast(minCenterY)`.
 - **Dummy Feedback Submission Fix:** Replaced dummy delay simulations in `FeedbackScreen` and `SurveyBottomSheet` with authentic persistent storage.
 - **Title Placeholder Line Wrapping:** Enforced single-line constraints (`maxLines = 1`, `TextOverflow.Ellipsis`) on title text fields.
 

@@ -4,17 +4,17 @@
 - **Commit**: 68f8fea
 - **Severity**: HIGH
 - **Category**: Physicality & Performance
-- **Estimated scope**: 1 file (`app/src/main/java/com/example/BrainOcrOverlayService.kt`)
+- **Estimated scope**: 1 file (`app/src/main/java/com/example/CobaltOcrOverlayService.kt`)
 
 ## Problem
 
-In `BrainOcrOverlayService.kt`, the previous collapse/expand implementation set window layout bounds upfront or deferred window resizing until `onAnimationEnd`. This created a mismatch between `containerView` (which remained 810px wide) and `handleView` (which shrank to 18px inside it), causing `handleView` to render offset at `onScreenX = 270` during SurfaceFlinger IPC layout passes.
+In `CobaltOcrOverlayService.kt`, the previous collapse/expand implementation set window layout bounds upfront or deferred window resizing until `onAnimationEnd`. This created a mismatch between `containerView` (which remained 810px wide) and `handleView` (which shrank to 18px inside it), causing `handleView` to render offset at `onScreenX = 270` during SurfaceFlinger IPC layout passes.
 
-Conversely, the reference implementation in `/home/hanan-bhatti/Downloads/BrainOcrOverlayService.kt` completely eliminates stray handles by updating `params.width`, `params.height`, and `params.y` on **every frame** of `ValueAnimator`. However, its default configuration has minor jerkiness due to a 50ms start delay, 380ms duration, and an aggressive initial curve (`PathInterpolator(0.05f, 0.7f, 0.1f, 1f)`).
+Conversely, the reference implementation in `/home/hanan-bhatti/Downloads/CobaltOcrOverlayService.kt` completely eliminates stray handles by updating `params.width`, `params.height`, and `params.y` on **every frame** of `ValueAnimator`. However, its default configuration has minor jerkiness due to a 50ms start delay, 380ms duration, and an aggressive initial curve (`PathInterpolator(0.05f, 0.7f, 0.1f, 1f)`).
 
 ## Target
 
-Adopt the per-frame WindowManager layout update architecture from `/home/hanan-bhatti/Downloads/BrainOcrOverlayService.kt` in `BrainOcrOverlayService.kt`, optimized for maximum smoothness:
+Adopt the per-frame WindowManager layout update architecture from `/home/hanan-bhatti/Downloads/CobaltOcrOverlayService.kt` in `CobaltOcrOverlayService.kt`, optimized for maximum smoothness:
 1. **Per-Frame Lockstep Window Resizing**: Update `params.width`, `params.height`, and `params.y` inside `addUpdateListener` on every animation frame during both `expandPanel()` and `collapsePanel()`.
 2. **Eliminate Alpha Zeroing / Layout Delay Hacks**: Keep `handleView` visible naturally throughout the morph transition without artificial `alpha = 0f` or `OnLayoutChangeListener` delays.
 3. **Smooth Motion Timing**: Use `duration = 300` with `PathInterpolator(0.32f, 0.72f, 0f, 1f)` (iOS drawer curve) and zero `startDelay` for crisp 60fps/120fps lockstep morphing.
@@ -22,7 +22,7 @@ Adopt the per-frame WindowManager layout update architecture from `/home/hanan-b
 Target code for `expandPanel()` and `collapsePanel()` update listeners:
 
 ```kotlin
-/* Target per-frame window morph in BrainOcrOverlayService.kt */
+/* Target per-frame window morph in CobaltOcrOverlayService.kt */
 addUpdateListener { animation ->
     val fraction = animation.animatedValue as Float
 

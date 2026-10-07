@@ -11,6 +11,6 @@ Prioritized animation and motion improvement plans for Cobalt.
 
 ## Recommended Execution Order
 
-1. **[002-per-frame-window-morph-animation.md](002-per-frame-window-morph-animation.md)**: Ports the per-frame WindowManager layout parameter animation architecture from `/home/hanan-bhatti/Downloads/BrainOcrOverlayService.kt` into `BrainOcrOverlayService.kt`. Eliminates stray handles by animating `params.width`, `params.height`, and `params.y` in lockstep on every frame with a 300ms `PathInterpolator(0.32f, 0.72f, 0f, 1f)` curve.
+1. **[002-per-frame-window-morph-animation.md](002-per-frame-window-morph-animation.md)**: Ports the per-frame WindowManager layout parameter animation architecture from `/home/hanan-bhatti/Downloads/CobaltOcrOverlayService.kt` into `CobaltOcrOverlayService.kt`. Eliminates stray handles by animating `params.width`, `params.height`, and `params.y` in lockstep on every frame with a 300ms `PathInterpolator(0.32f, 0.72f, 0f, 1f)` curve.
 
 To execute a plan, prompt any subagent with the plan filepath.

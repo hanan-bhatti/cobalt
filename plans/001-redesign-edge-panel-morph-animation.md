@@ -4,21 +4,21 @@
 - **Commit**: 68f8fea
 - **Severity**: HIGH
 - **Category**: Interruptibility & Performance & Physicality
-- **Estimated scope**: 1 file (`app/src/main/java/com/example/BrainOcrOverlayService.kt`)
+- **Estimated scope**: 1 file (`app/src/main/java/com/example/CobaltOcrOverlayService.kt`)
 
 ## Problem
 
-In `BrainOcrOverlayService.kt`, expanding and collapsing the floating side panel suffers from IPC surface timing mismatches between `WindowManager.LayoutParams` overlay window resizing and `ValueAnimator` updates:
+In `CobaltOcrOverlayService.kt`, expanding and collapsing the floating side panel suffers from IPC surface timing mismatches between `WindowManager.LayoutParams` overlay window resizing and `ValueAnimator` updates:
 1. `expandPanel()` resizes `containerView` (`root`) upfront to 810px x 1200px.
 2. `collapsePanel()` keeps `containerView` at 810px x 1200px throughout the 380ms collapse animation while `handleView` shrinks inside `containerView`.
 3. In `onAnimationEnd`, `windowManager.updateViewLayout` is called to shrink `containerView` back to 66px x 300px (22dp x 100dp).
 4. Because `WindowManager` resizes window overlay surfaces asynchronously in SurfaceFlinger, `containerView` remains 810px wide on screen for 48ms after `onAnimationEnd` fires.
 5. Using `root.post` attempts to restore `handleView.alpha = opacity` after an arbitrary Handler loop tick, but because it is not frame-synchronized with SurfaceFlinger's actual window layout pass, `handleView` can flash away from the screen edge on devices with varying SurfaceFlinger IPC latency or high refresh rates (90Hz/120Hz).
 
-Current code excerpt (`app/src/main/java/com/example/BrainOcrOverlayService.kt`):
+Current code excerpt (`app/src/main/java/com/example/CobaltOcrOverlayService.kt`):
 
 ```kotlin
-/* app/src/main/java/com/example/BrainOcrOverlayService.kt:1175 — current collapse resize */
+/* app/src/main/java/com/example/CobaltOcrOverlayService.kt:1175 — current collapse resize */
 params.width = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
 params.height = dpToPx(height)
 params.y = calculateYPosition(yPercent, height)
@@ -33,7 +33,7 @@ root.post {
 
 ## Target
 
-Redesign the expand/collapse transition in `BrainOcrOverlayService.kt` to be dynamically robust on any Android device resolution or refresh rate:
+Redesign the expand/collapse transition in `CobaltOcrOverlayService.kt` to be dynamically robust on any Android device resolution or refresh rate:
 1. **Dynamic Easing & Duration**: Use Apple-like drawer curve `PathInterpolator(0.32f, 0.72f, 0f, 1f)` (duration 300ms) for responsive, natural panel entry and exit.
 2. **Deterministic Frame-Synchronized Un-collapse**: Replace `root.post` guessing with a one-time `View.OnLayoutChangeListener` on `containerView` (`root`) during `collapsePanel()`'s `onAnimationEnd`:
    - Keep `handleView?.alpha = 0f` when triggering `updateViewLayout`.
@@ -43,7 +43,7 @@ Redesign the expand/collapse transition in `BrainOcrOverlayService.kt` to be dyn
 Target code:
 
 ```kotlin
-/* target collapse completion in BrainOcrOverlayService.kt */
+/* target collapse completion in CobaltOcrOverlayService.kt */
 val targetWidth = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
 val targetHeight = dpToPx(height)
 
@@ -73,7 +73,7 @@ try {
 
 ## Repo conventions to follow
 
-- Easing curves in `BrainOcrOverlayService.kt` use `PathInterpolator`.
+- Easing curves in `CobaltOcrOverlayService.kt` use `PathInterpolator`.
 - Overlay dimensions are dynamically converted using `dpToPx()`.
 - System gesture exclusions are managed via `updateSystemGestureExclusions()`.
 
