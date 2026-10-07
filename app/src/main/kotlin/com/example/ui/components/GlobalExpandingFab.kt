@@ -96,6 +96,7 @@ fun GlobalExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
+                .navigationBarsPadding()
                 .padding(bottom = 16.dp, end = 16.dp)
         ) {
             Column(

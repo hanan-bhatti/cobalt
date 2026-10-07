@@ -10,8 +10,8 @@
               <option name="connection">
                 <ConnectionSetting>
                   <option name="appId" value="com.hanan_bhatti.cobalt" />
-                  <option name="mobileSdkAppId" value="1:15111876974:android:d3418b62e2dfc35817917f" />
-                  <option name="projectId" value="cobalt-11" />
+                  <option name="mobileSdkAppId" value="1:15111876974:android:f42aa9b88634fa6017917f" />
+                  <option name="projectId" value="second-brain-11" />
                   <option name="projectNumber" value="15111876974" />
                 </ConnectionSetting>
               </option>
