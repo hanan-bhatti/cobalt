@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -67,7 +67,7 @@ import coil.ImageLoader
 import coil.request.ImageRequest
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
-import com.example.data.repository.SecondBrainRepository
+import com.example.data.repository.CobaltRepository
 import com.example.data.repository.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -91,7 +91,7 @@ class BrainOcrOverlayService : Service() {
     private val EXPANDED_MARGIN_DP = 12
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    private lateinit var repository: SecondBrainRepository
+    private lateinit var repository: CobaltRepository
     private lateinit var settingsRepo: SettingsRepository
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private lateinit var prefs: SharedPreferences
@@ -175,10 +175,10 @@ class BrainOcrOverlayService : Service() {
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        repository = SecondBrainRepository(applicationContext)
+        repository = CobaltRepository(applicationContext)
         settingsRepo = SettingsRepository(applicationContext)
 
-        prefs = applicationContext.getSharedPreferences("second_brain_settings", Context.MODE_PRIVATE)
+        prefs = applicationContext.getSharedPreferences("cobalt_settings", Context.MODE_PRIVATE)
         prefs.registerOnSharedPreferenceChangeListener(prefsListener)
 
         createNotificationChannel()
@@ -538,7 +538,7 @@ class BrainOcrOverlayService : Service() {
         brandPill.addView(brandIcon)
 
         val brandLabel = TextView(this).apply {
-            text = "Second Brain"
+            text = "Cobalt"
             textSize = 12f
             setTextColor(accent)
             typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
@@ -711,7 +711,7 @@ class BrainOcrOverlayService : Service() {
                         withContext(Dispatchers.Main) {
                             noteInput.setText("")
                             com.example.widget.WidgetUpdater.update(applicationContext)
-                            Toast.makeText(applicationContext, "✓ Saved to Second Brain", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(applicationContext, "✓ Saved to Cobalt", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -1707,7 +1707,7 @@ class BrainOcrOverlayService : Service() {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Second Brain Assistant Active")
+            .setContentTitle("Cobalt Assistant Active")
             .setContentText("Tap the side handle on your screen or swipe from the edge to open options.")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentIntent(pendingIntent)

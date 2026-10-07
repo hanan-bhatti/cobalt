@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -64,7 +64,7 @@ import com.example.MainActivity
 import com.example.R
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
-import com.example.data.repository.SecondBrainRepository
+import com.example.data.repository.CobaltRepository
 import com.example.ui.theme.*
 import com.example.utils.AnalyticsHelper
 
@@ -106,7 +106,7 @@ class RecentItemsWidget : GlanceAppWidget() {
         var freshItems: List<SavedItem>? = null
         try {
             val fetched = kotlinx.coroutines.withTimeoutOrNull(2000) {
-                SecondBrainRepository(context).getAllItems()
+                CobaltRepository(context).getAllItems()
             }
             if (fetched != null) {
                 freshItems = fetched
@@ -130,7 +130,7 @@ class RecentItemsWidget : GlanceAppWidget() {
 @Composable
 fun RecentItemsContent(items: List<SavedItem>, isFromCache: Boolean, isTimeout: Boolean) {
     val context = LocalContext.current
-    val prefs = context.getSharedPreferences("second_brain_settings", Context.MODE_PRIVATE)
+    val prefs = context.getSharedPreferences("cobalt_settings", Context.MODE_PRIVATE)
 
     val categoryFilter = prefs.getString("widget_category_filter", "All") ?: "All"
     val maxItems = prefs.getInt("widget_max_items", 10)
@@ -197,7 +197,7 @@ fun RecentItemsHeader(isFromCache: Boolean, isTimeout: Boolean) {
     } catch (e: Throwable) {
         null
     } ?: try {
-        val prefs = context.getSharedPreferences("second_brain_prefs", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE)
         prefs.getString("simulated_name", null)?.trim()?.ifBlank { null }
             ?: prefs.getString("simulated_email", null)?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
     } catch (e: Exception) {
@@ -253,7 +253,7 @@ fun RecentItemsHeader(isFromCache: Boolean, isTimeout: Boolean) {
             }
             Spacer(modifier = GlanceModifier.height(2.dp))
             Text(
-                text = "Your Second Brain",
+                text = "Your Cobalt",
                 style = TextStyle(
                     fontFamily = FontFamily.SansSerif,
                     fontSize = 11.sp,

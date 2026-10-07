@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -49,7 +49,7 @@ import java.io.FileOutputStream
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
-class SecondBrainRepository(private val context: Context) {
+class CobaltRepository(private val context: Context) {
 
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
@@ -86,7 +86,7 @@ class SecondBrainRepository(private val context: Context) {
             val response = RetrofitClient.geminiService.generateContent("models/$model", apiKey, request)
             response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
         } catch (e: Exception) {
-            Log.e("SecondBrainRepo", "Gemini Audio call failed: ${e.message}")
+            Log.e("CobaltRepo", "Gemini Audio call failed: ${e.message}")
             "Error: ${e.localizedMessage ?: "Transcription failed"}"
         }
     }
@@ -101,7 +101,7 @@ class SecondBrainRepository(private val context: Context) {
         }
 
         val promptText = """
-            You are an expert voice memo scribe for a Second Brain app.
+            You are an expert voice memo scribe for a Cobalt app.
             Format the following spoken thought or speech memo into a beautifully organized, professional, and clear Markdown document.
             Requirements:
             1. Provide a beautiful, highly descriptive H1 title at the very top (do not use generic titles like "Voice Memo").
@@ -127,7 +127,7 @@ class SecondBrainRepository(private val context: Context) {
             val response = RetrofitClient.geminiService.generateContent("models/$model", apiKey, request)
             response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
         } catch (e: Exception) {
-            Log.e("SecondBrainRepo", "Gemini Speech format call failed: ${e.message}")
+            Log.e("CobaltRepo", "Gemini Speech format call failed: ${e.message}")
             "Error: ${e.localizedMessage ?: "Formatting failed"}"
         }
     }
@@ -266,12 +266,12 @@ class SecondBrainRepository(private val context: Context) {
                 null
             }
         } catch (e: Exception) {
-            Log.e("SecondBrainRepo", "Failed to read file bytes: ${e.message}")
+            Log.e("CobaltRepo", "Failed to read file bytes: ${e.message}")
             null
         }
     }
 
-    private val prefs = context.getSharedPreferences("second_brain_prefs", Context.MODE_PRIVATE)
+    private val prefs = context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE)
 
     fun getTmdbApiKey(): String {
         return prefs.getString("tmdb_api_key", "") ?: ""
@@ -320,7 +320,7 @@ class SecondBrainRepository(private val context: Context) {
                     }
                 }
             } catch (e: Exception) {
-                Log.e("SecondBrainRepo", "TMDb searchMulti failed")
+                Log.e("CobaltRepo", "TMDb searchMulti failed")
             }
         }
 
@@ -354,7 +354,7 @@ class SecondBrainRepository(private val context: Context) {
                 )
             }
         } catch (e: Exception) {
-            Log.e("SecondBrainRepo", "Jikan searchAnime failed")
+            Log.e("CobaltRepo", "Jikan searchAnime failed")
         }
 
         results
@@ -440,7 +440,7 @@ class SecondBrainRepository(private val context: Context) {
                         }
                     }
                 } catch (e: Exception) {
-                    Log.e("SecondBrainRepo", "Failed to enrich TMDb media item: ${e.message}")
+                    Log.e("CobaltRepo", "Failed to enrich TMDb media item: ${e.message}")
                 }
             }
         } else if (item.id.startsWith("jikan_") || item.mediaType?.lowercase() == "anime") {
@@ -454,7 +454,7 @@ class SecondBrainRepository(private val context: Context) {
                         updated = true
                     }
                 } catch (e: Exception) {
-                    Log.e("SecondBrainRepo", "Failed to fetch Jikan streaming info: ${e.message}")
+                    Log.e("CobaltRepo", "Failed to fetch Jikan streaming info: ${e.message}")
                 }
             }
         }
@@ -607,7 +607,7 @@ class SecondBrainRepository(private val context: Context) {
         sensitivity: String = "Medium"
     ): String? = withContext(Dispatchers.IO) {
         if (apiKey.isBlank()) {
-            Log.e("SecondBrainRepo", "Gemini API key is missing or blank.")
+            Log.e("CobaltRepo", "Gemini API key is missing or blank.")
             return@withContext "API Key Missing. Enter your key in the AI Studio Secrets panel or the Profile page."
         }
 
@@ -675,7 +675,7 @@ class SecondBrainRepository(private val context: Context) {
             val response = RetrofitClient.geminiService.generateContent("models/$model", apiKey, request)
             response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
         } catch (e: Exception) {
-            Log.e("SecondBrainRepo", "Gemini API call failed: ${e.message}")
+            Log.e("CobaltRepo", "Gemini API call failed: ${e.message}")
             "Error: ${e.localizedMessage ?: "OCR failed"}"
         }
     }
@@ -732,7 +732,7 @@ class SecondBrainRepository(private val context: Context) {
 
             LinkMetadata(title?.trim(), description?.trim(), imageUrl)
         } catch (e: Exception) {
-            Log.e("SecondBrainRepo", "Failed to fetch link metadata: ${e.message}")
+            Log.e("CobaltRepo", "Failed to fetch link metadata: ${e.message}")
             LinkMetadata(null, null, null)
         }
     }

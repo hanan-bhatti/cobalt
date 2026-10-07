@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * FOSS flavor: all analytics calls are no-ops (no Firebase Analytics dependency).

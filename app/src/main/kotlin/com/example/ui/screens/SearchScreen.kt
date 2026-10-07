@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -65,7 +65,7 @@ import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.data.model.getBestImagePath
 import com.example.utils.AnalyticsHelper
-import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.viewmodel.CobaltViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -74,7 +74,7 @@ import java.util.concurrent.TimeUnit
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun SearchScreen(
-    viewModel: SecondBrainViewModel,
+    viewModel: CobaltViewModel,
     onNavigateBack: () -> Unit,
     onItemClick: (SavedItem) -> Unit
 ) {

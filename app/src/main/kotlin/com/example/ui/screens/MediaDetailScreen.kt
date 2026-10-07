@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -66,14 +66,14 @@ import com.example.data.model.getBestImagePath
 import com.example.ui.components.MarkdownText
 import com.example.ui.components.VideoPlayer
 import com.example.ui.theme.*
-import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.viewmodel.CobaltViewModel
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MediaDetailSection(
     item: SavedItem,
-    viewModel: SecondBrainViewModel,
+    viewModel: CobaltViewModel,
     modifier: Modifier = Modifier,
     onWatchStatusChanged: ((String) -> Unit)? = null
 ) {

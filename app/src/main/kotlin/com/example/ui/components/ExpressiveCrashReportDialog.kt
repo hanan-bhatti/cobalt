@@ -105,7 +105,7 @@ fun ExpressiveCrashReportDialog(
                 modifier = Modifier.animateContentSize()
             ) {
                 Text(
-                    text = "Second Brain encountered an unexpected error on its previous run. You can email the stack trace directly to the developer to get it resolved in the next release.",
+                    text = "Cobalt encountered an unexpected error on its previous run. You can email the stack trace directly to the developer to get it resolved in the next release.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

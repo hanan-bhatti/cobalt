@@ -105,7 +105,7 @@ data class QuickPromptItem(
 )
 
 /**
- * Ultra-Modern, Gamified In-App Survey Sheet for Second Brain.
+ * Ultra-Modern, Gamified In-App Survey Sheet for Cobalt.
  * Follows Hick's Law, Fitts's Law, and Goal-Gradient Effect for high completion rates.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -231,7 +231,7 @@ fun SurveyBottomSheet(
                     }
                     Column {
                         Text(
-                            text = "Second Brain Survey",
+                            text = "Cobalt Survey",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -359,7 +359,7 @@ fun SurveyBottomSheet(
 
                     // Q1: How is your experience? (Emoji Reaction Cards)
                     Text(
-                        text = "1. How is your overall experience with Second Brain?",
+                        text = "1. How is your overall experience with Cobalt?",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -467,7 +467,7 @@ fun SurveyBottomSheet(
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     // Q3: Desired Improvements (Chips)
                     Text(
-                        text = "3. What would make Second Brain even better?",
+                        text = "3. What would make Cobalt even better?",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface

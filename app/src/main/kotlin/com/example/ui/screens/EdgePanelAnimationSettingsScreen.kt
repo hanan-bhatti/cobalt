@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -42,12 +42,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.BrainOcrOverlayService
 import com.example.R
-import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.viewmodel.CobaltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EdgePanelAnimationSettingsScreen(
-    viewModel: SecondBrainViewModel,
+    viewModel: CobaltViewModel,
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current

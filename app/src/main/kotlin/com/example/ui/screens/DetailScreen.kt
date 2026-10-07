@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -63,7 +63,7 @@ import coil.compose.AsyncImage
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.data.model.getBestImagePath
-import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.viewmodel.CobaltViewModel
 import java.text.SimpleDateFormat
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
@@ -90,7 +90,7 @@ import com.example.ui.theme.toThemeColor
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailScreen(
-    viewModel: SecondBrainViewModel,
+    viewModel: CobaltViewModel,
     onClose: () -> Unit,
     onEdit: (SavedItem) -> Unit,
     hazeState: HazeState,
@@ -559,7 +559,7 @@ fun DetailScreen(
                                 .clip(RoundedCornerShape(8.dp))
                                 .clickable {
                                     coroutineScope.launch {
-                                        clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Second Brain Content", descriptionToShow)))
+                                        clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Cobalt Content", descriptionToShow)))
                                     }
                                     Toast.makeText(context, "Copied to clipboard!", Toast.LENGTH_SHORT).show()
                                 }
@@ -642,7 +642,7 @@ fun DetailScreen(
                                         .size(20.dp)
                                         .clickable {
                                             coroutineScope.launch {
-                                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Second Brain Content", item.content)))
+                                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Cobalt Content", item.content)))
                                             }
                                             Toast.makeText(context, "Copied!", Toast.LENGTH_SHORT).show()
                                         },

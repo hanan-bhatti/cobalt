@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -27,7 +27,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
-import com.example.data.repository.SecondBrainRepository
+import com.example.data.repository.CobaltRepository
 import com.example.data.remote.MediaSearchResultItem
 import com.example.widget.WidgetUpdater
 import kotlinx.coroutines.Dispatchers
@@ -36,10 +36,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
-class SecondBrainViewModel(application: Application) : AndroidViewModel(application) {
+class CobaltViewModel(application: Application) : AndroidViewModel(application) {
 
     private val context = application.applicationContext
-    private val repository = SecondBrainRepository(context)
+    private val repository = CobaltRepository(context)
     val settingsRepository = com.example.data.repository.SettingsRepository(context)
 
     /** Returns true when the device has an active internet-capable network. */
@@ -263,7 +263,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 }
                 repository.updateItems(itemsToUpdate)
             } catch (e: Exception) {
-                Log.e("SecondBrainVM", "Failed to update order indices: ${e.message}")
+                Log.e("CobaltVM", "Failed to update order indices: ${e.message}")
             }
         }
     }
@@ -280,7 +280,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             try {
                 repository.saveItem(updatedItem, null)
             } catch (e: Exception) {
-                Log.e("SecondBrainVM", "Failed to reorder item: ${e.message}")
+                Log.e("CobaltVM", "Failed to reorder item: ${e.message}")
             }
         }
     }
@@ -379,7 +379,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     )
                 }
             } catch (e: Exception) {
-                Log.e("SecondBrainVM", "searchMedia failed: ${e.message}")
+                Log.e("CobaltVM", "searchMedia failed: ${e.message}")
                 _mediaSearchResults.value = emptyList()
                 postFeedback(
                     message = "Media search error: ${e.localizedMessage ?: "Unknown error"}",
@@ -414,7 +414,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
 
         // 1. Instantly close sheet and notify user
         closeMediaSearchSheet()
-        showToast("Saved ${item.title} to Second Brain!")
+        showToast("Saved ${item.title} to Cobalt!")
 
         // 2. Save locally and launch background enrichment
         viewModelScope.launch {
@@ -540,7 +540,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     showToast("Refreshed ${models.size} models successfully.")
                 }
             } catch (e: Exception) {
-                Log.e("SecondBrainVM", "Failed to fetch models: ${e.message}")
+                Log.e("CobaltVM", "Failed to fetch models: ${e.message}")
                 if (isUserTriggered) {
                     showToast("Failed to refresh models: ${e.message ?: "Unknown error"}")
                 }
@@ -611,7 +611,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
 
 
 
-    private val prefs = context.getSharedPreferences("second_brain_prefs", android.content.Context.MODE_PRIVATE)
+    private val prefs = context.getSharedPreferences("cobalt_prefs", android.content.Context.MODE_PRIVATE)
 
 
     init {
@@ -761,7 +761,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                         )
                         _activeCaptureItem.value?.let { captureDrafts[SavedItemType.IMAGE] = it }
                     } catch (e: Exception) {
-                        Log.e("SecondBrainVM", "Failed to load shared image: ${e.message}")
+                        Log.e("CobaltVM", "Failed to load shared image: ${e.message}")
                     }
                 }
 
@@ -782,7 +782,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                         )
                         _activeCaptureItem.value?.let { captureDrafts[SavedItemType.VIDEO] = it }
                     } catch (e: Exception) {
-                        Log.e("SecondBrainVM", "Failed to load shared video: ${e.message}")
+                        Log.e("CobaltVM", "Failed to load shared video: ${e.message}")
                     }
                 }
             }
@@ -924,7 +924,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 }
             }
         } catch (e: Exception) {
-            Log.w("SecondBrainVM", "Failed to parse OCR JSON, falling back to raw text.")
+            Log.w("CobaltVM", "Failed to parse OCR JSON, falling back to raw text.")
         }
         return Pair(parsedExtractedText, urlsList)
     }
@@ -1062,7 +1062,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     _ocrError.value = "Gemini OCR was unable to read this region. Please select a clearer region."
                 }
             } catch (e: Exception) {
-                Log.e("SecondBrainVM", "OCR region extraction failed: ${e.message}")
+                Log.e("CobaltVM", "OCR region extraction failed: ${e.message}")
                 _ocrError.value = e.message ?: "OCR region extraction failed. Please try again."
             } finally {
                 _isOcrLoading.value = false
@@ -1124,15 +1124,15 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                             }
                         }
                     } catch (e: Exception) {
-                        Log.e("SecondBrainVM", "Background link metadata fetch failed: ${e.message}")
+                        Log.e("CobaltVM", "Background link metadata fetch failed: ${e.message}")
                     }
 
                     try {
                     } catch (e: Exception) {
-                        Log.e("SecondBrainVM", "Background sync failed: ${e.message}")
+                        Log.e("CobaltVM", "Background sync failed: ${e.message}")
                     }
                 } catch (e: Exception) {
-                    Log.e("SecondBrainVM", "Failed to save confirmed extracted link: ${e.message}")
+                    Log.e("CobaltVM", "Failed to save confirmed extracted link: ${e.message}")
                 }
             }
         }
@@ -1170,7 +1170,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     }
                 }
             } catch (e: Exception) {
-                Log.e("SecondBrainVM", "Failed to fetch link preview: ${e.message}")
+                Log.e("CobaltVM", "Failed to fetch link preview: ${e.message}")
                 _metadataError.value = "Extraction failed: ${e.localizedMessage ?: "Network error or invalid link"}"
             } finally {
                 _isMetadataExtracting.value = false
@@ -1204,7 +1204,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                         _capturedBitmap.value = bitmap
                     }
                 } catch (e: Exception) {
-                    Log.e("SecondBrainVM", "Failed to pre-load image bitmap for edit: ${e.message}")
+                    Log.e("CobaltVM", "Failed to pre-load image bitmap for edit: ${e.message}")
                 } finally {
                     _isOcrLoading.value = false
                 }
@@ -1229,7 +1229,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                     updateActiveCaptureItem { it.copy(content = uri.toString(), thumbnailPath = uri.toString(), type = type) }
                 }
             } catch (e: Exception) {
-                Log.e("SecondBrainVM", "Error in handleMediaSelected: ${e.message}")
+                Log.e("CobaltVM", "Error in handleMediaSelected: ${e.message}")
                 updateActiveCaptureItem { it.copy(content = uri.toString(), thumbnailPath = uri.toString(), type = type) }
             }
         }
@@ -1296,12 +1296,12 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                             )
                             repository.saveItem(updatedItem, null)
                         } catch (e: Exception) {
-                            Log.e("SecondBrainVM", "Bg link preview error: ${e.message}")
+                            Log.e("CobaltVM", "Bg link preview error: ${e.message}")
                         }
                     }
                 }
             } catch (e: Exception) {
-                Log.e("SecondBrainVM", "Failed to save quick note: ${e.message}")
+                Log.e("CobaltVM", "Failed to save quick note: ${e.message}")
             } finally {
                 _isSaving.value = false
             }
@@ -1336,7 +1336,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                 editOriginalId = null
                 showToast(if (isEdit) "Item updated successfully." else "Item saved successfully.")
             } catch (e: Exception) {
-                Log.e("SecondBrainVM", "Failed to save item: ${e.message}")
+                Log.e("CobaltVM", "Failed to save item: ${e.message}")
             } finally {
                 _isSaving.value = false
                 _saveProgress.value = null
@@ -1356,7 +1356,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
                         launch(kotlinx.coroutines.Dispatchers.IO) {
                 try {
                 } catch (e: Exception) {
-                    Log.e("SecondBrainVM", "Background sync failed: ${e.message}")
+                    Log.e("CobaltVM", "Background sync failed: ${e.message}")
                 }
             }
         }
@@ -1429,7 +1429,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
             launch(kotlinx.coroutines.Dispatchers.IO) {
                 try {
                 } catch (e: Exception) {
-                    Log.e("SecondBrainVM", "Background sync failed: ${e.message}")
+                    Log.e("CobaltVM", "Background sync failed: ${e.message}")
                 }
             }
         }
@@ -1454,7 +1454,7 @@ class SecondBrainViewModel(application: Application) : AndroidViewModel(applicat
     private fun readUriBytes(uri: Uri): ByteArray? = try {
         context.contentResolver.openInputStream(uri)?.readBytes()
     } catch (e: Exception) {
-        Log.e("SecondBrainVM", "Failed to read URI bytes: ${e.message}"); null
+        Log.e("CobaltVM", "Failed to read URI bytes: ${e.message}"); null
     }
 
     private val synonymGroups = listOf(

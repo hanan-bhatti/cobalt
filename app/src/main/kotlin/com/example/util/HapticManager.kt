@@ -10,12 +10,12 @@ import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 
 /**
- * High-performance, tuned Haptic Feedback Engine for Second Brain.
+ * High-performance, tuned Haptic Feedback Engine for Cobalt.
  * Follows Android 12+ API 31+ VibrationEffect Composition primitives for premium tactile feel.
  * Default state: Disabled by default (user selectable via Settings).
  */
 object HapticManager {
-    private const val PREFS_NAME = "second_brain_haptics_prefs"
+    private const val PREFS_NAME = "cobalt_haptics_prefs"
     private const val KEY_HAPTICS_ENABLED = "haptics_enabled"
 
     private fun getPrefs(context: Context): SharedPreferences {

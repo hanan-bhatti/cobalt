@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -41,7 +41,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.ui.components.bounceClick
-import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.viewmodel.CobaltViewModel
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -51,7 +51,7 @@ import dev.chrisbanes.haze.hazeSource
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MovieApiKeyScreen(
-    viewModel: SecondBrainViewModel,
+    viewModel: CobaltViewModel,
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current

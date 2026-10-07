@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -52,7 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.viewmodel.CobaltViewModel
 import kotlinx.coroutines.flow.StateFlow
 import androidx.compose.ui.res.painterResource
 import com.example.R
@@ -72,7 +72,7 @@ import com.example.utils.DevicePerformance
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    viewModel: SecondBrainViewModel,
+    viewModel: CobaltViewModel,
     onNavigateBack: () -> Unit
 ) {
     var showEdgePanelSettings by remember { mutableStateOf(false) }
@@ -560,7 +560,7 @@ fun SettingsScreen(
                                                 val component = ComponentName(context, QuickCaptureWidgetReceiver::class.java)
                                                 appWidgetManager.requestPinAppWidget(component, null, null)
                                             } else {
-                                                Toast.makeText(context, "Long press home screen to add Second Brain widget", Toast.LENGTH_LONG).show()
+                                                Toast.makeText(context, "Long press home screen to add Cobalt widget", Toast.LENGTH_LONG).show()
                                             }
                                         },
                                         modifier = Modifier.weight(1f),
@@ -581,7 +581,7 @@ fun SettingsScreen(
                                                 val component = ComponentName(context, RecentItemsWidgetReceiver::class.java)
                                                 appWidgetManager.requestPinAppWidget(component, null, null)
                                             } else {
-                                                Toast.makeText(context, "Long press home screen to add Second Brain widget", Toast.LENGTH_LONG).show()
+                                                Toast.makeText(context, "Long press home screen to add Cobalt widget", Toast.LENGTH_LONG).show()
                                             }
                                         },
                                         modifier = Modifier.weight(1f),
@@ -790,7 +790,7 @@ fun SettingsToggleRow(title: String, subtitle: String? = null, checked: Boolean,
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EdgePanelSettingsScreen(viewModel: SecondBrainViewModel, onNavigateBack: () -> Unit) {
+fun EdgePanelSettingsScreen(viewModel: CobaltViewModel, onNavigateBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(

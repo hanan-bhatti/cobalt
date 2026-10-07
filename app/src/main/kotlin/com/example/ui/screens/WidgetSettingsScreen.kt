@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -58,7 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.ui.theme.*
-import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.viewmodel.CobaltViewModel
 import com.example.widget.QuickCaptureWidgetReceiver
 import com.example.widget.RecentItemsWidgetReceiver
 import com.example.widget.WidgetUpdater
@@ -66,7 +66,7 @@ import com.example.widget.WidgetUpdater
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WidgetSettingsScreen(
-    viewModel: SecondBrainViewModel,
+    viewModel: CobaltViewModel,
     onNavigateBack: () -> Unit
 ) {
     val isDark = isSystemInDarkTheme()
@@ -212,7 +212,7 @@ private fun AnimatedCapsuleDotIndicator(
 
 @Composable
 private fun QuickCaptureCustomizationSection(
-    viewModel: SecondBrainViewModel
+    viewModel: CobaltViewModel
 ) {
     val isDark = isSystemInDarkTheme()
     val context = LocalContext.current
@@ -494,7 +494,7 @@ private fun RecentItemsCustomizationSection(
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = "Your Second Brain",
+                                        text = "Your Cobalt",
                                         fontSize = 11.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )

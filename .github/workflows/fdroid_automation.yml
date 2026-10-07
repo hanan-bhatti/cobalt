@@ -33,7 +33,7 @@ jobs:
           test -f fastlane/metadata/android/en-US/title.txt
           test -f fastlane/metadata/android/en-US/short_description.txt
           test -f fastlane/metadata/android/en-US/full_description.txt
-          test -f fdroid/com.hanan_bhatti.second_brain.yml
+          test -f fdroid/com.hanan_bhatti.cobalt.yml
           echo "All F-Droid submission files verified!"
 
       - name: Check for Uncommitted Changes

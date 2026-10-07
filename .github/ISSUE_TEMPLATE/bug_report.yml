@@ -1,5 +1,5 @@
 name: Bug Report
-description: File a bug report to help us improve Second Brain
+description: File a bug report to help us improve Cobalt
 title: "[Bug]: "
 labels: ["bug", "triage"]
 body:
@@ -8,13 +8,13 @@ body:
       value: |
         Thank you for taking the time to report a bug! Please ensure you have searched existing issues first.
         
-        **Note:** For reporting security issues, please refer directly to our [Security Policy](https://github.com/hanan-bhatti/second-brain/blob/main/SECURITY.md) instead of using this public form.
+        **Note:** For reporting security issues, please refer directly to our [Security Policy](https://github.com/hanan-bhatti/cobalt/blob/main/SECURITY.md) instead of using this public form.
 
   - type: dropdown
     id: app-version
     attributes:
       label: App Version
-      description: What version of Second Brain are you running? (Refer to SECURITY.md for supported versions)
+      description: What version of Cobalt are you running? (Refer to SECURITY.md for supported versions)
       options:
         - v0.9.0-beta01
         - Custom Build / Development Branch
@@ -28,7 +28,7 @@ body:
       placeholder: e.g. Android 14, Xiaomi Redmi Note 12 Pro / Oppo Find X5
       description: |
         Please specify your Android OS version and device manufacturer/model. 
-        This is critical as Second Brain contains OEM-specific logic for Oppo, Vivo, and Xiaomi background process management.
+        This is critical as Cobalt contains OEM-specific logic for Oppo, Vivo, and Xiaomi background process management.
     validations:
       required: true
 

@@ -3,13 +3,13 @@ Categories:
   - Utility
 License: AGPL-3.0-or-later
 AuthorName: Hanan Bhatti
-WebSite: https://github.com/hanan-bhatti/second-brain
-SourceCode: https://github.com/hanan-bhatti/second-brain
-IssueTracker: https://github.com/hanan-bhatti/second-brain/issues
+WebSite: https://github.com/hanan-bhatti/cobalt
+SourceCode: https://github.com/hanan-bhatti/cobalt
+IssueTracker: https://github.com/hanan-bhatti/cobalt/issues
 RepoType: git
-Repo: https://github.com/hanan-bhatti/second-brain.git
+Repo: https://github.com/hanan-bhatti/cobalt.git
 
-AutoName: Second Brain
+AutoName: Cobalt
 
 Builds:
   - versionName: 1.0.0

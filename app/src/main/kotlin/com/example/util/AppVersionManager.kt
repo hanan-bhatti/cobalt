@@ -117,7 +117,7 @@ object AppVersionManager {
         get() = com.example.BuildConfig.VERSION_CODE
 
     /**
-     * Authentic release history of Second Brain synchronized with CHANGELOG.md and BuildConfig.
+     * Authentic release history of Cobalt synchronized with CHANGELOG.md and BuildConfig.
      */
     val releaseHistory: List<ReleaseNote> = listOf(
         ReleaseNote(
@@ -396,7 +396,7 @@ object AppVersionManager {
             isCurrent = false,
             isLatest = false,
             highlights = listOf(
-                "Initial Beta Release of Second Brain",
+                "Initial Beta Release of Cobalt",
                 "Floating OCR & System Share Sheet Capture"
             ),
             features = listOf(
@@ -421,8 +421,8 @@ object AppVersionManager {
     suspend fun checkOnlineUpdates(): UpdateCheckResult = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder()
-                .url("https://api.github.com/repos/hanan-bhatti/second-brain/releases/latest")
-                .header("User-Agent", "SecondBrain-AndroidApp")
+                .url("https://api.github.com/repos/hanan-bhatti/cobalt/releases/latest")
+                .header("User-Agent", "Cobalt-AndroidApp")
                 .header("Accept", "application/vnd.github+json")
                 .build()
 
@@ -438,7 +438,7 @@ object AppVersionManager {
                 val json = JSONObject(responseBody)
 
                 val tagName = json.optString("tag_name", "").removePrefix("v").trim()
-                val htmlUrl = json.optString("html_url", "https://github.com/hanan-bhatti/second-brain/releases")
+                val htmlUrl = json.optString("html_url", "https://github.com/hanan-bhatti/cobalt/releases")
                 val bodyText = json.optString("body", "")
 
                 if (tagName.isNotBlank() && isVersionNewer(tagName, currentVersionName)) {

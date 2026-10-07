@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -33,7 +33,7 @@ import com.example.ui.theme.LightColorScheme
 @Composable
 fun getWidgetColorProviders(): ColorProviders {
     val context = LocalContext.current
-    val prefs = context.getSharedPreferences("second_brain_settings", Context.MODE_PRIVATE)
+    val prefs = context.getSharedPreferences("cobalt_settings", Context.MODE_PRIVATE)
 
     val themeMode = prefs.getString("theme_mode", "Light") ?: "Light"
     val useDynamic = prefs.getBoolean("dynamic_color", true)

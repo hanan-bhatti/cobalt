@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -89,7 +89,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.data.model.getBestImagePath
-import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.viewmodel.CobaltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
@@ -110,7 +110,7 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     onNavigateToSearch: () -> Unit,
-    viewModel: SecondBrainViewModel,
+    viewModel: CobaltViewModel,
     onNavigateToProfile: () -> Unit,
     onNavigateToMediaHub: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -275,7 +275,7 @@ fun HomeScreen(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
-                                    text = "Second Brain",
+                                    text = "Cobalt",
                                     fontSize = 28.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = FontFamily.SansSerif,
@@ -535,7 +535,7 @@ fun HomeScreen(
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = "Your Second Brain is Empty",
+                                    text = "Your Cobalt is Empty",
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onBackground
@@ -1610,7 +1610,7 @@ fun OnboardingSharingGuide(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Your Second Brain is Ready!",
+                        text = "Your Cobalt is Ready!",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -1664,8 +1664,8 @@ fun OnboardingSharingGuide(
 
             OnboardingStepRow(
                 stepNumber = "2",
-                title = "Select Second Brain",
-                description = "Pick Second Brain from the share sheet to save it instantly."
+                title = "Select Cobalt",
+                description = "Pick Cobalt from the share sheet to save it instantly."
             )
 
             OnboardingStepRow(
@@ -1740,7 +1740,7 @@ fun SharingGuideVisualMockup() {
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
-                    text = "Second Brain",
+                    text = "Cobalt",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -1853,7 +1853,7 @@ fun FolderChipItem(
 }
 
 @Composable
-fun PersistentCaptureForm(viewModel: SecondBrainViewModel) {
+fun PersistentCaptureForm(viewModel: CobaltViewModel) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("draft_prefs", android.content.Context.MODE_PRIVATE) }
     var noteText by remember { mutableStateOf(prefs.getString("quick_note", "") ?: "") }

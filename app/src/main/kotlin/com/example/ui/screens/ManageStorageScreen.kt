@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -36,7 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.viewmodel.CobaltViewModel
 import com.example.data.model.SavedItemType
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.combinedClickable
@@ -88,7 +88,7 @@ data class StorageBreakdownItem(
 @Composable
 fun ManageStorageScreen(
     onNavigateBack: () -> Unit,
-    viewModel: SecondBrainViewModel
+    viewModel: CobaltViewModel
 ) {
     val isDark = isSystemInDarkTheme()
     val isSyncing by viewModel.isSyncing.collectAsState()
@@ -800,7 +800,7 @@ fun ManageStorageScreen(
                     )
                     if (isAlreadyBackedUp) {
                         Text(
-                            text = "This item is backed up securely in your Second Brain cloud storage.",
+                            text = "This item is backed up securely in your Cobalt cloud storage.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.primary
                         )

@@ -1,6 +1,6 @@
 # Animation Plans
 
-Prioritized animation and motion improvement plans for Second Brain.
+Prioritized animation and motion improvement plans for Cobalt.
 
 ## Plan Catalog
 

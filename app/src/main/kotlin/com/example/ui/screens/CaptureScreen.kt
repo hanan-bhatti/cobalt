@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -72,7 +72,7 @@ import coil.compose.AsyncImage
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.ui.components.VideoPlayer
-import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.viewmodel.CobaltViewModel
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.res.painterResource
 import com.example.R
@@ -80,7 +80,7 @@ import com.example.R
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CaptureScreen(
-    viewModel: SecondBrainViewModel,
+    viewModel: CobaltViewModel,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current

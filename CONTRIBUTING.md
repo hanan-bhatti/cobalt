@@ -1,8 +1,8 @@
-# Contributing to Second Brain
+# Contributing to Cobalt
 
-Welcome! We are excited that you want to help make **Second Brain** better. 
+Welcome! We are excited that you want to help make **Cobalt** better. 
 
-Please note that Second Brain is currently a solo-developer project and is in an early public beta phase (`v0.9.0-beta01`). Because of this, the underlying architecture, database schemas, and APIs may still undergo structural changes. We ask for your patience and coordination as we work towards a stable `v1.0.0` release.
+Please note that Cobalt is currently a solo-developer project and is in an early public beta phase (`v0.9.0-beta01`). Because of this, the underlying architecture, database schemas, and APIs may still undergo structural changes. We ask for your patience and coordination as we work towards a stable `v1.0.0` release.
 
 ---
 

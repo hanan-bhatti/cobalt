@@ -1,4 +1,4 @@
-# Second Brain
+# Cobalt
 
 A universal capture and personal knowledge archive with minimalist design and Gemini AI OCR region marking.
 
@@ -13,7 +13,7 @@ A universal capture and personal knowledge archive with minimalist design and Ge
 
 ## Overview
 
-**Second Brain** (package: `com.hanan_bhatti.second_brain`) is a minimalist, offline-first personal knowledge archive and universal capture app for Android. Designed to eliminate the friction of digital hoarding and info fragmentation, Second Brain acts as your central repository for ideas, documents, audio clips, snapshots, and shared web content. 
+**Cobalt** (package: `com.hanan_bhatti.cobalt`) is a minimalist, offline-first personal knowledge archive and universal capture app for Android. Designed to eliminate the friction of digital hoarding and info fragmentation, Cobalt acts as your central repository for ideas, documents, audio clips, snapshots, and shared web content. 
 
 The app features an automated, on-device OCR system driven by Google's Gemini API, allowing you to highlight specific regions of your screen and instantly convert visual information into searchable, structured text notes.
 
@@ -111,12 +111,12 @@ The app features an automated, on-device OCR system driven by Google's Gemini AP
 ### Local Setup
 1.  **Clone the Repository:**
     ```bash
-    git clone https://github.com/hanan-bhatti/second-brain.git
-    cd second-brain
+    git clone https://github.com/hanan-bhatti/cobalt.git
+    cd cobalt
     ```
 2.  **Configure Firebase:**
     *   Create a Firebase Project in the [Firebase Console](https://console.firebase.google.com/).
-    *   Register an Android App under the package name `com.hanan_bhatti.second_brain`.
+    *   Register an Android App under the package name `com.hanan_bhatti.cobalt`.
     *   Download your `google-services.json` file and place it in the `app/` directory.
 3.  **Setup Environment Variables:**
     *   Copy the example environment configuration:

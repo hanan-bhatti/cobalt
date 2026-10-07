@@ -23,13 +23,13 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.R
 import com.example.data.remote.MediaSearchResultItem
-import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.viewmodel.CobaltViewModel
 import kotlinx.coroutines.delay
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun MediaSearchBottomSheet(viewModel: SecondBrainViewModel) {
+fun MediaSearchBottomSheet(viewModel: CobaltViewModel) {
     val showSheet by viewModel.showMediaSearchBottomSheet.collectAsState()
     if (!showSheet) return
 

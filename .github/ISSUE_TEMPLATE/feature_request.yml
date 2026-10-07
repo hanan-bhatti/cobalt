@@ -1,12 +1,12 @@
 name: Feature Request
-description: Propose a new feature or UX enhancement for Second Brain
+description: Propose a new feature or UX enhancement for Cobalt
 title: "[Feature]: "
 labels: ["enhancement", "feature-request"]
 body:
   - type: markdown
     attributes:
       value: |
-        Have an idea to make Second Brain even better? Propose it here! Please check existing issues/requests first to prevent duplicates.
+        Have an idea to make Cobalt even better? Propose it here! Please check existing issues/requests first to prevent duplicates.
 
   - type: textarea
     id: motivation

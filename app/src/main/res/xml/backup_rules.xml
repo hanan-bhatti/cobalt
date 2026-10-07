@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <exclude domain="sharedpref" path="second_brain_widget_cache.xml" />
+    <exclude domain="sharedpref" path="cobalt_widget_cache.xml" />
     <exclude domain="sharedpref" path="device_performance.xml" />
     <exclude domain="sharedpref" path="draft_prefs.xml" />
 </full-backup-content>

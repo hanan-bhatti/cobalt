@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -80,7 +80,7 @@ class QuickCaptureWidget : GlanceAppWidget() {
             -1
         }
 
-        val prefs = context.getSharedPreferences("second_brain_settings", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("cobalt_settings", Context.MODE_PRIVATE)
 
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val quickIds = appWidgetManager.getAppWidgetIds(ComponentName(context, QuickCaptureWidgetReceiver::class.java))

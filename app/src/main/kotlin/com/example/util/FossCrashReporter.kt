@@ -114,7 +114,7 @@ object FossCrashReporter {
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_EMAIL, arrayOf(CRASH_EMAIL))
-                putExtra(Intent.EXTRA_SUBJECT, "Second Brain FOSS Crash Report - v${BuildConfig.VERSION_NAME}")
+                putExtra(Intent.EXTRA_SUBJECT, "Cobalt FOSS Crash Report - v${BuildConfig.VERSION_NAME}")
                 putExtra(Intent.EXTRA_TEXT, reportText)
                 if (uri != null) {
                     putExtra(Intent.EXTRA_STREAM, uri)

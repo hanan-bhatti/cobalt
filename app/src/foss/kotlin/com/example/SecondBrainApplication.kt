@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  */
 
@@ -10,7 +10,7 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.decode.VideoFrameDecoder
 
-class SecondBrainApplication : Application(), ImageLoaderFactory {
+class CobaltApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         // Initialize FOSS local crash reporter

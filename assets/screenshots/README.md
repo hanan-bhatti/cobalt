@@ -1,6 +1,6 @@
-# Second Brain — Application Screenshots & Walkthrough
+# Cobalt — Application Screenshots & Walkthrough
 
-This directory contains high-fidelity visual mockups and screens demonstrating the core user flows, interfaces, and settings of the **Second Brain** Android application.
+This directory contains high-fidelity visual mockups and screens demonstrating the core user flows, interfaces, and settings of the **Cobalt** Android application.
 
 ---
 

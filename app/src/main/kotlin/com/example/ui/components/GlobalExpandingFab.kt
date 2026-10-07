@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -49,7 +49,7 @@ import androidx.compose.ui.window.Dialog
 import com.example.R
 import com.example.data.model.SavedItemType
 import com.example.ui.components.bounceClick
-import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.viewmodel.CobaltViewModel
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.HazeStyle
@@ -57,7 +57,7 @@ import dev.chrisbanes.haze.HazeTint
 import com.example.utils.DevicePerformance
 
 @Composable
-fun GlobalExpandingFab(viewModel: SecondBrainViewModel, hazeState: HazeState) {
+fun GlobalExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
     var isFabExpanded by remember { mutableStateOf(false) }
     var showAddFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }

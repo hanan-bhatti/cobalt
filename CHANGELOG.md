@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [1.1.0-beta01] - 2026-10-06
 
 ### Added
-- **Beta Release (v1.1.0-beta01):** Promoted Second Brain to 1.1.0-beta01!
+- **Beta Release (v1.1.0-beta01):** Promoted Cobalt to 1.1.0-beta01!
 - **Tab Swiping & Auto-Scroll:** Added horizontal swipe gesture in Capture Screen to fluidly switch between item types (OCR, Note, Shows, Link), and added auto-scrolling to the active tab.
 - **Save Progress Shimmer:** Added a sleek shimmering progress animation to the Save button on the Capture Screen, perfectly matching the rounded corner styling.
 - **Swipe-to-Dismiss Banners:** Redesigned `AppFeedbackBanner` to have a slimmer height and added swipe-to-dismiss gesture for quick clearing.
@@ -21,7 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [1.0.0] - 2026-08-05
 
 ### Added
-- **Official Stable Release (v1.0.0):** Promoted Second Brain to official 1.0.0 Stable production release!
+- **Official Stable Release (v1.0.0):** Promoted Cobalt to official 1.0.0 Stable production release!
 - **Dynamic Ergonomic Edge Panel & Landscape Mode:** Built dynamic Fitts's law thumb reachability engine for the Edge Panel. High handle positions (< 50% height) dynamically move Quick Actions (`OCR`, `Note`, `Shows`, `Link`, `Open`) and Quick Note to the bottom of the card directly under the thumb. Added landscape mode dimension scaling (`300dp × 280dp`).
 - **FOSS Offline Crash Handler & Email Reporting System (`FossCrashReporter`):** Implemented native uncaught crash interceptor saving device info and full stacktraces to local storage, with an automatic Material 3 `ExpressiveCrashReportDialog` on next launch supporting direct email reports to `hannanbhatti2006@gmail.com`.
 - **Unified Local & Cloud Feedback Persistence (`FeedbackSubmissionManager`):** Built unified data persistence manager for bug reports, feature requests, and in-app surveys that writes locally to `context.filesDir/feedback/` and syncs with Firestore when online.

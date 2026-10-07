@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Second Brain"
+rootProject.name = "Cobalt"
 
 include(":app")

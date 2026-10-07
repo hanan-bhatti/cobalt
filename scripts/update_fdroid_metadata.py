@@ -3,7 +3,7 @@
 Dynamic F-Droid Metadata Auto-Generator & Version Tracker
 Automatically reads app/build.gradle.kts, extracts versionCode and versionName,
 generates fastlane/metadata/android/en-US/changelogs/<versionCode>.txt from CHANGELOG.md,
-and syncs fdroid/com.hanan_bhatti.second_brain.yml so you never have to manually track versions.
+and syncs fdroid/com.hanan_bhatti.cobalt.yml so you never have to manually track versions.
 """
 
 import os
@@ -15,7 +15,7 @@ GRADLE_FILE = os.path.join(PROJECT_ROOT, "app", "build.gradle.kts")
 CHANGELOG_FILE = os.path.join(PROJECT_ROOT, "CHANGELOG.md")
 FASTLANE_DIR = os.path.join(PROJECT_ROOT, "fastlane", "metadata", "android", "en-US")
 CHANGELOGS_DIR = os.path.join(FASTLANE_DIR, "changelogs")
-FDROID_YML_FILE = os.path.join(PROJECT_ROOT, "fdroid", "com.hanan_bhatti.second_brain.yml")
+FDROID_YML_FILE = os.path.join(PROJECT_ROOT, "fdroid", "com.hanan_bhatti.cobalt.yml")
 
 def extract_app_version():
     """Extracts versionCode and versionName from app/build.gradle.kts."""
@@ -65,7 +65,7 @@ def sync_fastlane_changelog(version_code, changelog_text):
     print(f"✅ Generated Fastlane changelog: {target_file}")
 
 def sync_fdroid_yml(version_code, version_name):
-    """Updates fdroid/com.hanan_bhatti.second_brain.yml with current version info."""
+    """Updates fdroid/com.hanan_bhatti.cobalt.yml with current version info."""
     if not os.path.exists(FDROID_YML_FILE):
         print(f"Warning: {FDROID_YML_FILE} does not exist.")
         return

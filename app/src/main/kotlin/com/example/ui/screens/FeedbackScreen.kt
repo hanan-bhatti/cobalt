@@ -144,7 +144,7 @@ fun collectEnvironmentReport(context: Context): FeedbackEnvironmentReport {
 }
 
 /**
- * Custom Expressive Feedback & Bug Reporting Hub for Second Brain.
+ * Custom Expressive Feedback & Bug Reporting Hub for Cobalt.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -617,7 +617,7 @@ private fun ExpressiveBugReportContent(
                     ) {
                         Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
                         Text(
-                            text = "Bug Report Submitted! Thank you for helping us improve Second Brain.",
+                            text = "Bug Report Submitted! Thank you for helping us improve Cobalt.",
                             color = MaterialTheme.colorScheme.onTertiaryContainer,
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.bodyMedium
@@ -833,7 +833,7 @@ private fun ExpressiveFeatureRequestContent(
                         proposedSolution = it
                         if (it.isNotBlank()) errorMessage = null
                     },
-                    placeholder = { Text("Describe how you envision this feature working in Second Brain...") },
+                    placeholder = { Text("Describe how you envision this feature working in Cobalt...") },
                     minLines = 3,
                     shape = RoundedCornerShape(16.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -912,7 +912,7 @@ private fun ExpressiveFeatureRequestContent(
                         colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
                     )
                     Text(
-                        text = "I consent to sharing this feature request to help guide the Second Brain roadmap.",
+                        text = "I consent to sharing this feature request to help guide the Cobalt roadmap.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

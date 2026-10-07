@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -26,7 +26,7 @@ import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
 object WidgetCache {
-    private const val PREFS_NAME = "second_brain_widget_cache"
+    private const val PREFS_NAME = "cobalt_widget_cache"
     private const val KEY_ITEMS = "cached_items"
     private const val KEY_LAST_UPDATED = "last_updated_time"
 

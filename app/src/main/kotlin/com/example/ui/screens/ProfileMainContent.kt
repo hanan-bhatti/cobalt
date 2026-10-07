@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -47,7 +47,7 @@ import com.example.R
 import com.example.data.model.SavedItemType
 import androidx.compose.ui.res.painterResource
 import java.util.Locale
-import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.viewmodel.CobaltViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.example.ui.components.bounceClick
@@ -86,7 +86,7 @@ import androidx.compose.foundation.text.KeyboardActions
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ProfileMainContent(
-    viewModel: SecondBrainViewModel,
+    viewModel: CobaltViewModel,
     onNavigateBack: () -> Unit,
     onNavigateToAuth: () -> Unit,
     onNavigateToLegal: (String) -> Unit,
@@ -143,7 +143,7 @@ fun ProfileMainContent(
     var showSignOutConfirmDialog by remember { mutableStateOf(false) }
     var showSignOutOnlyConfirmDialog by remember { mutableStateOf(false) }
 
-    val prefs = remember { context.getSharedPreferences("second_brain_prefs", Context.MODE_PRIVATE) }
+    val prefs = remember { context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE) }
     var showInterruptedBackupDialog by remember {
         mutableStateOf(
             prefs.getBoolean("interrupted_backup_in_progress", false) &&
@@ -347,7 +347,7 @@ fun ProfileMainContent(
                             )
                         }
                         Text(
-                            text = userEmail ?: "Second Brain",
+                            text = userEmail ?: "Cobalt",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -789,7 +789,7 @@ fun ProfileMainContent(
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))
                     ClickableRow(
-                        title = "About Second Brain",
+                        title = "About Cobalt",
                         subtitle = "Universal capture & personal archive",
                         onClick = { onNavigateToLegal("about") }
                     )
@@ -866,7 +866,7 @@ fun ProfileMainContent(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Second Brain",
+                        text = "Cobalt",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant

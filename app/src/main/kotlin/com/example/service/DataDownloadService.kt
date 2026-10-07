@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,7 @@ import androidx.core.app.NotificationCompat
 import com.example.R
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
-import com.example.data.repository.SecondBrainRepository
+import com.example.data.repository.CobaltRepository
 import kotlinx.coroutines.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -38,7 +38,7 @@ class DataDownloadService : Service() {
 
     private val serviceJob = Job()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
-    private lateinit var repository: SecondBrainRepository
+    private lateinit var repository: CobaltRepository
     private lateinit var notificationManager: NotificationManager
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
@@ -53,7 +53,7 @@ class DataDownloadService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        repository = SecondBrainRepository(applicationContext)
+        repository = CobaltRepository(applicationContext)
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         createNotificationChannel()
     }
@@ -94,7 +94,7 @@ class DataDownloadService : Service() {
     }
 
     private suspend fun performDownload(intent: Intent?) = withContext(Dispatchers.IO) {
-        val prefs = getSharedPreferences("second_brain_prefs", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE)
         val resumeInterrupted = intent?.getBooleanExtra("resume_interrupted", false) ?: false
         val retryFailed = intent?.getBooleanExtra("retry_failed", false) ?: false
 
@@ -414,7 +414,7 @@ class DataDownloadService : Service() {
         Log.i(TAG, "Download finished. Signing out user...")
         
         // Remove simulated preference
-        val prefs = getSharedPreferences("second_brain_prefs", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE)
         prefs.edit().apply {
             remove("simulated_email")
             putBoolean("interrupted_backup_in_progress", false)

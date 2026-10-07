@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -54,7 +54,7 @@ import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.data.model.getBestImagePath
 import com.example.ui.theme.CategoryMedia
-import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.viewmodel.CobaltViewModel
 import com.example.utils.DevicePerformance
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
@@ -68,7 +68,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MediaHubScreen(
-    viewModel: SecondBrainViewModel,
+    viewModel: CobaltViewModel,
     onMediaClick: (SavedItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -187,7 +187,7 @@ fun MediaHubScreen(
 
 @Composable
 fun MediaHubContent(
-    viewModel: SecondBrainViewModel,
+    viewModel: CobaltViewModel,
     onMediaClick: (SavedItem) -> Unit,
     modifier: Modifier = Modifier
 ) {

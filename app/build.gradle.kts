@@ -19,7 +19,7 @@ android {
   compileSdk = 37
 
   defaultConfig {
-    applicationId = "com.hanan_bhatti.second_brain"
+    applicationId = "com.hanan_bhatti.cobalt"
     minSdk = 24
     targetSdk = 37
     versionCode = 11
@@ -32,7 +32,7 @@ android {
   productFlavors {
     create("foss") {
       dimension = "distribution"
-      manifestPlaceholders["appName"] = "Second Brain"
+      manifestPlaceholders["appName"] = "Cobalt"
       // Disable Firebase Performance instrumentation for foss builds
       configure<FirebasePerfExtension> {
         setInstrumentationEnabled(false)
@@ -40,7 +40,7 @@ android {
     }
     create("play") {
       dimension = "distribution"
-      manifestPlaceholders["appName"] = "Second Brain"
+      manifestPlaceholders["appName"] = "Cobalt"
     }
   }
 

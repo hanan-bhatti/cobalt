@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -53,7 +53,7 @@ object DevicePerformance {
 
     fun shouldUseBlur(context: Context): Boolean {
         // 1. Check manual override first
-        val prefs = context.getSharedPreferences("second_brain_settings", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("cobalt_settings", Context.MODE_PRIVATE)
         if (prefs.getBoolean("force_disable_blur", false)) {
             return false
         }

@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Standard Material 3 Expressive Dialog component for SecondBrain.
+ * Standard Material 3 Expressive Dialog component for Cobalt.
  * Provides 28.dp rounded corners, surfaceContainerHigh background,
  * expressive icon container, and styled action buttons.
  */

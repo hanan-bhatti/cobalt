@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -62,7 +62,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.SavedItemType
 import com.example.ui.screens.ImageMarkingCanvas
 import com.example.ui.theme.MyApplicationTheme
-import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.viewmodel.CobaltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.animation.core.*
@@ -78,7 +78,7 @@ import kotlin.math.sin
 @android.annotation.SuppressLint("InvalidFragmentVersionForActivityResult")
 class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCallback {
 
-    private val viewModel: SecondBrainViewModel by viewModels()
+    private val viewModel: CobaltViewModel by viewModels()
     private lateinit var mediaProjectionManager: MediaProjectionManager
 
     // Activity state
@@ -682,7 +682,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                         Button(
                                             onClick = {
                                                 viewModel.confirmAndSaveExtractedLinks(selectedFolders.toList())
-                                                Toast.makeText(context.applicationContext, "Saved selected links to Second Brain!", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context.applicationContext, "Saved selected links to Cobalt!", Toast.LENGTH_SHORT).show()
                                                 finish()
                                             },
                                             enabled = selectedCount > 0,
@@ -713,7 +713,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                     )
                                                 }
                                                 viewModel.saveActiveItem()
-                                                Toast.makeText(context.applicationContext, "Saved formatted note to Second Brain!", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(context.applicationContext, "Saved formatted note to Cobalt!", Toast.LENGTH_SHORT).show()
                                                 finish()
                                             },
                                             shape = RoundedCornerShape(20.dp),

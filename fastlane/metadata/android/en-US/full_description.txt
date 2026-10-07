@@ -1,4 +1,4 @@
-Second Brain is a minimalist, offline-first personal knowledge archive and universal capture app for Android. Designed to eliminate the friction of digital hoarding and info fragmentation, Second Brain acts as your central repository for ideas, documents, audio clips, snapshots, and shared web content.
+Cobalt is a minimalist, offline-first personal knowledge archive and universal capture app for Android. Designed to eliminate the friction of digital hoarding and info fragmentation, Cobalt acts as your central repository for ideas, documents, audio clips, snapshots, and shared web content.
 
 Key Features:
 - Universal & Rapid Capture: Ingest plain text, markdown lists, images, video clips, and web URLs directly from any third-party app with Android's native share handler.

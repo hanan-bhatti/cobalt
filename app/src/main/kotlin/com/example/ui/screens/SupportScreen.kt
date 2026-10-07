@@ -128,7 +128,7 @@ data class ExpressiveFaqItem(
 )
 
 /**
- * Custom Redesigned Expressive Support & Diagnostics Hub for Second Brain.
+ * Custom Redesigned Expressive Support & Diagnostics Hub for Cobalt.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -295,12 +295,12 @@ private fun ExpressiveHelpCenterContent(
         listOf(
             ExpressiveFaqItem(
                 "getting_started",
-                "How do I capture content into Second Brain?",
+                "How do I capture content into Cobalt?",
                 "Tap the floating '+' button, use the Floating OCR Overlay from any app, or use Quick Capture from your home screen widget. You can save URLs, images, voice memos, code snippets, rich notes, or movies."
             ),
             ExpressiveFaqItem(
                 "getting_started",
-                "How does Second Brain organize my items?",
+                "How does Cobalt organize my items?",
                 "Your items are automatically classified into category tabs (Notes, Links, Media, Code, Audio) and can be grouped into custom color-coded Folders with drag-and-drop or custom index ordering."
             ),
             ExpressiveFaqItem(
@@ -326,7 +326,7 @@ private fun ExpressiveHelpCenterContent(
             ExpressiveFaqItem(
                 "sync",
                 "Is my data stored locally or in the cloud?",
-                "Second Brain uses a local-first architecture powered by an SQLite Room database. Your data stays private on device, with optional multi-device cloud backup when signed into Firebase."
+                "Cobalt uses a local-first architecture powered by an SQLite Room database. Your data stays private on device, with optional multi-device cloud backup when signed into Firebase."
             ),
             ExpressiveFaqItem(
                 "sync",
@@ -335,13 +335,13 @@ private fun ExpressiveHelpCenterContent(
             ),
             ExpressiveFaqItem(
                 "voice",
-                "How do voice recordings work in Second Brain?",
+                "How do voice recordings work in Cobalt?",
                 "Tap the microphone icon in Quick Capture to record high-quality voice notes. Audio files are saved locally with interactive waveform visualization, playback speed controls, and timestamp seeking."
             ),
             ExpressiveFaqItem(
                 "widgets",
                 "How do I add home screen widgets?",
-                "Long-press your Android home screen -> select Widgets -> scroll to Second Brain -> add Quick Capture or Recent Items widget for 1-tap capture access."
+                "Long-press your Android home screen -> select Widgets -> scroll to Cobalt -> add Quick Capture or Recent Items widget for 1-tap capture access."
             ),
             ExpressiveFaqItem(
                 "widgets",

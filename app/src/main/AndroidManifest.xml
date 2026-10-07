@@ -21,7 +21,7 @@
     <uses-permission android:name="com.miui.securitycenter.permission.CLONE_APP_AUTORUN" />
 
     <application
-        android:name=".SecondBrainApplication"
+        android:name=".CobaltApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -72,8 +72,8 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="second-brain-11.firebaseapp.com" android:pathPrefix="/" />
-                <data android:scheme="https" android:host="second-brain-11.web.app" android:pathPrefix="/" />
+                <data android:scheme="https" android:host="cobalt-11.firebaseapp.com" android:pathPrefix="/" />
+                <data android:scheme="https" android:host="cobalt-11.web.app" android:pathPrefix="/" />
             </intent-filter>
         </activity>
 
@@ -132,7 +132,7 @@
         <service
             android:name=".BrainOcrTileService"
             android:icon="@drawable/ic_custom_ocr"
-            android:label="Second Brain"
+            android:label="Cobalt"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:exported="true">
             <intent-filter>

@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -58,7 +58,7 @@ import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import com.example.utils.DevicePerformance
-import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.viewmodel.CobaltViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 
@@ -73,7 +73,7 @@ fun CustomBottomBar(
     items: List<BottomBarItem>,
     currentRoute: String?,
     hazeState: HazeState,
-    viewModel: SecondBrainViewModel,
+    viewModel: CobaltViewModel,
     onNavigate: (String) -> Unit
 ) {
     val context = LocalContext.current

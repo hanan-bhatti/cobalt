@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -62,7 +62,7 @@ import com.example.data.local.CustomFolderEntity
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.ui.components.bounceClick
-import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.viewmodel.CobaltViewModel
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
@@ -158,7 +158,7 @@ fun FolderIcon(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun FoldersScreen(
-    viewModel: SecondBrainViewModel,
+    viewModel: CobaltViewModel,
     hazeState: HazeState,
     modifier: Modifier = Modifier
 ) {
@@ -898,7 +898,7 @@ fun FolderDirectoryItem(
 @Composable
 fun FolderContentsBrowser(
     folderName: String,
-    viewModel: SecondBrainViewModel,
+    viewModel: CobaltViewModel,
     onBack: () -> Unit,
     hazeState: HazeState
 ) {
@@ -1102,7 +1102,7 @@ fun FolderContentsBrowser(
 @OptIn(ExperimentalFoundationApi::class)
 fun FolderBrowseItemRow(
     item: SavedItem,
-    viewModel: SecondBrainViewModel,
+    viewModel: CobaltViewModel,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -1271,7 +1271,7 @@ fun FolderBrowseItemRow(
                             onClick = {
                                 showContextMenu = false
                                 val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                val clip = android.content.ClipData.newPlainText("Second Brain Note", item.content)
+                                val clip = android.content.ClipData.newPlainText("Cobalt Note", item.content)
                                 clipboard.setPrimaryClip(clip)
                                 android.widget.Toast.makeText(context, "Copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
                             },
@@ -1430,7 +1430,7 @@ fun FolderBrowseItemRow(
 @Composable
 fun FolderMoveDialog(
     item: SavedItem,
-    viewModel: SecondBrainViewModel,
+    viewModel: CobaltViewModel,
     onDismiss: () -> Unit
 ) {
     val customFolders by viewModel.customFolders.collectAsState()
@@ -1502,7 +1502,7 @@ fun FolderMoveDialog(
 @Composable
 fun FolderCustomizerDialog(
     folder: CustomFolderEntity,
-    viewModel: SecondBrainViewModel,
+    viewModel: CobaltViewModel,
     onDismiss: () -> Unit
 ) {
     val isDark = isSystemInDarkTheme()

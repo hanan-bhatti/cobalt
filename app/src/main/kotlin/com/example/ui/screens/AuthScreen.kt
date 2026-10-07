@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -45,7 +45,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.viewmodel.CobaltViewModel
 import com.example.ui.theme.SuccessLightGreen
 import com.example.ui.theme.SuccessBorderGreen
 import com.example.ui.theme.SuccessDarkGreen
@@ -53,7 +53,7 @@ import com.example.ui.theme.SuccessDarkGreen
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AuthScreen(
-    viewModel: SecondBrainViewModel,
+    viewModel: CobaltViewModel,
     onNavigateBack: () -> Unit,
     onNavigateToLegal: (String) -> Unit = {},
     modifier: Modifier = Modifier
@@ -122,7 +122,7 @@ fun AuthScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Your second brain is synced to Firebase.",
+                        text = "Your cobalt is synced to Firebase.",
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.secondary,
                         textAlign = TextAlign.Center
@@ -178,7 +178,7 @@ fun AuthScreen(
                         .padding(top = 20.dp)
                 ) {
                     Text(
-                        text = if (isSignUp) "Create Firebase Account" else "Welcome to Second Brain",
+                        text = if (isSignUp) "Create Firebase Account" else "Welcome to Cobalt",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
@@ -626,7 +626,7 @@ fun AuthScreen(
                                 modifier = Modifier.testTag("toggle_auth_mode_button")
                             ) {
                                 Text(
-                                    text = if (isSignUp) "Already have an account? Sign In" else "New to Second Brain? Create Account",
+                                    text = if (isSignUp) "Already have an account? Sign In" else "New to Cobalt? Create Account",
                                     color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.Medium,
                                     fontSize = 13.sp

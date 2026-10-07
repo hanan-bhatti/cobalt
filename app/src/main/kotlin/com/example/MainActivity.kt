@@ -1,5 +1,5 @@
 /*
- * Second Brain - A universal capture and personal knowledge archive
+ * Cobalt - A universal capture and personal knowledge archive
  * Copyright (C) 2026 Hanan Bhatti
  *
  * This program is free software: you can redistribute it and/or modify
@@ -66,7 +66,7 @@ import com.example.ui.screens.DetailScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.FoldersScreen
 import com.example.ui.theme.MyApplicationTheme
-import com.example.ui.viewmodel.SecondBrainViewModel
+import com.example.ui.viewmodel.CobaltViewModel
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -100,7 +100,7 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Search
 
 class MainActivity : ComponentActivity() {
-    private val viewModel: SecondBrainViewModel by viewModels()
+    private val viewModel: CobaltViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -117,7 +117,7 @@ class MainActivity : ComponentActivity() {
                     startService(serviceIntent)
                 }
             } catch (e: Exception) {
-                android.util.Log.e("SecondBrain", "Failed to start OCR overlay service: ${e.message}", e)
+                android.util.Log.e("Cobalt", "Failed to start OCR overlay service: ${e.message}", e)
             }
         }
 
