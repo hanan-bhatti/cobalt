@@ -121,12 +121,40 @@ object AppVersionManager {
      */
     val releaseHistory: List<ReleaseNote> = listOf(
         ReleaseNote(
+            versionName = "2.0.0",
+            versionCode = 12,
+            releaseDate = "October 7, 2026",
+            tag = AppVersionTag.STABLE,
+            isCurrent = false,
+            isLatest = false,
+            highlights = listOf(
+                "Major Rebranding to Cobalt (v2.0.0)",
+                "Mathematical Vector App Icon",
+                "FOSS Minimalist Badge",
+                "Firebase Migration & Alignment"
+            ),
+            features = listOf(
+                "Completely rebranded the application from Second Brain to Cobalt",
+                "Hand-crafted pure mathematical geometric vector icon for the new Cobalt branding",
+                "Added a sleek, minimalist FOSS badge to the UI for the open-source flavor",
+                "Migrated backend cloud storage and database connectivity to the new cobalt package name"
+            ),
+            improvements = listOf(
+                "Bumped version to v2.0.0 Stable (Build #12)",
+                "Refactored deep links to cobalt://"
+            ),
+            bugFixes = listOf(
+                "Updated all diagnostic tools, crash reporters, and underlying services to reflect the new identity"
+            )
+        ),
+
+        ReleaseNote(
             versionName = "1.1.0-beta01",
             versionCode = 11,
             releaseDate = "October 6, 2026",
             tag = AppVersionTag.BETA,
-            isCurrent = true,
-            isLatest = true,
+            isCurrent = false,
+            isLatest = false,
             highlights = listOf(
                 "Beta Release (v1.1.0-beta01)",
                 "Tab Swiping & Auto-Scroll in Capture Screen",

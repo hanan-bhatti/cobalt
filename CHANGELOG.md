@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-10-07
+
+### Added
+- **Major Rebranding:** Completely rebranded the application from "Second Brain" to "Cobalt" across the entire codebase.
+- **Mathematical Vector Icon:** Hand-crafted a pure mathematical geometric vector icon for the new Cobalt branding.
+- **FOSS Badge:** Added a sleek, minimalist FOSS badge to the UI for the open-source flavor.
+- **Firebase Alignment:** Migrated backend cloud storage and database connectivity to the new `com.hanan_bhatti.cobalt` package name and updated `google-services.json`.
+
+### Changed
+- Refactored deep links to `cobalt://`.
+- Updated all diagnostic tools, crash reporters, and underlying services (e.g., `CobaltOcrOverlayService`) to reflect the new identity.
+
 ## [1.1.0-beta01] - 2026-10-06
 
 ### Added

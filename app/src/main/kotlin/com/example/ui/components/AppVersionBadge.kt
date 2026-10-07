@@ -45,10 +45,11 @@ fun AppVersionBadge(
     val containerColor = tag.containerColor()
     val contentColor = tag.contentColor()
 
-    val displayText = if (versionName != null) {
-        "${tag.label} $versionName"
-    } else {
-        tag.label
+    val displayText = buildString {
+        append(if (versionName != null) "${tag.label} $versionName" else tag.label)
+        if (com.example.BuildConfig.FLAVOR == "foss") {
+            append(" • FOSS")
+        }
     }
 
     Surface(
