@@ -5,25 +5,20 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     
-    <!-- Bookmark Ribbon -->
-    <path
-        android:fillColor="#FF6D00"
-        android:pathData="M34,22 C34,17.58 37.58,14 42,14 L66,14 C70.42,14 74,17.58 74,22 L74,94 L54,78 L34,94 Z" />
-
-    <!-- S -->
-    <path
-        android:strokeColor="#121212"
-        android:strokeWidth="5"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M 68 30 L 44 30 A 6 6 0 0 0 38 36 L 38 36 A 6 6 0 0 0 44 42 L 64 42 A 6 6 0 0 1 70 48 L 70 48 A 6 6 0 0 1 64 54 L 38 54" />
-
-    <!-- B -->
-    <path
-        android:strokeColor="#121212"
-        android:strokeWidth="5"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M 38 58 L 38 82 M 38 58 L 62 58 A 6 6 0 0 1 68 64 A 6 6 0 0 1 62 70 L 38 70 M 38 70 L 64 70 A 6 6 0 0 1 70 76 A 6 6 0 0 1 64 82 L 38 82" />
+    <!-- "2" - Atomic number top-left -->
+    <path android:fillColor="#00E5FF"
+        android:pathData="M30,24 h6 v2 h-6 z M30,28 h6 v2 h-6 z M30,32 h6 v2 h-6 z M34,26 h2 v2 h-2 z M30,30 h2 v2 h-2 z"/>
+    
+    <!-- "7" - Atomic number top-left -->
+    <path android:fillColor="#00E5FF"
+        android:pathData="M38,24 h6 v2 h-6 z M42,26 h2 v8 h-2 z"/>
         
+    <!-- "C" - Left side -->
+    <path android:fillColor="#00B0FF"
+        android:pathData="M52,38 H30 V70 H52 V62 H38 V46 H52 Z"/>
+        
+    <!-- "o" - Right side (using evenOdd for inner hole cutout) -->
+    <path android:fillColor="#00B0FF"
+        android:fillType="evenOdd"
+        android:pathData="M58,46 H78 V70 H58 Z M66,54 H70 V62 H66 Z"/>
 </vector>
