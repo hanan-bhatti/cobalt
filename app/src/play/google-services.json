@@ -14,6 +14,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "15111876974-0vlc2trrsmril2qjcancn9dcvpd1jeej.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.hanan_bhatti.cobalt",
+            "certificate_hash": "9a536f8e8f96e9fc36215fff8a2295c78e4830a0"
+          }
+        },
+        {
+          "client_id": "15111876974-9e2tjshcr365cvlfhfj8odj8j8oe8n15.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.hanan_bhatti.cobalt",
+            "certificate_hash": "aae761ef40d32a9bf6706847882cbe7229363a66"
+          }
+        },
+        {
           "client_id": "15111876974-63emvhpl1n1bmrgqeb6f6fgi5js2uk80.apps.googleusercontent.com",
           "client_type": 3
         }
