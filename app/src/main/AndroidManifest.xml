@@ -108,7 +108,7 @@
             android:excludeFromRecents="true" />
 
         <service
-            android:name=".BrainOcrOverlayService"
+            android:name=".CobaltOcrOverlayService"
             android:foregroundServiceType="specialUse|dataSync"
             android:stopWithTask="false"
             tools:targetApi="q"
@@ -130,7 +130,7 @@
             android:exported="false" />
 
         <service
-            android:name=".BrainOcrTileService"
+            android:name=".CobaltOcrTileService"
             android:icon="@drawable/ic_custom_ocr"
             android:label="Cobalt"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"

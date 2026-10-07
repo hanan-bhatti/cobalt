@@ -24,7 +24,7 @@ import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import com.example.data.repository.SettingsRepository
 
-class BrainOcrTileService : TileService() {
+class CobaltOcrTileService : TileService() {
 
     override fun onStartListening() {
         super.onStartListening()

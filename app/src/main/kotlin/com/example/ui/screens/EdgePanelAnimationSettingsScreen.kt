@@ -40,7 +40,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.BrainOcrOverlayService
+import com.example.CobaltOcrOverlayService
 import com.example.R
 import com.example.ui.viewmodel.CobaltViewModel
 
@@ -66,7 +66,7 @@ fun EdgePanelAnimationSettingsScreen(
     )
 
     fun triggerTestAnimation() {
-        val intent = Intent(context, BrainOcrOverlayService::class.java).apply {
+        val intent = Intent(context, CobaltOcrOverlayService::class.java).apply {
             action = "com.example.ACTION_TOGGLE_PANEL"
         }
         try {

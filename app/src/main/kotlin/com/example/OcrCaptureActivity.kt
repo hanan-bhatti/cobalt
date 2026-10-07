@@ -696,7 +696,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                             Icon(painter = painterResource(id = R.drawable.ic_custom_link), contentDescription = null)
                                             Spacer(modifier = Modifier.width(8.dp))
                                             Text(
-                                                text = if (selectedCount > 0) "Save Selected Links ($selectedCount) to Brain" else "No Links Selected",
+                                                text = if (selectedCount > 0) "Save Selected Links ($selectedCount) to Cobalt" else "No Links Selected",
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 14.sp
                                             )
@@ -726,7 +726,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                             Icon(painter = painterResource(id = R.drawable.ic_custom_text), contentDescription = null)
                                             Spacer(modifier = Modifier.width(8.dp))
                                             Text(
-                                                text = "Save Formatted Note to Brain",
+                                                text = "Save Formatted Note to Cobalt",
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 14.sp
                                             )

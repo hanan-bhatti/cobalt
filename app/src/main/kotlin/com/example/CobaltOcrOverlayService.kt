@@ -77,7 +77,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class BrainOcrOverlayService : Service() {
+class CobaltOcrOverlayService : Service() {
 
     private lateinit var windowManager: WindowManager
     private var containerView: FrameLayout? = null
@@ -325,7 +325,7 @@ class BrainOcrOverlayService : Service() {
             } else {
                 val layoutParams = rootContainer.layoutParams as WindowManager.LayoutParams
                 val currentSide = getEdgePanelSide()
-                val touchSlopPx = ViewConfiguration.get(this@BrainOcrOverlayService).scaledTouchSlop
+                val touchSlopPx = ViewConfiguration.get(this@CobaltOcrOverlayService).scaledTouchSlop
                 val swipeThresholdPx = dpToPx(16) // Deliberate swipe distance threshold
 
                 when (event.action) {
@@ -1636,7 +1636,7 @@ class BrainOcrOverlayService : Service() {
         super.onTaskRemoved(rootIntent)
         // Re-deliver a start command so the service survives
         // when the user swipes the app away from recents.
-        val restartIntent = Intent(applicationContext, BrainOcrOverlayService::class.java)
+        val restartIntent = Intent(applicationContext, CobaltOcrOverlayService::class.java)
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 startForegroundService(restartIntent)
@@ -1644,7 +1644,7 @@ class BrainOcrOverlayService : Service() {
                 startService(restartIntent)
             }
         } catch (e: Exception) {
-            android.util.Log.e("BrainOcrOverlay", "Failed to restart after task removal: ${e.message}", e)
+            android.util.Log.e("CobaltOcrOverlay", "Failed to restart after task removal: ${e.message}", e)
         }
     }
 

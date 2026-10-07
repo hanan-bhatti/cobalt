@@ -179,7 +179,7 @@ object AppVersionManager {
                 "F-Droid recipe and Fastlane metadata synchronization"
             ),
             bugFixes = listOf(
-                "Fixed BrainOcrOverlayService Y-position coercion crash on landscape/small screen heights",
+                "Fixed CobaltOcrOverlayService Y-position coercion crash on landscape/small screen heights",
                 "Fixed feedback and survey submissions saving to nowhere",
                 "Fixed input field container fill colors and title placeholder line wrapping"
             )

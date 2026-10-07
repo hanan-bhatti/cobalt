@@ -315,7 +315,7 @@ fun SurveyBottomSheet(
                             )
 
                             Text(
-                                text = "You unlocked the 'Brain Contributor' Badge! Your feedback directly shapes our v1.0 roadmap.",
+                                text = "You unlocked the 'Cobalt Contributor' Badge! Your feedback directly shapes our v1.0 roadmap.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)

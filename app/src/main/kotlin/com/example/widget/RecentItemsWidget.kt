@@ -294,7 +294,7 @@ fun RecentItemRow(item: SavedItem) {
     } else {
         Intent(context, MainActivity::class.java).apply {
             action = Intent.ACTION_VIEW
-            data = android.net.Uri.parse("secondbrain://item/${item.id}")
+            data = android.net.Uri.parse("cobalt://item/${item.id}")
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
     }

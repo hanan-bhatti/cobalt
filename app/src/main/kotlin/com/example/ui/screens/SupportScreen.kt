@@ -966,7 +966,7 @@ private fun ExpressiveSystemDiagnosticsContent() {
             OutlinedButton(
                 onClick = {
                     val info = """
-                        --- SECOND BRAIN DIAGNOSTIC REPORT ---
+                        --- COBALT DIAGNOSTIC REPORT ---
                         User Email: ${envReport.userEmail}
                         User ID: ${envReport.userId}
                         App Version: v${envReport.appVersion} (${envReport.buildCode}) [${envReport.buildTag}]

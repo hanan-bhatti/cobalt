@@ -467,7 +467,7 @@ fun SettingsScreen(
                             checked = isEnabled,
                             onCheckedChange = { enable ->
                                 viewModel.settingsRepository.setFloatingOcrEnabled(enable)
-                                val serviceIntent = Intent(context, com.example.BrainOcrOverlayService::class.java)
+                                val serviceIntent = Intent(context, com.example.CobaltOcrOverlayService::class.java)
                                 if (enable) {
                                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                                         context.startForegroundService(serviceIntent)

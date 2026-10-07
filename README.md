@@ -40,7 +40,7 @@ The app features an automated, on-device OCR system driven by Google's Gemini AP
 
 ### 📥 Universal & Rapid Capture
 *   **System Share Sheet Interceptor:** Ingest plain text, markdown lists, images, video clips, and web URLs directly from any third-party app with Android's native share handler.
-*   **Deep Linking Support:** Access specific notes and content folders directly via custom `secondbrain://item/` deep links.
+*   **Deep Linking Support:** Access specific notes and content folders directly via custom `cobalt://item/` deep links.
 *   **Quick Capture FAB:** A dynamic expanding Floating Action Button allows manual note creation, rapid link bookmarking, and instant media attachments.
 *   **Android App Shortcuts:** Launch specific capture workflows directly from your device launcher with dedicated shortcuts (Smart Capture, Create Quick Note).
 

@@ -48,7 +48,7 @@ object FossCrashReporter {
 
         val reportText = buildString {
             appendLine("==================================================")
-            appendLine("SECOND BRAIN FOSS CRASH REPORT")
+            appendLine("COBALT FOSS CRASH REPORT")
             appendLine("==================================================")
             appendLine("App Version    : ${BuildConfig.VERSION_NAME} (Build #${BuildConfig.VERSION_CODE})")
             appendLine("Device Model   : ${Build.MANUFACTURER.uppercase()} ${Build.MODEL}")

@@ -1353,7 +1353,7 @@ fun HomeScreen(
                             color = MaterialTheme.colorScheme.onPrimary
                         )
                     } else {
-                        Text("Save to Brain", fontWeight = FontWeight.SemiBold)
+                        Text("Save to Cobalt", fontWeight = FontWeight.SemiBold)
                     }
                 }
             },

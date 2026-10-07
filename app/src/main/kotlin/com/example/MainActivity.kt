@@ -109,7 +109,7 @@ class MainActivity : ComponentActivity() {
         // Auto-start Floating OCR service if enabled and allowed
         val settingsRepo = com.example.data.repository.SettingsRepository(applicationContext)
         if (settingsRepo.isFloatingOcrEnabled.value && com.example.utils.PermissionUtils.hasOverlayPermission(applicationContext)) {
-            val serviceIntent = Intent(applicationContext, BrainOcrOverlayService::class.java)
+            val serviceIntent = Intent(applicationContext, CobaltOcrOverlayService::class.java)
             try {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                     startForegroundService(serviceIntent)
@@ -494,8 +494,8 @@ class MainActivity : ComponentActivity() {
             val data: Uri? = intent.data
             val linkStr = data?.toString()
             if (linkStr != null) {
-                if (linkStr.startsWith("secondbrain://item/")) {
-                    val itemId = linkStr.substringAfter("secondbrain://item/")
+                if (linkStr.startsWith("cobalt://item/")) {
+                    val itemId = linkStr.substringAfter("cobalt://item/")
                     viewModel.openItemById(itemId)
                 } else {
                     viewModel.handleDeepLink(linkStr)
