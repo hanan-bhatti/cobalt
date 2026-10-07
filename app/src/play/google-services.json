@@ -1,15 +1,47 @@
 {
   "project_info": {
     "project_number": "15111876974",
-    "project_id": "cobalt-11",
-    "storage_bucket": "cobalt-11.firebasestorage.app"
+    "project_id": "second-brain-11",
+    "storage_bucket": "second-brain-11.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:15111876974:android:d3418b62e2dfc35817917f",
+        "mobilesdk_app_id": "1:15111876974:android:f42aa9b88634fa6017917f",
         "android_client_info": {
           "package_name": "com.hanan_bhatti.cobalt"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "15111876974-63emvhpl1n1bmrgqeb6f6fgi5js2uk80.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyALpf-jWuz_mwZENoCwcuqBDeuDcm3u7CY"
+        },
+        {
+          "current_key": "AIzaSyCYSCNiTB_m9F1hIaG-q8tG8d69XW4gAXE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "15111876974-63emvhpl1n1bmrgqeb6f6fgi5js2uk80.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:15111876974:android:d3418b62e2dfc35817917f",
+        "android_client_info": {
+          "package_name": "com.hanan_bhatti.second_brain"
         }
       },
       "oauth_client": [
@@ -17,8 +49,16 @@
           "client_id": "15111876974-8rbhg2boh84mm0kud010k7188lgb3i1d.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.hanan_bhatti.cobalt",
+            "package_name": "com.hanan_bhatti.second_brain",
             "certificate_hash": "9a536f8e8f96e9fc36215fff8a2295c78e4830a0"
+          }
+        },
+        {
+          "client_id": "15111876974-rv5n0ke8a1ic1d5l2dh8tov6vd7a0pqj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.hanan_bhatti.second_brain",
+            "certificate_hash": "aae761ef40d32a9bf6706847882cbe7229363a66"
           }
         },
         {
@@ -27,6 +67,9 @@
         }
       ],
       "api_key": [
+        {
+          "current_key": "AIzaSyALpf-jWuz_mwZENoCwcuqBDeuDcm3u7CY"
+        },
         {
           "current_key": "AIzaSyCYSCNiTB_m9F1hIaG-q8tG8d69XW4gAXE"
         }
