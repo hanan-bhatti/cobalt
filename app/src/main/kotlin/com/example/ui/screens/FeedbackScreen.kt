@@ -111,7 +111,10 @@ data class FeedbackEnvironmentReport(
 )
 
 fun collectEnvironmentReport(context: Context): FeedbackEnvironmentReport {
-    val (userEmail, userId) = try {
+    var finalUserEmail = "Guest User"
+    var finalUserId = "guest_session"
+    
+    try {
         val clazz = Class.forName("com.google.firebase.auth.FirebaseAuth")
         val instance = clazz.getMethod("getInstance").invoke(null)
         val user = clazz.getMethod("getCurrentUser").invoke(instance)
@@ -119,10 +122,20 @@ fun collectEnvironmentReport(context: Context): FeedbackEnvironmentReport {
             val email = user.javaClass.getMethod("getEmail").invoke(user) as? String
             val isAnon = user.javaClass.getMethod("isAnonymous").invoke(user) as? Boolean == true
             val uid = user.javaClass.getMethod("getUid").invoke(user) as? String ?: "guest_session"
-            Pair(email ?: if (isAnon) "Anonymous User" else "Guest User", uid)
-        } else Pair("Guest User", "guest_session")
+            finalUserEmail = email ?: if (isAnon) "Anonymous User" else "Guest User"
+            finalUserId = uid
+        }
     } catch (e: Throwable) {
-        Pair("Guest User", "guest_session")
+        // Fallback below
+    }
+
+    if (finalUserEmail == "Guest User") {
+        val prefs = context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE)
+        val simEmail = prefs.getString("simulated_email", null)
+        if (simEmail != null) {
+            finalUserEmail = simEmail
+            finalUserId = "foss_session_${simEmail.hashCode()}"
+        }
     }
 
     val deviceModel = "${Build.MANUFACTURER.uppercase()} ${Build.MODEL}"
@@ -131,8 +144,8 @@ fun collectEnvironmentReport(context: Context): FeedbackEnvironmentReport {
     val timezone = TimeZone.getDefault().id
 
     return FeedbackEnvironmentReport(
-        userEmail = userEmail,
-        userId = userId,
+        userEmail = finalUserEmail,
+        userId = finalUserId,
         appVersion = AppVersionManager.currentVersionName,
         buildCode = AppVersionManager.currentVersionCode,
         buildTag = AppVersionManager.currentTag.label,
@@ -149,6 +162,7 @@ fun collectEnvironmentReport(context: Context): FeedbackEnvironmentReport {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedbackScreen(
+    viewModel: com.example.ui.viewmodel.CobaltViewModel,
     onNavigateBack: () -> Unit,
     initialTab: Int = 0,
     modifier: Modifier = Modifier
@@ -276,7 +290,7 @@ fun FeedbackScreen(
                 enter = fadeIn() + slideInVertically(),
                 exit = fadeOut() + slideOutVertically()
             ) {
-                ExpressiveBugReportContent(onSuccess = onNavigateBack)
+                ExpressiveBugReportContent(viewModel = viewModel, onSuccess = onNavigateBack)
             }
 
             AnimatedVisibility(
@@ -284,7 +298,7 @@ fun FeedbackScreen(
                 enter = fadeIn() + slideInVertically(),
                 exit = fadeOut() + slideOutVertically()
             ) {
-                ExpressiveFeatureRequestContent(onSuccess = onNavigateBack)
+                ExpressiveFeatureRequestContent(viewModel = viewModel, onSuccess = onNavigateBack)
             }
         }
     }
@@ -292,6 +306,7 @@ fun FeedbackScreen(
 
 @Composable
 private fun ExpressiveBugReportContent(
+    viewModel: com.example.ui.viewmodel.CobaltViewModel,
     onSuccess: () -> Unit
 ) {
     val context = LocalContext.current
@@ -634,7 +649,7 @@ private fun ExpressiveBugReportContent(
 
                         isSubmitting = true
                         coroutineScope.launch {
-                            com.example.util.FeedbackSubmissionManager.submitBugReport(
+                            viewModel.submitBugReport(
                                 context = context,
                                 title = bugTitle,
                                 description = bugDescription,
@@ -675,6 +690,7 @@ private fun ExpressiveBugReportContent(
 
 @Composable
 private fun ExpressiveFeatureRequestContent(
+    viewModel: com.example.ui.viewmodel.CobaltViewModel,
     onSuccess: () -> Unit
 ) {
     val context = LocalContext.current
@@ -965,7 +981,7 @@ private fun ExpressiveFeatureRequestContent(
 
                         isSubmitting = true
                         coroutineScope.launch {
-                            com.example.util.FeedbackSubmissionManager.submitFeatureRequest(
+                            viewModel.submitFeatureRequest(
                                 context = context,
                                 title = featureTitle,
                                 problemStatement = problemStatement,

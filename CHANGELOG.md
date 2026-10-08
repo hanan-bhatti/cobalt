@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0-beta] - 2026-10-08
+
+### Added
+- **Radial Menu FAB:** Completely rewrote `GlobalExpandingFab` with a highly tactile radial menu and floating canvas overlays for Quick Notes and Folder creation.
+- **TMDb Rich Media Expansion:** Massively upgraded media hub pulling Runtime, Taglines, Budgets, Revenue, and Production Companies from TMDb.
+- **True Native Archiving:** Migrated system-wide archiving to a native `isArchived` boolean field, replacing old string-based folder hacks.
+- **FOSS Enhancements:** Dynamic flavor titles ("Cobalt FOSS") with adaptive frameless version tags.
+- **File Sharing:** Added a proper Android `FileProvider` to enable secure external media sharing.
+
+### Changed
+- Replaced manual swiping on the Capture Screen with a native, fluid `HorizontalPager`.
+- Replaced Detail Screen inline image zooming with a dedicated full-screen overlay to fix scroll blocking.
+- Upgraded the Room database to Version 6 to support extended media metadata.
+- Upgraded brand icons to authentic SVGs for Apple, Crunchyroll, Disney, HBO, Hulu, Netflix, Prime, and YouTube.
+
+### Fixed
+- Squashed recursive cloud sync bug in `DataDownloadService` by utilizing `saveItemLocallyOnly()`.
+- Fixed home screen archive cards improperly rendering content URIs instead of extracted text for images.
+- Removed legacy `ImageMarkingCanvas` that disrupted vertical scrolling gestures.
+- Hid FOSS cloud sync icons for non-signed-in users and filtered duplicate streaming providers.
+
 ## [2.0.0] - 2026-10-07
 
 ### Added

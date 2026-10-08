@@ -523,7 +523,7 @@ private fun RecentItemsCustomizationSection(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = if (categoryFilter == "All") "Your archive is empty" else "No $categoryFilter items found",
+                                    text = if (categoryFilter == "All") "Your Cobalt is empty" else "No $categoryFilter items found",
                                     fontSize = 12.sp,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

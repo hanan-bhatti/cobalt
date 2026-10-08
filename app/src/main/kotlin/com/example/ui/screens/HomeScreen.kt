@@ -550,14 +550,14 @@ fun HomeScreen(
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = "Your Cobalt is Empty",
+                                    text = "Your Cobalt is empty",
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onBackground
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Share links, photos, code snippets from other apps,\nor tap the '+' button below to add your first memory.",
+                                    text = "Share links, photos, code snippets from other apps,\nor tap the '+' button below to add your first item.",
                                     fontSize = 13.sp,
                                     color = MaterialTheme.colorScheme.secondary,
                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -910,7 +910,7 @@ fun HomeScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Assign \"${liveItem.title.ifBlank { "Untitled Note" }}\" to folders",
+                        text = "Assign \"${liveItem.title.ifBlank { "Untitled Item" }}\" to folders",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.secondary,
                         maxLines = 1,

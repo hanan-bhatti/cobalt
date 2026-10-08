@@ -19,6 +19,7 @@
 package com.example.data.model
 
 import java.util.UUID
+import com.squareup.moshi.JsonClass
 
 enum class SavedItemType(val displayName: String) {
     LINK("Links"),
@@ -30,6 +31,7 @@ enum class SavedItemType(val displayName: String) {
     MEDIA("Movies & Anime")
 }
 
+@JsonClass(generateAdapter = true)
 data class SavedItem(
     val id: String = UUID.randomUUID().toString(),
     val type: SavedItemType,

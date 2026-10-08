@@ -781,13 +781,13 @@ fun ManageStorageScreen(
                             .clip(CircleShape)
                             .background(baseColor)
                     )
-                    Text("Memory Options", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Item Options", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = item.title.ifEmpty { "Untitled Memory" },
+                        text = item.title.ifEmpty { "Untitled Item" },
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -855,7 +855,7 @@ fun ManageStorageScreen(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("View Memory Details")
+                        Text("View Item Details")
                     }
 
                     TextButton(

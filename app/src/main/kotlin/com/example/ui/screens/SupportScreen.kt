@@ -278,8 +278,20 @@ private fun ExpressiveHelpCenterContent(
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategoryId by remember { mutableStateOf<String?>(null) }
     val expandedItems = remember { mutableStateMapOf<Int, Boolean>() }
-    val helpfulFeedback = remember { mutableStateMapOf<String, Boolean>() }
     val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE) }
+    
+    val helpfulFeedback = remember {
+        val map = mutableStateMapOf<String, Boolean>()
+        // Load initial state
+        prefs.all.forEach { (key, value) ->
+            if (key.startsWith("faq_")) {
+                val questionKey = key.removePrefix("faq_")
+                map[questionKey] = value as Boolean
+            }
+        }
+        map
+    }
 
     val categories = remember {
         listOf(
@@ -580,6 +592,7 @@ private fun ExpressiveHelpCenterContent(
                                 IconButton(
                                     onClick = {
                                         helpfulFeedback[item.question] = true
+                                        prefs.edit().putBoolean("faq_${item.question}", true).apply()
                                         com.example.util.HapticManager.performClick(context)
                                     },
                                     modifier = Modifier.size(28.dp)
@@ -594,6 +607,7 @@ private fun ExpressiveHelpCenterContent(
                                 IconButton(
                                     onClick = {
                                         helpfulFeedback[item.question] = false
+                                        prefs.edit().putBoolean("faq_${item.question}", false).apply()
                                         com.example.util.HapticManager.performClick(context)
                                     },
                                     modifier = Modifier.size(28.dp)

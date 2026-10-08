@@ -953,7 +953,7 @@ fun FolderContentsBrowser(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "This Folder is Empty",
+                            text = "This Folder is empty",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
@@ -1058,7 +1058,7 @@ fun FolderBrowseItemRow(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = item.title.ifBlank { "Untitled preserving" },
+                        text = item.title.ifBlank { "Untitled Cobalt Item" },
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground,

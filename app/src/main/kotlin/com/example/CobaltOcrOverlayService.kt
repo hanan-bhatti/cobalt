@@ -590,7 +590,7 @@ class CobaltOcrOverlayService : Service() {
             QuickAction(R.drawable.ic_custom_text, "Note") {
                 noteInputRef?.requestFocus()
             },
-            QuickAction(R.drawable.ic_custom_movie, "Shows") {
+            QuickAction(R.drawable.ic_custom_movie, "Cobalt") {
                 mainContainerView.visibility = View.GONE
                 subpageContainerView.visibility = View.VISIBLE
             },
@@ -803,7 +803,7 @@ class CobaltOcrOverlayService : Service() {
         subpageHeader.addView(backBtn)
 
         val subpageTitle = TextView(this).apply {
-            text = "Movies & TV Shows"
+            text = "Cobalt"
             textSize = 12.5f
             setTextColor(textPrimary)
             typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
@@ -931,6 +931,16 @@ class CobaltOcrOverlayService : Service() {
                 }
 
                 searchRunnable = Runnable {
+                    searchResultsContainer.removeAllViews()
+                    val loadingTv = TextView(applicationContext).apply {
+                        text = "Loading..."
+                        textSize = 11f
+                        setTextColor(textSecondary)
+                        gravity = Gravity.CENTER
+                        setPadding(0, dpToPx(30), 0, dpToPx(30))
+                    }
+                    searchResultsContainer.addView(loadingTv)
+
                     serviceScope.launch {
                         val results = try {
                             repository.searchMedia(query)
@@ -1039,33 +1049,44 @@ class CobaltOcrOverlayService : Service() {
                                         setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4))
                                         isClickable = true
                                         setOnClickListener {
+                                            isClickable = false
+                                            text = "..."
                                             serviceScope.launch {
-                                                val savedItem = SavedItem(
-                                                    id = item.id,
-                                                    type = SavedItemType.MEDIA,
-                                                    title = item.title,
-                                                    content = item.overview ?: "",
-                                                    thumbnailPath = item.posterUrl,
-                                                    backdropUrl = item.backdropUrl,
-                                                    mediaType = item.mediaType,
-                                                    watchStatus = "Plan to Watch",
-                                                    releaseYear = item.releaseYear,
-                                                    genres = item.genres,
-                                                    watchProviders = item.watchProviders,
-                                                    trailerUrl = item.trailerUrl,
-                                                    rating = item.rating,
-                                                    folders = listOf("Media")
-                                                )
-                                                repository.saveItem(savedItem)
-                                                withContext(Dispatchers.Main) {
-                                                    text = "✓"
-                                                    val doneBg = GradientDrawable().apply {
-                                                        setColor(Color.parseColor("#4CAF50"))
-                                                        cornerRadius = dpToPx(8).toFloat()
+                                                try {
+                                                    val savedItem = SavedItem(
+                                                        id = item.id,
+                                                        type = SavedItemType.MEDIA,
+                                                        title = item.title,
+                                                        content = item.overview ?: "",
+                                                        thumbnailPath = item.posterUrl,
+                                                        backdropUrl = item.backdropUrl,
+                                                        mediaType = item.mediaType,
+                                                        watchStatus = "Plan to Watch",
+                                                        releaseYear = item.releaseYear,
+                                                        genres = item.genres,
+                                                        watchProviders = item.watchProviders,
+                                                        trailerUrl = item.trailerUrl,
+                                                        rating = item.rating,
+                                                        folders = listOf("Media")
+                                                    )
+                                                    val enrichedItem = repository.enrichMediaItemDetails(savedItem, saveToDb = false)
+                                                    repository.saveItem(enrichedItem)
+                                                    withContext(Dispatchers.Main) {
+                                                        text = "✓"
+                                                        val doneBg = GradientDrawable().apply {
+                                                            setColor(Color.parseColor("#4CAF50"))
+                                                            cornerRadius = dpToPx(8).toFloat()
+                                                        }
+                                                        background = doneBg
+                                                        com.example.widget.WidgetUpdater.update(applicationContext)
+                                                        Toast.makeText(applicationContext, "✓ Saved ${item.title}", Toast.LENGTH_SHORT).show()
                                                     }
-                                                    background = doneBg
-                                                    com.example.widget.WidgetUpdater.update(applicationContext)
-                                                    Toast.makeText(applicationContext, "✓ Saved ${item.title}", Toast.LENGTH_SHORT).show()
+                                                } catch (e: Exception) {
+                                                    withContext(Dispatchers.Main) {
+                                                        isClickable = true
+                                                        text = "Save"
+                                                        Toast.makeText(applicationContext, "Failed to save", Toast.LENGTH_SHORT).show()
+                                                    }
                                                 }
                                             }
                                         }

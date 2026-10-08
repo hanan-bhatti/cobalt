@@ -122,6 +122,23 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         settingsRepository.setHasDismissedOnboarding(true)
     }
 
+    private val _showProactiveSurvey = MutableStateFlow(false)
+    val showProactiveSurvey: StateFlow<Boolean> = _showProactiveSurvey.asStateFlow()
+
+    fun dismissProactiveSurvey() {
+        _showProactiveSurvey.value = false
+    }
+
+    fun checkProactiveSurvey() {
+        val count = prefs.getInt("saved_items_count", 0) + 1
+        prefs.edit().putInt("saved_items_count", count).apply()
+        
+        val surveySubmitted = prefs.getBoolean("survey_submitted", false)
+        if (!surveySubmitted && count == 5) {
+            _showProactiveSurvey.value = true
+        }
+    }
+
     val forceDisableBlur = settingsRepository.forceDisableBlur
     fun setForceDisableBlur(disabled: Boolean) {
         settingsRepository.setForceDisableBlur(disabled)
@@ -1871,6 +1888,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 cancelCapture()
                 editOriginalId = null
                 showToast(if (isEdit) "Item updated successfully." else "Item saved successfully.")
+                if (!isEdit) checkProactiveSurvey()
 
                 // Sync to Firestore and Storage in background
                 launch(kotlinx.coroutines.Dispatchers.IO) {
@@ -2292,6 +2310,36 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Memory"))
     }
 
+    suspend fun submitBugReport(
+        context: android.content.Context, title: String, description: String, steps: List<String>, attachmentUriStr: String?,
+        userEmail: String, userId: String, deviceModel: String, osVersion: String, appVersion: String
+    ): Boolean {
+        return com.example.util.FeedbackSubmissionManager.submitBugReport(
+            context, title, description, steps, attachmentUriStr, userEmail, userId, deviceModel, osVersion, appVersion,
+            uploadCloudAttachment = { uri -> repository.uploadFeedbackAttachment(uri) },
+            submitToCloud = { coll, payload -> repository.submitFeedbackToCloud(coll, payload) }
+        )
+    }
+
+    suspend fun submitFeatureRequest(
+        context: android.content.Context, title: String, problemStatement: String, proposedSolution: String, priority: String,
+        userConsent: Boolean, userEmail: String, userId: String, deviceModel: String, osVersion: String, appVersion: String
+    ): Boolean {
+        return com.example.util.FeedbackSubmissionManager.submitFeatureRequest(
+            context, title, problemStatement, proposedSolution, priority, userConsent, userEmail, userId, deviceModel, osVersion, appVersion,
+            submitToCloud = { coll, payload -> repository.submitFeedbackToCloud(coll, payload) }
+        )
+    }
+
+    suspend fun submitSurvey(
+        context: android.content.Context, reaction: String, favoriteFeatures: List<String>, desiredImprovements: List<String>,
+        npsScore: Int, customFeedback: String, userEmail: String, userId: String, deviceModel: String, osVersion: String, appVersion: String
+    ): Boolean {
+        return com.example.util.FeedbackSubmissionManager.submitSurvey(
+            context, reaction, favoriteFeatures, desiredImprovements, npsScore, customFeedback, userEmail, userId, deviceModel, osVersion, appVersion,
+            submitToCloud = { coll, payload -> repository.submitFeedbackToCloud(coll, payload) }
+        )
+    }
 }
 
 data class ExtractedLinkReview(

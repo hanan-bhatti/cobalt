@@ -109,7 +109,7 @@ fun CaptureScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Capture Memory",
+                        text = "Capture Item",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground

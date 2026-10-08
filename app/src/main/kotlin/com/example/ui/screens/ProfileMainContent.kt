@@ -860,6 +860,7 @@ fun ProfileMainContent(
 
             if (showSurveySheet) {
                 com.example.ui.components.SurveyBottomSheet(
+                    viewModel = viewModel,
                     onDismissRequest = { showSurveySheet = false }
                 )
             }

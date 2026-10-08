@@ -121,6 +121,40 @@ object AppVersionManager {
      */
     val releaseHistory: List<ReleaseNote> = listOf(
         ReleaseNote(
+            versionName = "2.1.0-beta",
+            versionCode = 13,
+            releaseDate = "October 8, 2026",
+            tag = AppVersionTag.BETA,
+            isCurrent = false,
+            isLatest = true,
+            highlights = listOf(
+                "UI & Gestures Overhaul",
+                "TMDb Rich Media Expansion",
+                "True Native Archiving"
+            ),
+            features = listOf(
+                "GlobalExpandingFab rewritten with a smooth Radial Menu, Floating Canvas overlays for quick notes, and a new tactile Folder bottom sheet",
+                "Massively upgraded media hub pulling Runtime, Taglines, Budgets, Revenue, and Production Companies from TMDb",
+                "Native 'isArchived' system wide filtering, replacing old string-based folder hacks",
+                "Dynamic flavor titles (Cobalt FOSS) with adaptive frameless version tags",
+                "Added proper FileProvider to enable secure sharing"
+            ),
+            improvements = listOf(
+                "Replaced manual swiping with proper HorizontalPager on Capture Screen for fluid gestures",
+                "Replaced Detail Screen inline image zooming with a dedicated full-screen overlay to fix scroll blocking",
+                "Removed legacy ImageMarkingCanvas that disrupted vertical scrolling",
+                "Upgraded database to Version 6 to support extended media metadata",
+                "Added authentic SVG brand logos for Apple, Crunchyroll, Disney, HBO, Hulu, Netflix, Prime, and YouTube"
+            ),
+            bugFixes = listOf(
+                "Squashed recursive cloud sync bug in DataDownloadService by utilizing saveItemLocallyOnly()",
+                "Fixed Video thumbnail absolute paths correctly binding to item content",
+                "Fixed home screen archive cards improperly rendering content URIs instead of extracted text for images",
+                "Hid FOSS cloud sync icons for non-signed-in users",
+                "Filtered duplicate streaming providers on Detail Screen"
+            )
+        ),
+        ReleaseNote(
             versionName = "2.0.0",
             versionCode = 12,
             releaseDate = "October 7, 2026",

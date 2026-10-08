@@ -9,7 +9,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:text="Loading your notes..."
+        android:text="Loading Cobalt..."
         android:textColor="?android:attr/textColorSecondary"
         android:textSize="12sp"
         android:gravity="center" />

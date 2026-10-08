@@ -200,7 +200,7 @@ fun DetailScreen(
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_custom_share),
-                            contentDescription = "Share memory",
+                            contentDescription = "Share item",
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -272,7 +272,7 @@ fun DetailScreen(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Edit Memory", fontWeight = FontWeight.Bold)
+                        Text("Edit Item", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -305,7 +305,7 @@ fun DetailScreen(
             if (item.type != SavedItemType.MEDIA) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     // Title
-                    val displayTitle = item.title.ifBlank { item.linkTitle ?: "Untitled Memory" }
+                    val displayTitle = item.title.ifBlank { item.linkTitle ?: "Untitled Item" }
                     Text(
                         text = displayTitle,
                         style = MaterialTheme.typography.displayMedium,

@@ -846,6 +846,16 @@ class CobaltRepository(private val context: Context) {
             return@withContext null
         }
     }
+
+    suspend fun uploadFeedbackAttachment(uri: android.net.Uri): String? = withContext(Dispatchers.IO) {
+        // Not supported in FOSS build
+        null
+    }
+
+    suspend fun submitFeedbackToCloud(collection: String, payload: Map<String, Any?>): Boolean = withContext(Dispatchers.IO) {
+        // Not supported in FOSS build, handled locally by saveLocally()
+        true // Return true so it doesn't fail the operation, as saving locally is the intended behavior for FOSS
+    }
 }
 
 data class LinkMetadata(

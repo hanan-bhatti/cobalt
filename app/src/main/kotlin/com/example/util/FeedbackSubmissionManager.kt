@@ -1,6 +1,7 @@
 package com.example.util
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -13,13 +14,9 @@ import java.util.Locale
 
 /**
  * Unified Submission Manager for Bug Reports, Feature Requests, and In-App Surveys.
- * Guarantees zero data loss across FOSS and Play distributions for both Guest and Signed-in users.
  */
 object FeedbackSubmissionManager {
 
-    /**
-     * Submits a Bug Report.
-     */
     suspend fun submitBugReport(
         context: Context,
         title: String,
@@ -30,15 +27,33 @@ object FeedbackSubmissionManager {
         userId: String,
         deviceModel: String,
         osVersion: String,
-        appVersion: String
+        appVersion: String,
+        uploadCloudAttachment: suspend (Uri) -> String?,
+        submitToCloud: suspend (String, Map<String, Any?>) -> Boolean
     ): Boolean = withContext(Dispatchers.IO) {
+        var finalAttachmentUrl = ""
+        
+        if (!attachmentUriStr.isNullOrBlank()) {
+            val uri = Uri.parse(attachmentUriStr)
+            try {
+                // Production fix: Validate file size (Max 25MB)
+                val fileSize = getFileSize(context, uri)
+                if (fileSize > 25 * 1024 * 1024) {
+                    throw Exception("Attachment exceeds 25MB limit.")
+                }
+                finalAttachmentUrl = uploadCloudAttachment(uri) ?: ""
+            } catch (e: Exception) {
+                throw Exception("Failed to upload attachment: ${e.message}")
+            }
+        }
+
         val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
         val payload = mapOf(
             "type" to "BUG_REPORT",
             "title" to title,
             "description" to description,
             "steps" to steps,
-            "attachmentUri" to (attachmentUriStr ?: ""),
+            "attachmentUrl" to finalAttachmentUrl, // Uploaded remote URL, not local URI
             "userEmail" to userEmail,
             "userId" to userId,
             "deviceModel" to deviceModel,
@@ -48,13 +63,14 @@ object FeedbackSubmissionManager {
         )
 
         saveLocally(context, "bug_reports.json", payload)
-        sendToFirestoreIfAvailable("bug_reports", payload)
+        
+        val cloudSuccess = submitToCloud("bug_reports", payload)
+        if (!cloudSuccess) {
+            throw Exception("Network error or permissions denied when submitting to cloud.")
+        }
         return@withContext true
     }
 
-    /**
-     * Submits a Feature Request.
-     */
     suspend fun submitFeatureRequest(
         context: Context,
         title: String,
@@ -66,7 +82,8 @@ object FeedbackSubmissionManager {
         userId: String,
         deviceModel: String,
         osVersion: String,
-        appVersion: String
+        appVersion: String,
+        submitToCloud: suspend (String, Map<String, Any?>) -> Boolean
     ): Boolean = withContext(Dispatchers.IO) {
         val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
         val payload = mapOf(
@@ -85,13 +102,13 @@ object FeedbackSubmissionManager {
         )
 
         saveLocally(context, "feature_requests.json", payload)
-        sendToFirestoreIfAvailable("feature_requests", payload)
+        val cloudSuccess = submitToCloud("feature_requests", payload)
+        if (!cloudSuccess) {
+            throw Exception("Network error or permissions denied when submitting to cloud.")
+        }
         return@withContext true
     }
 
-    /**
-     * Submits a Survey Response.
-     */
     suspend fun submitSurvey(
         context: Context,
         reaction: String,
@@ -103,7 +120,8 @@ object FeedbackSubmissionManager {
         userId: String,
         deviceModel: String,
         osVersion: String,
-        appVersion: String
+        appVersion: String,
+        submitToCloud: suspend (String, Map<String, Any?>) -> Boolean
     ): Boolean = withContext(Dispatchers.IO) {
         val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
         val payload = mapOf(
@@ -122,8 +140,28 @@ object FeedbackSubmissionManager {
         )
 
         saveLocally(context, "surveys.json", payload)
-        sendToFirestoreIfAvailable("surveys", payload)
+        val cloudSuccess = submitToCloud("surveys", payload)
+        if (!cloudSuccess) {
+            throw Exception("Network error or permissions denied when submitting to cloud.")
+        }
         return@withContext true
+    }
+
+    private fun getFileSize(context: Context, uri: Uri): Long {
+        var size = 0L
+        try {
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val sizeIndex = cursor.getColumnIndex(android.provider.OpenableColumns.SIZE)
+                    if (sizeIndex != -1) {
+                        size = cursor.getLong(sizeIndex)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("FeedbackSubmissionManager", "Failed to get file size", e)
+        }
+        return size
     }
 
     private fun saveLocally(context: Context, filename: String, payload: Map<String, Any?>) {
@@ -157,23 +195,6 @@ object FeedbackSubmissionManager {
             file.writeText(jsonArray.toString(2))
         } catch (e: Exception) {
             Log.e("FeedbackSubmissionManager", "Failed to save feedback locally: ${e.message}", e)
-        }
-    }
-
-    private fun sendToFirestoreIfAvailable(collectionName: String, payload: Map<String, Any?>) {
-        try {
-            val firestoreClazz = Class.forName("com.google.firebase.firestore.FirebaseFirestore")
-            val db = firestoreClazz.getMethod("getInstance").invoke(null)
-            val timestampClazz = Class.forName("com.google.firebase.Timestamp")
-            val now = timestampClazz.getMethod("now").invoke(null)
-
-            val firestorePayload = HashMap(payload)
-            firestorePayload["serverTimestamp"] = now
-
-            val col = db?.javaClass?.getMethod("collection", String::class.java)?.invoke(db, collectionName)
-            col?.javaClass?.getMethod("add", Any::class.java)?.invoke(col, firestorePayload)
-        } catch (e: Throwable) {
-            // Firebase unavailable or FOSS build; locally saved copy guarantees data preservation
         }
     }
 }

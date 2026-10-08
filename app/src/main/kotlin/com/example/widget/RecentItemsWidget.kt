@@ -105,7 +105,7 @@ class RecentItemsWidget : GlanceAppWidget() {
 
         var freshItems: List<SavedItem>? = null
         try {
-            val fetched = kotlinx.coroutines.withTimeoutOrNull(2000) {
+            val fetched = kotlinx.coroutines.withTimeoutOrNull(5000) {
                 CobaltRepository(context).getAllItems()
             }
             if (fetched != null) {
@@ -163,7 +163,7 @@ fun RecentItemsContent(items: List<SavedItem>, isFromCache: Boolean, isTimeout: 
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (items.isEmpty()) "Your archive is empty" else "No $categoryFilter items found",
+                    text = if (items.isEmpty()) "Your Cobalt is empty" else "No $categoryFilter items found",
                     style = TextStyle(
                         fontFamily = FontFamily.SansSerif,
                         color = GlanceTheme.colors.onSurfaceVariant,

@@ -110,6 +110,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Force widget update on app start to overcome OEM background restrictions
+        com.example.widget.WidgetUpdater.update(applicationContext)
+
         // Auto-start Floating OCR service if enabled and allowed
         val settingsRepo = com.example.data.repository.SettingsRepository(applicationContext)
         if (settingsRepo.isFloatingOcrEnabled.value && com.example.utils.PermissionUtils.hasOverlayPermission(applicationContext)) {
@@ -342,6 +345,7 @@ class MainActivity : ComponentActivity() {
                                      }
                                      composable("feedback") {
                                          com.example.ui.screens.FeedbackScreen(
+                                             viewModel = viewModel,
                                              onNavigateBack = { navController.popBackStack() }
                                          )
                                      }
@@ -464,6 +468,14 @@ class MainActivity : ComponentActivity() {
                                 com.example.ui.components.GlobalExpandingFab(viewModel = viewModel, hazeState = hazeState)
                             }
                             com.example.ui.components.MediaSearchBottomSheet(viewModel = viewModel)
+                        }
+
+                        val showProactiveSurvey by viewModel.showProactiveSurvey.collectAsState()
+                        if (showProactiveSurvey) {
+                            com.example.ui.components.SurveyBottomSheet(
+                                viewModel = viewModel,
+                                onDismissRequest = { viewModel.dismissProactiveSurvey() }
+                            )
                         }
 
                         val userFeedback by viewModel.userFeedback.collectAsState()

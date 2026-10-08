@@ -16,6 +16,9 @@
 # debugging stack traces.
 #-keepattributes SourceFile,LineNumberTable
 
+# Preserve annotations and signatures for Kotlin reflection and Moshi
+-keepattributes *Annotation*,Signature,InnerClasses
+
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile

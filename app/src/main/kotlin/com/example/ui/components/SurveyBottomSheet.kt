@@ -112,6 +112,7 @@ data class QuickPromptItem(
 @Suppress("DEPRECATION")
 @Composable
 fun SurveyBottomSheet(
+    viewModel: com.example.ui.viewmodel.CobaltViewModel,
     onDismissRequest: () -> Unit,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     modifier: Modifier = Modifier
@@ -137,8 +138,9 @@ fun SurveyBottomSheet(
     var npsScore by remember { mutableIntStateOf(9) }
     var customFeedback by remember { mutableStateOf("") }
 
+    val prefs = remember { context.getSharedPreferences("cobalt_prefs", android.content.Context.MODE_PRIVATE) }
     var isSubmitting by remember { mutableStateOf(false) }
-    var submitSuccess by remember { mutableStateOf(false) }
+    var submitSuccess by remember { mutableStateOf(prefs.getBoolean("survey_submitted", false)) }
 
     val reactions = remember {
         listOf(
@@ -634,7 +636,7 @@ fun SurveyBottomSheet(
                         onClick = {
                             isSubmitting = true
                             coroutineScope.launch {
-                                com.example.util.FeedbackSubmissionManager.submitSurvey(
+                                viewModel.submitSurvey(
                                     context = context,
                                     reaction = selectedReaction?.label ?: "Loving It",
                                     favoriteFeatures = favoriteFeatures.toList(),
@@ -649,6 +651,7 @@ fun SurveyBottomSheet(
                                 )
                                 isSubmitting = false
                                 submitSuccess = true
+                                prefs.edit().putBoolean("survey_submitted", true).apply()
                                 com.example.util.HapticManager.performSuccess(context)
                             }
                         },

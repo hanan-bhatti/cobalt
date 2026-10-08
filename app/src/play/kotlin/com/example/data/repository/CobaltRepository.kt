@@ -1722,6 +1722,29 @@ class CobaltRepository(private val context: Context) {
             return@withContext null
         }
     }
+
+    suspend fun uploadFeedbackAttachment(uri: android.net.Uri): String? = withContext(Dispatchers.IO) {
+        val storageRef = storage?.reference?.child("feedback_attachments/${System.currentTimeMillis()}_${uri.lastPathSegment}")
+        return@withContext try {
+            storageRef?.putFile(uri)?.await()
+            storageRef?.downloadUrl?.await()?.toString()
+        } catch (e: Exception) {
+            Log.e("CobaltRepo", "Failed to upload feedback attachment: ${e.message}", e)
+            null
+        }
+    }
+
+    suspend fun submitFeedbackToCloud(collection: String, payload: Map<String, Any?>): Boolean = withContext(Dispatchers.IO) {
+        return@withContext try {
+            val firestorePayload = HashMap(payload)
+            firestorePayload["serverTimestamp"] = com.google.firebase.firestore.FieldValue.serverTimestamp()
+            firestore?.collection(collection)?.add(firestorePayload)?.await()
+            true
+        } catch (e: Exception) {
+            Log.e("CobaltRepo", "Failed to submit feedback to Firestore: ${e.message}", e)
+            false
+        }
+    }
 }
 
 data class LinkMetadata(

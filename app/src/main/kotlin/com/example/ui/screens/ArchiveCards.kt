@@ -198,7 +198,7 @@ fun ArchiveItemCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = item.title.ifBlank { "Untitled Note" },
+                        text = item.title.ifBlank { "Untitled Item" },
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 2,
@@ -680,7 +680,7 @@ fun ArchiveItemRow(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = item.title.ifBlank { "Untitled Note" },
+                        text = item.title.ifBlank { "Untitled Item" },
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
