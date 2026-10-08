@@ -300,6 +300,7 @@ fun DetailScreen(
         containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier.fillMaxSize()
     ) { innerPadding ->
+        var showFullscreenImage by remember { mutableStateOf(false) }
         var isLoading by remember(item.id) { mutableStateOf(true) }
         LaunchedEffect(item.id) {
             delay(400)
@@ -436,40 +437,7 @@ fun DetailScreen(
                             .clip(RoundedCornerShape(20.dp))
                             .background(Color.Black.copy(alpha = 0.05f))
                             .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
-                            .pointerInput(item.id) {
-                                detectTransformGestures { _, pan, zoom, _ ->
-                                    val newScale = (scale * zoom).coerceIn(1f, 5f)
-                                    if (newScale > 1f) {
-                                        val maxOffset = (newScale - 1f) * 200f
-                                        val newOffset = offset + pan
-                                        offset = Offset(
-                                            x = newOffset.x.coerceIn(-maxOffset, maxOffset),
-                                            y = newOffset.y.coerceIn(-maxOffset, maxOffset)
-                                        )
-                                    } else {
-                                        offset = Offset.Zero
-                                    }
-                                    scale = newScale
-                                }
-                            }
-                            .pointerInput(item.id) {
-                                detectTapGestures(
-                                    onDoubleTap = {
-                                        if (scale > 1f) {
-                                            scale = 1f
-                                            offset = Offset.Zero
-                                        } else {
-                                            scale = 2.5f
-                                        }
-                                    }
-                                )
-                            }
-                            .graphicsLayer(
-                                scaleX = scale,
-                                scaleY = scale,
-                                translationX = offset.x,
-                                translationY = offset.y
-                            )
+                            .clickable { showFullscreenImage = true }
                     )
                 }
             }
@@ -696,6 +664,73 @@ fun DetailScreen(
                     isDestructive = false,
                     icon = painterResource(id = R.drawable.ic_custom_link_external)
                 )
+            }
+            if (showFullscreenImage) {
+                androidx.compose.ui.window.Dialog(
+                    onDismissRequest = { showFullscreenImage = false },
+                    properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black)
+                    ) {
+                        var dialogScale by remember { mutableStateOf(1f) }
+                        var dialogOffset by remember { mutableStateOf(Offset.Zero) }
+                        
+                        AsyncImage(
+                            model = item.getBestImagePath(),
+                            contentDescription = "Fullscreen Image",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .pointerInput(Unit) {
+                                    detectTransformGestures { _, pan, zoom, _ ->
+                                        val newScale = (dialogScale * zoom).coerceIn(1f, 5f)
+                                        if (newScale > 1f) {
+                                            val maxOffset = (newScale - 1f) * 400f
+                                            val newOffset = dialogOffset + pan
+                                            dialogOffset = Offset(
+                                                x = newOffset.x.coerceIn(-maxOffset, maxOffset),
+                                                y = newOffset.y.coerceIn(-maxOffset, maxOffset)
+                                            )
+                                        } else {
+                                            dialogOffset = Offset.Zero
+                                        }
+                                        dialogScale = newScale
+                                    }
+                                }
+                                .pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onDoubleTap = {
+                                            if (dialogScale > 1f) {
+                                                dialogScale = 1f
+                                                dialogOffset = Offset.Zero
+                                            } else {
+                                                dialogScale = 2.5f
+                                            }
+                                        }
+                                    )
+                                }
+                                .graphicsLayer(
+                                    scaleX = dialogScale,
+                                    scaleY = dialogScale,
+                                    translationX = dialogOffset.x,
+                                    translationY = dialogOffset.y
+                                ),
+                            contentScale = ContentScale.Fit
+                        )
+                        
+                        IconButton(
+                            onClick = { showFullscreenImage = false },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(32.dp)
+                                .background(Color.Black.copy(alpha = 0.5f), androidx.compose.foundation.shape.CircleShape)
+                        ) {
+                            Icon(painter = painterResource(id = R.drawable.ic_custom_close), contentDescription = "Close", tint = Color.White)
+                        }
+                    }
+                }
             }
             Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding() + 16.dp))
         }

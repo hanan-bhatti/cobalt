@@ -311,43 +311,154 @@ fun CaptureScreen(
             }
 
             // MEDIA DRAWING CANVAS (OCR Region Selection)
-            if (pageType == SavedItemType.IMAGE && capturedBitmap != null) {
-                Text(
-                    text = "Screenshot Region Marking",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(bottom = 2.dp)
-                )
-                Text(
-                    text = "Draw a rough box or line over text/URLs to autoextract using Gemini AI. Leave empty to skip OCR.",
-                    fontSize = 11.sp,
-                    lineHeight = 15.sp,
-                    color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.padding(bottom = 10.dp)
-                )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
-                        .background(Color.Black)
-                ) {
-                    ImageMarkingCanvas(
-                        bitmap = capturedBitmap!!,
-                        onRegionSelected = { x, y, w, h ->
-                            viewModel.performRegionOcr(x, y, w, h)
-                        },
-                        enabled = !isOcrLoading,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+            val mediaPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+                androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
+            ) { uri ->
+                if (uri != null) {
+                    viewModel.handleMediaSelected(uri, pageType)
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // EXTRACTED TEXT FIELD (IF OCR TRIGGERED)
+            // UNIFIED MEDIA PREVIEW
+            if (pageType == SavedItemType.IMAGE || pageType == SavedItemType.VIDEO) {
+                var isDrawMode by remember { mutableStateOf(false) }
+                val mediaUrl = item.content
+                
+                // Show Media file picker buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = {
+                            mediaPicker.launch(
+                                androidx.activity.result.PickVisualMediaRequest(
+                                    if (pageType == SavedItemType.IMAGE) androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    else androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.VideoOnly
+                                )
+                            )
+                        },
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    ) {
+                        Icon(
+                            painter = painterResource(id = if (pageType == SavedItemType.IMAGE) R.drawable.ic_custom_image else R.drawable.ic_custom_video),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (pageType == SavedItemType.IMAGE) "Select Image File" else "Select Video File",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    
+                    if (mediaUrl.isNotBlank() || capturedBitmap != null) {
+                        IconButton(
+                            onClick = {
+                                viewModel.updateActiveCaptureItem { it.copy(content = "") }
+                            },
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.errorContainer,
+                                    RoundedCornerShape(12.dp)
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete File",
+                                tint = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+                }
+
+                if (pageType == SavedItemType.IMAGE && capturedBitmap != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Shared Image OCR",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text("Draw Mode", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
+                            Switch(
+                                checked = isDrawMode,
+                                onCheckedChange = { isDrawMode = it },
+                                modifier = Modifier.graphicsLayer { scaleX = 0.7f; scaleY = 0.7f }
+                            )
+                        }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .border(1.dp, if(isDrawMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
+                            .background(Color.Black)
+                    ) {
+                        ImageMarkingCanvas(
+                            bitmap = capturedBitmap!!,
+                            onRegionSelected = { x, y, w, h ->
+                                viewModel.performRegionOcr(x, y, w, h)
+                            },
+                            enabled = isDrawMode && !isOcrLoading,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                } else if (pageType == SavedItemType.IMAGE && mediaUrl.isNotBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(20.dp))
+                    ) {
+                        AsyncImage(
+                            model = mediaUrl,
+                            contentDescription = "Selected Image",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                } else if (pageType == SavedItemType.VIDEO && mediaUrl.isNotBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(20.dp))
+                            .background(Color.Black),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_video),
+                            contentDescription = "Video Loaded",
+                            tint = Color.White,
+                            modifier = Modifier.size(48.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+            // EXTRACTED TEXT FIELD / NOTES FIELD
             if (isOcrLoading) {
                 Box(
                     modifier = Modifier
@@ -374,9 +485,9 @@ fun CaptureScreen(
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-            } else if (item.extractedText != null) {
+            } else if (item.extractedText != null || pageType == SavedItemType.IMAGE || pageType == SavedItemType.VIDEO) {
                 Text(
-                    text = "Extracted OCR Result",
+                    text = if (item.extractedText != null && capturedBitmap != null) "Extracted OCR Result" else "Notes / Description",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.primary,
@@ -756,111 +867,7 @@ fun CaptureScreen(
                 val editorFont = if (pageType == SavedItemType.CODE) FontFamily.Monospace else FontFamily.SansSerif
                 val isMultiLine = pageType == SavedItemType.TEXT || pageType == SavedItemType.CODE
 
-                if (pageType == SavedItemType.IMAGE || pageType == SavedItemType.VIDEO) {
-                    val mediaUrl = item.content
-
-                    // native media picker
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Button(
-                            onClick = {
-                                mediaPicker.launch(
-                                    androidx.activity.result.PickVisualMediaRequest(
-                                        if (pageType == SavedItemType.IMAGE) androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
-                                        else androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.VideoOnly
-                                    )
-                                )
-                            },
-                            modifier = Modifier.weight(1f),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        ) {
-                            Icon(
-                                painter = painterResource(id = if (pageType == SavedItemType.IMAGE) R.drawable.ic_custom_image else R.drawable.ic_custom_video),
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (pageType == SavedItemType.IMAGE) "Select Image File" else "Select Video File",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        if (mediaUrl.isNotBlank()) {
-                            IconButton(
-                                onClick = {
-                                    viewModel.updateActiveCaptureItem { it.copy(content = "") }
-                                },
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .background(
-                                        MaterialTheme.colorScheme.errorContainer,
-                                        RoundedCornerShape(12.dp)
-                                    )
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = "Delete File",
-                                    tint = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                            }
-                        }
-                    }
-
-                    if (mediaUrl.isNotBlank() && pageType == SavedItemType.IMAGE) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(220.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .border(
-                                    1.dp,
-                                    MaterialTheme.colorScheme.outlineVariant,
-                                    RoundedCornerShape(20.dp)
-                                )
-                        ) {
-                            AsyncImage(
-                                model = mediaUrl,
-                                contentDescription = "Selected Image",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
-                        Spacer(Modifier.height(16.dp))
-                    }
-
-                    if (pageType == SavedItemType.VIDEO && mediaUrl.isNotBlank()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(220.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .border(
-                                    1.dp,
-                                    MaterialTheme.colorScheme.outlineVariant,
-                                    RoundedCornerShape(20.dp)
-                                )
-                                .background(Color.Black),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_video),
-                                contentDescription = "Video Loaded",
-                                tint = Color.White,
-                                modifier = Modifier.size(48.dp)
-                            )
-                        }
-                        Spacer(Modifier.height(16.dp))
-                    }
-                } else if (pageType == SavedItemType.AUDIO) {
+                if (pageType == SavedItemType.AUDIO) {
                     AudioRecorderComponent(
                         onRecordComplete = { file: java.io.File ->
                             viewModel.transcribeAudioMemo(file)
@@ -1283,22 +1290,19 @@ fun ImageMarkingCanvas(
                 containerWidth = coordinates.size.width.toFloat()
                 containerHeight = coordinates.size.height.toFloat()
             }
-            .pointerInput(bitmap) {
-                detectDragGestures(
-                    onDragStart = { offset ->
-                        if (currentEnabled) {
+            .pointerInput(bitmap, currentEnabled) {
+                if (currentEnabled) {
+                    detectDragGestures(
+                        onDragStart = { offset ->
                             pathPoints = listOf(offset)
-                        }
-                    },
-                    onDrag = { change, _ ->
-                        if (currentEnabled) {
+                        },
+                        onDrag = { change, _ ->
                             change.consume()
                             pathPoints = pathPoints + change.position
-                        }
-                    },
-                    onDragEnd = {
-                        if (currentEnabled && pathPoints.isNotEmpty() && containerWidth > 0 && containerHeight > 0) {
-                            val minX = pathPoints.minOf { it.x }.coerceIn(0f, containerWidth)
+                        },
+                        onDragEnd = {
+                            if (pathPoints.isNotEmpty() && containerWidth > 0 && containerHeight > 0) {
+                                val minX = pathPoints.minOf { it.x }.coerceIn(0f, containerWidth)
                             val maxX = pathPoints.maxOf { it.x }.coerceIn(0f, containerWidth)
                             val minY = pathPoints.minOf { it.y }.coerceIn(0f, containerHeight)
                             val maxY = pathPoints.maxOf { it.y }.coerceIn(0f, containerHeight)
@@ -1316,6 +1320,7 @@ fun ImageMarkingCanvas(
                         }
                     }
                 )
+                }
             }
     ) {
         Image(
