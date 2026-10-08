@@ -271,11 +271,11 @@ fun HomeScreen(
                     title = {
                         Column {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalAlignment = Alignment.Top,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text(
-                                    text = "Cobalt",
+                                    text = if (com.example.BuildConfig.FLAVOR == "foss") "Cobalt FOSS" else "Cobalt",
                                     fontSize = 28.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = FontFamily.SansSerif,
@@ -283,7 +283,11 @@ fun HomeScreen(
                                 )
                                 com.example.ui.components.AppVersionBadge(
                                     onClick = { showReleaseNotesSheet = true },
-                                    modifier = Modifier.padding(top = 4.dp).testTag("topbar_version_badge")
+                                    fontSize = 12.sp,
+                                    horizontalPadding = 0.dp,
+                                    verticalPadding = 0.dp,
+                                    isFrameless = true,
+                                    modifier = Modifier.padding(top = 2.dp, start = 2.dp).testTag("topbar_version_badge")
                                 )
                             }
                             Text(

@@ -39,22 +39,27 @@ fun AppVersionBadge(
     horizontalPadding: Dp = 8.dp,
     verticalPadding: Dp = 3.dp,
     cornerRadius: Dp = 8.dp,
+    isFrameless: Boolean = false,
     onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val containerColor = tag.containerColor()
     val contentColor = tag.contentColor()
+    
+    // For frameless, we use the tag's intrinsic contentColor to ensure it matches the actual version channel.
+    val finalContentColor = contentColor
 
     val displayText = buildString {
         append(if (versionName != null) "${tag.label} $versionName" else tag.label)
-        if (com.example.BuildConfig.FLAVOR == "foss") {
+        // Don't append FOSS if it's a frameless badge (used as a superscript)
+        if (!isFrameless && com.example.BuildConfig.FLAVOR == "foss") {
             append(" • FOSS")
         }
     }
 
     Surface(
-        color = containerColor,
-        contentColor = contentColor,
+        color = if (isFrameless) Color.Transparent else containerColor,
+        contentColor = finalContentColor,
         shape = RoundedCornerShape(cornerRadius),
         modifier = modifier
             .clip(RoundedCornerShape(cornerRadius))
@@ -71,13 +76,13 @@ fun AppVersionBadge(
                 Icon(
                     imageVector = Icons.Default.Sell,
                     contentDescription = null,
-                    tint = contentColor,
+                    tint = finalContentColor,
                     modifier = Modifier.size((fontSize.value + 2).dp)
                 )
             }
             Text(
                 text = displayText,
-                color = contentColor,
+                color = finalContentColor,
                 fontSize = fontSize,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 0.5.sp

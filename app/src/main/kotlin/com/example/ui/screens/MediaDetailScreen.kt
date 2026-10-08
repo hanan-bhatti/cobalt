@@ -33,7 +33,9 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
@@ -69,7 +71,7 @@ import com.example.ui.theme.*
 import com.example.ui.viewmodel.CobaltViewModel
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MediaDetailSection(
     item: SavedItem,
@@ -78,6 +80,7 @@ fun MediaDetailSection(
     onWatchStatusChanged: ((String) -> Unit)? = null
 ) {
     var showPosterZoom by remember { mutableStateOf(false) }
+    var showMoreInfoSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(item.id) {
         viewModel.enrichMediaItem(item)
@@ -478,12 +481,12 @@ fun MediaDetailSection(
                         color = MaterialTheme.colorScheme.secondary
                     )
                 }
+                val uniqueProviders = item.watchProviders.map { getStreamingProviderConfig(it) }.distinctBy { it.label }
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    items(item.watchProviders, key = { it }) { provider ->
-                        val config = getStreamingProviderConfig(provider)
+                    items(uniqueProviders, key = { it.label }) { config ->
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = config.backgroundColor,
@@ -530,6 +533,20 @@ fun MediaDetailSection(
                     markdown = item.content,
                     color = MaterialTheme.colorScheme.onBackground
                 )
+                if (item.tagline?.isNotBlank() == true || item.runtime != null || item.budget != null || item.revenue != null || item.status != null || item.productionCompanies.isNotEmpty()) {
+                    TextButton(
+                        onClick = { showMoreInfoSheet = true },
+                        modifier = Modifier.align(Alignment.End),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "View More Info",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
         }
 
@@ -631,6 +648,84 @@ fun MediaDetailSection(
             }
         }
     }
+
+    // MORE INFO BOTTOM SHEET
+    if (showMoreInfoSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showMoreInfoSheet = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Additional Information",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                
+                if (!item.tagline.isNullOrBlank()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(text = "TAGLINE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
+                        Text(text = "“${item.tagline}”", style = MaterialTheme.typography.bodyMedium, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+                    }
+                }
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    if (item.runtime != null && item.runtime > 0) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
+                            Text(text = "RUNTIME", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
+                            Text(text = "${item.runtime} mins", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    if (!item.status.isNullOrBlank()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
+                            Text(text = "STATUS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
+                            Text(text = item.status, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    if (item.budget != null && item.budget > 0) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
+                            Text(text = "BUDGET", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
+                            val formattedBudget = java.text.NumberFormat.getCurrencyInstance(Locale.US).apply { maximumFractionDigits = 0 }.format(item.budget)
+                            Text(text = formattedBudget, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    if (item.revenue != null && item.revenue > 0) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
+                            Text(text = "REVENUE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
+                            val formattedRevenue = java.text.NumberFormat.getCurrencyInstance(Locale.US).apply { maximumFractionDigits = 0 }.format(item.revenue)
+                            Text(text = formattedRevenue, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+                
+                if (item.productionCompanies.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(text = "PRODUCTION", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
+                        Text(text = item.productionCompanies.joinToString(", "), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -665,7 +760,7 @@ fun YouTubeTrailerPlayer(
                                 allowFileAccess = true
                                 useWideViewPort = true
                                 loadWithOverviewMode = true
-                                userAgentString = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36"
+                                userAgentString = "Mozilla/5.0 (Linux; Android 16; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Mobile Safari/537.36"
                             }
                             webChromeClient = WebChromeClient()
                             webViewClient = object : WebViewClient() {
@@ -674,7 +769,8 @@ fun YouTubeTrailerPlayer(
                                     isLoading = false
                                 }
                             }
-                            loadUrl(embedUrl)
+                            val headers = mutableMapOf("Referer" to "https://www.youtube.com")
+                            loadUrl(embedUrl, headers)
                         }
                     },
                     modifier = Modifier.fillMaxSize()

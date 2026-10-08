@@ -56,6 +56,12 @@ data class SavedItem(
     val backdropUrl: String? = null,
     val releaseYear: String? = null,
     val rating: Double? = null,
+    val runtime: Int? = null,
+    val tagline: String? = null,
+    val budget: Long? = null,
+    val revenue: Long? = null,
+    val status: String? = null,
+    val productionCompanies: List<String> = emptyList(),
     val isArchived: Boolean = false,
     val updatedAt: Long = timestamp,
     val isDeleted: Boolean = false

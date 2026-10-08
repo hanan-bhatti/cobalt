@@ -218,6 +218,17 @@ class CobaltRepository(private val context: Context) {
             backdropUrl = backdropUrl,
             releaseYear = releaseYear,
             rating = rating,
+            runtime = runtime,
+            tagline = tagline,
+            budget = budget,
+            revenue = revenue,
+            status = status,
+            productionCompanies = try {
+                productionCompaniesJson.removeSurrounding("[", "]")
+                    .split(",")
+                    .map { it.trim().removeSurrounding("\"") }
+                    .filter { it.isNotEmpty() }
+            } catch (e: Exception) { emptyList() },
             isArchived = isArchived,
             updatedAt = updatedAt,
             isDeleted = isDeleted
@@ -255,6 +266,12 @@ class CobaltRepository(private val context: Context) {
             backdropUrl = backdropUrl,
             releaseYear = releaseYear,
             rating = rating,
+            runtime = runtime,
+            tagline = tagline,
+            budget = budget,
+            revenue = revenue,
+            status = status,
+            productionCompaniesJson = "[" + productionCompanies.joinToString(",") { "\"$it\"" } + "]",
             isArchived = isArchived,
             updatedAt = updatedAt,
             isDeleted = isDeleted
@@ -375,6 +392,12 @@ class CobaltRepository(private val context: Context) {
         var trailerUrl = item.trailerUrl
         var backdropUrl = item.backdropUrl
         var rating = item.rating
+        var runtime = item.runtime
+        var tagline = item.tagline
+        var budget = item.budget
+        var revenue = item.revenue
+        var status = item.status
+        var productionCompanies = item.productionCompanies
 
         var updated = false
 
@@ -393,6 +416,30 @@ class CobaltRepository(private val context: Context) {
 
                     if (rating == null && details.voteAverage != null) {
                         rating = details.voteAverage
+                        updated = true
+                    }
+                    if (runtime == null && details.runtime != null) {
+                        runtime = details.runtime
+                        updated = true
+                    }
+                    if (tagline == null && details.tagline != null) {
+                        tagline = details.tagline
+                        updated = true
+                    }
+                    if (budget == null && details.budget != null) {
+                        budget = details.budget
+                        updated = true
+                    }
+                    if (revenue == null && details.revenue != null) {
+                        revenue = details.revenue
+                        updated = true
+                    }
+                    if (status == null && details.status != null) {
+                        status = details.status
+                        updated = true
+                    }
+                    if (productionCompanies.isEmpty() && details.productionCompanies != null) {
+                        productionCompanies = details.productionCompanies.mapNotNull { it.name }
                         updated = true
                     }
 
@@ -472,7 +519,13 @@ class CobaltRepository(private val context: Context) {
                 watchProviders = watchProviders,
                 trailerUrl = trailerUrl,
                 backdropUrl = backdropUrl,
-                rating = rating
+                rating = rating,
+                runtime = runtime,
+                tagline = tagline,
+                budget = budget,
+                revenue = revenue,
+                status = status,
+                productionCompanies = productionCompanies
             )
             if (saveToDb) {
                 savedItemDao.insertItem(newItem.toEntity())

@@ -191,7 +191,7 @@ fun ProfileMainContent(
                                     color = MaterialTheme.colorScheme.onBackground
                                 )
                                 Text(
-                                    text = if (com.example.BuildConfig.FLAVOR == "foss") "SETTINGS & DEVICES" else "SETTINGS, STORAGE & DEVICES",
+                                    text = if (com.example.BuildConfig.FLAVOR == "foss") "SETTINGS" else "SETTINGS, STORAGE & DEVICES",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.secondary,

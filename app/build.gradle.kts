@@ -32,7 +32,8 @@ android {
   productFlavors {
     create("foss") {
       dimension = "distribution"
-      manifestPlaceholders["appName"] = "Cobalt"
+      applicationIdSuffix = ".foss"
+      manifestPlaceholders["appName"] = "Cobalt FOSS"
       // Disable Firebase Performance instrumentation for foss builds
       configure<FirebasePerfExtension> {
         setInstrumentationEnabled(false)
