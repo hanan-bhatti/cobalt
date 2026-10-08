@@ -23,7 +23,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SavedItemDao {
-    @Query("SELECT * FROM saved_items ORDER BY orderIndex DESC, timestamp DESC")
+    @Query("SELECT * FROM saved_items WHERE isDeleted = 0 ORDER BY orderIndex DESC, timestamp DESC")
     fun getAllItemsFlow(): Flow<List<SavedItemEntity>>
 
     @Query("SELECT * FROM saved_items WHERE id = :id")

@@ -218,7 +218,9 @@ class CobaltRepository(private val context: Context) {
             backdropUrl = backdropUrl,
             releaseYear = releaseYear,
             rating = rating,
-            isArchived = isArchived
+            isArchived = isArchived,
+            updatedAt = updatedAt,
+            isDeleted = isDeleted
         )
     }
 
@@ -253,7 +255,9 @@ class CobaltRepository(private val context: Context) {
             backdropUrl = backdropUrl,
             releaseYear = releaseYear,
             rating = rating,
-            isArchived = isArchived
+            isArchived = isArchived,
+            updatedAt = updatedAt,
+            isDeleted = isDeleted
         )
     }
 
@@ -484,6 +488,12 @@ class CobaltRepository(private val context: Context) {
             savedItemDao.insertItem(it.toEntity())
         }
     }
+    suspend fun saveItemLocallyOnly(item: SavedItem) = withContext(Dispatchers.IO) {
+        val updatedItem = item.copy(timestamp = System.currentTimeMillis())
+        savedItemDao.insertItem(updatedItem.toEntity())
+        updatedItem
+    }
+
 
     suspend fun saveItem(item: SavedItem, mediaBytes: ByteArray? = null, onProgress: (Float) -> Unit = {}): SavedItem = withContext(Dispatchers.IO) {
         val itemSize = when {
@@ -492,7 +502,7 @@ class CobaltRepository(private val context: Context) {
             item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO -> item.sizeBytes
             else -> item.content.toByteArray().size.toLong()
         }
-        val finalItem = item.copy(sizeBytes = itemSize, timestamp = System.currentTimeMillis())
+        val finalItem = item.copy(sizeBytes = itemSize, timestamp = if (item.timestamp == 0L) System.currentTimeMillis() else item.timestamp, updatedAt = System.currentTimeMillis())
         savedItemDao.insertItem(finalItem.toEntity())
         com.example.widget.WidgetUpdater.update(context)
         finalItem
@@ -739,6 +749,50 @@ class CobaltRepository(private val context: Context) {
         }
     }
 
+    suspend fun ensureMediaCached(item: SavedItem): SavedItem? = withContext(Dispatchers.IO) {
+        val isMedia = item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO
+        val remoteUrl = if (item.type == SavedItemType.AUDIO) item.thumbnailPath else item.content
+        if (!isMedia || remoteUrl.isNullOrBlank() || (!remoteUrl.startsWith("http://") && !remoteUrl.startsWith("https://"))) {
+            return@withContext null
+        }
+
+        try {
+            val destDir = getPermanentMediaDir(item.type)
+            val extension = when (item.type) {
+                SavedItemType.VIDEO -> "mp4"
+                SavedItemType.AUDIO -> "mp4"
+                else -> "jpg"
+            }
+            val fileName = "${item.id}.$extension"
+            val destFile = java.io.File(destDir, fileName)
+
+            if (!destFile.exists()) {
+                val request = okhttp3.Request.Builder().url(remoteUrl).build()
+                val client = okhttp3.OkHttpClient()
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return@withContext null
+                    val body = response.body ?: return@withContext null
+                    body.byteStream().use { input ->
+                        java.io.FileOutputStream(destFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                }
+            }
+
+            val updatedItem = if (item.type == SavedItemType.AUDIO) {
+                item.copy(thumbnailPath = destFile.absolutePath)
+            } else {
+                item.copy(content = destFile.absolutePath, thumbnailPath = destFile.absolutePath)
+            }
+            
+            saveItemLocallyOnly(updatedItem)
+            return@withContext updatedItem
+        } catch (e: Exception) {
+            Log.e("CobaltRepo", "Failed to cache media: ${e.message}")
+            return@withContext null
+        }
+    }
 }
 
 data class LinkMetadata(

@@ -93,7 +93,8 @@ fun ProfileMainContent(
     onNavigateToSettings: () -> Unit,
     onNavigateToDevices: () -> Unit,
     onNavigateToMovieApiKey: () -> Unit = {},
-    onNavigateToManageStorage: () -> Unit
+    onNavigateToManageStorage: () -> Unit,
+    onNavigateToCategory: (String) -> Unit = {}
 ) {
     val isFirebaseAvailable = viewModel.isFirebaseAvailable
     val userEmail by viewModel.userEmail.collectAsState()
@@ -176,7 +177,7 @@ fun ProfileMainContent(
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_profile),
+                                painter = painterResource(id = if (com.example.BuildConfig.FLAVOR == "foss") R.drawable.ic_custom_settings else R.drawable.ic_custom_profile),
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(24.dp)
@@ -184,13 +185,13 @@ fun ProfileMainContent(
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = "Profile",
+                                    text = if (com.example.BuildConfig.FLAVOR == "foss") "Settings" else "Profile",
                                     fontSize = 24.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onBackground
                                 )
                                 Text(
-                                    text = "SETTINGS, STORAGE & DEVICES",
+                                    text = if (com.example.BuildConfig.FLAVOR == "foss") "SETTINGS & DEVICES" else "SETTINGS, STORAGE & DEVICES",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.secondary,
@@ -320,6 +321,7 @@ fun ProfileMainContent(
                     }
                 }
             }
+            if (com.example.BuildConfig.FLAVOR != "foss") {
             // HEADER
             Surface(
                 shape = RoundedCornerShape(24.dp),
@@ -480,6 +482,7 @@ fun ProfileMainContent(
                     }
                 }
             }
+            }
 
             // YOUR ARCHIVE
             SectionContainer(title = "YOUR ARCHIVE") {
@@ -504,12 +507,14 @@ fun ProfileMainContent(
                             ArchiveStatRow(
                                 iconResId = R.drawable.ic_custom_link, count = totalLinks, label = "Links",
                                 baseColor = CategoryLink,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                onClick = { onNavigateToCategory("Links") }
                             )
                             ArchiveStatRow(
                                 iconResId = R.drawable.ic_custom_image, count = totalImages, label = "Images",
                                 baseColor = CategoryImage,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                onClick = { onNavigateToCategory("Images") }
                             )
                         }
                         Row(
@@ -519,12 +524,14 @@ fun ProfileMainContent(
                             ArchiveStatRow(
                                 iconResId = R.drawable.ic_custom_video, count = totalVideos, label = "Videos",
                                 baseColor = CategoryVideo,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                onClick = { onNavigateToCategory("Videos") }
                             )
                             ArchiveStatRow(
                                 iconResId = R.drawable.ic_custom_text, count = totalText, label = "Text",
                                 baseColor = CategoryText,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                onClick = { onNavigateToCategory("Text") }
                             )
                         }
                         Row(
@@ -534,12 +541,14 @@ fun ProfileMainContent(
                             ArchiveStatRow(
                                 iconResId = R.drawable.ic_custom_code, count = totalCode, label = "Code",
                                 baseColor = CategoryCode,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                onClick = { onNavigateToCategory("Code") }
                             )
                             ArchiveStatRow(
                                 iconResId = R.drawable.ic_custom_voice, count = totalAudio, label = "Audio",
                                 baseColor = CategoryAudio,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                onClick = { onNavigateToCategory("Audio") }
                             )
                         }
                         Row(
@@ -549,7 +558,8 @@ fun ProfileMainContent(
                             ArchiveStatRow(
                                 iconResId = R.drawable.ic_custom_movie, count = totalMedia, label = "Movies & Anime",
                                 baseColor = CategoryMedia,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                onClick = { onNavigateToCategory("Movies & Anime") }
                             )
                             Spacer(modifier = Modifier.weight(1f))
                         }
@@ -574,6 +584,7 @@ fun ProfileMainContent(
                 ClickableRow(title = "Movie & TV Integration", onClick = onNavigateToMovieApiKey)
             }
 
+            if (com.example.BuildConfig.FLAVOR != "foss") {
             // STORAGE SECTION
             SectionContainer(title = "STORAGE") {
                 Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
@@ -756,6 +767,7 @@ fun ProfileMainContent(
                 }
             }
 
+            }
             // 1. HELP & COMMUNITY
             SectionContainer(title = "HELP & COMMUNITY") {
                 Column {
@@ -1250,7 +1262,8 @@ fun ArchiveStatRow(
     count: Int,
     label: String,
     baseColor: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
 ) {
     val isDark = isSystemInDarkTheme()
     val resolvedColor = baseColor.toThemeColor(isDark)
@@ -1259,6 +1272,7 @@ fun ArchiveStatRow(
     Row(
         modifier = modifier
             .background(resolvedColor.copy(alpha = cardAlpha), CircleShape)
+            .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

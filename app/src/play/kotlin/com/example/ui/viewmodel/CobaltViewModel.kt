@@ -323,8 +323,23 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     private val _activeDetailItem = MutableStateFlow<SavedItem?>(null)
     val activeDetailItem: StateFlow<SavedItem?> = _activeDetailItem.asStateFlow()
 
-    fun showDetailItem(item: SavedItem) {
+    fun showDetailItem(item: com.example.data.model.SavedItem) {
         _activeDetailItem.value = item
+        
+        val isMedia = item.type == com.example.data.model.SavedItemType.IMAGE || item.type == com.example.data.model.SavedItemType.VIDEO || item.type == com.example.data.model.SavedItemType.AUDIO
+        val hasRemoteContent = !item.content.isNullOrBlank() && (item.content.startsWith("http://") || item.content.startsWith("https://"))
+        if (isMedia && hasRemoteContent) {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    val cachedItem = repository.ensureMediaCached(item)
+                    if (cachedItem != null && _activeDetailItem.value?.id == item.id) {
+                        _activeDetailItem.value = cachedItem
+                    }
+                } catch (e: Exception) {
+                    Log.e("CobaltVM", "Failed to cache media on open: ${e.message}")
+                }
+            }
+        }
     }
 
     fun closeDetailItem() {
@@ -636,7 +651,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     val cloudUsedStorageBytes: StateFlow<Long> = allItems.map { items: List<com.example.data.model.SavedItem> ->
-        items.filter { it.isSynced && !it.isUnavailable && it.isMediaType() }.sumOf { it.mediaQuotaBytes() }
+        items.filter { it.isBackedUp && !it.isUnavailable && it.isMediaType() }.sumOf { it.mediaQuotaBytes() }
     }.stateIn(viewModelScope, SharingStarted.Lazily, 0L)
 
     private val _selectedForBackupIds = MutableStateFlow<Set<String>>(emptySet())
@@ -744,16 +759,15 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             _userPhotoUrl.value = user?.photoUrl?.toString()
 
             if (user != null) {
+                _isInitialLoading.value = false
                 viewModelScope.launch {
-                    _isInitialLoading.value = true
                     try {
                         repository.restoreUserDataFromCloud()
                         repository.updateDeviceSession()
                         repository.syncUnsyncedItems()
                     } catch (e: Exception) {
                         Log.e("CobaltVM", "Initial auto-sync error: ${e.message}", e)
-                    } finally {
-                        _isInitialLoading.value = false
+                        postFeedback("Background sync failed — showing offline data", com.example.util.FeedbackSeverity.WARNING)
                     }
                 }
             } else {
@@ -766,16 +780,15 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 _userName.value = updatedUser?.displayName
                 _userPhotoUrl.value = updatedUser?.photoUrl?.toString()
                 if (updatedUser != null) {
+                    _isInitialLoading.value = false
                     viewModelScope.launch {
-                        _isInitialLoading.value = true
                         try {
                             repository.restoreUserDataFromCloud()
                             repository.updateDeviceSession()
                             repository.syncUnsyncedItems()
                         } catch (e: Exception) {
                             Log.e("CobaltVM", "Initial auto-sync error: ${e.message}", e)
-                        } finally {
-                            _isInitialLoading.value = false
+                            postFeedback("Background sync failed — showing offline data", com.example.util.FeedbackSeverity.WARNING)
                         }
                     }
                 }
@@ -2179,6 +2192,106 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             }
         }
     }
+
+    private val _shareDownloadProgress = MutableStateFlow<Float?>(null)
+    val shareDownloadProgress: StateFlow<Float?> = _shareDownloadProgress.asStateFlow()
+
+    fun shareItem(item: com.example.data.model.SavedItem, context: android.content.Context) {
+        val isMedia = item.type == com.example.data.model.SavedItemType.IMAGE || item.type == com.example.data.model.SavedItemType.VIDEO || item.type == com.example.data.model.SavedItemType.AUDIO
+        val localPath = if (item.type == com.example.data.model.SavedItemType.AUDIO) item.thumbnailPath else item.content
+        
+        if (isMedia && !localPath.isNullOrBlank() && (localPath.startsWith("http://") || localPath.startsWith("https://"))) {
+            // Need to download it first
+            viewModelScope.launch(Dispatchers.IO) {
+                _shareDownloadProgress.value = 0f
+                try {
+                    val destDir = repository.getPermanentMediaDir(item.type)
+                    val extension = when (item.type) {
+                        com.example.data.model.SavedItemType.VIDEO -> "mp4"
+                        com.example.data.model.SavedItemType.AUDIO -> "mp4"
+                        else -> "jpg"
+                    }
+                    val fileName = "share_${item.id}.$extension"
+                    val destFile = java.io.File(destDir, fileName)
+                    
+                    if (!destFile.exists()) {
+                        val request = okhttp3.Request.Builder().url(localPath).build()
+                        val client = okhttp3.OkHttpClient()
+                        client.newCall(request).execute().use { response ->
+                            if (!response.isSuccessful) throw Exception("Failed to download")
+                            val body = response.body ?: throw Exception("Empty body")
+                            val totalBytes = body.contentLength()
+                            body.byteStream().use { input ->
+                                java.io.FileOutputStream(destFile).use { output ->
+                                    val buffer = ByteArray(8192)
+                                    var bytesCopied = 0L
+                                    var read: Int
+                                    while (input.read(buffer).also { read = it } >= 0) {
+                                        output.write(buffer, 0, read)
+                                        bytesCopied += read
+                                        if (totalBytes > 0) {
+                                            _shareDownloadProgress.value = bytesCopied.toFloat() / totalBytes
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    _shareDownloadProgress.value = null
+                    
+                    // Now share it
+                    shareLocalFile(destFile, item, context)
+                } catch (e: Exception) {
+                    _shareDownloadProgress.value = null
+                    postFeedback("Failed to download media for sharing: ${e.message}", com.example.util.FeedbackSeverity.ERROR)
+                    shareAsText(item, context)
+                }
+            }
+        } else if (isMedia && !localPath.isNullOrBlank()) {
+            val file = java.io.File(localPath)
+            if (file.exists()) {
+                shareLocalFile(file, item, context)
+            } else {
+                shareAsText(item, context)
+            }
+        } else {
+            shareAsText(item, context)
+        }
+    }
+
+    private fun shareLocalFile(file: java.io.File, item: com.example.data.model.SavedItem, context: android.content.Context) {
+        val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = when (item.type) {
+                com.example.data.model.SavedItemType.VIDEO -> "video/*"
+                com.example.data.model.SavedItemType.AUDIO -> "audio/*"
+                else -> "image/*"
+            }
+            putExtra(android.content.Intent.EXTRA_STREAM, uri)
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Media"))
+    }
+
+    private fun shareAsText(item: com.example.data.model.SavedItem, context: android.content.Context) {
+        val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            val shareText = buildString {
+                appendLine("Title: ${item.title}")
+                appendLine("Type: ${item.type.displayName}")
+                appendLine("Content: ${if (item.type == com.example.data.model.SavedItemType.VIDEO) "Video media" else item.content}")
+                if (item.type == com.example.data.model.SavedItemType.AUDIO && !item.thumbnailPath.isNullOrBlank()) {
+                    appendLine("Audio Link: ${item.thumbnailPath}")
+                }
+                if (item.extractedText != null) {
+                    appendLine("Extracted Text: ${item.extractedText}")
+                }
+            }
+            putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+        }
+        context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Memory"))
+    }
+
 }
 
 data class ExtractedLinkReview(

@@ -331,7 +331,17 @@ class DataDownloadService : Service() {
                                 isSynced = false,
                                 isPendingBackup = false,
                                 isBackedUp = false,
-                                isUnavailable = false
+                                isUnavailable = false,
+                                updatedAt = System.currentTimeMillis()
+                            )
+                        } else if (item.type == SavedItemType.VIDEO) {
+                            item.copy(
+                                content = destFile.absolutePath,
+                                isSynced = false,
+                                isPendingBackup = false,
+                                isBackedUp = false,
+                                isUnavailable = false,
+                                updatedAt = System.currentTimeMillis()
                             )
                         } else {
                             item.copy(
@@ -340,10 +350,11 @@ class DataDownloadService : Service() {
                                 isSynced = false,
                                 isPendingBackup = false,
                                 isBackedUp = false,
-                                isUnavailable = false
+                                isUnavailable = false,
+                                updatedAt = System.currentTimeMillis()
                             )
                         }
-                        repository.saveItem(updatedItem)
+                        repository.saveItemLocallyOnly(updatedItem)
 
                         // Update persisted completed list
                         synchronized(prefs) {

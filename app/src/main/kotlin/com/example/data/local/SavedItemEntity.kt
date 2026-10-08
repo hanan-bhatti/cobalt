@@ -48,5 +48,7 @@ data class SavedItemEntity(
     val backdropUrl: String? = null,
     val releaseYear: String? = null,
     val rating: Double? = null,
-    val isArchived: Boolean = false
+    val isArchived: Boolean = false,
+    val updatedAt: Long = timestamp,
+    val isDeleted: Boolean = false
 )

@@ -244,7 +244,10 @@ class CobaltRepository(private val context: Context) {
             trailerUrl = trailerUrl,
             backdropUrl = backdropUrl,
             releaseYear = releaseYear,
-            rating = rating
+            rating = rating,
+            isArchived = isArchived,
+            updatedAt = updatedAt,
+            isDeleted = isDeleted
         )
     }
 
@@ -278,7 +281,10 @@ class CobaltRepository(private val context: Context) {
             trailerUrl = trailerUrl,
             backdropUrl = backdropUrl,
             releaseYear = releaseYear,
-            rating = rating
+            rating = rating,
+            isArchived = isArchived,
+            updatedAt = updatedAt,
+            isDeleted = isDeleted
         )
     }
 
@@ -541,7 +547,7 @@ class CobaltRepository(private val context: Context) {
             }
         }
 
-        var finalItem = item.copy(isSynced = false, sizeBytes = itemSize, timestamp = System.currentTimeMillis())
+        var finalItem = item.copy(isSynced = false, sizeBytes = itemSize, timestamp = if (item.timestamp == 0L) System.currentTimeMillis() else item.timestamp, updatedAt = System.currentTimeMillis())
 
         // 1. Save locally first to keep the interface fast & offline-ready
         savedItemDao.insertItem(finalItem.toEntity())
@@ -800,32 +806,40 @@ class CobaltRepository(private val context: Context) {
                     if (item.type == SavedItemType.AUDIO) {
                         item.copy(
                             thumbnailPath = localFile.absolutePath,
-                            isSynced = false,
+                            isSynced = true,
                             isPendingBackup = false,
-                            isBackedUp = false
+                            isBackedUp = false,
+                            updatedAt = System.currentTimeMillis()
                         )
                     } else {
                         item.copy(
                             content = localFile.absolutePath,
                             thumbnailPath = localFile.absolutePath,
-                            isSynced = false,
+                            isSynced = true,
                             isPendingBackup = false,
-                            isBackedUp = false
+                            isBackedUp = false,
+                            updatedAt = System.currentTimeMillis()
                         )
                     }
                 } else {
                     item.copy(
-                        isSynced = false,
+                        isSynced = true,
                         isPendingBackup = false,
-                        isBackedUp = false
+                        isBackedUp = false,
+                        updatedAt = System.currentTimeMillis()
                     )
                 }
                 savedItemDao.insertItem(updatedItem.toEntity())
 
-                // Delete from Storage if it had a remote URL
-                if (storage != null && hasRemoteUrl) {
+                // Delete from Storage (construct path directly based on item id)
+                if (storage != null && isMedia) {
                     try {
-                        val storageRef = storage.getReferenceFromUrl(mediaUrl!!)
+                        val fileExtension = when (item.type) {
+                            SavedItemType.VIDEO -> "mp4"
+                            SavedItemType.AUDIO -> "mp4"
+                            else -> "jpg"
+                        }
+                        val storageRef = storage.reference.child("users/${currentUser.uid}/media/${item.id}.$fileExtension")
                         storageRef.delete().await()
                     } catch (storageEx: Exception) {
                         Log.w("CobaltRepo", "Failed to delete storage blob: ${storageEx.message}")
@@ -839,7 +853,8 @@ class CobaltRepository(private val context: Context) {
                     
                     val updateMap = mutableMapOf<String, Any?>(
                         "isBackedUp" to false,
-                        "timestamp" to System.currentTimeMillis()
+                        "updatedAt" to updatedItem.updatedAt,
+                        "isSynced" to true
                     )
                     if (item.type == SavedItemType.AUDIO) {
                         updateMap["thumbnailPath"] = ""
@@ -848,7 +863,12 @@ class CobaltRepository(private val context: Context) {
                         updateMap["thumbnailPath"] = ""
                     }
 
-                    docRef.update(updateMap).await()
+                    try {
+                        docRef.update(updateMap).await()
+                    } catch (firestoreEx: Exception) {
+                        Log.w("CobaltRepo", "Failed to update Firestore tombstone: ${firestoreEx.message}")
+                        savedItemDao.insertItem(updatedItem.copy(isSynced = false).toEntity())
+                    }
                 }
 
             } catch (e: Exception) {
@@ -958,7 +978,11 @@ class CobaltRepository(private val context: Context) {
                             "watchProviders" to finalItem.watchProviders,
                             "trailerUrl" to finalItem.trailerUrl,
                             "backdropUrl" to finalItem.backdropUrl,
-                            "releaseYear" to finalItem.releaseYear
+                            "releaseYear" to finalItem.releaseYear,
+                            "rating" to finalItem.rating,
+                            "isArchived" to finalItem.isArchived,
+                            "updatedAt" to finalItem.updatedAt,
+                            "isDeleted" to finalItem.isDeleted
                         )
                         firestore.collection("users").document(currentUser.uid)
                             .collection("items").document(finalItem.id)
@@ -1003,18 +1027,28 @@ class CobaltRepository(private val context: Context) {
     }
 
     suspend fun deleteItem(item: SavedItem) = withContext(Dispatchers.IO) {
-        // Delete locally
-        savedItemDao.deleteItem(item.toEntity())
+        val deletedItem = item.copy(
+            isDeleted = true,
+            isSynced = false,
+            updatedAt = System.currentTimeMillis()
+        )
+        // Mark as deleted locally
+        savedItemDao.insertItem(deletedItem.toEntity())
 
-        // Delete from Firestore
+        // Mark as deleted in Firestore
         val currentUser = firebaseAuth?.currentUser
         if (currentUser != null && firestore != null) {
             try {
                 firestore.collection("users").document(currentUser.uid)
                     .collection("items").document(item.id)
-                    .delete()
+                    .update(
+                        "isDeleted", true,
+                        "updatedAt", deletedItem.updatedAt,
+                        "isSynced", true
+                    ).await()
+                savedItemDao.insertItem(deletedItem.copy(isSynced = true).toEntity())
             } catch (e: Exception) {
-                Log.e("CobaltRepo", "Failed to delete item from Firestore: ${e.message}")
+                Log.e("CobaltRepo", "Failed to update isDeleted in Firestore: ${e.message}")
             }
         }
 
@@ -1028,6 +1062,7 @@ class CobaltRepository(private val context: Context) {
                 Log.e("CobaltRepo", "Failed to delete media from Storage: ${e.message}")
             }
         }
+
         com.example.widget.WidgetUpdater.update(context)
     }
 
@@ -1234,6 +1269,10 @@ class CobaltRepository(private val context: Context) {
                 val trailerUrl = doc.getString("trailerUrl")
                 val backdropUrl = doc.getString("backdropUrl")
                 val releaseYear = doc.getString("releaseYear")
+                val rating = doc.getDouble("rating")
+                val isArchived = doc.getBoolean("isArchived") ?: false
+                val updatedAt = doc.getLong("updatedAt") ?: timestamp
+                val isDeleted = doc.getBoolean("isDeleted") ?: false
 
                 val foldersJsonStr = "[" + foldersList.joinToString(",") { "\"$it\"" } + "]"
                 val genresJsonStr = "[" + genresList.joinToString(",") { "\"$it\"" } + "]"
@@ -1285,7 +1324,7 @@ class CobaltRepository(private val context: Context) {
                 val currentExisting = savedItemDao.getItemById(id)
 
                 // Check if local DB already has a newer version of this item
-                if (currentExisting != null && currentExisting.isSynced && currentExisting.timestamp >= timestamp) {
+                if (currentExisting != null && currentExisting.updatedAt >= updatedAt) {
                     // Local is already up-to-date; skip to avoid overwriting local edits
                     return@forEach
                 }
@@ -1322,7 +1361,11 @@ class CobaltRepository(private val context: Context) {
                         watchProvidersJson = watchProvidersJsonStr,
                         trailerUrl = trailerUrl,
                         backdropUrl = backdropUrl,
-                        releaseYear = releaseYear
+                        releaseYear = releaseYear,
+                        rating = rating,
+                        isArchived = isArchived,
+                        updatedAt = updatedAt,
+                        isDeleted = isDeleted
                     )
                 )
             }
@@ -1579,6 +1622,51 @@ class CobaltRepository(private val context: Context) {
         } catch (e: Exception) {
             Log.e("CobaltRepo", "Failed to get device sessions: ${e.message}")
             emptyList()
+        }
+    }
+
+    suspend fun ensureMediaCached(item: SavedItem): SavedItem? = withContext(Dispatchers.IO) {
+        val isMedia = item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO
+        val remoteUrl = if (item.type == SavedItemType.AUDIO) item.thumbnailPath else item.content
+        if (!isMedia || remoteUrl.isNullOrBlank() || (!remoteUrl.startsWith("http://") && !remoteUrl.startsWith("https://"))) {
+            return@withContext null
+        }
+
+        try {
+            val destDir = getPermanentMediaDir(item.type)
+            val extension = when (item.type) {
+                SavedItemType.VIDEO -> "mp4"
+                SavedItemType.AUDIO -> "mp4"
+                else -> "jpg"
+            }
+            val fileName = "${item.id}.$extension"
+            val destFile = java.io.File(destDir, fileName)
+
+            if (!destFile.exists()) {
+                val request = okhttp3.Request.Builder().url(remoteUrl).build()
+                val client = okhttp3.OkHttpClient()
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) return@withContext null
+                    val body = response.body ?: return@withContext null
+                    body.byteStream().use { input ->
+                        java.io.FileOutputStream(destFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                }
+            }
+
+            val updatedItem = if (item.type == SavedItemType.AUDIO) {
+                item.copy(thumbnailPath = destFile.absolutePath)
+            } else {
+                item.copy(content = destFile.absolutePath, thumbnailPath = destFile.absolutePath)
+            }
+            
+            saveItemLocallyOnly(updatedItem)
+            return@withContext updatedItem
+        } catch (e: Exception) {
+            Log.e("CobaltRepo", "Failed to cache media: ${e.message}")
+            return@withContext null
         }
     }
 }

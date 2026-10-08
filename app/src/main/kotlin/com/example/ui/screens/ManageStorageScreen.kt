@@ -488,7 +488,7 @@ fun ManageStorageScreen(
                                                 horizontalArrangement = Arrangement.SpaceBetween,
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                val syncedCount = items.count { it.isSynced && !it.isUnavailable }
+                                                val syncedCount = items.count { it.isBackedUp && !it.isUnavailable }
                                                 val unavailableCount = items.count { it.isUnavailable }
                                                 val localCount = items.size - syncedCount - unavailableCount
                                                 val freeLabel = if (!isMediaType(type)) " • Free (no quota)" else ""

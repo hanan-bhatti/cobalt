@@ -158,6 +158,25 @@ fun DetailScreen(
         offset = Offset.Zero
     }
 
+    val shareDownloadProgress by viewModel.shareDownloadProgress.collectAsState()
+    if (shareDownloadProgress != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Preparing Share...", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Downloading media from the cloud so it can be shared.")
+                    androidx.compose.material3.LinearProgressIndicator(
+                        progress = { shareDownloadProgress ?: 0f },
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            },
+            confirmButton = {}
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -175,28 +194,7 @@ fun DetailScreen(
                 actions = {
                     IconButton(
                         onClick = {
-                            val shareIntent = Intent().apply {
-                                action = Intent.ACTION_SEND
-                                type = "text/plain"
-                                val shareText = buildString {
-                                    appendLine("Title: ${item.title}")
-                                    appendLine("Type: ${item.type.displayName}")
-                                    appendLine(
-                                        "Content: ${
-                                            if (item.type == SavedItemType.VIDEO) "Video media"
-                                            else item.content
-                                        }"
-                                    )
-                                    if (item.type == SavedItemType.AUDIO && !item.thumbnailPath.isNullOrBlank()) {
-                                        appendLine("Audio Link: ${item.thumbnailPath}")
-                                    }
-                                    if (item.extractedText != null) {
-                                        appendLine("Extracted Text: ${item.extractedText}")
-                                    }
-                                }
-                                putExtra(Intent.EXTRA_TEXT, shareText)
-                            }
-                            context.startActivity(Intent.createChooser(shareIntent, "Share Memory"))
+                            viewModel.shareItem(item, context)
                         },
                         modifier = Modifier.bounceClick().testTag("detail_share_button")
                     ) {
@@ -242,28 +240,7 @@ fun DetailScreen(
                 ) {
                     IconButton(
                         onClick = {
-                            val shareIntent = Intent().apply {
-                                action = Intent.ACTION_SEND
-                                type = "text/plain"
-                                val shareText = buildString {
-                                    appendLine("Title: ${item.title}")
-                                    appendLine("Type: ${item.type.displayName}")
-                                    appendLine(
-                                        "Content: ${
-                                            if (item.type == SavedItemType.VIDEO) "Video media"
-                                            else item.content
-                                        }"
-                                    )
-                                    if (item.type == SavedItemType.AUDIO && !item.thumbnailPath.isNullOrBlank()) {
-                                        appendLine("Audio Link: ${item.thumbnailPath}")
-                                    }
-                                    if (item.extractedText != null) {
-                                        appendLine("Extracted Text: ${item.extractedText}")
-                                    }
-                                }
-                                putExtra(Intent.EXTRA_TEXT, shareText)
-                            }
-                            context.startActivity(Intent.createChooser(shareIntent, "Share Memory"))
+                            viewModel.shareItem(item, context)
                         },
                         modifier = Modifier.bounceClick().testTag("detail_bottom_share_button")
                     ) {
@@ -304,12 +281,7 @@ fun DetailScreen(
         modifier = modifier.fillMaxSize()
     ) { innerPadding ->
         var showFullscreenImage by remember { mutableStateOf(false) }
-        var isLoading by remember(item.id) { mutableStateOf(true) }
-        LaunchedEffect(item.id) {
-            delay(400)
-            isLoading = false
-        }
-
+        var isLoading by remember(item.id) { mutableStateOf(false) }
         if (isLoading) {
             DetailScreenSkeleton(
                 itemType = item.type,

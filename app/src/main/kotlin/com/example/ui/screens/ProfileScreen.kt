@@ -54,7 +54,8 @@ fun ProfileScreen(
     onNavigateBack: () -> Unit,
     onNavigateToAuth: () -> Unit,
     onNavigateToLegal: (String) -> Unit = {},
-    onNavigateToManageStorage: () -> Unit = {}
+    onNavigateToManageStorage: () -> Unit = {},
+    onNavigateToCategory: (String) -> Unit = {}
 ) {
     var currentScreen by remember { mutableStateOf(ProfileSubScreen.MAIN) }
 
@@ -72,7 +73,8 @@ fun ProfileScreen(
                 onNavigateToSettings = { currentScreen = ProfileSubScreen.SETTINGS },
                 onNavigateToDevices = { currentScreen = ProfileSubScreen.DEVICES },
                 onNavigateToMovieApiKey = { currentScreen = ProfileSubScreen.MOVIE_API_KEY },
-                onNavigateToManageStorage = onNavigateToManageStorage
+                onNavigateToManageStorage = onNavigateToManageStorage,
+                onNavigateToCategory = onNavigateToCategory
             )
         }
         ProfileSubScreen.SETTINGS -> {

@@ -286,7 +286,13 @@ class MainActivity : ComponentActivity() {
                                             onNavigateBack = { navController.popBackStack() },
                                             onNavigateToAuth = { if (viewModel.isFirebaseAvailable) navController.navigate("auth") },
                                             onNavigateToLegal = { route -> navController.navigate(route) },
-                                            onNavigateToManageStorage = { if (viewModel.isFirebaseAvailable) navController.navigate("manage_storage") }
+                                            onNavigateToManageStorage = { if (viewModel.isFirebaseAvailable) navController.navigate("manage_storage") },
+                                            onNavigateToCategory = { category ->
+                                                viewModel.setFolderFilter(category)
+                                                navController.navigate("home") {
+                                                    popUpTo("home") { inclusive = false }
+                                                }
+                                            }
                                         )
                                     }
                                     composable("auth") {
@@ -422,7 +428,11 @@ class MainActivity : ComponentActivity() {
                                 BottomBarItem("search", R.drawable.ic_custom_search, "Search"),
                                 BottomBarItem("media_hub", R.drawable.ic_custom_movie, "Hub"),
                                 BottomBarItem("folders", R.drawable.ic_custom_folder, "Folders"),
-                                BottomBarItem("profile", R.drawable.ic_custom_profile, "Profile")
+                                BottomBarItem(
+                                    "profile",
+                                    if (com.example.BuildConfig.FLAVOR == "foss") R.drawable.ic_custom_settings else R.drawable.ic_custom_profile,
+                                    if (com.example.BuildConfig.FLAVOR == "foss") "Settings" else "Profile"
+                                )
                             )
                             val navInsets = androidx.compose.foundation.layout.WindowInsets.navigationBars
                             val bottomPadding = navInsets.asPaddingValues().calculateBottomPadding()
