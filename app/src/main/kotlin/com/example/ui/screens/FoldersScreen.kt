@@ -340,7 +340,7 @@ fun FoldersScreen(
                             items(SavedItemType.entries.size) { index ->
                             val type = SavedItemType.entries[index]
                             val count = remember(allItems) {
-                                allItems.count { it.type == type && !it.folders.contains("Archive") }
+                                allItems.count { it.type == type && !it.isArchived }
                             }
                             val iconResId = when (type) {
                                 SavedItemType.LINK -> R.drawable.ic_custom_link
@@ -441,9 +441,26 @@ fun FoldersScreen(
                                 )
                             }
                         }
-                    }
+
+                        // Archive Section
+                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                            val archiveCount = remember(allItems) {
+                                allItems.count { it.isArchived }
+                            }
+                            SystemCategoryCard(
+                                name = "Archive",
+                                count = archiveCount,
+                                iconResId = com.example.R.drawable.ic_custom_archive,
+                                onClick = { activeBrowseFolder = "Archive" },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                 }
             }
+        }
 
                 val useBlurGrid = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
                 val folderFabModifier = if (useBlurGrid) {
@@ -465,9 +482,12 @@ fun FoldersScreen(
                 }
 
                 val folderInteractionSource = remember { MutableInteractionSource() }
+                val navInsets = androidx.compose.foundation.layout.WindowInsets.navigationBars
+                val bottomPadding = navInsets.asPaddingValues().calculateBottomPadding()
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
+                        .padding(bottom = bottomPadding)
                         .padding(bottom = 16.dp, end = 16.dp)
                 ) {
                     FloatingActionButton(
@@ -498,161 +518,25 @@ fun FoldersScreen(
     }
 
     // Add Custom Folder Dialog
-    if (showAddFolderDialog) {
-        AlertDialog(
-            onDismissRequest = { resetNewFolderFields() },
-            title = { Text("New Custom Folder", fontWeight = FontWeight.Bold) },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    OutlinedTextField(
-                        value = newFolderName,
-                        onValueChange = { newFolderName = it },
-                        placeholder = { Text("e.g. Work, Inspiration....") },
-                        label = { Text("Folder Name") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().testTag("add_folder_name_field")
-                    )
-
-                    // Pin toggle
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { newFolderPinned = !newFolderPinned }
-                            .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_pin),
-                                contentDescription = null,
-                                tint = if (newFolderPinned) parseHexColor(newFolderColorHex, isDark = isDark) else MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Pin to top", fontWeight = FontWeight.Medium)
-                        }
-                        com.example.ui.components.ExpressiveSwitch(
-                            checked = newFolderPinned,
-                            onCheckedChange = { newFolderPinned = it }
-                        )
-                    }
-
-                    // Choose Icon
-                    Column {
-                        Text(
-                            text = "Choose Icon",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(vertical = 4.dp)
-                        ) {
-                            items(folderPresetIcons.size) { index ->
-                                val iconName = folderPresetIcons[index]
-                                val isSelected = newFolderIconName == iconName
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            if (isSelected) parseHexColor(newFolderColorHex, isDark = isDark).copy(alpha = 0.2f)
-                                            else Color.Transparent
-                                        )
-                                        .border(
-                                            1.5.dp,
-                                            if (isSelected) parseHexColor(newFolderColorHex, isDark = isDark)
-                                            else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                                            CircleShape
-                                        )
-                                        .clickable { newFolderIconName = iconName },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    FolderIcon(
-                                        iconName = iconName,
-                                        tint = if (isSelected) parseHexColor(newFolderColorHex, isDark = isDark) else MaterialTheme.colorScheme.secondary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Choose Color
-                    Column {
-                        Text(
-                            text = "Choose Theme Color",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(vertical = 4.dp)
-                        ) {
-                            items(folderPresetColors) { (hex, name) ->
-                                val color = parseHexColor(hex, isDark = isDark)
-                                val isSelected = newFolderColorHex == hex
-                                Box(
-                                    modifier = Modifier
-                                        .size(34.dp)
-                                        .clip(CircleShape)
-                                        .background(color)
-                                        .clickable { newFolderColorHex = hex },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (isSelected) {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.ic_custom_check),
-                                            contentDescription = "Selected",
-                                            tint = MaterialTheme.colorScheme.background,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val trimmed = newFolderName.trim()
-                        if (trimmed.isNotEmpty()) {
-                            viewModel.createFolder(
-                                name = trimmed,
-                                colorHex = newFolderColorHex,
-                                iconName = newFolderIconName,
-                                isPinned = newFolderPinned
-                            )
-                            resetNewFolderFields()
-                        }
-                    },
-                    modifier = Modifier.testTag("confirm_add_folder_btn")
-                ) {
-                    Text("Create", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { resetNewFolderFields() }) {
-                    Text("Cancel")
-                }
-            },
-            shape = RoundedCornerShape(24.dp)
-        )
-    }
+    com.example.ui.components.FolderBottomSheet(
+        isVisible = showAddFolderDialog,
+        onDismiss = { resetNewFolderFields() },
+        initialFolder = null,
+        onSave = { updatedFolder, _ ->
+            val finalName = updatedFolder.name.trim()
+            if (finalName.isNotEmpty()) {
+                viewModel.createFolder(
+                    name = finalName,
+                    colorHex = updatedFolder.colorHex,
+                    iconName = updatedFolder.iconName,
+                    isPinned = updatedFolder.isPinned
+                )
+                resetNewFolderFields()
+            }
+        },
+        useBlur = false,
+        hazeState = null
+    )
 
     // Customize Folder Dialog/Sheet (Aesthetics Customizer)
     if (folderToCustomize != null) {
@@ -913,11 +797,16 @@ fun FolderContentsBrowser(
 
     // Filter items matching current browsing folder (either custom tag or system type)
     val folderItems = remember(items, folderName) {
+        val isItemArchived: (SavedItem) -> Boolean = { it.isArchived }
         val systemCategory = SavedItemType.entries.find { it.displayName == folderName }
         if (systemCategory != null) {
-            items.filter { it.type == systemCategory && !it.folders.contains("Archive") }
+            items.filter { it.type == systemCategory && !isItemArchived(it) }
         } else {
-            items.filter { it.folders.contains(folderName) }
+            if (folderName == "Archive") {
+                items.filter { isItemArchived(it) }
+            } else {
+                items.filter { it.folders.contains(folderName) && !isItemArchived(it) }
+            }
         }
     }
 
@@ -1347,7 +1236,7 @@ fun FolderBrowseItemRow(
                 )
 
                 // 4. Archive Action (For all)
-                val isArchived = item.folders.contains("Archive")
+                val isArchived = item.isArchived || item.isArchived
                 DropdownMenuItem(
                     leadingIcon = {
                         Icon(
@@ -1505,13 +1394,11 @@ fun FolderCustomizerDialog(
     viewModel: CobaltViewModel,
     onDismiss: () -> Unit
 ) {
-    val isDark = isSystemInDarkTheme()
-    var folderNameInput by remember { mutableStateOf(folder.name) }
-    var selectedColorHex by remember { mutableStateOf(folder.colorHex ?: folderPresetColors.first().first) }
-    var selectedIconName by remember { mutableStateOf(folder.iconName ?: "folder") }
-    var isPinned by remember { mutableStateOf(folder.isPinned) }
-
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    val allItems by viewModel.allItems.collectAsState()
+    val itemCount = remember(allItems, folder.name) {
+        allItems.count { it.folders.contains(folder.name) }
+    }
 
     if (showDeleteConfirm) {
         AlertDialog(
@@ -1536,189 +1423,32 @@ fun FolderCustomizerDialog(
                 }
             }
         )
-    } else {
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { Text("Customize Folder", fontWeight = FontWeight.Bold) },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Rename input
-                    OutlinedTextField(
-                        value = folderNameInput,
-                        onValueChange = { folderNameInput = it },
-                        label = { Text("Folder Name") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().testTag("customize_folder_name_field")
-                    )
-
-                    // Pin toggle
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { isPinned = !isPinned }
-                            .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_pin),
-                                contentDescription = null,
-                                 tint = if (isPinned) parseHexColor(selectedColorHex, isDark = isDark) else MaterialTheme.colorScheme.secondary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Pin to top", fontWeight = FontWeight.Medium)
-                        }
-                        com.example.ui.components.ExpressiveSwitch(
-                            checked = isPinned,
-                            onCheckedChange = { isPinned = it }
-                        )
-                    }
-
-                    // Choose Icon
-                    Column {
-                        Text(
-                            text = "Choose Icon",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        // Horizontal Icon Grid layout
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(vertical = 4.dp)
-                        ) {
-                            items(folderPresetIcons.size) { index ->
-                                val iconName = folderPresetIcons[index]
-                                val isSelected = selectedIconName == iconName
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            if (isSelected) parseHexColor(selectedColorHex, isDark = isDark).copy(alpha = 0.2f)
-                                            else Color.Transparent
-                                        )
-                                        .border(
-                                            1.5.dp,
-                                            if (isSelected) parseHexColor(selectedColorHex, isDark = isDark)
-                                            else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                                            CircleShape
-                                        )
-                                        .clickable { selectedIconName = iconName },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    FolderIcon(
-                                        iconName = iconName,
-                                        tint = if (isSelected) parseHexColor(selectedColorHex, isDark = isDark) else MaterialTheme.colorScheme.secondary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Choose Color
-                    Column {
-                        Text(
-                            text = "Choose Theme Color",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(vertical = 4.dp)
-                        ) {
-                            items(folderPresetColors) { (hex, name) ->
-                                val color = parseHexColor(hex, isDark = isDark)
-                                val isSelected = selectedColorHex == hex
-                                Box(
-                                    modifier = Modifier
-                                        .size(34.dp)
-                                        .clip(CircleShape)
-                                        .background(color)
-                                        .clickable { selectedColorHex = hex },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (isSelected) {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.ic_custom_check),
-                                            contentDescription = "Selected",
-                                            tint = MaterialTheme.colorScheme.background,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Delete button
-                    Button(
-                        onClick = { showDeleteConfirm = true },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth().testTag("delete_folder_btn")
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_delete),
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Delete Folder")
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val finalName = folderNameInput.trim()
-                        if (finalName.isNotEmpty()) {
-                            // 1. Rename folder first if changed
-                            if (finalName != folder.name) {
-                                viewModel.renameFolder(folder.name, finalName)
-                            }
-                            // 2. Save settings
-                            viewModel.updateFolder(
-                                CustomFolderEntity(
-                                    name = finalName,
-                                    colorHex = selectedColorHex,
-                                    iconName = selectedIconName,
-                                    isPinned = isPinned,
-                                    isSynced = folder.isSynced
-                                )
-                            )
-                            onDismiss()
-                        }
-                    },
-                    modifier = Modifier.testTag("save_custom_folder_btn")
-                ) {
-                    Text("Save Changes", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = onDismiss) {
-                    Text("Cancel")
-                }
-            },
-            shape = RoundedCornerShape(24.dp)
-        )
     }
+
+    com.example.ui.components.FolderBottomSheet(
+        isVisible = !showDeleteConfirm,
+        onDismiss = onDismiss,
+        initialFolder = folder,
+        initialItemCount = itemCount,
+        onSave = { updatedFolder, originalName ->
+            val finalName = updatedFolder.name.trim()
+            if (finalName.isNotEmpty()) {
+                if (originalName != null && finalName != originalName) {
+                    viewModel.renameFolder(originalName, finalName)
+                }
+                viewModel.updateFolder(
+                    CustomFolderEntity(
+                        name = finalName,
+                        colorHex = updatedFolder.colorHex,
+                        iconName = updatedFolder.iconName,
+                        isPinned = updatedFolder.isPinned,
+                        isSynced = folder.isSynced
+                    )
+                )
+            }
+        },
+        onDelete = { showDeleteConfirm = true },
+        useBlur = false,
+        hazeState = null
+    )
 }

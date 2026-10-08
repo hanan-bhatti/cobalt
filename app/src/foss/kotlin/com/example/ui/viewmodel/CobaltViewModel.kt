@@ -152,10 +152,10 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     val allItems: StateFlow<List<SavedItem>> = repository.getAllItemsFlow()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    val customFolders: StateFlow<List<String>> = repository.getAllFoldersFlow()
+    val customFolders: StateFlow<List<String>> = repository.getAllFoldersFlow().map { folders -> folders.filter { it != "Archive" } }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    val customFolderEntities: StateFlow<List<com.example.data.local.CustomFolderEntity>> = repository.getAllFolderEntitiesFlow()
+    val customFolderEntities: StateFlow<List<com.example.data.local.CustomFolderEntity>> = repository.getAllFolderEntitiesFlow().map { folders -> folders.filter { it.name != "Archive" } }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     private val _selectedFolder = MutableStateFlow("All")
@@ -173,18 +173,25 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         var filtered = items
 
         // 1. Filter by Folder (System Category or Custom Folder)
+        val isItemArchived: (SavedItem) -> Boolean = { it.isArchived }
+        
         if (folder != "All") {
             val systemCategory = SavedItemType.entries.find { it.displayName == folder }
             filtered = if (systemCategory != null) {
-                // System folder filter (e.g. Images, Links, Text, etc.) - hide archived
-                filtered.filter { it.type == systemCategory && !it.folders.contains("Archive") }
+                // System folder filter - hide archived
+                filtered.filter { it.type == systemCategory && !isItemArchived(it) }
             } else {
-                // Custom folder filter (e.g. "Work" or "Archive")
-                filtered.filter { it.folders.contains(folder) }
+                if (folder == "Archive") {
+                    // Show ONLY archived items
+                    filtered.filter { isItemArchived(it) }
+                } else {
+                    // Custom folder filter
+                    filtered.filter { it.folders.contains(folder) && !isItemArchived(it) }
+                }
             }
         } else {
             // Hide archived items from "All" main feed
-            filtered = filtered.filter { !it.folders.contains("Archive") }
+            filtered = filtered.filter { !isItemArchived(it) }
         }
 
         // 2. Filter and rank by Search Query (fuzzy, synonym-aware search)
@@ -1308,6 +1315,27 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun saveQuickNote(title: String, content: String, onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            _isSaving.value = true
+            try {
+                val item = com.example.data.model.SavedItem(
+                    type = com.example.data.model.SavedItemType.TEXT,
+                    title = title,
+                    content = content
+                )
+                repository.saveItem(item, null)
+                com.example.widget.WidgetUpdater.update(context)
+                kotlinx.coroutines.delay(200)
+                onComplete()
+            } catch (e: Exception) {
+                android.util.Log.e("CobaltVM", "Failed to save quick note: ${e.message}")
+            } finally {
+                _isSaving.value = false
+            }
+        }
+    }
+
     fun saveActiveItem() {
         val item = _activeCaptureItem.value ?: return
         viewModelScope.launch {
@@ -1364,12 +1392,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
     fun archiveItem(item: SavedItem) {
         viewModelScope.launch {
-            // Pre-create "Archive" custom folder if it does not exist
-            if (!customFolders.value.contains("Archive")) {
-                repository.addCustomFolder("Archive")
-            }
-            val updatedFolders = if (item.folders.contains("Archive")) item.folders else item.folders + "Archive"
-            repository.saveItem(item.copy(folders = updatedFolders))
+            val updatedFolders = item.folders.filter { it != "Archive" }
+            repository.saveItem(item.copy(isArchived = true, folders = updatedFolders))
             showToast("Item archived successfully.")
         }
     }
@@ -1377,7 +1401,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     fun unarchiveItem(item: SavedItem) {
         viewModelScope.launch {
             val updatedFolders = item.folders.filter { it != "Archive" }
-            repository.saveItem(item.copy(folders = updatedFolders))
+            repository.saveItem(item.copy(isArchived = false, folders = updatedFolders))
             showToast("Item unarchived successfully.")
         }
     }

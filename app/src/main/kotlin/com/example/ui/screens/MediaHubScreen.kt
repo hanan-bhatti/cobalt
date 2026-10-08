@@ -198,7 +198,7 @@ fun MediaHubContent(
 
     val allMediaItems = remember(allItems) {
         allItems.filter { item ->
-            item.type == SavedItemType.MEDIA && !item.folders.contains("Archive")
+            item.type == SavedItemType.MEDIA && !item.isArchived
         }
     }
 

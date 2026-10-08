@@ -55,7 +55,8 @@ data class SavedItem(
     val trailerUrl: String? = null,
     val backdropUrl: String? = null,
     val releaseYear: String? = null,
-    val rating: Double? = null
+    val rating: Double? = null,
+    val isArchived: Boolean = false
 )
 
 fun SavedItem.getBestImagePath(): String? {

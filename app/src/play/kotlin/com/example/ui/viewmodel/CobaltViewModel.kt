@@ -188,14 +188,14 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             val systemCategory = SavedItemType.entries.find { it.displayName == folder }
             filtered = if (systemCategory != null) {
                 // System folder filter (e.g. Images, Links, Text, etc.) - hide archived
-                filtered.filter { it.type == systemCategory && !it.folders.contains("Archive") }
+                filtered.filter { it.type == systemCategory && !it.isArchived }
             } else {
                 // Custom folder filter (e.g. "Work" or "Archive")
                 filtered.filter { it.folders.contains(folder) }
             }
         } else {
             // Hide archived items from "All" main feed
-            filtered = filtered.filter { !it.folders.contains("Archive") }
+            filtered = filtered.filter { !it.isArchived }
         }
 
         // 2. Filter and rank by Search Query (fuzzy, synonym-aware search)
@@ -1804,6 +1804,27 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun saveQuickNote(title: String, content: String, onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            _isSaving.value = true
+            try {
+                val item = com.example.data.model.SavedItem(
+                    type = com.example.data.model.SavedItemType.TEXT,
+                    title = title,
+                    content = content
+                )
+                repository.saveItem(item, null)
+                com.example.widget.WidgetUpdater.update(context)
+                kotlinx.coroutines.delay(200)
+                onComplete()
+            } catch (e: Exception) {
+                android.util.Log.e("CobaltVM", "Failed to save quick note: ${e.message}")
+            } finally {
+                _isSaving.value = false
+            }
+        }
+    }
+
     fun saveActiveItem() {
         val item = _activeCaptureItem.value ?: return
         viewModelScope.launch {
@@ -1878,12 +1899,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
     fun archiveItem(item: SavedItem) {
         viewModelScope.launch {
-            // Pre-create "Archive" custom folder if it does not exist
-            if (!customFolders.value.contains("Archive")) {
-                repository.addCustomFolder("Archive")
-            }
-            val updatedFolders = if (item.folders.contains("Archive")) item.folders else item.folders + "Archive"
-            repository.saveItem(item.copy(folders = updatedFolders))
+            val updatedFolders = item.folders.filter { it != "Archive" }
+            repository.saveItem(item.copy(isArchived = true, folders = updatedFolders))
             showToast("Item archived successfully.")
         }
     }
@@ -1891,7 +1908,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     fun unarchiveItem(item: SavedItem) {
         viewModelScope.launch {
             val updatedFolders = item.folders.filter { it != "Archive" }
-            repository.saveItem(item.copy(folders = updatedFolders))
+            repository.saveItem(item.copy(isArchived = false, folders = updatedFolders))
             showToast("Item unarchived successfully.")
         }
     }

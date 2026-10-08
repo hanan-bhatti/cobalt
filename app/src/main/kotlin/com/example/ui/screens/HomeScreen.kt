@@ -413,6 +413,17 @@ fun HomeScreen(
                         onClick = { viewModel.setFolderFilter(category) }
                     )
                 }
+
+                // 6. Archive Folder
+                item {
+                    val isSelected = selectedFolder == "Archive"
+                    FolderChipItem(
+                        folder = "Archive",
+                        isSelected = isSelected,
+                        painter = painterResource(id = R.drawable.ic_custom_archive),
+                        onClick = { viewModel.setFolderFilter("Archive") }
+                    )
+                }
             }
 
             // Recent Captures Redesign (Compact, space-saving, and collapsible)
@@ -633,7 +644,7 @@ fun HomeScreen(
                                             itemToDelete = item
                                         },
                                         onDismissToArchive = {
-                                            if (item.folders.contains("Archive")) {
+                                            if (item.isArchived) {
                                                 viewModel.unarchiveItem(item)
                                             } else {
                                                 viewModel.archiveItem(item)
@@ -660,7 +671,7 @@ fun HomeScreen(
                                                 },
                                                 onManageFolders = { itemToManageFolders = item },
                                                 onArchive = {
-                                                    if (item.folders.contains("Archive")) {
+                                                    if (item.isArchived) {
                                                         viewModel.unarchiveItem(item)
                                                     } else {
                                                         viewModel.archiveItem(item)
@@ -726,7 +737,7 @@ fun HomeScreen(
                                         },
                                         onManageFolders = { itemToManageFolders = item },
                                         onArchive = {
-                                            if (item.folders.contains("Archive")) {
+                                            if (item.isArchived) {
                                                 viewModel.unarchiveItem(item)
                                             } else {
                                                 viewModel.archiveItem(item)
@@ -820,52 +831,29 @@ fun HomeScreen(
 }
 
     // Add Custom Folder Dialog
-    if (showAddFolderDialog) {
-        AlertDialog(
-            onDismissRequest = {
+    com.example.ui.components.FolderBottomSheet(
+        isVisible = showAddFolderDialog,
+        onDismiss = { 
+            showAddFolderDialog = false 
+            newFolderName = ""
+        },
+        initialFolder = null,
+        onSave = { updatedFolder, _ ->
+            val finalName = updatedFolder.name.trim()
+            if (finalName.isNotEmpty()) {
+                viewModel.createFolder(
+                    name = finalName,
+                    colorHex = updatedFolder.colorHex,
+                    iconName = updatedFolder.iconName,
+                    isPinned = updatedFolder.isPinned
+                )
                 showAddFolderDialog = false
                 newFolderName = ""
-            },
-            title = { Text("New Custom Folder", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) },
-            text = {
-                OutlinedTextField(
-                    value = newFolderName,
-                    onValueChange = { newFolderName = it },
-                    placeholder = { Text("Work, Inspiration, Books...") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth().testTag("folder_name_input")
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.createFolder(newFolderName)
-                        showAddFolderDialog = false
-                        newFolderName = ""
-                    },
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.testTag("confirm_folder_button")
-                ) {
-                    Text("Create")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showAddFolderDialog = false
-                        newFolderName = ""
-                    },
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            },
-            shape = RoundedCornerShape(28.dp),
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 6.dp
-        )
-    }
+            }
+        },
+        useBlur = false,
+        hazeState = null
+    )
 
     // Delete Confirmation Dialog
     if (itemToDelete != null) {
@@ -1393,7 +1381,7 @@ fun SwipeToDismissWrapper(
     isDark: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val isArchived = remember(item.folders) { item.folders.contains("Archive") }
+    val isArchived = remember(item.folders) { item.isArchived }
     val offsetX = remember { Animatable(0f) }
     var cardWidth by remember { mutableFloatStateOf(1f) }
     val scope = rememberCoroutineScope()

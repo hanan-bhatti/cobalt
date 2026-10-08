@@ -464,7 +464,7 @@ fun ArchiveItemCard(
                 onClick = { showContextMenu = false; onManageFolders() },
                 leadingIcon = { Icon(painterResource(id = R.drawable.ic_custom_folder_open), null, modifier = Modifier.size(20.dp)) }
             )
-            val isArchived = item.folders.contains("Archive")
+            val isArchived = item.isArchived
             DropdownMenuItem(
                 text = { Text(if (isArchived) "Restore from Archive" else "Archive") },
                 onClick = { showContextMenu = false; onArchive() },
@@ -709,7 +709,7 @@ fun ArchiveItemRow(
                 onClick = { showContextMenu = false; onManageFolders() },
                 leadingIcon = { Icon(painterResource(id = R.drawable.ic_custom_folder_open), null, modifier = Modifier.size(20.dp)) }
             )
-            val isArchived = item.folders.contains("Archive")
+            val isArchived = item.isArchived
             DropdownMenuItem(
                 text = { Text(if (isArchived) "Restore from Archive" else "Archive") },
                 onClick = { showContextMenu = false; onArchive() },

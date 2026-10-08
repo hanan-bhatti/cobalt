@@ -52,6 +52,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
@@ -421,11 +424,13 @@ class MainActivity : ComponentActivity() {
                                 BottomBarItem("folders", R.drawable.ic_custom_folder, "Folders"),
                                 BottomBarItem("profile", R.drawable.ic_custom_profile, "Profile")
                             )
+                            val navInsets = androidx.compose.foundation.layout.WindowInsets.navigationBars
+                            val bottomPadding = navInsets.asPaddingValues().calculateBottomPadding()
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.BottomStart)
                                     .fillMaxWidth()
-                                    .navigationBarsPadding()
+                                    .padding(bottom = bottomPadding)
                             ) {
                                 CustomBottomBar(
                                     items = items,

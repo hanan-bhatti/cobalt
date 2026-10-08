@@ -217,7 +217,8 @@ class CobaltRepository(private val context: Context) {
             trailerUrl = trailerUrl,
             backdropUrl = backdropUrl,
             releaseYear = releaseYear,
-            rating = rating
+            rating = rating,
+            isArchived = isArchived
         )
     }
 
@@ -251,7 +252,8 @@ class CobaltRepository(private val context: Context) {
             trailerUrl = trailerUrl,
             backdropUrl = backdropUrl,
             releaseYear = releaseYear,
-            rating = rating
+            rating = rating,
+            isArchived = isArchived
         )
     }
 
