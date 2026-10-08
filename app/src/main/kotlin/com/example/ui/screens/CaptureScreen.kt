@@ -256,31 +256,33 @@ fun CaptureScreen(
                 }
             }
 
-            var totalDrag by remember { mutableStateOf(0f) }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .pointerInput(Unit) {
-                        detectHorizontalDragGestures(
-                            onDragStart = { _ -> totalDrag = 0f },
-                            onDragEnd = { 
-                                val currentIndex = SavedItemType.entries.indexOf(item.type)
-                                if (totalDrag > 100f && currentIndex > 0) {
-                                    viewModel.switchActiveCaptureType(SavedItemType.entries[currentIndex - 1])
-                                } else if (totalDrag < -100f && currentIndex < SavedItemType.entries.size - 1) {
-                                    viewModel.switchActiveCaptureType(SavedItemType.entries[currentIndex + 1])
-                                }
-                                totalDrag = 0f
-                            },
-                            onHorizontalDrag = { change, dragAmount ->
-                                change.consume()
-                                totalDrag += dragAmount
-                            }
-                        )
-                    }
-            ) {
+            val pagerState = androidx.compose.foundation.pager.rememberPagerState(
+                initialPage = SavedItemType.entries.indexOf(item.type).coerceAtLeast(0),
+                pageCount = { SavedItemType.entries.size }
+            )
+
+            // Keep the item type selector synced with the pager
+            androidx.compose.runtime.LaunchedEffect(pagerState.currentPage) {
+                if (SavedItemType.entries[pagerState.currentPage] != item.type) {
+                    viewModel.switchActiveCaptureType(SavedItemType.entries[pagerState.currentPage])
+                }
+            }
+            androidx.compose.runtime.LaunchedEffect(item.type) {
+                val index = SavedItemType.entries.indexOf(item.type)
+                if (index >= 0 && index != pagerState.currentPage) {
+                    pagerState.animateScrollToPage(index)
+                }
+            }
+
+            androidx.compose.foundation.pager.HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxWidth(),
+                userScrollEnabled = true,
+                verticalAlignment = Alignment.Top
+            ) { pageIndex ->
+                val pageType = SavedItemType.entries[pageIndex]
                 Column(modifier = Modifier.fillMaxWidth()) {
-            if (item.type != SavedItemType.MEDIA) {
+            if (pageType != SavedItemType.MEDIA) {
                 // TITLE FIELD
                 Text(
                     text = "Title",
@@ -309,7 +311,7 @@ fun CaptureScreen(
             }
 
             // MEDIA DRAWING CANVAS (OCR Region Selection)
-            if (item.type == SavedItemType.IMAGE && capturedBitmap != null) {
+            if (pageType == SavedItemType.IMAGE && capturedBitmap != null) {
                 Text(
                     text = "Screenshot Region Marking",
                     fontSize = 12.sp,
@@ -486,7 +488,7 @@ fun CaptureScreen(
                 }
             }
 
-            if (item.type == SavedItemType.MEDIA) {
+            if (pageType == SavedItemType.MEDIA) {
                 // Media capture view
                 val searchResults by viewModel.mediaSearchResults.collectAsState()
                 val isSearchingMedia by viewModel.isSearchingMedia.collectAsState()
@@ -730,7 +732,7 @@ fun CaptureScreen(
             } else {
                 // MAIN CONTENT EDITOR
                 Text(
-                    text = when (item.type) {
+                    text = when (pageType) {
                         SavedItemType.LINK -> "URL / Link"
                         SavedItemType.CODE -> "Code Snippet Source"
                         SavedItemType.IMAGE, SavedItemType.VIDEO -> "Media File"
@@ -747,14 +749,14 @@ fun CaptureScreen(
                     androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
                 ) { uri ->
                     if (uri != null) {
-                        viewModel.handleMediaSelected(uri, item.type)
+                        viewModel.handleMediaSelected(uri, pageType)
                     }
                 }
 
-                val editorFont = if (item.type == SavedItemType.CODE) FontFamily.Monospace else FontFamily.SansSerif
-                val isMultiLine = item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE
+                val editorFont = if (pageType == SavedItemType.CODE) FontFamily.Monospace else FontFamily.SansSerif
+                val isMultiLine = pageType == SavedItemType.TEXT || pageType == SavedItemType.CODE
 
-                if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO) {
+                if (pageType == SavedItemType.IMAGE || pageType == SavedItemType.VIDEO) {
                     val mediaUrl = item.content
 
                     // native media picker
@@ -767,7 +769,7 @@ fun CaptureScreen(
                             onClick = {
                                 mediaPicker.launch(
                                     androidx.activity.result.PickVisualMediaRequest(
-                                        if (item.type == SavedItemType.IMAGE) androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                                        if (pageType == SavedItemType.IMAGE) androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
                                         else androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.VideoOnly
                                     )
                                 )
@@ -780,13 +782,13 @@ fun CaptureScreen(
                             )
                         ) {
                             Icon(
-                                painter = painterResource(id = if (item.type == SavedItemType.IMAGE) R.drawable.ic_custom_image else R.drawable.ic_custom_video),
+                                painter = painterResource(id = if (pageType == SavedItemType.IMAGE) R.drawable.ic_custom_image else R.drawable.ic_custom_video),
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (item.type == SavedItemType.IMAGE) "Select Image File" else "Select Video File",
+                                text = if (pageType == SavedItemType.IMAGE) "Select Image File" else "Select Video File",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -813,7 +815,7 @@ fun CaptureScreen(
                         }
                     }
 
-                    if (mediaUrl.isNotBlank() && item.type == SavedItemType.IMAGE) {
+                    if (mediaUrl.isNotBlank() && pageType == SavedItemType.IMAGE) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -835,7 +837,7 @@ fun CaptureScreen(
                         Spacer(Modifier.height(16.dp))
                     }
 
-                    if (item.type == SavedItemType.VIDEO && mediaUrl.isNotBlank()) {
+                    if (pageType == SavedItemType.VIDEO && mediaUrl.isNotBlank()) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -858,7 +860,7 @@ fun CaptureScreen(
                         }
                         Spacer(Modifier.height(16.dp))
                     }
-                } else if (item.type == SavedItemType.AUDIO) {
+                } else if (pageType == SavedItemType.AUDIO) {
                     AudioRecorderComponent(
                         onRecordComplete = { file: java.io.File ->
                             viewModel.transcribeAudioMemo(file)
@@ -903,7 +905,7 @@ fun CaptureScreen(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
                         )
                     }
-                } else if (item.type == SavedItemType.TEXT) {
+                } else if (pageType == SavedItemType.TEXT) {
                     RichTextEditor(
                         value = item.content,
                         onValueChange = { newContent ->
@@ -924,19 +926,19 @@ fun CaptureScreen(
                     OutlinedTextField(
                         value = item.content,
                         onValueChange = { viewModel.updateActiveCaptureItem { captured -> captured.copy(content = it) } },
-                        visualTransformation = if (item.type == SavedItemType.CODE) {
+                        visualTransformation = if (pageType == SavedItemType.CODE) {
                             com.example.ui.components.CodeSyntaxHighlightTransformation(androidx.compose.foundation.isSystemInDarkTheme())
                         } else {
                             androidx.compose.ui.text.input.VisualTransformation.None
                         },
-                        keyboardOptions = if (item.type == SavedItemType.LINK) {
+                        keyboardOptions = if (pageType == SavedItemType.LINK) {
                             KeyboardOptions(keyboardType = KeyboardType.Uri)
                         } else {
                             KeyboardOptions.Default
                         },
                         placeholder = {
                             Text(
-                                when (item.type) {
+                                when (pageType) {
                                     SavedItemType.LINK -> "https://example.com/shared-resource"
                                     SavedItemType.CODE -> "Write or paste source code..."
                                     else -> ""
@@ -959,7 +961,7 @@ fun CaptureScreen(
                             .testTag("capture_content_input")
                     )
                 }
-                if (item.type == SavedItemType.LINK && item.content.isNotBlank()) {
+                if (pageType == SavedItemType.LINK && item.content.isNotBlank()) {
                     val isExtracting by viewModel.isMetadataExtracting.collectAsState()
                     val metadataError by viewModel.metadataError.collectAsState()
 
