@@ -229,7 +229,11 @@ fun ArchiveItemCard(
                 }
 
                 // Sub-description
-                val cDesc = item.linkDescription?.trim() ?: item.content.trim()
+                val cDesc = if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO) {
+                    item.extractedText?.trim() ?: ""
+                } else {
+                    item.linkDescription?.trim() ?: item.content.trim()
+                }
                 if (cDesc.isNotBlank() && cDesc.lowercase() != item.title.trim().lowercase()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -684,7 +688,11 @@ fun ArchiveItemRow(
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    val cDesc = item.linkDescription?.trim() ?: item.content.trim()
+                    val cDesc = if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO) {
+                        item.extractedText?.trim() ?: ""
+                    } else {
+                        item.linkDescription?.trim() ?: item.content.trim()
+                    }
                     if (cDesc.isNotBlank() && cDesc.lowercase() != item.title.trim().lowercase()) {
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(

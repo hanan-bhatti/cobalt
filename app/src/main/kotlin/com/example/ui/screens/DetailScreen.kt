@@ -136,6 +136,9 @@ fun DetailScreen(
     val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
     val blurRadius by viewModel.blurRadius.collectAsState()
     val blurOpacity by viewModel.blurOpacity.collectAsState()
+    
+    val userEmail by viewModel.userEmail.collectAsState()
+    val isUserSignedIn = !userEmail.isNullOrBlank()
 
     BackHandler {
         onClose()
@@ -374,7 +377,7 @@ fun DetailScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        if (!item.isSynced) {
+                        if (isUserSignedIn && !item.isSynced) {
                             Text("•", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_custom_cloud_queue),
