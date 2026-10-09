@@ -2336,8 +2336,10 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             context, reaction, favoriteFeatures, desiredImprovements, npsScore, customFeedback, userEmail, userId, deviceModel, osVersion, appVersion,
             submitToCloud = { coll, payload -> repository.submitFeedbackToCloud(coll, payload) }
         )
+    }
+
     private fun triggerBackgroundSync() {
-        val context = getApplication<Application>().applicationContext
+        val context = getApplication<android.app.Application>().applicationContext
         val intent = android.content.Intent(context, com.example.service.DataUploadService::class.java).apply {
             action = com.example.service.DataUploadService.ACTION_START_SYNC
         }
@@ -2352,3 +2354,4 @@ data class ExtractedLinkReview(
     val description: String,
     val isSelected: Boolean = true
 )
+}

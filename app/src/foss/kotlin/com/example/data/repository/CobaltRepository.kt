@@ -852,6 +852,14 @@ class CobaltRepository(private val context: Context) {
         null
     }
 
+    suspend fun backupSelectedItems(itemIds: List<String>, onProgress: ((com.example.sync.BackupSyncManager.SyncProgress) -> Unit)? = null) {
+        // No-op for FOSS
+    }
+
+    suspend fun syncUnsyncedItems(onProgress: ((com.example.sync.BackupSyncManager.SyncProgress) -> Unit)? = null) {
+        // No-op for FOSS
+    }
+
     suspend fun submitFeedbackToCloud(collection: String, payload: Map<String, Any?>): Boolean = withContext(Dispatchers.IO) {
         // Not supported in FOSS build, handled locally by saveLocally()
         true // Return true so it doesn't fail the operation, as saving locally is the intended behavior for FOSS
