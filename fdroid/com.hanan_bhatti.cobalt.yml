@@ -15,7 +15,7 @@ AutoName: Cobalt
 Builds:
   - versionName: 2.1.0-beta
     versionCode: 13
-    commit: 313a918c5c41ef2a6dadb6c8f9e0cd32ed3490d7
+    commit: 468e5219ead5f802e656d3dc4bd3be24b54b45bd
     subdir: app
     gradle:
       - assembleFossRelease
