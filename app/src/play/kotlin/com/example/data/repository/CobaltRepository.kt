@@ -600,7 +600,15 @@ class CobaltRepository(private val context: Context) {
             }
         }
 
-        var finalItem = item.copy(isSynced = false, sizeBytes = itemSize, timestamp = if (item.timestamp == 0L) System.currentTimeMillis() else item.timestamp, updatedAt = System.currentTimeMillis())
+        val isNewMedia = mediaBytes != null
+        val pending = if (isNewMedia) true else item.isPendingBackup
+        var finalItem = item.copy(
+            isSynced = false, 
+            isPendingBackup = pending,
+            sizeBytes = itemSize, 
+            timestamp = if (item.timestamp == 0L) System.currentTimeMillis() else item.timestamp, 
+            updatedAt = System.currentTimeMillis()
+        )
 
         // 1. Save locally first to keep the interface fast & offline-ready
         savedItemDao.insertItem(finalItem.toEntity())
@@ -617,8 +625,10 @@ class CobaltRepository(private val context: Context) {
         if (currentUser != null) {
             try {
                 var actualBytes = mediaBytes
-                // If mediaBytes are not provided (e.g., queued/offline item), read them from the local cache file
-                if (actualBytes == null && (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO)) {
+                // If mediaBytes are not provided, only read them from disk if the item is explicitly pending backup
+                // and hasn't been backed up yet. This prevents blindly re-uploading large videos just because the user edited the title,
+                // and respects the user's choice if they removed the backup (isPendingBackup = false).
+                if (actualBytes == null && item.isPendingBackup && !item.isBackedUp && (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO)) {
                     val localPath = item.thumbnailPath ?: item.content
                     if (!localPath.startsWith("http://") && !localPath.startsWith("https://")) {
                         actualBytes = readFileBytes(localPath)
@@ -670,6 +680,8 @@ class CobaltRepository(private val context: Context) {
 
                 // Sync metadata to Firestore
                 if (firestore != null) {
+                    val actuallyBackedUp = if (finalItem.type == SavedItemType.IMAGE || finalItem.type == SavedItemType.VIDEO || finalItem.type == SavedItemType.AUDIO) finalItem.isBackedUp else true
+                    
                     val itemMap = mapOf(
                         "id" to finalItem.id,
                         "type" to finalItem.type.name,
@@ -685,7 +697,7 @@ class CobaltRepository(private val context: Context) {
                         "linkDescription" to finalItem.linkDescription,
                         "linkImage" to finalItem.linkImage,
                         "sizeBytes" to finalItem.sizeBytes,
-                        "isBackedUp" to true,
+                        "isBackedUp" to actuallyBackedUp,
                         "mediaType" to finalItem.mediaType,
                         "watchStatus" to finalItem.watchStatus,
                         "genres" to finalItem.genres,
@@ -698,8 +710,8 @@ class CobaltRepository(private val context: Context) {
                         .collection("items").document(finalItem.id)
                         .set(itemMap).await()
 
-                    // Mark locally as synced and backed up
-                    finalItem = finalItem.copy(isSynced = true, isBackedUp = true, isPendingBackup = true)
+                    // Mark locally as synced. Preserve isPendingBackup and use accurate isBackedUp
+                    finalItem = finalItem.copy(isSynced = true, isBackedUp = actuallyBackedUp)
                     savedItemDao.insertItem(finalItem.toEntity())
                 }
                 onProgress(1.0f)
@@ -1030,7 +1042,7 @@ class CobaltRepository(private val context: Context) {
                             "linkDescription" to finalItem.linkDescription,
                             "linkImage" to finalItem.linkImage,
                             "sizeBytes" to finalItem.sizeBytes,
-                            "isBackedUp" to finalItem.isBackedUp,
+                            "isBackedUp" to true,
                             "mediaType" to finalItem.mediaType,
                             "watchStatus" to finalItem.watchStatus,
                             "genres" to finalItem.genres,
@@ -1050,7 +1062,7 @@ class CobaltRepository(private val context: Context) {
                         // Update locally as synced. For media items this also implicitly
                         // confirms isPendingBackup was already true (that's why it was
                         // picked up above); leave the flag as-is for non-media items.
-                        finalItem = finalItem.copy(isSynced = true)
+                        finalItem = finalItem.copy(isSynced = true, isBackedUp = true)
                         savedItemDao.insertItem(finalItem.toEntity())
                         Log.d("CobaltRepo", "Successfully synced item")
                     }
