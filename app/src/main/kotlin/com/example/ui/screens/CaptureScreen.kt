@@ -21,6 +21,12 @@ package com.example.ui.screens
 import android.widget.Toast
 import kotlinx.coroutines.delay
 import androidx.compose.ui.platform.LocalContext
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.activity.compose.BackHandler
 import android.graphics.Bitmap
 import androidx.compose.foundation.BorderStroke
@@ -94,6 +100,53 @@ fun CaptureScreen(
     val customFolders by viewModel.customFolders.collectAsState()
     val extractedLinks by viewModel.extractedLinksToReview.collectAsState()
 
+    var showPermissionRationale by remember { mutableStateOf(false) }
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        viewModel.saveActiveItem()
+    }
+    
+    val handleSaveClick = {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val status = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+            if (status != PackageManager.PERMISSION_GRANTED) {
+                showPermissionRationale = true
+            } else {
+                viewModel.saveActiveItem()
+            }
+        } else {
+            viewModel.saveActiveItem()
+        }
+    }
+
+    if (showPermissionRationale) {
+        AlertDialog(
+            onDismissRequest = { 
+                showPermissionRationale = false 
+                viewModel.saveActiveItem() 
+            },
+            title = { Text("Backup Notifications") },
+            text = { Text("Allow Cobalt to send notifications so you can see live progress of your background backups and know when they complete.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showPermissionRationale = false
+                    launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }) {
+                    Text("Allow")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showPermissionRationale = false
+                    viewModel.saveActiveItem()
+                }) {
+                    Text("No thanks")
+                }
+            }
+        )
+    }
+
     LaunchedEffect(ocrError) {
         ocrError?.let {
             Toast.makeText(context, it, Toast.LENGTH_LONG).show()
@@ -152,7 +205,7 @@ fun CaptureScreen(
                     val onPrimaryColor = MaterialTheme.colorScheme.onPrimary
 
                     Button(
-                        onClick = { viewModel.saveActiveItem() },
+                        onClick = handleSaveClick,
                         enabled = !isSavingActive,
                         shape = RoundedCornerShape(20.dp),
                         colors = ButtonDefaults.buttonColors(

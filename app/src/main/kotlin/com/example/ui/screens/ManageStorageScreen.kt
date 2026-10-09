@@ -17,6 +17,14 @@
  */
 
 package com.example.ui.screens
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.mutableStateOf
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -96,6 +104,27 @@ fun ManageStorageScreen(
     val allItems by viewModel.allItems.collectAsState()
     val cloudUsedStorageBytes by viewModel.cloudUsedStorageBytes.collectAsState()
     val selectedForBackupIds by viewModel.selectedForBackupIds.collectAsState()
+
+    val context = LocalContext.current
+    var showPermissionRationale by remember { mutableStateOf(false) }
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        viewModel.backupSelectedItems()
+    }
+    
+    val handleBackupClick = {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val status = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+            if (status != PackageManager.PERMISSION_GRANTED) {
+                showPermissionRationale = true
+            } else {
+                viewModel.backupSelectedItems()
+            }
+        } else {
+            viewModel.backupSelectedItems()
+        }
+    }
 
     val categories = SavedItemType.values().map { type ->
         val itemsForType = allItems.filter { it.type == type }
@@ -207,7 +236,7 @@ fun ManageStorageScreen(
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Button(
-                            onClick = { viewModel.backupSelectedItems() },
+                            onClick = handleBackupClick,
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !limitReached && newSelectionSize > 0
                         ) {
@@ -769,6 +798,34 @@ fun ManageStorageScreen(
                 }
             }
         }
+    }
+
+    
+    if (showPermissionRationale) {
+        AlertDialog(
+            onDismissRequest = { 
+                showPermissionRationale = false 
+                viewModel.backupSelectedItems() 
+            },
+            title = { Text("Backup Notifications") },
+            text = { Text("Allow Cobalt to send notifications so you can see live progress of your background backups and know when they complete.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showPermissionRationale = false
+                    launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }) {
+                    Text("Allow")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showPermissionRationale = false
+                    viewModel.backupSelectedItems()
+                }) {
+                    Text("No thanks")
+                }
+            }
+        )
     }
 
     if (showDeselectDialog != null) {

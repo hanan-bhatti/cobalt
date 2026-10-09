@@ -593,7 +593,6 @@ class CobaltRepository(private val context: Context) {
                     itemSize = file.length()
                 }
             } else if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO) {
-                // Keep existing sizeBytes for remote media items loaded from cloud
                 itemSize = if (item.sizeBytes > 0L) item.sizeBytes else 0L
             } else {
                 itemSize = item.content.toByteArray().size.toLong()
@@ -612,114 +611,24 @@ class CobaltRepository(private val context: Context) {
 
         // 1. Save locally first to keep the interface fast & offline-ready
         savedItemDao.insertItem(finalItem.toEntity())
-        onProgress(0.1f)
+        onProgress(0.5f)
 
         // 2. Perform background sync if signed in
         val currentUser = firebaseAuth?.currentUser
         if (currentUser == null && prefs.getString("simulated_email", null) != null) {
             finalItem = finalItem.copy(isSynced = true)
             savedItemDao.insertItem(finalItem.toEntity())
-            onProgress(1.0f)
         }
 
         if (currentUser != null) {
-            try {
-                var actualBytes = mediaBytes
-                // If mediaBytes are not provided, only read them from disk if the item is explicitly pending backup
-                // and hasn't been backed up yet. This prevents blindly re-uploading large videos just because the user edited the title,
-                // and respects the user's choice if they removed the backup (isPendingBackup = false).
-                if (actualBytes == null && item.isPendingBackup && !item.isBackedUp && (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO)) {
-                    val localPath = item.thumbnailPath ?: item.content
-                    if (!localPath.startsWith("http://") && !localPath.startsWith("https://")) {
-                        actualBytes = readFileBytes(localPath)
-                    }
-                }
-
-                // Upload to Firebase Storage if we have bytes and storage is available
-                if (storage != null && actualBytes != null) {
-                    val fileExtension = when (item.type) {
-                        SavedItemType.VIDEO -> "mp4"
-                        SavedItemType.AUDIO -> "mp4"
-                        else -> "jpg"
-                    }
-                    val storageRef = storage.reference.child("users/${currentUser.uid}/media/${item.id}.$fileExtension")
-
-                    val uploadTask = storageRef.putBytes(actualBytes)
-                    uploadTask.addOnProgressListener { taskSnapshot ->
-                        val progress = if (taskSnapshot.totalByteCount > 0) {
-                            taskSnapshot.bytesTransferred.toFloat() / taskSnapshot.totalByteCount
-                        } else {
-                            0f
-                        }
-                        // Scale progress to 10% - 85% range
-                        onProgress(0.1f + progress * 0.75f)
-                    }
-                    val snapshot = uploadTask.await()
-                    val downloadUrl = (snapshot.metadata?.reference?.downloadUrl ?: throw Exception("No reference URL")).await()
-
-                    finalItem = if (item.type == SavedItemType.AUDIO) {
-                        finalItem.copy(
-                            thumbnailPath = downloadUrl.toString(),
-                            sizeBytes = actualBytes.size.toLong(),
-                            isBackedUp = true
-                        )
-                    } else {
-                        finalItem.copy(
-                            content = downloadUrl.toString(),
-                            thumbnailPath = downloadUrl.toString(),
-                            sizeBytes = actualBytes.size.toLong(),
-                            isBackedUp = true
-                        )
-                    }
-                    // Save locally again with the new remote URL
-                    savedItemDao.insertItem(finalItem.toEntity())
-                    onProgress(0.9f)
-                } else {
-                    onProgress(0.5f)
-                }
-
-                // Sync metadata to Firestore
-                if (firestore != null) {
-                    val actuallyBackedUp = if (finalItem.type == SavedItemType.IMAGE || finalItem.type == SavedItemType.VIDEO || finalItem.type == SavedItemType.AUDIO) finalItem.isBackedUp else true
-                    
-                    val itemMap = mapOf(
-                        "id" to finalItem.id,
-                        "type" to finalItem.type.name,
-                        "title" to finalItem.title,
-                        "content" to finalItem.content,
-                        "timestamp" to finalItem.timestamp,
-                        "orderIndex" to finalItem.orderIndex,
-                        "folders" to finalItem.folders,
-                        "extractedText" to finalItem.extractedText,
-                        "thumbnailPath" to finalItem.thumbnailPath,
-                        "isSynced" to true,
-                        "linkTitle" to finalItem.linkTitle,
-                        "linkDescription" to finalItem.linkDescription,
-                        "linkImage" to finalItem.linkImage,
-                        "sizeBytes" to finalItem.sizeBytes,
-                        "isBackedUp" to actuallyBackedUp,
-                        "mediaType" to finalItem.mediaType,
-                        "watchStatus" to finalItem.watchStatus,
-                        "genres" to finalItem.genres,
-                        "watchProviders" to finalItem.watchProviders,
-                        "trailerUrl" to finalItem.trailerUrl,
-                        "backdropUrl" to finalItem.backdropUrl,
-                        "releaseYear" to finalItem.releaseYear
-                    )
-                    firestore.collection("users").document(currentUser.uid)
-                        .collection("items").document(finalItem.id)
-                        .set(itemMap).await()
-
-                    // Mark locally as synced. Preserve isPendingBackup and use accurate isBackedUp
-                    finalItem = finalItem.copy(isSynced = true, isBackedUp = actuallyBackedUp)
-                    savedItemDao.insertItem(finalItem.toEntity())
-                }
-                onProgress(1.0f)
-            } catch (e: Exception) {
-                Log.e("CobaltRepo", "Background Firebase sync failed: ${e.message}")
+            // Start the foreground service to handle the upload in the background
+            val intent = android.content.Intent(context, com.example.service.DataUploadService::class.java).apply {
+                action = com.example.service.DataUploadService.ACTION_START_SYNC
             }
+            androidx.core.content.ContextCompat.startForegroundService(context, intent)
         }
 
+        onProgress(1.0f)
         com.example.widget.WidgetUpdater.update(context)
         return@withContext finalItem
     }
@@ -734,7 +643,7 @@ class CobaltRepository(private val context: Context) {
     suspend fun backupSelectedItems(itemIds: List<String>, onProgress: ((com.example.sync.BackupSyncManager.SyncProgress) -> Unit)? = null) = withContext(Dispatchers.IO) {
         val currentUser = firebaseAuth?.currentUser ?: return@withContext
         val items = savedItemDao.getAllItems()
-        val toBackup = items.filter { itemIds.contains(it.id) && !it.isSynced }
+        val toBackup = items.filter { itemIds.contains(it.id) && !it.isBackedUp }
         if (toBackup.isEmpty()) return@withContext
 
         Log.d("CobaltRepo", "Starting backup of ${toBackup.size} selected items.")
@@ -991,16 +900,7 @@ class CobaltRepository(private val context: Context) {
     suspend fun syncUnsyncedItems(onProgress: ((com.example.sync.BackupSyncManager.SyncProgress) -> Unit)? = null) = withContext(Dispatchers.IO) {
         val currentUser = firebaseAuth?.currentUser ?: return@withContext
         val items = savedItemDao.getAllItems()
-        val unsynced = items.filter { entity ->
-            if (!entity.isSynced) {
-                val isMedia = entity.type == SavedItemType.IMAGE.name ||
-                    entity.type == SavedItemType.VIDEO.name ||
-                    entity.type == SavedItemType.AUDIO.name
-                if (isMedia) entity.isPendingBackup else true
-            } else {
-                false
-            }
-        }
+        val unsynced = items.filter { !it.isSynced }
 
         if (unsynced.isNotEmpty()) {
             Log.d("CobaltRepo", "Starting sync of ${unsynced.size} unsynced items.")
@@ -1011,9 +911,9 @@ class CobaltRepository(private val context: Context) {
                     var domainItem = entity.toDomain()
                     var finalItem = domainItem
 
+                    val isMedia = domainItem.type == SavedItemType.IMAGE || domainItem.type == SavedItemType.VIDEO || domainItem.type == SavedItemType.AUDIO
                     val mediaUrl = if (domainItem.type == SavedItemType.AUDIO) domainItem.thumbnailPath ?: "" else domainItem.content
-                    if ((domainItem.type == SavedItemType.IMAGE || domainItem.type == SavedItemType.VIDEO || domainItem.type == SavedItemType.AUDIO) &&
-                        !mediaUrl.startsWith("http://") && !mediaUrl.startsWith("https://")
+                    if (isMedia && entity.isPendingBackup && !mediaUrl.startsWith("http://") && !mediaUrl.startsWith("https://")
                     ) {
                         val localPath = when (domainItem.type) {
                             SavedItemType.AUDIO -> domainItem.thumbnailPath ?: ""
@@ -1066,6 +966,7 @@ class CobaltRepository(private val context: Context) {
                             currentCategory = domainItem.type
                         ))
                     }
+                    val shouldBeBackedUp = if (isMedia) finalItem.isBackedUp else true
 
                     // Upload metadata to Firestore
                     if (firestore != null) {
@@ -1084,7 +985,7 @@ class CobaltRepository(private val context: Context) {
                             "linkDescription" to finalItem.linkDescription,
                             "linkImage" to finalItem.linkImage,
                             "sizeBytes" to finalItem.sizeBytes,
-                            "isBackedUp" to true,
+                            "isBackedUp" to shouldBeBackedUp,
                             "mediaType" to finalItem.mediaType,
                             "watchStatus" to finalItem.watchStatus,
                             "genres" to finalItem.genres,
@@ -1101,10 +1002,8 @@ class CobaltRepository(private val context: Context) {
                             .collection("items").document(finalItem.id)
                             .set(itemMap).await()
 
-                        // Update locally as synced. For media items this also implicitly
-                        // confirms isPendingBackup was already true (that's why it was
-                        // picked up above); leave the flag as-is for non-media items.
-                        finalItem = finalItem.copy(isSynced = true, isBackedUp = true)
+                        // Update locally as synced.
+                        finalItem = finalItem.copy(isSynced = true, isBackedUp = shouldBeBackedUp)
                         savedItemDao.insertItem(finalItem.toEntity())
                         Log.d("CobaltRepo", "Successfully synced item")
                     }
