@@ -1,4 +1,3 @@
-import com.google.firebase.perf.plugin.FirebasePerfExtension
 import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -10,8 +9,6 @@ plugins {
   alias(libs.plugins.roborazzi)
   alias(libs.plugins.secrets)
   alias(libs.plugins.google.services)
-  alias(libs.plugins.firebase.crashlytics)
-  alias(libs.plugins.firebase.perf)
 }
 
 android {
@@ -34,10 +31,6 @@ android {
       dimension = "distribution"
       applicationIdSuffix = ".foss"
       manifestPlaceholders["appName"] = "Cobalt FOSS"
-      // Disable Firebase Performance instrumentation for foss builds
-      configure<FirebasePerfExtension> {
-        setInstrumentationEnabled(false)
-      }
     }
     create("play") {
       dimension = "distribution"
@@ -77,9 +70,6 @@ android {
       isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
-      configure<com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension> {
-        mappingFileUploadEnabled = false
-      }
     }
     debug { signingConfig = signingConfigs.getByName("debugConfig") }
   }

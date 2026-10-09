@@ -1,31 +1,28 @@
 Categories:
-  - Productivity
-  - Utility
+  - Note
+  - Task
+  - Bookmark
 License: AGPL-3.0-or-later
 AuthorName: Hanan Bhatti
-WebSite: https://github.com/hanan-bhatti/second-brain
-SourceCode: https://github.com/hanan-bhatti/second-brain
-IssueTracker: https://github.com/hanan-bhatti/second-brain/issues
+WebSite: https://github.com/hanan-bhatti/cobalt
+SourceCode: https://github.com/hanan-bhatti/cobalt
+IssueTracker: https://github.com/hanan-bhatti/cobalt/issues
 RepoType: git
-Repo: https://github.com/hanan-bhatti/second-brain.git
+Repo: https://github.com/hanan-bhatti/cobalt.git
 
 AutoName: Cobalt
 
 Builds:
-  - versionName: 1.0.0
-    versionCode: 10
-    commit: 5f49486ddab2f6345d5d184156d1083de448063e
-    subdir: app
-    gradle:
-      - assembleFossRelease
   - versionName: 2.1.0-beta
     versionCode: 13
-    commit: ef00c60c8e34e46fbb9642d68a01df7a27ecca96
+    commit: 313a918c5c41ef2a6dadb6c8f9e0cd32ed3490d7
     subdir: app
     gradle:
       - assembleFossRelease
+    prebuild:
+      - sed -i -e '/playImplementation/d' app/build.gradle.kts
 
-AutoUpdateMode: Version v%v
+AutoUpdateMode: Version
 UpdateCheckMode: Tags
 CurrentVersion: 2.1.0-beta
 CurrentVersionCode: 13
