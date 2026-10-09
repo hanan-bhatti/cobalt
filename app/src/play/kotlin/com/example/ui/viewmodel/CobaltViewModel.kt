@@ -2354,4 +2354,3 @@ data class ExtractedLinkReview(
     val description: String,
     val isSelected: Boolean = true
 )
-}
