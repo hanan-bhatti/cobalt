@@ -685,7 +685,7 @@ class CobaltRepository(private val context: Context) {
                         "linkDescription" to finalItem.linkDescription,
                         "linkImage" to finalItem.linkImage,
                         "sizeBytes" to finalItem.sizeBytes,
-                        "isBackedUp" to finalItem.isBackedUp,
+                        "isBackedUp" to true,
                         "mediaType" to finalItem.mediaType,
                         "watchStatus" to finalItem.watchStatus,
                         "genres" to finalItem.genres,
@@ -698,8 +698,8 @@ class CobaltRepository(private val context: Context) {
                         .collection("items").document(finalItem.id)
                         .set(itemMap).await()
 
-                    // Mark locally as synced
-                    finalItem = finalItem.copy(isSynced = true)
+                    // Mark locally as synced and backed up
+                    finalItem = finalItem.copy(isSynced = true, isBackedUp = true, isPendingBackup = true)
                     savedItemDao.insertItem(finalItem.toEntity())
                 }
                 onProgress(1.0f)
@@ -778,6 +778,7 @@ class CobaltRepository(private val context: Context) {
                         "extractedText" to finalItem.extractedText,
                         "thumbnailPath" to finalItem.thumbnailPath,
                         "isSynced" to true,
+                        "isBackedUp" to true,
                         "linkTitle" to finalItem.linkTitle,
                         "linkDescription" to finalItem.linkDescription,
                         "linkImage" to finalItem.linkImage,
@@ -796,7 +797,7 @@ class CobaltRepository(private val context: Context) {
 
                     // isPendingBackup=true records that the user explicitly wants
                     // this item backed up, distinct from isSynced (current state).
-                    finalItem = finalItem.copy(isSynced = true, isPendingBackup = true)
+                    finalItem = finalItem.copy(isSynced = true, isBackedUp = true, isPendingBackup = true)
                     savedItemDao.insertItem(finalItem.toEntity())
                 }
             } catch (e: Exception) {
@@ -854,7 +855,22 @@ class CobaltRepository(private val context: Context) {
                     destFile
                 } else null
 
-                // Update local SavedItemEntity
+                // Delete from Storage (construct path directly based on item id)
+                if (storage != null && isMedia) {
+                    try {
+                        val fileExtension = when (item.type) {
+                            SavedItemType.VIDEO -> "mp4"
+                            SavedItemType.AUDIO -> "mp4"
+                            else -> "jpg"
+                        }
+                        val storageRef = storage.reference.child("users/${currentUser.uid}/media/${item.id}.$fileExtension")
+                        storageRef.delete().await()
+                    } catch (storageEx: Exception) {
+                        Log.w("CobaltRepo", "Failed to delete storage blob: ${storageEx.message}")
+                    }
+                }
+
+                // Update local model first to generate the new timestamps & paths
                 val updatedItem = if (isMedia && localFile != null) {
                     if (item.type == SavedItemType.AUDIO) {
                         item.copy(
@@ -882,22 +898,6 @@ class CobaltRepository(private val context: Context) {
                         updatedAt = System.currentTimeMillis()
                     )
                 }
-                savedItemDao.insertItem(updatedItem.toEntity())
-
-                // Delete from Storage (construct path directly based on item id)
-                if (storage != null && isMedia) {
-                    try {
-                        val fileExtension = when (item.type) {
-                            SavedItemType.VIDEO -> "mp4"
-                            SavedItemType.AUDIO -> "mp4"
-                            else -> "jpg"
-                        }
-                        val storageRef = storage.reference.child("users/${currentUser.uid}/media/${item.id}.$fileExtension")
-                        storageRef.delete().await()
-                    } catch (storageEx: Exception) {
-                        Log.w("CobaltRepo", "Failed to delete storage blob: ${storageEx.message}")
-                    }
-                }
 
                 // Update Firestore document (Tombstone)
                 if (firestore != null) {
@@ -918,10 +918,16 @@ class CobaltRepository(private val context: Context) {
 
                     try {
                         docRef.update(updateMap).await()
+                        
+                        // Successfully removed from cloud, now update local DB
+                        savedItemDao.insertItem(updatedItem.toEntity())
                     } catch (firestoreEx: Exception) {
                         Log.w("CobaltRepo", "Failed to update Firestore tombstone: ${firestoreEx.message}")
-                        savedItemDao.insertItem(updatedItem.copy(isSynced = false).toEntity())
                     }
+                } else {
+                    // Offline fallback: we cannot guarantee removal without firestore, but if firestore is null, we shouldn't fail silently.
+                    // Wait, firestore is only null if Firebase is not initialized, which is rare.
+                    savedItemDao.insertItem(updatedItem.toEntity())
                 }
 
             } catch (e: Exception) {

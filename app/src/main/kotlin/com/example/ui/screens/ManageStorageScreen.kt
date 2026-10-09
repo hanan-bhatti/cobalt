@@ -139,7 +139,8 @@ fun ManageStorageScreen(
         val unassignedItems = mutableListOf<com.example.data.model.SavedItem>()
 
         allItems.forEach { item ->
-            // Only media bytes count toward storage — skip free items
+            // Only backed-up media bytes count toward cloud storage — skip free, local-only, and unavailable items
+            if (!item.isBackedUp || item.isUnavailable) return@forEach
             val itemSize = mediaQuotaBytes(item)
             if (itemSize == 0L) return@forEach
 
@@ -175,7 +176,7 @@ fun ManageStorageScreen(
     }
 
     // Only media items selected-for-backup count toward the pending quota
-    val newSelectionSize = allItems.filter { it.id in selectedForBackupIds && !it.isSynced && isMediaType(it.type) }.sumOf { mediaQuotaBytes(it) }
+    val newSelectionSize = allItems.filter { it.id in selectedForBackupIds && !it.isBackedUp && isMediaType(it.type) }.sumOf { mediaQuotaBytes(it) }
 
     val totalPendingSize = cloudUsedStorageBytes + newSelectionSize
     val maxStorageBytes = viewModel.maxStorageBytes
@@ -557,7 +558,7 @@ fun ManageStorageScreen(
                                                 ) {
                                                     items.forEachIndexed { itemIndex, item ->
                                                         val isSelected = selectedForBackupIds.contains(item.id)
-                                                        val isAlreadyBackedUp = item.isSynced && !item.isUnavailable
+                                                        val isAlreadyBackedUp = item.isBackedUp && !item.isUnavailable
                                                         val isItemUnavailable = item.isUnavailable
                                                         val itemSize = mediaQuotaBytes(item)
 
@@ -757,7 +758,7 @@ fun ManageStorageScreen(
 
     if (longClickedItem != null) {
         val item = longClickedItem!!
-        val isAlreadyBackedUp = item.isSynced
+        val isAlreadyBackedUp = item.isBackedUp
 
         AlertDialog(
             onDismissRequest = { longClickedItem = null },
@@ -872,7 +873,7 @@ fun ManageStorageScreen(
     if (longClickedCategory != null) {
         val type = longClickedCategory!!
         val typeItems = allItems.filter { it.type == type }
-        val nonSyncedItems = typeItems.filter { !it.isSynced }
+        val nonSyncedItems = typeItems.filter { !it.isBackedUp }
         val allSelected = nonSyncedItems.isNotEmpty() && nonSyncedItems.all { selectedForBackupIds.contains(it.id) }
 
         val baseColor = when (type) {
@@ -921,7 +922,7 @@ fun ManageStorageScreen(
                                     }
                                 } else {
                                     val categoryUnsyncedSize = nonSyncedItems.sumOf { mediaQuotaBytes(it) }
-                                    val otherCategoriesSelectionSize = allItems.filter { it.id in selectedForBackupIds && !it.isSynced && it.type != type }.sumOf { mediaQuotaBytes(it) }
+                                    val otherCategoriesSelectionSize = allItems.filter { it.id in selectedForBackupIds && !it.isBackedUp && it.type != type }.sumOf { mediaQuotaBytes(it) }
                                     val totalPendingWithCategory = cloudUsedStorageBytes + otherCategoriesSelectionSize + categoryUnsyncedSize
                                     if (totalPendingWithCategory > maxStorageBytes) {
                                         viewModel.showToast("Exceeds 512MB free backup limit by ${formatStorageSize(totalPendingWithCategory - maxStorageBytes)}.")

@@ -349,7 +349,7 @@ fun DetailScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        if (isUserSignedIn && !item.isSynced) {
+                        if (isUserSignedIn && !item.isBackedUp) {
                             Text("•", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_custom_cloud_queue),

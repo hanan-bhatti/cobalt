@@ -5,5 +5,10 @@ service firebase.storage {
     match /users/{userId}/{allPaths=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
+    
+    // Allow users to upload bug report attachments
+    match /feedback_attachments/{allPaths=**} {
+      allow create: if true;
+    }
   }
 }
