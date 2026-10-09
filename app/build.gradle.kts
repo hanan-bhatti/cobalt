@@ -175,6 +175,7 @@ dependencies {
   implementation(libs.androidx.media3.ui)
   implementation(libs.androidx.glance.appwidget)
   implementation(libs.androidx.glance.material3)
+  implementation("androidx.work:work-runtime-ktx:2.9.1")
   implementation("dev.chrisbanes.haze:haze:1.7.2")
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)

@@ -570,7 +570,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     repository.restoreUserDataFromCloud()
                     repository.updateDeviceSession()
-                    repository.syncUnsyncedItems()
+                    triggerBackgroundSync()
                 }
                 showToast("Data synced successfully.")
             } catch (e: Exception) {
@@ -699,17 +699,14 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     fun backupSelectedItems() {
         val ids = _selectedForBackupIds.value.toList()
         if (ids.isEmpty()) return
-        viewModelScope.launch {
-            _isSyncing.value = true
-            try {
-                repository.backupSelectedItems(ids)
-                clearBackupSelection()
-            } catch (e: Exception) {
-                postFeedback("Backup failed: ${e.message}", com.example.util.FeedbackSeverity.ERROR)
-            } finally {
-                _isSyncing.value = false
-            }
+        
+        val context = getApplication<Application>().applicationContext
+        val intent = android.content.Intent(context, com.example.service.DataUploadService::class.java).apply {
+            action = com.example.service.DataUploadService.ACTION_START_BACKUP
+            putStringArrayListExtra(com.example.service.DataUploadService.EXTRA_ITEM_IDS, java.util.ArrayList(ids))
         }
+        androidx.core.content.ContextCompat.startForegroundService(context, intent)
+        clearBackupSelection()
     }
 
     fun removeBackupItems(ids: List<String>) {
@@ -781,7 +778,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     try {
                         repository.restoreUserDataFromCloud()
                         repository.updateDeviceSession()
-                        repository.syncUnsyncedItems()
+                        triggerBackgroundSync()
                     } catch (e: Exception) {
                         Log.e("CobaltVM", "Initial auto-sync error: ${e.message}", e)
                         postFeedback("Background sync failed — showing offline data", com.example.util.FeedbackSeverity.WARNING)
@@ -802,7 +799,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                         try {
                             repository.restoreUserDataFromCloud()
                             repository.updateDeviceSession()
-                            repository.syncUnsyncedItems()
+                            triggerBackgroundSync()
                         } catch (e: Exception) {
                             Log.e("CobaltVM", "Initial auto-sync error: ${e.message}", e)
                             postFeedback("Background sync failed — showing offline data", com.example.util.FeedbackSeverity.WARNING)
@@ -872,7 +869,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     try {
                         repository.restoreUserDataFromCloud()
                         repository.updateDeviceSession()
-                        repository.syncUnsyncedItems()
+                        triggerBackgroundSync()
                         showToast("Successfully registered and synced as $userMail.")
                     } catch (e: Exception) {
                         Log.e("CobaltVM", "Post sign-up sync failed: ${e.message}")
@@ -917,7 +914,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     try {
                         repository.restoreUserDataFromCloud()
                         repository.updateDeviceSession()
-                        repository.syncUnsyncedItems()
+                        triggerBackgroundSync()
                         showToast("Successfully logged in and synced as $userMail.")
                     } catch (e: Exception) {
                         Log.e("CobaltVM", "Post sign-in sync failed: ${e.message}")
@@ -977,7 +974,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     AnalyticsHelper.logSignInSuccess(context, "Google")
                     repository.restoreUserDataFromCloud()
                     repository.updateDeviceSession()
-                    repository.syncUnsyncedItems()
+                    triggerBackgroundSync()
                     showToast("Successfully logged in and synced as $userMail.")
                     onCompletion(true)
                 } else {
@@ -1163,7 +1160,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     try {
                         repository.restoreUserDataFromCloud()
                         repository.updateDeviceSession()
-                        repository.syncUnsyncedItems()
+                        triggerBackgroundSync()
                         showToast("Successfully logged in and synced as $userMail.")
                     } catch (e: Exception) {
                         Log.e("CobaltVM", "Post link sign-in sync failed: ${e.message}")
@@ -1643,7 +1640,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
                     // Sync to Firestore in background
                     try {
-                        repository.syncUnsyncedItems()
+                        triggerBackgroundSync()
                     } catch (e: Exception) {
                         Log.e("CobaltVM", "Background sync failed: ${e.message}")
                     }
@@ -1804,7 +1801,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 // Sync to Firestore and Storage in background
                 launch(kotlinx.coroutines.Dispatchers.IO) {
                     try {
-                        repository.syncUnsyncedItems()
+                        triggerBackgroundSync()
                     } catch (e: Exception) {
                         Log.e("CobaltVM", "Background sync failed: ${e.message}")
                     }
@@ -1893,7 +1890,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 // Sync to Firestore and Storage in background
                 launch(kotlinx.coroutines.Dispatchers.IO) {
                     try {
-                        repository.syncUnsyncedItems()
+                        triggerBackgroundSync()
                     } catch (e: Exception) {
                         Log.e("CobaltVM", "Background sync failed: ${e.message}")
                     }
@@ -1920,7 +1917,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             // Sync to Firebase in the background if configured
             launch(kotlinx.coroutines.Dispatchers.IO) {
                 try {
-                    repository.syncUnsyncedItems()
+                    triggerBackgroundSync()
                 } catch (e: Exception) {
                     Log.e("CobaltVM", "Background sync failed: ${e.message}")
                 }
@@ -1948,21 +1945,21 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         if (name.isBlank()) return
         viewModelScope.launch {
             repository.addCustomFolder(name.trim(), colorHex, iconName, isPinned)
-            repository.syncUnsyncedItems()
+            triggerBackgroundSync()
         }
     }
 
     fun deleteFolder(name: String) {
         viewModelScope.launch {
             repository.deleteCustomFolder(name)
-            repository.syncUnsyncedItems()
+            triggerBackgroundSync()
         }
     }
 
     fun updateFolder(folder: com.example.data.local.CustomFolderEntity) {
         viewModelScope.launch {
             repository.updateCustomFolder(folder)
-            repository.syncUnsyncedItems()
+            triggerBackgroundSync()
         }
     }
 
@@ -1970,7 +1967,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         if (newName.isBlank() || oldName == newName) return
         viewModelScope.launch {
             repository.renameCustomFolder(oldName, newName.trim())
-            repository.syncUnsyncedItems()
+            triggerBackgroundSync()
             showToast("Folder renamed to '${newName.trim()}' successfully.")
         }
     }
@@ -1995,7 +1992,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             AnalyticsHelper.logNoteEdited(context, item.id, item.type.name)
             launch(kotlinx.coroutines.Dispatchers.IO) {
                 try {
-                    repository.syncUnsyncedItems()
+                    triggerBackgroundSync()
                 } catch (e: Exception) {
                     Log.e("CobaltVM", "Background sync failed: ${e.message}")
                 }
@@ -2339,6 +2336,12 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             context, reaction, favoriteFeatures, desiredImprovements, npsScore, customFeedback, userEmail, userId, deviceModel, osVersion, appVersion,
             submitToCloud = { coll, payload -> repository.submitFeedbackToCloud(coll, payload) }
         )
+    private fun triggerBackgroundSync() {
+        val context = getApplication<Application>().applicationContext
+        val intent = android.content.Intent(context, com.example.service.DataUploadService::class.java).apply {
+            action = com.example.service.DataUploadService.ACTION_START_SYNC
+        }
+        androidx.core.content.ContextCompat.startForegroundService(context, intent)
     }
 }
 

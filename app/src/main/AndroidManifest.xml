@@ -130,6 +130,11 @@
             android:exported="false" />
 
         <service
+            android:name=".service.DataUploadService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
+        <service
             android:name=".CobaltOcrTileService"
             android:icon="@drawable/ic_custom_ocr"
             android:label="${appName}"

@@ -92,6 +92,7 @@ fun ManageStorageScreen(
 ) {
     val isDark = isSystemInDarkTheme()
     val isSyncing by viewModel.isSyncing.collectAsState()
+    val syncProgressState by com.example.sync.BackupSyncManager.syncState.collectAsState()
     val allItems by viewModel.allItems.collectAsState()
     val cloudUsedStorageBytes by viewModel.cloudUsedStorageBytes.collectAsState()
     val selectedForBackupIds by viewModel.selectedForBackupIds.collectAsState()
@@ -536,6 +537,41 @@ fun ManageStorageScreen(
                                                     .height(4.dp)
                                                     .clip(RoundedCornerShape(2.dp))
                                             )
+                                            
+                                            if (syncProgressState.isSyncing && syncProgressState.currentCategory == type) {
+                                                Spacer(modifier = Modifier.height(8.dp))
+                                                val progressFloat = if (syncProgressState.totalBytes > 0) {
+                                                    syncProgressState.progressBytes.toFloat() / syncProgressState.totalBytes
+                                                } else 0f
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        "Syncing ${syncProgressState.currentItem} / ${syncProgressState.totalItems}",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = baseColor,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                    Text(
+                                                        "${(progressFloat * 100).toInt()}%",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = baseColor,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                LinearProgressIndicator(
+                                                    progress = { progressFloat },
+                                                    color = baseColor,
+                                                    trackColor = baseColor.copy(alpha = 0.3f),
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .height(4.dp)
+                                                        .clip(RoundedCornerShape(2.dp))
+                                                )
+                                            }
                                         }
 
                                         // Collapsible item contents

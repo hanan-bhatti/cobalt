@@ -731,14 +731,16 @@ class CobaltRepository(private val context: Context) {
     // "the user wants this backed up" — this is what lets syncUnsyncedItems()
     // tell the difference between "never backed up yet" and "explicitly removed
     // from backup", instead of relying on isSynced alone for both meanings.
-    suspend fun backupSelectedItems(itemIds: List<String>) = withContext(Dispatchers.IO) {
+    suspend fun backupSelectedItems(itemIds: List<String>, onProgress: ((com.example.sync.BackupSyncManager.SyncProgress) -> Unit)? = null) = withContext(Dispatchers.IO) {
         val currentUser = firebaseAuth?.currentUser ?: return@withContext
         val items = savedItemDao.getAllItems()
         val toBackup = items.filter { itemIds.contains(it.id) && !it.isSynced }
         if (toBackup.isEmpty()) return@withContext
 
         Log.d("CobaltRepo", "Starting backup of ${toBackup.size} selected items.")
+        var currentIndex = 0
         for (entity in toBackup) {
+            currentIndex++
             try {
                 var domainItem = entity.toDomain()
                 var finalItem = domainItem
@@ -760,6 +762,16 @@ class CobaltRepository(private val context: Context) {
                         }
                         val storageRef = storage.reference.child("users/${currentUser.uid}/media/${domainItem.id}.$fileExtension")
                         val uploadTask = storageRef.putBytes(bytes)
+                        uploadTask.addOnProgressListener { taskSnapshot ->
+                            onProgress?.invoke(com.example.sync.BackupSyncManager.SyncProgress(
+                                isSyncing = true,
+                                progressBytes = taskSnapshot.bytesTransferred,
+                                totalBytes = taskSnapshot.totalByteCount,
+                                currentItem = currentIndex,
+                                totalItems = toBackup.size,
+                                currentCategory = domainItem.type
+                            ))
+                        }
                         val snapshot = uploadTask.await()
                         val downloadUrl = (snapshot.metadata?.reference?.downloadUrl ?: throw Exception("No reference URL")).await()
                         finalItem = if (domainItem.type == SavedItemType.AUDIO) {
@@ -776,6 +788,15 @@ class CobaltRepository(private val context: Context) {
                         }
                         savedItemDao.insertItem(finalItem.toEntity())
                     }
+                } else {
+                    onProgress?.invoke(com.example.sync.BackupSyncManager.SyncProgress(
+                        isSyncing = true,
+                        progressBytes = 100L,
+                        totalBytes = 100L,
+                        currentItem = currentIndex,
+                        totalItems = toBackup.size,
+                        currentCategory = domainItem.type
+                    ))
                 }
 
                 if (firestore != null) {
@@ -967,7 +988,7 @@ class CobaltRepository(private val context: Context) {
     // alone can't distinguish "never backed up" from "explicitly removed").
     // Non-media items (TEXT/LINK/CODE) are free/unlimited and always auto-synced
     // as before, since they were never gated by backup selection.
-    suspend fun syncUnsyncedItems() = withContext(Dispatchers.IO) {
+    suspend fun syncUnsyncedItems(onProgress: ((com.example.sync.BackupSyncManager.SyncProgress) -> Unit)? = null) = withContext(Dispatchers.IO) {
         val currentUser = firebaseAuth?.currentUser ?: return@withContext
         val items = savedItemDao.getAllItems()
         val unsynced = items.filter { entity ->
@@ -983,7 +1004,9 @@ class CobaltRepository(private val context: Context) {
 
         if (unsynced.isNotEmpty()) {
             Log.d("CobaltRepo", "Starting sync of ${unsynced.size} unsynced items.")
+            var currentIndex = 0
             for (entity in unsynced) {
+                currentIndex++
                 try {
                     var domainItem = entity.toDomain()
                     var finalItem = domainItem
@@ -1005,6 +1028,16 @@ class CobaltRepository(private val context: Context) {
                             }
                             val storageRef = storage.reference.child("users/${currentUser.uid}/media/${domainItem.id}.$fileExtension")
                             val uploadTask = storageRef.putBytes(bytes)
+                            uploadTask.addOnProgressListener { taskSnapshot ->
+                                onProgress?.invoke(com.example.sync.BackupSyncManager.SyncProgress(
+                                isSyncing = true,
+                                progressBytes = taskSnapshot.bytesTransferred,
+                                totalBytes = taskSnapshot.totalByteCount,
+                                currentItem = currentIndex,
+                                totalItems = unsynced.size,
+                                currentCategory = domainItem.type
+                            ))
+                            }
                             val snapshot = uploadTask.await()
                             val downloadUrl = (snapshot.metadata?.reference?.downloadUrl ?: throw Exception("No reference URL")).await()
                             finalItem = if (domainItem.type == SavedItemType.AUDIO) {
@@ -1023,6 +1056,15 @@ class CobaltRepository(private val context: Context) {
                             }
                             savedItemDao.insertItem(finalItem.toEntity())
                         }
+                    } else {
+                        onProgress?.invoke(com.example.sync.BackupSyncManager.SyncProgress(
+                            isSyncing = true,
+                            progressBytes = 100L,
+                            totalBytes = 100L,
+                            currentItem = currentIndex,
+                            totalItems = unsynced.size,
+                            currentCategory = domainItem.type
+                        ))
                     }
 
                     // Upload metadata to Firestore
