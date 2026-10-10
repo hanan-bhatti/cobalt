@@ -160,9 +160,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun isApiKeySet(): Boolean {
-        val apiKey = settingsRepository.geminiApiKey.value
-        val buildKey = com.example.BuildConfig.GEMINI_API_KEY
-        return apiKey.isNotEmpty() || (buildKey.isNotEmpty() && buildKey != "MY_GEMINI_API_KEY")
+        return settingsRepository.geminiApiKey.value.isNotEmpty()
     }
 
     private val _tmdbApiKey = MutableStateFlow(repository.getTmdbApiKey())
@@ -1410,9 +1408,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun resolveValidApiKeyOrNull(): String? {
         val userKey = settingsRepository.geminiApiKey.value
-        if (userKey.isNotEmpty()) return userKey
-        val buildKey = com.example.BuildConfig.GEMINI_API_KEY
-        return if (buildKey.isEmpty() || buildKey == "MY_GEMINI_API_KEY") null else buildKey
+        return if (userKey.isNotEmpty()) userKey else null
     }
 
     private fun parseGeminiOcrResult(raw: String): Pair<String, List<Pair<String, String>>> {

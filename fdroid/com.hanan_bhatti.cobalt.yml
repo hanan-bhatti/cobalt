@@ -21,7 +21,7 @@ Binaries: https://github.com/hanan-bhatti/cobalt/releases/download/v%v/cobalt-fo
 Builds:
   - versionName: 2.1.1
     versionCode: 14
-    commit: 3300bc456f8c03354e2417c04a6e4c3c035ef099
+    commit: v2.1.1
     subdir: app
     gradle:
       - foss

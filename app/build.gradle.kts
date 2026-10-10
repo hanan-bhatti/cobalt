@@ -6,7 +6,6 @@ plugins {
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.roborazzi)
-  alias(libs.plugins.secrets)
   alias(libs.plugins.google.services) apply false
 }
 
@@ -110,12 +109,6 @@ tasks.withType<KotlinCompile>().configureEach {
   }
 }
 
-// Configure the Secrets Gradle Plugin to use .env and .env.example files
-// to match the convention used in Web projects.
-secrets {
-  propertiesFileName = ".env"
-  defaultPropertiesFileName = ".env.example"
-}
 
 // Disable any Google Services tasks targeting the FOSS flavor
 tasks.matching { it.name.contains("GoogleServices") && it.name.contains("Foss", ignoreCase = true) }.configureEach {
@@ -208,6 +201,3 @@ tasks.register<Exec>("syncFdroidMetadata") {
   commandLine("python3", "${rootDir}/scripts/update_fdroid_metadata.py")
 }
 
-configure<com.google.gms.googleservices.GoogleServicesPlugin.GoogleServicesPluginConfig> {
-  missingGoogleServicesStrategy = MissingGoogleServicesStrategy.IGNORE
-}
