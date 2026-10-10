@@ -1,4 +1,3 @@
-import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -8,7 +7,14 @@ plugins {
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.roborazzi)
   alias(libs.plugins.secrets)
-  alias(libs.plugins.google.services)
+  alias(libs.plugins.google.services) apply false
+}
+
+val isFossBuild = gradle.startParameter.taskNames.isNotEmpty() &&
+    gradle.startParameter.taskNames.all { it.contains("foss", ignoreCase = true) }
+
+if (!isFossBuild) {
+  apply(plugin = "com.google.gms.google-services")
 }
 
 android {
@@ -19,8 +25,8 @@ android {
     applicationId = "com.hanan_bhatti.cobalt"
     minSdk = 24
     targetSdk = 37
-    versionCode = 13
-    versionName = "2.1.0-beta"
+    versionCode = 14
+    versionName = "2.1.1"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -111,7 +117,10 @@ secrets {
   defaultPropertiesFileName = ".env.example"
 }
 
-googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
+// Disable any Google Services tasks targeting the FOSS flavor
+tasks.matching { it.name.contains("GoogleServices") && it.name.contains("Foss", ignoreCase = true) }.configureEach {
+  enabled = false
+}
 
 // Some unused dependencies are commented out below instead of being removed.
 // This makes it easy to add them back in the future if needed.

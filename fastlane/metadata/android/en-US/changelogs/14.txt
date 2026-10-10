@@ -1,0 +1,4 @@
+- F-Droid compliance: disabled dependency metadata and Google Services tasks on FOSS.
+- Added 512x512 app icon and network service disclosures for F-Droid.
+- Fixed placeholder Gemini API key fallback when building without secrets.
+- Stability improvements and bug fixes.

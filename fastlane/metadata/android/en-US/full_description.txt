@@ -1,9 +1,22 @@
-Cobalt is a minimalist, offline-first personal knowledge archive and universal capture app for Android. Designed to eliminate the friction of digital hoarding and info fragmentation, Cobalt acts as your central repository for ideas, documents, audio clips, snapshots, and shared web content.
+Cobalt is an offline-first personal archive and capture app for Android. It stores links, notes, images, audio clips, code snippets, and movie/anime watchlists in a local Room database without requiring an account.
 
-Key Features:
-- Universal & Rapid Capture: Ingest plain text, markdown lists, images, video clips, and web URLs directly from any third-party app with Android's native share handler.
-- Floating OCR & Region Capture HUD: Tap and drag a bounding box on captured screen contents to convert visual information into searchable text notes.
-- Multi-Language & RTL Text Support: Automatically detects scripts like Urdu, Arabic, and Hebrew and adjusts text layout, alignment, and reading direction seamlessly.
-- AI Voice Memos & Transcripts: Record voice notes with visual waveform monitoring and local audio cache storage.
-- Privacy & Offline-First Architecture: Uses a secure local Room database as the primary source of truth, ensuring instant launch and data accessibility without network connection.
-- Material 3 Expressive UI: Custom themes, smooth animations, expressive dialogs, and clean card organization.
+Capture Methods:
+- Android Share Target: Save text, URLs, images, and videos directly from other apps via the system share sheet.
+- Floating Overlay: Access a screen-edge panel to write quick notes, capture links, or trigger OCR without leaving your current app.
+- Screen Region OCR: Capture a screenshot or crop a region on screen using MediaProjection to extract text and links.
+- Quick Settings Tile: Launch OCR capture directly from the system Quick Settings panel.
+- Voice Notes: Record audio memos with real-time waveform display, stored locally on device.
+- Home Screen Widgets: View recent captures or trigger capture actions from your home screen.
+
+Organization & Viewing:
+- Supported Item Types: Links (with metadata previews), Markdown text notes, Photos/Images, Video clips, Code snippets, Audio recordings, and Movies/Anime.
+- Folders & Archive: Organize items into custom folders or archive them to remove them from the main feed while keeping them stored.
+- Search & Filters: Search across titles, content, extracted OCR text, and URLs, with filter chips for each media type.
+- Media Hub: Track movies and anime with watch statuses (Plan to Watch, Watching, Completed), genres, ratings, and release years.
+- Storage Management: View local storage usage broken down by media type, with options to delete cached files.
+
+Network & Privacy Disclosures:
+The FOSS build stores all data locally on your device. It does not include analytics, tracking SDKs, or background synchronization services. Certain optional features connect to external APIs:
+- AI Screen OCR & Transcription: Sends selected image regions or voice notes to Google's Gemini API for processing. This requires you to provide your own Gemini API key in Settings.
+- Movie & Anime Data: Queries The Movie Database (TMDb) and Jikan (MyAnimeList) for media details and poster images. TMDb searches require your own TMDb API key.
+- Trailers: Embedded playback of YouTube trailers on media detail screens.
