@@ -84,11 +84,16 @@ android {
       excludes += "META-INF/NOTICE*"
       excludes += "META-INF/AL2.0"
       excludes += "META-INF/LGPL2.1"
+      excludes += "META-INF/version-control-info.textproto"
     }
   }
   buildFeatures {
     compose = true
     buildConfig = true
+  }
+  dependenciesInfo {
+    includeInApk = false
+    includeInBundle = false
   }
   testOptions { unitTests { isIncludeAndroidResources = true } }
 }

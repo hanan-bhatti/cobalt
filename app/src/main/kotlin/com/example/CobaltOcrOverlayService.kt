@@ -27,66 +27,50 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.ServiceInfo
-import android.content.res.ColorStateList
-import android.graphics.Color
 import android.graphics.PixelFormat
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.provider.Settings
-import android.text.InputType
-import android.text.TextUtils
 import android.view.Gravity
 import android.view.MotionEvent
-import android.view.View
 import android.view.ViewConfiguration
-import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.EditText
-import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
 import android.widget.Toast
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
-import android.animation.ArgbEvaluator
-import android.animation.ValueAnimator
-import android.view.animation.PathInterpolator
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.app.NotificationCompat
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import com.example.ui.theme.*
-import coil.ImageLoader
-import coil.request.ImageRequest
-import com.example.data.model.SavedItem
-import com.example.data.model.SavedItemType
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
+import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.example.data.repository.CobaltRepository
 import com.example.data.repository.SettingsRepository
+import com.example.ui.overlay.OverlayState
+import com.example.ui.overlay.UnifiedOverlay
+import com.example.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class CobaltOcrOverlayService : Service() {
 
     private lateinit var windowManager: WindowManager
-    private var containerView: FrameLayout? = null
+    private var composeView: ComposeView? = null
+    private var overlayLifecycleOwner: OverlayLifecycleOwner? = null
 
-    private var handleView: View? = null
-    private var panelView: View? = null
-    private var noteInputRef: EditText? = null
     private var isExpanded = false
-    private var panelAnimator: ValueAnimator? = null
+    private val overlayState = mutableStateOf(OverlayState.COLLAPSED)
+
     private val EXTRA_TOUCH_WIDTH_DP = 16
     private val EXPANDED_MARGIN_DP = 12
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -101,19 +85,7 @@ class CobaltOcrOverlayService : Service() {
     private fun getEdgePanelThickness(): Int = prefs.getInt("edge_panel_thickness", 6)
     private fun getEdgePanelHeight(): Int = prefs.getInt("edge_panel_height", 100)
     private fun getEdgePanelOpacity(): Float = prefs.getFloat("edge_panel_opacity", 0.7f)
-
-    private fun getAnimDuration(): Long = prefs.getInt("edge_panel_anim_duration", 350).toLong()
-    private fun getAnimStartScale(): Float = prefs.getFloat("edge_panel_anim_scale", 0.96f)
-    private fun getAnimInterpolator(): android.animation.TimeInterpolator {
-        return when (prefs.getString("edge_panel_anim_interpolator", "Emphasized") ?: "Emphasized") {
-            "Decelerate" -> android.view.animation.DecelerateInterpolator()
-            "Overshoot" -> android.view.animation.OvershootInterpolator(1.1f)
-            "Bounce" -> android.view.animation.BounceInterpolator()
-            "Linear" -> android.view.animation.LinearInterpolator()
-            "Accelerate" -> android.view.animation.AccelerateInterpolator()
-            else -> PathInterpolator(0.2f, 0f, 0f, 1f) // Emphasized
-        }
-    }
+    private fun getAnimPreset(): String = prefs.getString("edge_panel_anim_preset", "Smooth") ?: "Smooth"
 
     private fun isDarkTheme(): Boolean {
         val theme = prefs.getString("theme_mode", "Light") ?: "Light"
@@ -126,35 +98,15 @@ class CobaltOcrOverlayService : Service() {
         }
     }
 
-    private fun getColorScheme(): ColorScheme {
-        val isDark = isDarkTheme()
-        val useDynamic = prefs.getBoolean("dynamic_color", true)
-        return when {
-            useDynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-                if (isDark) dynamicDarkColorScheme(this) else dynamicLightColorScheme(this)
-            }
-            else -> if (isDark) DarkColorScheme else LightColorScheme
-        }
-    }
-
-    private fun getAccentColor(): Int {
-        return getColorScheme().primary.toArgb()
-    }
-
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "edge_panel_height" || key == "edge_panel_thickness" ||
             key == "edge_panel_opacity" || key == "edge_panel_side" ||
             key == "edge_panel_y_percent" || key == "floating_ocr_enabled" ||
             key == "dynamic_color" || key == "theme_mode" ||
-            key == "edge_panel_anim_preset" || key == "edge_panel_anim_duration" ||
-            key == "edge_panel_anim_interpolator" || key == "edge_panel_anim_scale"
+            key == "edge_panel_anim_preset"
         ) {
-            Handler(Looper.getMainLooper()).post {
-                if (isExpanded) {
-                    expandPanel()
-                } else {
-                    updateViewLayoutAndStyle()
-                }
+            mainHandler.post {
+                updateViewLayoutAndStyle()
             }
         }
     }
@@ -162,11 +114,7 @@ class CobaltOcrOverlayService : Service() {
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
         mainHandler.post {
-            if (isExpanded) {
-                expandPanel()
-            } else {
-                updateViewLayoutAndStyle()
-            }
+            updateViewLayoutAndStyle()
         }
     }
 
@@ -180,6 +128,8 @@ class CobaltOcrOverlayService : Service() {
 
         prefs = applicationContext.getSharedPreferences("cobalt_settings", Context.MODE_PRIVATE)
         prefs.registerOnSharedPreferenceChangeListener(prefsListener)
+
+        overlayLifecycleOwner = OverlayLifecycleOwner().apply { onCreate() }
 
         createNotificationChannel()
 
@@ -214,7 +164,7 @@ class CobaltOcrOverlayService : Service() {
             return START_STICKY
         }
 
-        if (containerView == null) {
+        if (composeView == null) {
             createOverlayViews()
         } else {
             updateViewLayoutAndStyle()
@@ -224,20 +174,16 @@ class CobaltOcrOverlayService : Service() {
     }
 
     private fun updateSystemGestureExclusions() {
-        val root = containerView ?: return
+        val root = composeView ?: return
         val lp = root.layoutParams as? WindowManager.LayoutParams ?: return
         val w = lp.width
         val h = lp.height
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            if (isExpanded || handleView?.visibility != View.VISIBLE) {
+            if (isExpanded) {
                 root.systemGestureExclusionRects = emptyList()
                 return
             }
             if (w > 0 && h > 0) {
-                // Exclude the entire touch window of the handle from system back gestures.
-                // This ensures swiping directly from the extreme screen edge over the handle height
-                // always triggers the panel expand gesture, while system back gestures remain
-                // fully functional above and below the handle.
                 val rect = android.graphics.Rect(0, 0, w, h)
                 root.systemGestureExclusionRects = listOf(rect)
             }
@@ -249,12 +195,7 @@ class CobaltOcrOverlayService : Service() {
         val yPercent = getEdgePanelYPercent()
         val thickness = getEdgePanelThickness()
         val height = getEdgePanelHeight()
-        val opacity = getEdgePanelOpacity()
 
-        // Gesture edge quirk workaround: Make window 16dp wider than the handle thickness.
-        // This ensures the window extends slightly inset from the edge so android's native gesture
-        // zone does not eat our swipe. The handle is aligned to the extreme edge, but swipe-detection
-        // covers the whole window, capturing touches started slightly inset (e.g. ~8dp to 28dp).
         val params = WindowManager.LayoutParams(
             dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP),
             dpToPx(height),
@@ -272,1289 +213,113 @@ class CobaltOcrOverlayService : Service() {
             y = calculateYPosition(yPercent, height)
         }
 
-        val rootContainer = FrameLayout(this).apply {
-            clipChildren = false
-            clipToPadding = false
-        }
-
-        // 1. Collapsed state: Draggable thin vertical handle (like Samsung edge)
-        val handle = FrameLayout(this).apply {
-            val bgShape = GradientDrawable().apply {
-                setColor(getAccentColor())
-                val radiusPx = dpToPx(8).toFloat()
-                cornerRadii = if (side == "Right") {
-                    floatArrayOf(radiusPx, radiusPx, 0f, 0f, 0f, 0f, radiusPx, radiusPx)
-                } else {
-                    floatArrayOf(0f, 0f, radiusPx, radiusPx, radiusPx, radiusPx, 0f, 0f)
-                }
+        val compose = ComposeView(this).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            overlayLifecycleOwner?.let { owner ->
+                setViewTreeLifecycleOwner(owner)
+                setViewTreeViewModelStoreOwner(owner)
+                setViewTreeSavedStateRegistryOwner(owner)
             }
-            background = bgShape
-            alpha = opacity
-            // elevation = dpToPx(4).toFloat()
-        }
-
-        // Gesture state variables
-        var initialY = 0
-        var initialTouchX = 0f
-        var initialTouchY = 0f
-        var isDraggingY = false
-        var isSwipingX = false
-        var isLongPressDetected = false
-        var touchActive = false
-        var downTime = 0L
-
-        val longPressRunnable = Runnable {
-            if (touchActive && !isSwipingX) {
-                isLongPressDetected = true
-                try {
-                    rootContainer.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-                } catch (e: Exception) {
-                    // Ignore haptic feedback errors
+            setContent {
+                MyApplicationTheme(
+                    darkTheme = isDarkTheme(),
+                    dynamicColor = prefs.getBoolean("dynamic_color", true)
+                ) {
+                    UnifiedOverlay(
+                        overlayState = overlayState.value,
+                        side = getEdgePanelSide(),
+                        yPercent = getEdgePanelYPercent(),
+                        thickness = getEdgePanelThickness(),
+                        handleHeight = getEdgePanelHeight(),
+                        opacity = getEdgePanelOpacity(),
+                        animPreset = getAnimPreset(),
+                        repository = repository,
+                        onExpand = { expandPanel() },
+                        onDismiss = { collapsePanel() },
+                        onCollapseFinished = { onPanelCollapsed() },
+                        onLaunchOcr = { launchOcrCapture() },
+                        onLaunchLinkCapture = { launchLinkCapture() },
+                        onOpenMainApp = { itemId -> openMainApp(itemId) }
+                    )
                 }
             }
         }
 
-        rootContainer.setOnTouchListener { _, event ->
-            if (isExpanded) {
-                if (event.action == MotionEvent.ACTION_OUTSIDE) {
-                    collapsePanel()
-                    true
-                } else {
-                    false
-                }
+        // Outside touch detection when expanded
+        compose.setOnTouchListener { _, event ->
+            if (isExpanded && event.action == MotionEvent.ACTION_OUTSIDE) {
+                collapsePanel()
+                true
             } else {
-                val layoutParams = rootContainer.layoutParams as WindowManager.LayoutParams
-                val currentSide = getEdgePanelSide()
-                val touchSlopPx = ViewConfiguration.get(this@CobaltOcrOverlayService).scaledTouchSlop
-                val swipeThresholdPx = dpToPx(16) // Deliberate swipe distance threshold
-
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        touchActive = true
-                        downTime = System.currentTimeMillis()
-                        initialY = layoutParams.y
-                        initialTouchX = event.rawX
-                        initialTouchY = event.rawY
-                        isDraggingY = false
-                        isSwipingX = false
-                        isLongPressDetected = false
-
-                        mainHandler.postDelayed(longPressRunnable, 500)
-                        true
-                    }
-
-                    MotionEvent.ACTION_MOVE -> {
-                        if (!touchActive) return@setOnTouchListener false
-                        val deltaX = event.rawX - initialTouchX
-                        val deltaY = event.rawY - initialTouchY
-
-                        // 1. If actively dragging to vertically reposition:
-                        if (isDraggingY) {
-                            layoutParams.y = (initialY + deltaY).toInt()
-
-                            val usableHeight = resources.displayMetrics.heightPixels - dpToPx(160)
-                            val halfHeight = usableHeight / 2
-                            if (layoutParams.y < -halfHeight) layoutParams.y = -halfHeight
-                            if (layoutParams.y > halfHeight) layoutParams.y = halfHeight
-
-                            windowManager.updateViewLayout(rootContainer, layoutParams)
-                            return@setOnTouchListener true
-                        }
-
-                        // 2. If actively swiping horizontally:
-                        if (isSwipingX) {
-                            return@setOnTouchListener true
-                        }
-
-                        // 3. Disambiguate gestures
-                        val absDeltaX = Math.abs(deltaX)
-                        val absDeltaY = Math.abs(deltaY)
-
-                        if (absDeltaX > touchSlopPx || absDeltaY > touchSlopPx) {
-                            if (absDeltaX > absDeltaY * 1.5f) {
-                                // Horizontal movement - determine if swiping correct direction (inward)
-                                val isSwipeDirectionCorrect = if (currentSide == "Right") deltaX < 0 else deltaX > 0
-                                if (isSwipeDirectionCorrect) {
-                                    mainHandler.removeCallbacks(longPressRunnable)
-                                    isSwipingX = true
-                                }
-                            } else if (absDeltaY > touchSlopPx) {
-                                // Vertical movement - only drag if long press has fired first!
-                                if (isLongPressDetected) {
-                                    isDraggingY = true
-                                } else {
-                                    mainHandler.removeCallbacks(longPressRunnable)
-                                }
-                            }
-                        }
-                        true
-                    }
-
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                        touchActive = false
-                        mainHandler.removeCallbacks(longPressRunnable)
-
-                        if (event.action == MotionEvent.ACTION_UP) {
-                            val deltaX = event.rawX - initialTouchX
-                            val deltaY = event.rawY - initialTouchY
-                            val absDeltaX = Math.abs(deltaX)
-                            val absDeltaY = Math.abs(deltaY)
-
-                            if (isDraggingY) {
-                                val usableHeight = resources.displayMetrics.heightPixels - dpToPx(160)
-                                val halfHeight = usableHeight / 2
-                                val finalY = layoutParams.y
-                                val newPercent = (finalY + halfHeight).toFloat() / usableHeight.toFloat()
-                                val clampedPercent = newPercent.coerceIn(0.0f, 1.0f)
-                                settingsRepo.setEdgePanelYPercent(clampedPercent)
-                            } else if (isSwipingX || (absDeltaX > swipeThresholdPx && absDeltaX > absDeltaY * 1.5f)) {
-                                val isSwipeDirectionCorrect = if (currentSide == "Right") deltaX < 0 else deltaX > 0
-                                if (isSwipeDirectionCorrect) {
-                                    expandPanel()
-                                }
-                            } else {
-                                val duration = System.currentTimeMillis() - downTime
-                                if (absDeltaX < touchSlopPx && absDeltaY < touchSlopPx && duration < 500) {
-                                    toggleExpand()
-                                }
-                            }
-                        }
-
-                        isDraggingY = false
-                        isSwipingX = false
-                        isLongPressDetected = false
-                        true
-                    }
-
-                    else -> false
-                }
+                false
             }
         }
 
-        // Align the visible handle perfectly to the edge within the wider touchable window container
-        val handleParams = FrameLayout.LayoutParams(
-            dpToPx(thickness),
-            dpToPx(height)
-        ).apply {
-            gravity = (if (side == "Right") Gravity.END else Gravity.START) or Gravity.CENTER_VERTICAL
-        }
-        rootContainer.addView(handle, handleParams)
+        composeView = compose
 
-        containerView = rootContainer
-        handleView = handle
-
-        // Dynamic system gesture exclusion tracking
-        rootContainer.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+        compose.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             updateSystemGestureExclusions()
         }
 
-        windowManager.addView(rootContainer, params)
+        windowManager.addView(compose, params)
         updateSystemGestureExclusions()
     }
 
     private fun expandPanel() {
-        val root = containerView ?: return
+        val root = composeView ?: return
         val side = getEdgePanelSide()
         val yPercent = getEdgePanelYPercent()
-        val thickness = getEdgePanelThickness()
-        val height = getEdgePanelHeight()
-        val opacity = getEdgePanelOpacity()
-
-        // Remove old panelView if present
-        panelView?.let { oldPanel ->
-            (oldPanel.parent as? ViewGroup)?.removeView(oldPanel)
-        }
-        panelView = null
+        val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val expandedWidthDp = if (isLandscape) 300 else 260
+        val expandedHeightDp = if (isLandscape) 280 else 400
 
         isExpanded = true
-        handleView?.visibility = View.VISIBLE
+        overlayState.value = OverlayState.EXPANDED
 
-        val colorScheme = getColorScheme()
-
-        // ── Color palette ──
-        val surfaceColor = colorScheme.surface.toArgb()
-        val cardColor = colorScheme.surfaceVariant.toArgb()
-        val textPrimary = colorScheme.onSurface.toArgb()
-        val textSecondary = colorScheme.onSurfaceVariant.toArgb()
-        val accent = colorScheme.primary.toArgb()
-        val accentSoft = colorScheme.primaryContainer.toArgb()
-        val borderColor = colorScheme.outlineVariant.toArgb()
-        val accentBorder = (accent and 0x00FFFFFF) or 0x33000000 // 20% alpha
-
-        // ── Root panel ──
-        val panel = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dpToPx(14), dpToPx(14), dpToPx(14), 0)
-            background = null
-            elevation = 0f
-            alpha = 0f
-            scaleX = 0.96f
-            scaleY = 0.96f
-        }
-
-        val mainContainerView = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT
-            )
-        }
-
-        val subpageContainerView = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            visibility = View.GONE
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT
-            )
-        }
-
-        // ═══════════════════════════════════════════════════
-        // 1. MAIN HEADER — brand pill + close button
-        // ═══════════════════════════════════════════════════
-        val header = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, 0, 0, dpToPx(10))
-        }
-
-        val brandPill = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dpToPx(10), dpToPx(5), dpToPx(12), dpToPx(5))
-            val pillBg = GradientDrawable().apply {
-                setColor(accentSoft)
-                cornerRadius = dpToPx(20).toFloat()
-            }
-            background = pillBg
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-
-        val brandIcon = ImageView(this).apply {
-            setImageResource(R.drawable.ic_custom_school)
-            imageTintList = ColorStateList.valueOf(accent)
-            layoutParams = LinearLayout.LayoutParams(dpToPx(16), dpToPx(16))
-        }
-        brandPill.addView(brandIcon)
-
-        val brandLabel = TextView(this).apply {
-            text = "Cobalt"
-            textSize = 12f
-            setTextColor(accent)
-            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
-            setPadding(dpToPx(6), 0, 0, 0)
-        }
-        brandPill.addView(brandLabel)
-        header.addView(brandPill)
-
-        val closeBtn = FrameLayout(this).apply {
-            val closeBg = GradientDrawable().apply {
-                setColor(cardColor)
-                cornerRadius = dpToPx(14).toFloat()
-            }
-            background = closeBg
-            layoutParams = LinearLayout.LayoutParams(dpToPx(28), dpToPx(28)).apply {
-                setMargins(dpToPx(8), 0, 0, 0)
-            }
-            isClickable = true
-            isFocusable = true
-            setOnClickListener { collapsePanel() }
-        }
-        val closeIcon = ImageView(this).apply {
-            setImageResource(R.drawable.ic_custom_close)
-            imageTintList = ColorStateList.valueOf(textSecondary)
-            layoutParams = FrameLayout.LayoutParams(dpToPx(14), dpToPx(14), Gravity.CENTER)
-        }
-        closeBtn.addView(closeIcon)
-        header.addView(closeBtn)
-
-        val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-        val isHighPosition = yPercent < 0.5f
-
-        // ═══════════════════════════════════════════════════
-        // 2. QUICK ACTIONS — 5-column icon grid
-        // ═══════════════════════════════════════════════════
-        val actionsGrid = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, dpToPx(10))
-        }
-
-        data class QuickAction(val iconRes: Int, val label: String, val onClick: () -> Unit)
-
-        val actions = listOf(
-            QuickAction(R.drawable.ic_custom_ocr, "OCR") {
-                collapsePanel()
-                launchOcrCapture()
-            },
-            QuickAction(R.drawable.ic_custom_text, "Note") {
-                noteInputRef?.requestFocus()
-            },
-            QuickAction(R.drawable.ic_custom_movie, "Cobalt") {
-                mainContainerView.visibility = View.GONE
-                subpageContainerView.visibility = View.VISIBLE
-            },
-            QuickAction(R.drawable.ic_custom_link, "Link") {
-                collapsePanel()
-                val intent = Intent(applicationContext, MainActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                    putExtra("NAVIGATE_TO", "capture")
-                    putExtra("CAPTURE_TYPE", "link")
-                }
-                startActivity(intent)
-            },
-            QuickAction(R.drawable.ic_custom_home, "Open") {
-                collapsePanel()
-                val intent = Intent(applicationContext, MainActivity::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                }
-                startActivity(intent)
-            }
-        )
-
-        actions.forEach { action ->
-            val actionCol = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER_HORIZONTAL
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                isClickable = true
-                isFocusable = true
-                setPadding(dpToPx(1), dpToPx(4), dpToPx(1), dpToPx(4))
-                setOnClickListener { action.onClick() }
-            }
-
-            val iconContainer = FrameLayout(this).apply {
-                val iconBg = GradientDrawable().apply {
-                    setColor(cardColor)
-                    cornerRadius = dpToPx(14).toFloat()
-                }
-                background = iconBg
-                layoutParams = LinearLayout.LayoutParams(dpToPx(38), dpToPx(38))
-            }
-            val icon = ImageView(this).apply {
-                setImageResource(action.iconRes)
-                imageTintList = ColorStateList.valueOf(accent)
-                layoutParams = FrameLayout.LayoutParams(dpToPx(18), dpToPx(18), Gravity.CENTER)
-            }
-            iconContainer.addView(icon)
-            actionCol.addView(iconContainer)
-
-            val label = TextView(this).apply {
-                text = action.label
-                textSize = 9.5f
-                setTextColor(textSecondary)
-                gravity = Gravity.CENTER
-                typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-                setPadding(0, dpToPx(3), 0, 0)
-            }
-            actionCol.addView(label)
-            actionsGrid.addView(actionCol)
-        }
-
-        // ═══════════════════════════════════════════════════
-        // 3. QUICK NOTE — inline compact input bar
-        // ═══════════════════════════════════════════════════
-        val noteBar = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dpToPx(10), dpToPx(2), dpToPx(4), dpToPx(2))
-            val noteBg = GradientDrawable().apply {
-                setColor(cardColor)
-                cornerRadius = dpToPx(14).toFloat()
-                setStroke(dpToPx(1), borderColor)
-            }
-            background = noteBg
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dpToPx(40)
-            ).apply {
-                setMargins(0, 0, 0, dpToPx(8))
-            }
-        }
-
-        val noteInput = EditText(this).apply {
-            hint = "Quick thought..."
-            setHintTextColor(textSecondary)
-            setTextColor(textPrimary)
-            textSize = 12f
-            background = null
-            setPadding(0, 0, 0, 0)
-            maxLines = 1
-            isSingleLine = true
-            inputType = InputType.TYPE_CLASS_TEXT
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
-        }
-        noteInputRef = noteInput
-        noteBar.addView(noteInput)
-
-        val sendBtn = FrameLayout(this).apply {
-            val sendBg = GradientDrawable().apply {
-                setColor(accent)
-                cornerRadius = dpToPx(12).toFloat()
-            }
-            background = sendBg
-            layoutParams = LinearLayout.LayoutParams(dpToPx(30), dpToPx(30)).apply {
-                setMargins(dpToPx(6), 0, 0, 0)
-            }
-            isClickable = true
-            isFocusable = true
-            setOnClickListener {
-                val textContent = noteInput.text.toString().trim()
-                if (textContent.isNotBlank()) {
-                    serviceScope.launch {
-                        val newItem = SavedItem(
-                            title = "Quick Edge Note",
-                            content = textContent,
-                            type = SavedItemType.TEXT
-                        )
-                        repository.saveItem(newItem)
-                        withContext(Dispatchers.Main) {
-                            noteInput.setText("")
-                            com.example.widget.WidgetUpdater.update(applicationContext)
-                            Toast.makeText(applicationContext, "✓ Saved to Cobalt", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                }
-            }
-        }
-        val sendIcon = ImageView(this).apply {
-            setImageResource(R.drawable.ic_custom_send)
-            imageTintList = ColorStateList.valueOf(Color.WHITE)
-            layoutParams = FrameLayout.LayoutParams(dpToPx(14), dpToPx(14), Gravity.CENTER)
-        }
-        sendBtn.addView(sendIcon)
-        noteBar.addView(sendBtn)
-
-        // ═══════════════════════════════════════════════════
-        // 4. RECENTS — section label + slim list
-        // ═══════════════════════════════════════════════════
-        val recentsLabel = TextView(this).apply {
-            text = "RECENTS"
-            textSize = 9f
-            setTextColor(textSecondary)
-            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
-            letterSpacing = 0.08f
-            setPadding(dpToPx(2), 0, 0, dpToPx(4))
-        }
-
-        val scrollView = ScrollView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            )
-            isVerticalScrollBarEnabled = false
-        }
-        val recentContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-        }
-        scrollView.addView(recentContainer)
-
-        // ═══════════════════════════════════════════════════
-        // DYNAMIC ERGONOMIC THUMB-REACHABLE ASSEMBLY
-        // ═══════════════════════════════════════════════════
-        // If handle Y position is HIGH (< 50% height): place Quick Actions & Quick Note at BOTTOM for easy thumb reach.
-        // If handle Y position is LOW (>= 50% height): place Quick Actions & Quick Note at TOP.
-        mainContainerView.addView(header)
-
-        if (isHighPosition) {
-            mainContainerView.addView(recentsLabel)
-            mainContainerView.addView(scrollView)
-            mainContainerView.addView(actionsGrid)
-            mainContainerView.addView(noteBar)
-        } else {
-            mainContainerView.addView(actionsGrid)
-            mainContainerView.addView(noteBar)
-            mainContainerView.addView(recentsLabel)
-            mainContainerView.addView(scrollView)
-        }
-
-        // ═══════════════════════════════════════════════════
-        // 5. MEDIA SEARCH SUBPAGE (LIVE MOVIES, TV & ANIME)
-        // ═══════════════════════════════════════════════════
-        val subpageHeader = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, 0, 0, dpToPx(8))
-        }
-
-        val backBtn = FrameLayout(this).apply {
-            val backBg = GradientDrawable().apply {
-                setColor(cardColor)
-                cornerRadius = dpToPx(12).toFloat()
-            }
-            background = backBg
-            layoutParams = LinearLayout.LayoutParams(dpToPx(28), dpToPx(28)).apply {
-                setMargins(0, 0, dpToPx(8), 0)
-            }
-            isClickable = true
-            isFocusable = true
-            setOnClickListener {
-                subpageContainerView.visibility = View.GONE
-                mainContainerView.visibility = View.VISIBLE
-            }
-        }
-        val backIcon = ImageView(this).apply {
-            setImageResource(R.drawable.ic_custom_back)
-            imageTintList = ColorStateList.valueOf(textSecondary)
-            layoutParams = FrameLayout.LayoutParams(dpToPx(14), dpToPx(14), Gravity.CENTER)
-        }
-        backBtn.addView(backIcon)
-        subpageHeader.addView(backBtn)
-
-        val subpageTitle = TextView(this).apply {
-            text = "Cobalt"
-            textSize = 12.5f
-            setTextColor(textPrimary)
-            typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        subpageHeader.addView(subpageTitle)
-
-        val subpageCloseBtn = FrameLayout(this).apply {
-            val closeBg = GradientDrawable().apply {
-                setColor(cardColor)
-                cornerRadius = dpToPx(12).toFloat()
-            }
-            background = closeBg
-            layoutParams = LinearLayout.LayoutParams(dpToPx(28), dpToPx(28))
-            isClickable = true
-            isFocusable = true
-            setOnClickListener { collapsePanel() }
-        }
-        val subpageCloseIcon = ImageView(this).apply {
-            setImageResource(R.drawable.ic_custom_close)
-            imageTintList = ColorStateList.valueOf(textSecondary)
-            layoutParams = FrameLayout.LayoutParams(dpToPx(14), dpToPx(14), Gravity.CENTER)
-        }
-        subpageCloseBtn.addView(subpageCloseIcon)
-        subpageHeader.addView(subpageCloseBtn)
-        subpageContainerView.addView(subpageHeader)
-
-        // Subpage Search Input Field
-        val searchBar = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dpToPx(10), dpToPx(2), dpToPx(8), dpToPx(2))
-            val searchBg = GradientDrawable().apply {
-                setColor(cardColor)
-                cornerRadius = dpToPx(14).toFloat()
-                setStroke(dpToPx(1), borderColor)
-            }
-            background = searchBg
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dpToPx(38)
-            ).apply {
-                setMargins(0, 0, 0, dpToPx(8))
-            }
-        }
-
-        val searchIconIv = ImageView(this).apply {
-            setImageResource(R.drawable.ic_custom_search)
-            imageTintList = ColorStateList.valueOf(accent)
-            layoutParams = LinearLayout.LayoutParams(dpToPx(14), dpToPx(14)).apply {
-                setMargins(0, 0, dpToPx(6), 0)
-            }
-        }
-        searchBar.addView(searchIconIv)
-
-        val mediaSearchInput = EditText(this).apply {
-            hint = "Search title..."
-            setHintTextColor(textSecondary)
-            setTextColor(textPrimary)
-            textSize = 12f
-            background = null
-            setPadding(0, 0, 0, 0)
-            maxLines = 1
-            isSingleLine = true
-            inputType = InputType.TYPE_CLASS_TEXT
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
-        }
-        searchBar.addView(mediaSearchInput)
-
-        val clearSearchBtn = ImageView(this).apply {
-            setImageResource(R.drawable.ic_custom_close)
-            imageTintList = ColorStateList.valueOf(textSecondary)
-            visibility = View.GONE
-            layoutParams = LinearLayout.LayoutParams(dpToPx(14), dpToPx(14))
-            isClickable = true
-            setOnClickListener {
-                mediaSearchInput.setText("")
-            }
-        }
-        searchBar.addView(clearSearchBtn)
-        subpageContainerView.addView(searchBar)
-
-        // Search Results Scroll Container
-        val searchScrollView = ScrollView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            )
-            isVerticalScrollBarEnabled = false
-        }
-
-        val searchResultsContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-        }
-        searchScrollView.addView(searchResultsContainer)
-        subpageContainerView.addView(searchScrollView)
-
-        // Initial prompt in search subpage
-        val promptTv = TextView(applicationContext).apply {
-            text = "Search movies, TV shows, or anime..."
-            textSize = 11f
-            setTextColor(textSecondary)
-            gravity = Gravity.CENTER
-            setPadding(0, dpToPx(30), 0, dpToPx(30))
-        }
-        searchResultsContainer.addView(promptTv)
-
-        // Live Debounced Media Search Handler
-        var searchRunnable: Runnable? = null
-        val imageLoader = ImageLoader(this)
-
-        mediaSearchInput.addTextChangedListener(object : android.text.TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            override fun afterTextChanged(s: android.text.Editable?) {
-                val query = s?.toString()?.trim() ?: ""
-                clearSearchBtn.visibility = if (query.isNotEmpty()) View.VISIBLE else View.GONE
-
-                searchRunnable?.let { mainHandler.removeCallbacks(it) }
-                if (query.isBlank()) {
-                    searchResultsContainer.removeAllViews()
-                    searchResultsContainer.addView(promptTv)
-                    return
-                }
-
-                searchRunnable = Runnable {
-                    searchResultsContainer.removeAllViews()
-                    val loadingTv = TextView(applicationContext).apply {
-                        text = "Loading..."
-                        textSize = 11f
-                        setTextColor(textSecondary)
-                        gravity = Gravity.CENTER
-                        setPadding(0, dpToPx(30), 0, dpToPx(30))
-                    }
-                    searchResultsContainer.addView(loadingTv)
-
-                    serviceScope.launch {
-                        val results = try {
-                            repository.searchMedia(query)
-                        } catch (e: Exception) {
-                            emptyList()
-                        }
-                        withContext(Dispatchers.Main) {
-                            searchResultsContainer.removeAllViews()
-                            if (results.isEmpty()) {
-                                val emptyTv = TextView(applicationContext).apply {
-                                    text = "No results found"
-                                    textSize = 11f
-                                    setTextColor(textSecondary)
-                                    gravity = Gravity.CENTER
-                                    setPadding(0, dpToPx(30), 0, dpToPx(30))
-                                }
-                                searchResultsContainer.addView(emptyTv)
-                            } else {
-                                results.forEach { item ->
-                                    val itemRow = LinearLayout(applicationContext).apply {
-                                        orientation = LinearLayout.HORIZONTAL
-                                        gravity = Gravity.CENTER_VERTICAL
-                                        setPadding(dpToPx(6), dpToPx(6), dpToPx(6), dpToPx(6))
-                                        val rowBg = GradientDrawable().apply {
-                                            setColor(cardColor)
-                                            cornerRadius = dpToPx(10).toFloat()
-                                        }
-                                        background = rowBg
-                                        layoutParams = LinearLayout.LayoutParams(
-                                            LinearLayout.LayoutParams.MATCH_PARENT,
-                                            LinearLayout.LayoutParams.WRAP_CONTENT
-                                        ).apply {
-                                            setMargins(0, 0, 0, dpToPx(5))
-                                        }
-                                    }
-
-                                    // Poster thumbnail
-                                    val posterIv = ImageView(applicationContext).apply {
-                                        val posterBg = GradientDrawable().apply {
-                                            setColor(accentSoft)
-                                            cornerRadius = dpToPx(8).toFloat()
-                                        }
-                                        background = posterBg
-                                        clipToOutline = true
-                                        scaleType = ImageView.ScaleType.CENTER_CROP
-                                        layoutParams = LinearLayout.LayoutParams(dpToPx(32), dpToPx(44))
-                                    }
-                                    if (!item.posterUrl.isNullOrBlank()) {
-                                        val req = ImageRequest.Builder(applicationContext)
-                                            .data(item.posterUrl)
-                                            .target(posterIv)
-                                            .build()
-                                        imageLoader.enqueue(req)
-                                    } else {
-                                        posterIv.setImageResource(R.drawable.ic_custom_movie)
-                                        posterIv.imageTintList = ColorStateList.valueOf(textSecondary)
-                                    }
-                                    itemRow.addView(posterIv)
-
-                                    // Text info column
-                                    val textCol = LinearLayout(applicationContext).apply {
-                                        orientation = LinearLayout.VERTICAL
-                                        setPadding(dpToPx(8), 0, dpToPx(4), 0)
-                                        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                                    }
-
-                                    val mediaTypeLabel = when (item.mediaType.lowercase()) {
-                                        "movie" -> "Movie"
-                                        "tv", "tv show", "tv_show" -> "TV"
-                                        "anime" -> "Anime"
-                                        else -> item.mediaType.replaceFirstChar { it.uppercase() }
-                                    }
-                                    val metaText = if (!item.releaseYear.isNullOrBlank()) "$mediaTypeLabel • ${item.releaseYear}" else mediaTypeLabel
-                                    val metaTv = TextView(applicationContext).apply {
-                                        text = metaText
-                                        textSize = 9f
-                                        setTextColor(accent)
-                                        typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
-                                    }
-                                    textCol.addView(metaTv)
-
-                                    val titleTv = TextView(applicationContext).apply {
-                                        text = item.title
-                                        textSize = 11.5f
-                                        setTextColor(textPrimary)
-                                        typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
-                                        maxLines = 1
-                                        ellipsize = TextUtils.TruncateAt.END
-                                    }
-                                    textCol.addView(titleTv)
-
-                                    itemRow.addView(textCol)
-
-                                    // Direct Save Action Button
-                                    val saveBtn = TextView(applicationContext).apply {
-                                        text = "Save"
-                                        textSize = 10.5f
-                                        setTextColor(Color.WHITE)
-                                        typeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
-                                        gravity = Gravity.CENTER
-                                        val saveBg = GradientDrawable().apply {
-                                            setColor(accent)
-                                            cornerRadius = dpToPx(8).toFloat()
-                                        }
-                                        background = saveBg
-                                        setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4))
-                                        isClickable = true
-                                        setOnClickListener {
-                                            isClickable = false
-                                            text = "..."
-                                            serviceScope.launch {
-                                                try {
-                                                    val savedItem = SavedItem(
-                                                        id = item.id,
-                                                        type = SavedItemType.MEDIA,
-                                                        title = item.title,
-                                                        content = item.overview ?: "",
-                                                        thumbnailPath = item.posterUrl,
-                                                        backdropUrl = item.backdropUrl,
-                                                        mediaType = item.mediaType,
-                                                        watchStatus = "Plan to Watch",
-                                                        releaseYear = item.releaseYear,
-                                                        genres = item.genres,
-                                                        watchProviders = item.watchProviders,
-                                                        trailerUrl = item.trailerUrl,
-                                                        rating = item.rating,
-                                                        folders = listOf("Media")
-                                                    )
-                                                    val enrichedItem = repository.enrichMediaItemDetails(savedItem, saveToDb = false)
-                                                    repository.saveItem(enrichedItem)
-                                                    withContext(Dispatchers.Main) {
-                                                        text = "✓"
-                                                        val doneBg = GradientDrawable().apply {
-                                                            setColor(Color.parseColor("#4CAF50"))
-                                                            cornerRadius = dpToPx(8).toFloat()
-                                                        }
-                                                        background = doneBg
-                                                        com.example.widget.WidgetUpdater.update(applicationContext)
-                                                        Toast.makeText(applicationContext, "✓ Saved ${item.title}", Toast.LENGTH_SHORT).show()
-                                                    }
-                                                } catch (e: Exception) {
-                                                    withContext(Dispatchers.Main) {
-                                                        isClickable = true
-                                                        text = "Save"
-                                                        Toast.makeText(applicationContext, "Failed to save", Toast.LENGTH_SHORT).show()
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                    itemRow.addView(saveBtn)
-
-                                    searchResultsContainer.addView(itemRow)
-                                }
-                            }
-                        }
-                    }
-                }
-                mainHandler.postDelayed(searchRunnable!!, 350)
-            }
-        })
-
-        panel.addView(mainContainerView)
-        panel.addView(subpageContainerView)
-
-        // Populate recent items
-        serviceScope.launch {
-            repository.getAllItemsFlow().collect { list ->
-                val recent = list.sortedByDescending { it.timestamp }.take(5)
-                withContext(Dispatchers.Main) {
-                    recentContainer.removeAllViews()
-                    if (recent.isEmpty()) {
-                        val emptyTv = TextView(applicationContext).apply {
-                            text = "No recent items yet"
-                            textSize = 11f
-                            setTextColor(textSecondary)
-                            gravity = Gravity.CENTER
-                            setPadding(0, dpToPx(20), 0, dpToPx(20))
-                        }
-                        recentContainer.addView(emptyTv)
-                    } else {
-                        recent.forEach { item ->
-                            val row = LinearLayout(applicationContext).apply {
-                                orientation = LinearLayout.HORIZONTAL
-                                gravity = Gravity.CENTER_VERTICAL
-                                setPadding(dpToPx(10), dpToPx(9), dpToPx(10), dpToPx(9))
-                                val rowBg = GradientDrawable().apply {
-                                    setColor(cardColor)
-                                    cornerRadius = dpToPx(12).toFloat()
-                                }
-                                background = rowBg
-                                layoutParams = LinearLayout.LayoutParams(
-                                    LinearLayout.LayoutParams.MATCH_PARENT,
-                                    LinearLayout.LayoutParams.WRAP_CONTENT
-                                ).apply {
-                                    setMargins(0, 0, 0, dpToPx(5))
-                                }
-                                isClickable = true
-                                isFocusable = true
-                                setOnClickListener {
-                                    if (item.type == SavedItemType.LINK) {
-                                        val intent =
-                                            Intent(Intent.ACTION_VIEW, android.net.Uri.parse(item.content)).apply {
-                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                            }
-                                        try {
-                                            startActivity(intent)
-                                        } catch (_: Exception) {
-                                            Toast.makeText(applicationContext, "Cannot open link", Toast.LENGTH_SHORT)
-                                                .show()
-                                        }
-                                    } else {
-                                        val intent = Intent(applicationContext, MainActivity::class.java).apply {
-                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                                            putExtra("OPEN_ITEM_ID", item.id)
-                                        }
-                                        startActivity(intent)
-                                    }
-                                    collapsePanel()
-                                }
-                            }
-
-                            // Type icon — use app's custom icons
-                            val iconRes = when (item.type) {
-                                SavedItemType.LINK -> R.drawable.ic_custom_link
-                                SavedItemType.IMAGE -> R.drawable.ic_custom_image
-                                SavedItemType.VIDEO -> R.drawable.ic_custom_video
-                                SavedItemType.AUDIO -> R.drawable.ic_custom_voice
-                                SavedItemType.MEDIA -> R.drawable.ic_custom_movie
-                                else -> R.drawable.ic_custom_text
-                            }
-                            val isNightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
-                            val rawTint = when (item.type) {
-                                SavedItemType.LINK -> android.graphics.Color.parseColor("#42A5F5")
-                                SavedItemType.IMAGE -> android.graphics.Color.parseColor("#66BB6A")
-                                SavedItemType.VIDEO -> android.graphics.Color.parseColor("#AB47BC")
-                                SavedItemType.AUDIO -> accent
-                                SavedItemType.MEDIA -> android.graphics.Color.parseColor("#E91E63")
-                                else -> accent
-                            }
-                            val iconTint = if (isNightMode) {
-                                val hsl = FloatArray(3)
-                                androidx.core.graphics.ColorUtils.colorToHSL(rawTint, hsl)
-                                hsl[1] = hsl[1].coerceIn(0.35f, 0.70f)
-                                hsl[2] = hsl[2].coerceIn(0.60f, 0.85f)
-                                androidx.core.graphics.ColorUtils.HSLToColor(hsl)
-                            } else {
-                                rawTint
-                            }
-
-                            val iconWrap = FrameLayout(applicationContext).apply {
-                                val iconBg = GradientDrawable().apply {
-                                    setColor(cardColor)
-                                    cornerRadius = dpToPx(10).toFloat()
-                                }
-                                background = iconBg
-                                layoutParams = LinearLayout.LayoutParams(dpToPx(32), dpToPx(32))
-                            }
-                            val iv = ImageView(applicationContext).apply {
-                                setImageResource(iconRes)
-                                imageTintList = ColorStateList.valueOf(iconTint)
-                                layoutParams = FrameLayout.LayoutParams(dpToPx(16), dpToPx(16), Gravity.CENTER)
-                            }
-                            iconWrap.addView(iv)
-                            row.addView(iconWrap)
-
-                            // Text column
-                            val col = LinearLayout(applicationContext).apply {
-                                orientation = LinearLayout.VERTICAL
-                                setPadding(dpToPx(10), 0, 0, 0)
-                                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                            }
-
-                            val title = TextView(applicationContext).apply {
-                                text = if (item.title.isNotBlank()) item.title else "Untitled"
-                                textSize = 12f
-                                setTextColor(textPrimary)
-                                typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-                                maxLines = 1
-                                ellipsize = TextUtils.TruncateAt.END
-                            }
-                            col.addView(title)
-
-                            val snippet = TextView(applicationContext).apply {
-                                text = item.content.take(60)
-                                textSize = 10f
-                                setTextColor(textSecondary)
-                                maxLines = 1
-                                ellipsize = TextUtils.TruncateAt.END
-                            }
-                            col.addView(snippet)
-
-                            row.addView(col)
-
-                            // Arrow chevron
-                            val arrow = ImageView(applicationContext).apply {
-                                setImageResource(R.drawable.ic_custom_chevron_right)
-                                imageTintList = ColorStateList.valueOf(textSecondary)
-                                layoutParams = LinearLayout.LayoutParams(dpToPx(14), dpToPx(14))
-                            }
-                            row.addView(arrow)
-
-                            recentContainer.addView(row)
-                        }
-                    }
-                }
-            }
-        }
-
-        panelView = panel
-        val endWidthDp = if (isLandscape) 300 else 260
-        val endHeightDp = if (isLandscape) 280 else 400
-        val endWidth = dpToPx(endWidthDp)
-        val endHeight = dpToPx(endHeightDp)
-        val expandedMargin = dpToPx(EXPANDED_MARGIN_DP)
-        val endWinWidth = endWidth + expandedMargin
-
-        panel.layoutParams = FrameLayout.LayoutParams(endWidth, endHeight).apply {
-            gravity = (if (side == "Right") Gravity.END else Gravity.START) or Gravity.CENTER_VERTICAL
-        }
-        val handle = handleView as? FrameLayout
-        handle?.addView(panel)
-
-        // ── Expand animation ──
         val params = root.layoutParams as WindowManager.LayoutParams
-        panel.pivotX = if (side == "Right") endWidth.toFloat() else 0f
-        panel.pivotY = endHeight / 2f
-
-        cancelPanelAnimation()
-
-        val startY = params.y
-        val targetY = calculateYPosition(yPercent, endHeightDp)
-        val startWinWidth = params.width
-        val startWinHeight = params.height
-
+        params.gravity = Gravity.CENTER_VERTICAL or (if (side == "Right") Gravity.END else Gravity.START)
+        params.y = calculateYPosition(yPercent, expandedHeightDp)
+        params.width = dpToPx(expandedWidthDp + EXPANDED_MARGIN_DP)
+        params.height = dpToPx(expandedHeightDp)
         params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+
         try {
             windowManager.updateViewLayout(root, params)
         } catch (_: Exception) {}
 
-        val startAlpha = panel.alpha
-        val startScaleFloat = getAnimStartScale()
-
-        val animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = getAnimDuration()
-            interpolator = getAnimInterpolator()
-            addUpdateListener { animation ->
-                val fraction = animation.animatedValue as Float
-                val clampedFraction = fraction.coerceIn(0f, 1f)
-
-                panel.alpha = (startAlpha + (1f - startAlpha) * fraction).coerceIn(0f, 1f)
-                panel.scaleX = startScaleFloat + (1f - startScaleFloat) * fraction
-                panel.scaleY = startScaleFloat + (1f - startScaleFloat) * fraction
-
-                // Handle morphing & margin animation
-                val handleParams = handleView?.layoutParams as? FrameLayout.LayoutParams
-                if (handleParams != null) {
-                    val startHandleWidth = dpToPx(thickness)
-                    val endHandleWidth = endWidth
-                    val startHandleHeight = dpToPx(height)
-                    val endHandleHeight = endHeight
-
-                    val currentMargin = (expandedMargin * clampedFraction).toInt()
-                    handleParams.width = (startHandleWidth + (endHandleWidth - startHandleWidth) * clampedFraction).toInt()
-                    handleParams.height = (startHandleHeight + (endHandleHeight - startHandleHeight) * clampedFraction).toInt()
-
-                    if (side == "Right") {
-                        handleParams.marginEnd = currentMargin
-                        handleParams.marginStart = 0
-                    } else {
-                        handleParams.marginStart = currentMargin
-                        handleParams.marginEnd = 0
-                    }
-                    handleView?.layoutParams = handleParams
-                }
-
-                val handleBg = handleView?.background as? GradientDrawable
-                if (handleBg != null) {
-                    val startRadius = dpToPx(8).toFloat()
-                    val endRadius = dpToPx(22).toFloat()
-
-                    val rTopLeft = if (side == "Right") {
-                        startRadius + (endRadius - startRadius) * clampedFraction
-                    } else {
-                        0f + (endRadius - 0f) * clampedFraction
-                    }
-                    val rTopRight = if (side == "Right") {
-                        0f + (endRadius - 0f) * clampedFraction
-                    } else {
-                        startRadius + (endRadius - startRadius) * clampedFraction
-                    }
-                    val rBottomRight = if (side == "Right") {
-                        0f + (endRadius - 0f) * clampedFraction
-                    } else {
-                        startRadius + (endRadius - startRadius) * clampedFraction
-                    }
-                    val rBottomLeft = if (side == "Right") {
-                        startRadius + (endRadius - startRadius) * clampedFraction
-                    } else {
-                        0f + (endRadius - 0f) * clampedFraction
-                    }
-
-                    handleBg.cornerRadii = floatArrayOf(
-                        rTopLeft, rTopLeft,
-                        rTopRight, rTopRight,
-                        rBottomRight, rBottomRight,
-                        rBottomLeft, rBottomLeft
-                    )
-
-                    val evaluator = ArgbEvaluator()
-                    val startColor = getAccentColor()
-                    val currentColor = evaluator.evaluate(clampedFraction, startColor, surfaceColor) as Int
-                    handleBg.setColor(currentColor)
-
-                    val strokeW = (dpToPx(1) * clampedFraction).toInt().coerceAtLeast(0)
-                    handleBg.setStroke(strokeW, borderColor)
-                }
-
-                handleView?.alpha = opacity + (1f - opacity) * clampedFraction
-
-                // Animate window position AND size in lockstep per-frame
-                params.y = (startY + (targetY - startY) * clampedFraction).toInt()
-                params.width = (startWinWidth + (endWinWidth - startWinWidth) * clampedFraction).toInt()
-                params.height = (startWinHeight + (endHeight - startWinHeight) * clampedFraction).toInt()
-                try {
-                    windowManager.updateViewLayout(root, params)
-                } catch (_: Exception) {}
-            }
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    params.y = targetY
-                    params.width = endWinWidth
-                    params.height = endHeight
-                    if (containerView != null) {
-                        try {
-                            windowManager.updateViewLayout(root, params)
-                        } catch (_: Exception) {}
-                    }
-                    panelAnimator = null
-                }
-
-                override fun onAnimationCancel(animation: Animator) {
-                    panelAnimator = null
-                }
-            })
-        }
-        panelAnimator = animator
-        animator.start()
         updateSystemGestureExclusions()
     }
 
     private fun collapsePanel() {
-        val root = containerView ?: return
-        val panel = panelView ?: return
+        if (!isExpanded) return
+        isExpanded = false
+        // Trigger Compose spring morph back to COLLAPSED state
+        overlayState.value = OverlayState.COLLAPSED
+    }
+
+    private fun onPanelCollapsed() {
+        val root = composeView ?: return
         val side = getEdgePanelSide()
         val yPercent = getEdgePanelYPercent()
         val thickness = getEdgePanelThickness()
         val height = getEdgePanelHeight()
-        val colorScheme = getColorScheme()
-        val surfaceColor = colorScheme.surface.toArgb()
-        val borderColor = colorScheme.outlineVariant.toArgb()
-        val opacity = getEdgePanelOpacity()
-
-        isExpanded = false
-        noteInputRef = null
 
         val params = root.layoutParams as WindowManager.LayoutParams
-        val startWidth = params.width
-        val startHeight = params.height
-        val endWidth = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
-        val endHeight = dpToPx(height)
-        val expandedMargin = dpToPx(EXPANDED_MARGIN_DP)
-        val startHandleMargin = (handleView?.layoutParams as? FrameLayout.LayoutParams)?.let {
-            if (side == "Right") it.marginEnd else it.marginStart
-        } ?: expandedMargin
-        val startAlpha = panel.alpha
-        val startScale = panel.scaleX
-
-        val startY = params.y
-        val targetY = calculateYPosition(yPercent, height)
-
+        params.gravity = Gravity.CENTER_VERTICAL or (if (side == "Right") Gravity.END else Gravity.START)
+        params.y = calculateYPosition(yPercent, height)
+        params.width = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
+        params.height = dpToPx(height)
         params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+
         try {
             windowManager.updateViewLayout(root, params)
         } catch (_: Exception) {}
 
-        cancelPanelAnimation()
-
-        val minScaleFloat = getAnimStartScale()
-
-        val animator = ValueAnimator.ofFloat(1f, 0f).apply {
-            duration = getAnimDuration()
-            interpolator = getAnimInterpolator()
-            addUpdateListener { animation ->
-                val fraction = animation.animatedValue as Float
-                val clampedFraction = fraction.coerceIn(0f, 1f)
-
-                panel.alpha = (startAlpha * fraction).coerceIn(0f, 1f)
-                panel.scaleX = minScaleFloat + (startScale - minScaleFloat) * fraction
-                panel.scaleY = minScaleFloat + (startScale - minScaleFloat) * fraction
-
-                // Handle morphing & margin animation
-                val handleParams = handleView?.layoutParams as? FrameLayout.LayoutParams
-                if (handleParams != null) {
-                    val startHandleWidth = dpToPx(thickness)
-                    val endHandleWidth = dpToPx(260)
-                    val startHandleHeight = dpToPx(height)
-                    val endHandleHeight = dpToPx(400)
-
-                    val currentMargin = (startHandleMargin * clampedFraction).toInt()
-                    handleParams.width = (startHandleWidth + (endHandleWidth - startHandleWidth) * clampedFraction).toInt()
-                    handleParams.height = (startHandleHeight + (endHandleHeight - startHandleHeight) * clampedFraction).toInt()
-
-                    if (side == "Right") {
-                        handleParams.marginEnd = currentMargin
-                        handleParams.marginStart = 0
-                    } else {
-                        handleParams.marginStart = currentMargin
-                        handleParams.marginEnd = 0
-                    }
-                    handleView?.layoutParams = handleParams
-                }
-
-                val handleBg = handleView?.background as? GradientDrawable
-                if (handleBg != null) {
-                    val startRadius = dpToPx(8).toFloat()
-                    val endRadius = dpToPx(22).toFloat()
-
-                    val rTopLeft = if (side == "Right") {
-                        startRadius + (endRadius - startRadius) * clampedFraction
-                    } else {
-                        0f + (endRadius - 0f) * clampedFraction
-                    }
-                    val rTopRight = if (side == "Right") {
-                        0f + (endRadius - 0f) * clampedFraction
-                    } else {
-                        startRadius + (endRadius - startRadius) * clampedFraction
-                    }
-                    val rBottomRight = if (side == "Right") {
-                        0f + (endRadius - 0f) * clampedFraction
-                    } else {
-                        startRadius + (endRadius - startRadius) * clampedFraction
-                    }
-                    val rBottomLeft = if (side == "Right") {
-                        startRadius + (endRadius - startRadius) * clampedFraction
-                    } else {
-                        0f + (endRadius - 0f) * clampedFraction
-                    }
-
-                    handleBg.cornerRadii = floatArrayOf(
-                        rTopLeft, rTopLeft,
-                        rTopRight, rTopRight,
-                        rBottomRight, rBottomRight,
-                        rBottomLeft, rBottomLeft
-                    )
-
-                    val evaluator = ArgbEvaluator()
-                    val startColor = getAccentColor()
-                    val currentColor = evaluator.evaluate(clampedFraction, startColor, surfaceColor) as Int
-                    handleBg.setColor(currentColor)
-
-                    val strokeW = (dpToPx(1) * clampedFraction).toInt().coerceAtLeast(0)
-                    handleBg.setStroke(strokeW, borderColor)
-                }
-
-                handleView?.alpha = opacity + (1f - opacity) * clampedFraction
-
-                // Animate actual window position and size per-frame in lockstep
-                params.y = (targetY + (startY - targetY) * clampedFraction).toInt()
-                params.width = (endWidth + (startWidth - endWidth) * clampedFraction).toInt()
-                params.height = (endHeight + (startHeight - endHeight) * clampedFraction).toInt()
-                try {
-                    windowManager.updateViewLayout(root, params)
-                } catch (_: Exception) {}
-            }
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    if (containerView != null) {
-                        (handleView as? ViewGroup)?.removeView(panel)
-                        panelView = null
-                        handleView?.visibility = View.VISIBLE
-                        (handleView?.layoutParams as? FrameLayout.LayoutParams)?.apply {
-                            marginEnd = 0
-                            marginStart = 0
-                            this.width = dpToPx(thickness)
-                            this.height = dpToPx(getEdgePanelHeight())
-                            handleView?.layoutParams = this
-                        }
-                        params.y = targetY
-                        params.width = endWidth
-                        params.height = endHeight
-                        try {
-                            windowManager.updateViewLayout(root, params)
-                        } catch (_: Exception) {}
-                        updateViewLayoutAndStyle()
-                    }
-                    panelAnimator = null
-                }
-
-                override fun onAnimationCancel(animation: Animator) {
-                    panelAnimator = null
-                }
-            })
-        }
-        panelAnimator = animator
-        animator.start()
-    }
-
-    private fun cancelPanelAnimation() {
-        panelAnimator?.cancel()
-        panelAnimator = null
+        updateViewLayoutAndStyle()
+        updateSystemGestureExclusions()
     }
 
     private fun toggleExpand() {
@@ -1566,47 +331,15 @@ class CobaltOcrOverlayService : Service() {
     }
 
     private fun updateViewLayoutAndStyle() {
-        val root = containerView ?: return
+        val root = composeView ?: return
         val side = getEdgePanelSide()
         val yPercent = getEdgePanelYPercent()
         val thickness = getEdgePanelThickness()
         val height = getEdgePanelHeight()
-        val opacity = getEdgePanelOpacity()
 
-        val expandedMargin = dpToPx(EXPANDED_MARGIN_DP)
         val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val expandedWidthDp = if (isLandscape) 300 else 260
         val expandedHeightDp = if (isLandscape) 280 else 400
-
-        // Reapply background shape style to handle
-        handleView?.let { h ->
-            val bgShape = GradientDrawable().apply {
-                setColor(getAccentColor())
-                val radiusPx = dpToPx(8).toFloat()
-                cornerRadii = if (side == "Right") {
-                    floatArrayOf(radiusPx, radiusPx, 0f, 0f, 0f, 0f, radiusPx, radiusPx)
-                } else {
-                    floatArrayOf(0f, 0f, radiusPx, radiusPx, radiusPx, radiusPx, 0f, 0f)
-                }
-            }
-            h.background = bgShape
-            h.alpha = opacity
-
-            h.layoutParams = FrameLayout.LayoutParams(
-                if (isExpanded) dpToPx(expandedWidthDp) else dpToPx(thickness),
-                if (isExpanded) dpToPx(expandedHeightDp) else dpToPx(height)
-            ).apply {
-                gravity = (if (side == "Right") Gravity.END else Gravity.START) or Gravity.CENTER_VERTICAL
-                val m = if (isExpanded) expandedMargin else 0
-                if (side == "Right") {
-                    marginEnd = m
-                    marginStart = 0
-                } else {
-                    marginStart = m
-                    marginEnd = 0
-                }
-            }
-        }
 
         val params = root.layoutParams as WindowManager.LayoutParams
         params.gravity = Gravity.CENTER_VERTICAL or (if (side == "Right") Gravity.END else Gravity.START)
@@ -1615,21 +348,19 @@ class CobaltOcrOverlayService : Service() {
         if (!isExpanded) {
             params.width = dpToPx(thickness + EXTRA_TOUCH_WIDTH_DP)
             params.height = dpToPx(height)
+            params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         } else {
-            params.width = dpToPx(expandedWidthDp) + expandedMargin
+            params.width = dpToPx(expandedWidthDp + EXPANDED_MARGIN_DP)
             params.height = dpToPx(expandedHeightDp)
-        }
-
-        params.flags = if (isExpanded) {
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+            params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
-        } else {
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
         }
 
-        windowManager.updateViewLayout(root, params)
+        try {
+            windowManager.updateViewLayout(root, params)
+        } catch (_: Exception) {}
         updateSystemGestureExclusions()
     }
 
@@ -1640,23 +371,36 @@ class CobaltOcrOverlayService : Service() {
         startActivity(intent)
     }
 
+    private fun launchLinkCapture() {
+        val intent = Intent(applicationContext, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            putExtra("NAVIGATE_TO", "capture")
+            putExtra("CAPTURE_TYPE", "link")
+        }
+        startActivity(intent)
+    }
+
+    private fun openMainApp(itemId: String? = null) {
+        val intent = Intent(applicationContext, MainActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            if (itemId != null) {
+                putExtra("OPEN_ITEM_ID", itemId)
+            }
+        }
+        startActivity(intent)
+    }
+
     private fun removeOverlayViews() {
-        containerView?.let {
+        composeView?.let {
             try {
                 windowManager.removeView(it)
-            } catch (e: Exception) {
-                // Ignore
-            }
-            containerView = null
-            handleView = null
-            panelView = null
+            } catch (_: Exception) {}
+            composeView = null
         }
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         super.onTaskRemoved(rootIntent)
-        // Re-deliver a start command so the service survives
-        // when the user swipes the app away from recents.
         val restartIntent = Intent(applicationContext, CobaltOcrOverlayService::class.java)
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -1673,6 +417,8 @@ class CobaltOcrOverlayService : Service() {
         super.onDestroy()
         prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
         serviceScope.cancel()
+        overlayLifecycleOwner?.onDestroy()
+        overlayLifecycleOwner = null
         removeOverlayViews()
     }
 
@@ -1689,22 +435,6 @@ class CobaltOcrOverlayService : Service() {
         val clampedCenterY = targetCenterY.coerceIn(minCenterY, maxCenterY)
         return (clampedCenterY - (screenHeight / 2f)).toInt()
     }
-
-    private fun createDivider(): View {
-        return View(this).apply {
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(1)).apply {
-                setMargins(0, dpToPx(12), 0, dpToPx(12))
-            }
-            backgroundColor = Color.parseColor("#262629")
-        }
-    }
-
-    // Helper extensions for programmatically styling views
-    private var View.backgroundColor: Int
-        get() = 0
-        set(value) {
-            setBackgroundColor(value)
-        }
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -1735,6 +465,30 @@ class CobaltOcrOverlayService : Service() {
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
+    }
+
+    private class OverlayLifecycleOwner : LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
+        private val lifecycleRegistry = LifecycleRegistry(this)
+        private val savedStateRegistryController = SavedStateRegistryController.create(this)
+        private val store = ViewModelStore()
+
+        override val lifecycle: Lifecycle get() = lifecycleRegistry
+        override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
+        override val viewModelStore: ViewModelStore get() = store
+
+        fun onCreate() {
+            savedStateRegistryController.performRestore(null)
+            lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+            lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+            lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+        }
+
+        fun onDestroy() {
+            lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+            lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+            lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+            store.clear()
+        }
     }
 
     companion object {
