@@ -1,16 +1,17 @@
 Categories:
+  - Bookmark
   - Note
   - Task
-  - Bookmark
 License: AGPL-3.0-or-later
 AuthorName: Hanan Bhatti
 WebSite: https://github.com/hanan-bhatti/cobalt
 SourceCode: https://github.com/hanan-bhatti/cobalt
 IssueTracker: https://github.com/hanan-bhatti/cobalt/issues
-RepoType: git
-Repo: https://github.com/hanan-bhatti/cobalt.git
 
 AutoName: Cobalt
+
+RepoType: git
+Repo: https://github.com/hanan-bhatti/cobalt.git
 
 Builds:
   - versionName: 2.1.0-beta
@@ -19,8 +20,7 @@ Builds:
     subdir: app
     gradle:
       - assembleFossRelease
-    prebuild:
-      - sed -i -e '/playImplementation/d' app/build.gradle.kts
+    prebuild: sed -i -e '/playImplementation/d' build.gradle.kts
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
