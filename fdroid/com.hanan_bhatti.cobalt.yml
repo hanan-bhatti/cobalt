@@ -8,21 +8,28 @@ WebSite: https://github.com/hanan-bhatti/cobalt
 SourceCode: https://github.com/hanan-bhatti/cobalt
 IssueTracker: https://github.com/hanan-bhatti/cobalt/issues
 
+AntiFeatures:
+  NonFreeNet:
+    en-US: Relies on proprietary network services (Gemini and TMDb) for optional AI OCR, transcription, and media lookup features.
+
 AutoName: Cobalt
 
 RepoType: git
 Repo: https://github.com/hanan-bhatti/cobalt.git
+Binaries: https://github.com/hanan-bhatti/cobalt/releases/download/v%v/cobalt-foss-v%v.apk
 
 Builds:
-  - versionName: 2.1.0-beta
-    versionCode: 13
-    commit: 9b399849ce6b91ebf102b96141daf6ce0384f041
+  - versionName: 2.1.1
+    versionCode: 14
+    commit: 3300bc456f8c03354e2417c04a6e4c3c035ef099
     subdir: app
     gradle:
       - foss
     prebuild: sed -i -e '/playImplementation/d' build.gradle.kts
 
+AllowedAPKSigningKeys: 9af192bc1865c315591539bd4022e69e6a35e597384b846d3b3f272e74c6e2cb
+
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 2.1.0-beta
-CurrentVersionCode: 13
+CurrentVersion: 2.1.1
+CurrentVersionCode: 14
