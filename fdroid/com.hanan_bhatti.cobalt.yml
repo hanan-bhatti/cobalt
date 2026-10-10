@@ -16,10 +16,10 @@ Repo: https://github.com/hanan-bhatti/cobalt.git
 Builds:
   - versionName: 2.1.0-beta
     versionCode: 13
-    commit: 468e5219ead5f802e656d3dc4bd3be24b54b45bd
+    commit: 93d82042d2b9a5bdafabdadce0bbb2c4d4f9348a
     subdir: app
     gradle:
-      - assembleFossRelease
+      - foss
     prebuild: sed -i -e '/playImplementation/d' build.gradle.kts
 
 AutoUpdateMode: Version
