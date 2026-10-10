@@ -29,8 +29,7 @@ android {
   productFlavors {
     create("foss") {
       dimension = "distribution"
-      applicationIdSuffix = ".foss"
-      manifestPlaceholders["appName"] = "Cobalt FOSS"
+      manifestPlaceholders["appName"] = "Cobalt"
     }
     create("play") {
       dimension = "distribution"
