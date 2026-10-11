@@ -36,8 +36,8 @@ import android.net.NetworkCapabilities
 
 class DataDownloadService : Service() {
 
-    private val serviceJob = Job()
-    private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
+    private var serviceJob = SupervisorJob()
+    private var serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
     private lateinit var repository: CobaltRepository
     private lateinit var notificationManager: NotificationManager
     private val httpClient = OkHttpClient.Builder()
@@ -53,6 +53,8 @@ class DataDownloadService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        serviceJob = SupervisorJob()
+        serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
         repository = CobaltRepository(applicationContext)
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         createNotificationChannel()
@@ -61,15 +63,23 @@ class DataDownloadService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val notification = createNotification("Preparing download...", 0, 100)
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "startForeground failed: ${e.message}", e)
+            stopSelf(startId)
+            return START_NOT_STICKY
         }
 
         serviceScope.launch {
             try {
                 performDownload(intent)
+            } catch (e: CancellationException) {
+                Log.d(TAG, "Download job cancelled")
             } catch (e: Exception) {
                 Log.e(TAG, "Download failed: ${e.message}", e)
                 DataDownloadManager.updateProgress(
@@ -86,11 +96,17 @@ class DataDownloadService : Service() {
                     @Suppress("DEPRECATION")
                     stopForeground(true)
                 }
-                stopSelf()
+                stopSelf(startId)
             }
         }
 
         return START_NOT_STICKY
+    }
+
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        super.onTimeout(startId, fgsType)
+        Log.w(TAG, "Foreground service timed out for type $fgsType, stopping service")
+        stopSelf(startId)
     }
 
     private suspend fun performDownload(intent: Intent?) = withContext(Dispatchers.IO) {

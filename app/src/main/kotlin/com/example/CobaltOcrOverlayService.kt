@@ -189,12 +189,6 @@ class CobaltOcrOverlayService : Service() {
                 buildNotification(),
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
             )
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                NOTIFICATION_ID,
-                buildNotification(),
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-            )
         } else {
             startForeground(NOTIFICATION_ID, buildNotification())
         }

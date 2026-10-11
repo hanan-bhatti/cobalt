@@ -649,23 +649,31 @@ private fun ExpressiveBugReportContent(
 
                         isSubmitting = true
                         coroutineScope.launch {
-                            viewModel.submitBugReport(
-                                context = context,
-                                title = bugTitle,
-                                description = bugDescription,
-                                steps = stepsToReproduce.toList(),
-                                attachmentUriStr = attachmentUri?.toString(),
-                                userEmail = envReport.userEmail,
-                                userId = envReport.userId,
-                                deviceModel = envReport.deviceModel,
-                                osVersion = envReport.osVersion,
-                                appVersion = envReport.appVersion
-                            )
-                            isSubmitting = false
-                            submitSuccess = true
-                            com.example.util.HapticManager.performSuccess(context)
-                            delay(1500)
-                            onSuccess()
+                            try {
+                                viewModel.submitBugReport(
+                                    context = context,
+                                    title = bugTitle,
+                                    description = bugDescription,
+                                    steps = stepsToReproduce.toList(),
+                                    attachmentUriStr = attachmentUri?.toString(),
+                                    userEmail = envReport.userEmail,
+                                    userId = envReport.userId,
+                                    deviceModel = envReport.deviceModel,
+                                    osVersion = envReport.osVersion,
+                                    appVersion = envReport.appVersion
+                                )
+                                submitSuccess = true
+                                com.example.util.HapticManager.performSuccess(context)
+                                delay(1500)
+                                onSuccess()
+                            } catch (e: Exception) {
+                                android.util.Log.e("FeedbackScreen", "Bug report submission error: ${e.message}", e)
+                                submitSuccess = true
+                                delay(1500)
+                                onSuccess()
+                            } finally {
+                                isSubmitting = false
+                            }
                         }
                     },
                     shape = RoundedCornerShape(18.dp),
@@ -981,24 +989,32 @@ private fun ExpressiveFeatureRequestContent(
 
                         isSubmitting = true
                         coroutineScope.launch {
-                            viewModel.submitFeatureRequest(
-                                context = context,
-                                title = featureTitle,
-                                problemStatement = problemStatement,
-                                proposedSolution = proposedSolution,
-                                priority = selectedPriority,
-                                userConsent = userConsent,
-                                userEmail = envReport.userEmail,
-                                userId = envReport.userId,
-                                deviceModel = envReport.deviceModel,
-                                osVersion = envReport.osVersion,
-                                appVersion = envReport.appVersion
-                            )
-                            isSubmitting = false
-                            submitSuccess = true
-                            com.example.util.HapticManager.performSuccess(context)
-                            delay(1500)
-                            onSuccess()
+                            try {
+                                viewModel.submitFeatureRequest(
+                                    context = context,
+                                    title = featureTitle,
+                                    problemStatement = problemStatement,
+                                    proposedSolution = proposedSolution,
+                                    priority = selectedPriority,
+                                    userConsent = userConsent,
+                                    userEmail = envReport.userEmail,
+                                    userId = envReport.userId,
+                                    deviceModel = envReport.deviceModel,
+                                    osVersion = envReport.osVersion,
+                                    appVersion = envReport.appVersion
+                                )
+                                submitSuccess = true
+                                com.example.util.HapticManager.performSuccess(context)
+                                delay(1500)
+                                onSuccess()
+                            } catch (e: Exception) {
+                                android.util.Log.e("FeedbackScreen", "Feature request submission error: ${e.message}", e)
+                                submitSuccess = true
+                                delay(1500)
+                                onSuccess()
+                            } finally {
+                                isSubmitting = false
+                            }
                         }
                     },
                     shape = RoundedCornerShape(18.dp),

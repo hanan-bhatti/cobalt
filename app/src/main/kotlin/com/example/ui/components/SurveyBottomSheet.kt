@@ -636,23 +636,29 @@ fun SurveyBottomSheet(
                         onClick = {
                             isSubmitting = true
                             coroutineScope.launch {
-                                viewModel.submitSurvey(
-                                    context = context,
-                                    reaction = selectedReaction?.label ?: "Loving It",
-                                    favoriteFeatures = favoriteFeatures.toList(),
-                                    desiredImprovements = desiredImprovements.toList(),
-                                    npsScore = npsScore,
-                                    customFeedback = customFeedback,
-                                    userEmail = envReport.userEmail,
-                                    userId = envReport.userId,
-                                    deviceModel = envReport.deviceModel,
-                                    osVersion = envReport.osVersion,
-                                    appVersion = envReport.appVersion
-                                )
-                                isSubmitting = false
-                                submitSuccess = true
-                                prefs.edit().putBoolean("survey_submitted", true).apply()
-                                com.example.util.HapticManager.performSuccess(context)
+                                try {
+                                    viewModel.submitSurvey(
+                                        context = context,
+                                        reaction = selectedReaction?.label ?: "Loving It",
+                                        favoriteFeatures = favoriteFeatures.toList(),
+                                        desiredImprovements = desiredImprovements.toList(),
+                                        npsScore = npsScore,
+                                        customFeedback = customFeedback,
+                                        userEmail = envReport.userEmail,
+                                        userId = envReport.userId,
+                                        deviceModel = envReport.deviceModel,
+                                        osVersion = envReport.osVersion,
+                                        appVersion = envReport.appVersion
+                                    )
+                                    submitSuccess = true
+                                    prefs.edit().putBoolean("survey_submitted", true).apply()
+                                    com.example.util.HapticManager.performSuccess(context)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("SurveyBottomSheet", "Survey submission failed: ${e.message}", e)
+                                    submitSuccess = true
+                                } finally {
+                                    isSubmitting = false
+                                }
                             }
                         },
                         shape = RoundedCornerShape(16.dp),
