@@ -132,8 +132,8 @@ dependencies {
   // firebase-auth.
   "playImplementation"(libs.firebase.auth)
   "playImplementation"(libs.firebase.analytics)
-  "playImplementation"(libs.firebase.crashlytics)
-  "playImplementation"(libs.firebase.perf)
+  // "playImplementation"(libs.firebase.crashlytics)
+  // "playImplementation"(libs.firebase.perf)
   "playImplementation"(libs.androidx.credentials)
   "playImplementation"(libs.androidx.credentials.play.services)
   "playImplementation"(libs.googleid)

@@ -1,3 +1,7 @@
+AntiFeatures:
+  NonFreeNet:
+    en-US: Relies on proprietary network services (Gemini and TMDb) for optional AI
+      OCR, transcription, and media lookup features.
 Categories:
   - Bookmark
   - Note
@@ -7,10 +11,6 @@ AuthorName: Hanan Bhatti
 WebSite: https://github.com/hanan-bhatti/cobalt
 SourceCode: https://github.com/hanan-bhatti/cobalt
 IssueTracker: https://github.com/hanan-bhatti/cobalt/issues
-
-AntiFeatures:
-  NonFreeNet:
-    en-US: Relies on proprietary network services (Gemini and TMDb) for optional AI OCR, transcription, and media lookup features.
 
 AutoName: Cobalt
 
