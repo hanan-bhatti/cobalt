@@ -7,6 +7,8 @@ plugins {
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.roborazzi)
   alias(libs.plugins.google.services) apply false
+  alias(libs.plugins.firebase.crashlytics) apply false
+  alias(libs.plugins.firebase.perf) apply false
 }
 
 val isFossBuild = gradle.startParameter.taskNames.isNotEmpty() &&
@@ -14,6 +16,8 @@ val isFossBuild = gradle.startParameter.taskNames.isNotEmpty() &&
 
 if (!isFossBuild) {
   apply(plugin = "com.google.gms.google-services")
+  apply(plugin = "com.google.firebase.crashlytics")
+  apply(plugin = "com.google.firebase.firebase-perf")
 }
 
 android {
@@ -132,8 +136,8 @@ dependencies {
   // firebase-auth.
   "playImplementation"(libs.firebase.auth)
   "playImplementation"(libs.firebase.analytics)
-  // "playImplementation"(libs.firebase.crashlytics)
-  // "playImplementation"(libs.firebase.perf)
+  "playImplementation"(libs.firebase.crashlytics)
+  "playImplementation"(libs.firebase.perf)
   "playImplementation"(libs.androidx.credentials)
   "playImplementation"(libs.androidx.credentials.play.services)
   "playImplementation"(libs.googleid)
