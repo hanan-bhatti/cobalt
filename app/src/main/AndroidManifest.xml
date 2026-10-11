@@ -109,7 +109,7 @@
 
         <service
             android:name=".CobaltOcrOverlayService"
-            android:foregroundServiceType="specialUse|dataSync"
+            android:foregroundServiceType="specialUse"
             android:stopWithTask="false"
             tools:targetApi="q"
             android:exported="false">

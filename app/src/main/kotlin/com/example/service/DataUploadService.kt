@@ -17,8 +17,8 @@ import android.net.NetworkCapabilities
 
 class DataUploadService : Service() {
 
-    private val serviceJob = Job()
-    private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
+    private var serviceJob = SupervisorJob()
+    private var serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
     private lateinit var repository: CobaltRepository
     private lateinit var notificationManager: NotificationManager
 
@@ -32,6 +32,8 @@ class DataUploadService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        serviceJob = SupervisorJob()
+        serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
         repository = CobaltRepository(applicationContext)
         notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         createNotificationChannel()
@@ -42,10 +44,16 @@ class DataUploadService : Service() {
         
         val notification = createNotification("Starting upload...", 0, 100)
         
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (e: Exception) {
+            Log.e("DataUploadService", "Failed to start foreground service: ${e.message}", e)
+            stopSelf(startId)
+            return START_NOT_STICKY
         }
 
         val action = intent.action
@@ -55,7 +63,6 @@ class DataUploadService : Service() {
             try {
                 if (!isNetworkAvailable()) {
                     updateNotificationError("No network connection.")
-                    stopSelf()
                     return@launch
                 }
 
@@ -70,16 +77,30 @@ class DataUploadService : Service() {
                 }
                 
                 showSuccessNotification()
+            } catch (e: CancellationException) {
+                Log.d("DataUploadService", "Upload job cancelled")
             } catch (e: Exception) {
                 Log.e("DataUploadService", "Upload failed", e)
                 updateNotificationError("Upload failed: ${e.message}")
             } finally {
                 BackupSyncManager.updateProgress(BackupSyncManager.SyncProgress(isSyncing = false))
-                stopSelf()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                } else {
+                    @Suppress("DEPRECATION")
+                    stopForeground(true)
+                }
+                stopSelf(startId)
             }
         }
 
         return START_NOT_STICKY
+    }
+
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        super.onTimeout(startId, fgsType)
+        Log.w("DataUploadService", "Foreground service timed out for type $fgsType, stopping service")
+        stopSelf(startId)
     }
 
     private fun updateProgress(progress: BackupSyncManager.SyncProgress) {

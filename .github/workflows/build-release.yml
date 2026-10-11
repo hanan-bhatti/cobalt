@@ -6,6 +6,11 @@ on:
         description: 'Release notes (leave blank to use auto-generated notes)'
         required: false
         default: ''
+      play_only:
+        description: 'Only update Play release APK (preserve FOSS release APK)'
+        required: false
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -163,6 +168,7 @@ jobs:
           retention-days: 90
 
       - name: Create GitHub Release
+        if: github.event.inputs.play_only != 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.check-version.outputs.version_name }}
@@ -175,3 +181,13 @@ jobs:
           files: |
             release-artifacts/${{ steps.rename.outputs.apk_name_foss }}
             release-artifacts/${{ steps.rename.outputs.apk_name_play }}
+
+      - name: Update Play APK on GitHub Release (play_only mode)
+        if: github.event.inputs.play_only == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ needs.check-version.outputs.version_name }}"
+          PLAY_FILE="release-artifacts/${{ steps.rename.outputs.apk_name_play }}"
+          echo "Updating only $PLAY_FILE on release $TAG..."
+          gh release upload "$TAG" "$PLAY_FILE" --clobber

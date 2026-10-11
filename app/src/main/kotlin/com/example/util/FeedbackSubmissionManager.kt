@@ -64,9 +64,14 @@ object FeedbackSubmissionManager {
 
         saveLocally(context, "bug_reports.json", payload)
         
-        val cloudSuccess = submitToCloud("bug_reports", payload)
+        val cloudSuccess = try {
+            submitToCloud("bug_reports", payload)
+        } catch (e: Exception) {
+            Log.w("FeedbackManager", "Failed to submit bug report to cloud: ${e.message}")
+            false
+        }
         if (!cloudSuccess) {
-            throw Exception("Network error or permissions denied when submitting to cloud.")
+            Log.w("FeedbackManager", "Bug report saved locally; cloud submission was unsuccessful.")
         }
         return@withContext true
     }
@@ -102,9 +107,14 @@ object FeedbackSubmissionManager {
         )
 
         saveLocally(context, "feature_requests.json", payload)
-        val cloudSuccess = submitToCloud("feature_requests", payload)
+        val cloudSuccess = try {
+            submitToCloud("feature_requests", payload)
+        } catch (e: Exception) {
+            Log.w("FeedbackManager", "Failed to submit feature request to cloud: ${e.message}")
+            false
+        }
         if (!cloudSuccess) {
-            throw Exception("Network error or permissions denied when submitting to cloud.")
+            Log.w("FeedbackManager", "Feature request saved locally; cloud submission was unsuccessful.")
         }
         return@withContext true
     }
@@ -140,9 +150,14 @@ object FeedbackSubmissionManager {
         )
 
         saveLocally(context, "surveys.json", payload)
-        val cloudSuccess = submitToCloud("surveys", payload)
+        val cloudSuccess = try {
+            submitToCloud("surveys", payload)
+        } catch (e: Exception) {
+            Log.w("FeedbackManager", "Failed to submit survey to cloud: ${e.message}")
+            false
+        }
         if (!cloudSuccess) {
-            throw Exception("Network error or permissions denied when submitting to cloud.")
+            Log.w("FeedbackManager", "Survey saved locally; cloud submission was unsuccessful.")
         }
         return@withContext true
     }

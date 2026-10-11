@@ -777,7 +777,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     try {
                         repository.restoreUserDataFromCloud()
                         repository.updateDeviceSession()
-                        triggerBackgroundSync()
+                        repository.syncUnsyncedItems()
                     } catch (e: Exception) {
                         Log.e("CobaltVM", "Initial auto-sync error: ${e.message}", e)
                         postFeedback("Background sync failed — showing offline data", com.example.util.FeedbackSeverity.WARNING)
@@ -798,7 +798,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                         try {
                             repository.restoreUserDataFromCloud()
                             repository.updateDeviceSession()
-                            triggerBackgroundSync()
+                            repository.syncUnsyncedItems()
                         } catch (e: Exception) {
                             Log.e("CobaltVM", "Initial auto-sync error: ${e.message}", e)
                             postFeedback("Background sync failed — showing offline data", com.example.util.FeedbackSeverity.WARNING)
@@ -2338,11 +2338,22 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun triggerBackgroundSync() {
-        val context = getApplication<android.app.Application>().applicationContext
-        val intent = android.content.Intent(context, com.example.service.DataUploadService::class.java).apply {
-            action = com.example.service.DataUploadService.ACTION_START_SYNC
+        try {
+            val context = getApplication<android.app.Application>().applicationContext
+            val intent = android.content.Intent(context, com.example.service.DataUploadService::class.java).apply {
+                action = com.example.service.DataUploadService.ACTION_START_SYNC
+            }
+            androidx.core.content.ContextCompat.startForegroundService(context, intent)
+        } catch (e: Exception) {
+            Log.e("CobaltVM", "Failed to start background sync service: ${e.message}", e)
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    repository.syncUnsyncedItems()
+                } catch (err: Exception) {
+                    Log.e("CobaltVM", "Fallback sync error: ${err.message}", err)
+                }
+            }
         }
-        androidx.core.content.ContextCompat.startForegroundService(context, intent)
     }
 }
 
