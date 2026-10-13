@@ -99,52 +99,8 @@ fun CaptureScreen(
     val ocrError by viewModel.ocrError.collectAsState()
     val customFolders by viewModel.customFolders.collectAsState()
     val extractedLinks by viewModel.extractedLinksToReview.collectAsState()
-
-    var showPermissionRationale by remember { mutableStateOf(false) }
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        viewModel.saveActiveItem()
-    }
-    
     val handleSaveClick = {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val status = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
-            if (status != PackageManager.PERMISSION_GRANTED) {
-                showPermissionRationale = true
-            } else {
-                viewModel.saveActiveItem()
-            }
-        } else {
-            viewModel.saveActiveItem()
-        }
-    }
-
-    if (showPermissionRationale) {
-        AlertDialog(
-            onDismissRequest = { 
-                showPermissionRationale = false 
-                viewModel.saveActiveItem() 
-            },
-            title = { Text("Backup Notifications") },
-            text = { Text("Allow Cobalt to send notifications so you can see live progress of your background backups and know when they complete.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showPermissionRationale = false
-                    launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }) {
-                    Text("Allow")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showPermissionRationale = false
-                    viewModel.saveActiveItem()
-                }) {
-                    Text("No thanks")
-                }
-            }
-        )
+        viewModel.saveActiveItem()
     }
 
     LaunchedEffect(ocrError) {

@@ -121,12 +121,38 @@ object AppVersionManager {
      */
     val releaseHistory: List<ReleaseNote> = listOf(
         ReleaseNote(
+            versionName = "2.1.2",
+            versionCode = 15,
+            releaseDate = "October 13, 2026",
+            tag = AppVersionTag.STABLE,
+            isCurrent = true,
+            isLatest = true,
+            highlights = listOf(
+                "F-Droid Tester Feedback Fixes",
+                "Decoupled Home & Search Feeds",
+                "Radial FAB Tap & Gesture Improvements"
+            ),
+            features = listOf(
+                "Added opt-in toggle in Settings -> Release & Updates for GitHub update checks (default OFF in FOSS)",
+                "Full plain-tap support for GlobalExpandingFab radial menu in addition to drag gesture"
+            ),
+            improvements = listOf(
+                "Decoupled Home tab items from Search tab query, automatically clearing search query on back navigation",
+                "Added custom User-Agent and enhanced guidance for Jikan anime search",
+                "Completely removed sync/upload/download background services and notification permissions from FOSS build"
+            ),
+            bugFixes = listOf(
+                "Eliminated persistent 'Backup Notifications' dialog on saving captures",
+                "Fixed Home screen showing filtered search results with an empty search bar"
+            )
+        ),
+        ReleaseNote(
             versionName = "2.1.0-beta",
             versionCode = 13,
             releaseDate = "October 8, 2026",
             tag = AppVersionTag.BETA,
             isCurrent = false,
-            isLatest = true,
+            isLatest = false,
             highlights = listOf(
                 "UI & Gestures Overhaul",
                 "TMDb Rich Media Expansion",

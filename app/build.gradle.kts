@@ -7,8 +7,6 @@ plugins {
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.roborazzi)
   alias(libs.plugins.google.services) apply false
-  alias(libs.plugins.firebase.crashlytics) apply false
-  alias(libs.plugins.firebase.perf) apply false
 }
 
 val isFossBuild = gradle.startParameter.taskNames.isNotEmpty() &&
@@ -16,8 +14,6 @@ val isFossBuild = gradle.startParameter.taskNames.isNotEmpty() &&
 
 if (!isFossBuild) {
   apply(plugin = "com.google.gms.google-services")
-  apply(plugin = "com.google.firebase.crashlytics")
-  apply(plugin = "com.google.firebase.firebase-perf")
 }
 
 android {
@@ -28,8 +24,8 @@ android {
     applicationId = "com.hanan_bhatti.cobalt"
     minSdk = 24
     targetSdk = 37
-    versionCode = 14
-    versionName = "2.1.1"
+    versionCode = 15
+    versionName = "2.1.2"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -114,8 +110,12 @@ tasks.withType<KotlinCompile>().configureEach {
 }
 
 
-// Disable any Google Services tasks targeting the FOSS flavor
-tasks.matching { it.name.contains("GoogleServices") && it.name.contains("Foss", ignoreCase = true) }.configureEach {
+// Disable Google Services tasks targeting the FOSS flavor
+tasks.matching {
+  val name = it.name
+  name.contains("GoogleServices", ignoreCase = true) &&
+  name.contains("Foss", ignoreCase = true)
+}.configureEach {
   enabled = false
 }
 
@@ -136,8 +136,8 @@ dependencies {
   // firebase-auth.
   "playImplementation"(libs.firebase.auth)
   "playImplementation"(libs.firebase.analytics)
-  "playImplementation"(libs.firebase.crashlytics)
-  "playImplementation"(libs.firebase.perf)
+  // "playImplementation"(libs.firebase.crashlytics)
+  // "playImplementation"(libs.firebase.perf)
   "playImplementation"(libs.androidx.credentials)
   "playImplementation"(libs.androidx.credentials.play.services)
   "playImplementation"(libs.googleid)

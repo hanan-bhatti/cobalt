@@ -18,6 +18,7 @@
 
 package com.example.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -87,6 +88,17 @@ fun SearchScreen(
     var sortOrder by remember { mutableStateOf(SearchSortOrder.NEWEST) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
+
+    BackHandler {
+        viewModel.setSearchQuery("")
+        onNavigateBack()
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.setSearchQuery("")
+        }
+    }
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()

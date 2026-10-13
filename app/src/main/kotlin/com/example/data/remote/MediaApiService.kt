@@ -70,10 +70,17 @@ object MediaApiClient {
         .build()
 
     private val okHttpClient = okhttp3.OkHttpClient.Builder()
-        .connectTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(12, java.util.concurrent.TimeUnit.SECONDS)
-        .writeTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
-        .callTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+        .addInterceptor { chain ->
+            val request = chain.request().newBuilder()
+                .header("User-Agent", "Cobalt-AndroidApp/2.1.2 (https://github.com/hanan-bhatti/cobalt)")
+                .header("Accept", "application/json")
+                .build()
+            chain.proceed(request)
+        }
+        .connectTimeout(12, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+        .writeTimeout(12, java.util.concurrent.TimeUnit.SECONDS)
+        .callTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
         .build()
 
     val tmdbApiService: TmdbApiService by lazy {

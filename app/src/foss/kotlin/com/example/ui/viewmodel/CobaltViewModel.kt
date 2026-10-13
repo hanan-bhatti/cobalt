@@ -60,6 +60,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
     fun checkForAppUpdatesOnStartup() {
         viewModelScope.launch {
+            if (!settingsRepository.isAutoUpdateCheckEnabled.value) return@launch
             if (!isNetworkAvailable()) return@launch
             when (val result = com.example.util.AppVersionManager.checkOnlineUpdates()) {
                 is com.example.util.UpdateCheckResult.UpdateAvailable -> {
@@ -180,49 +181,51 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    // Filtered Items (computes search query and selected system/custom folders)
-    val filteredItems: StateFlow<List<SavedItem>> = combine(
+    // Home Items (filtered by folder, independent of search)
+    val homeItems: StateFlow<List<SavedItem>> = combine(
         allItems,
-        _selectedFolder,
-        _searchQuery
-    ) { items, folder, query ->
-        var filtered = items
-
-        // 1. Filter by Folder (System Category or Custom Folder)
+        _selectedFolder
+    ) { items, folder ->
         val isItemArchived: (SavedItem) -> Boolean = { it.isArchived }
-        
         if (folder != "All") {
             val systemCategory = SavedItemType.entries.find { it.displayName == folder }
-            filtered = if (systemCategory != null) {
+            if (systemCategory != null) {
                 // System folder filter - hide archived
-                filtered.filter { it.type == systemCategory && !isItemArchived(it) }
+                items.filter { it.type == systemCategory && !isItemArchived(it) }
             } else {
                 if (folder == "Archive") {
                     // Show ONLY archived items
-                    filtered.filter { isItemArchived(it) }
+                    items.filter { isItemArchived(it) }
                 } else {
                     // Custom folder filter
-                    filtered.filter { it.folders.contains(folder) && !isItemArchived(it) }
+                    items.filter { it.folders.contains(folder) && !isItemArchived(it) }
                 }
             }
         } else {
             // Hide archived items from "All" main feed
-            filtered = filtered.filter { !isItemArchived(it) }
+            items.filter { !isItemArchived(it) }
         }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-        // 2. Filter and rank by Search Query (fuzzy, synonym-aware search)
+    // Filtered Items (computes search query over folder items)
+    val filteredItems: StateFlow<List<SavedItem>> = combine(
+        homeItems,
+        _searchQuery
+    ) { items, query ->
         if (query.isNotBlank()) {
             val queryTerms = query.lowercase().split(Regex("[^a-zA-Z0-9]")).filter { it.isNotBlank() }
             if (queryTerms.isNotEmpty()) {
-                filtered = filtered
+                items
                     .map { item -> item to calculateSearchScore(item, queryTerms) }
                     .filter { it.second > 0 }
                     .sortedByDescending { it.second }
                     .map { it.first }
+            } else {
+                items
             }
+        } else {
+            items
         }
-
-        filtered
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     // ----------------------------------------------------
@@ -257,6 +260,10 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     fun clearSelection() {
         _isSelectionMode.value = false
         _selectedItemIds.value = emptySet()
+    }
+
+    fun startCloudMediaDownload(context: android.content.Context, resumeInterrupted: Boolean = false, retryFailed: Boolean = false) {
+        // No-op for FOSS as all media is stored locally
     }
 
     fun selectAll(itemIds: List<String>) {

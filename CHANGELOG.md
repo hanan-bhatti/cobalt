@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.2] - 2026-10-13
+
+### Added
+- **Opt-In Update Checks (FOSS):** Added an opt-in toggle in Settings -> Release & Updates ("Auto-Check for Updates", default OFF) so F-Droid releases do not check GitHub without explicit consent.
+- **Radial FAB Tap Support:** Enhanced `GlobalExpandingFab` so a single tap opens and holds the radial menu open, allowing direct item selection alongside the existing swipe/drag gesture.
+
+### Changed
+- **Decoupled Home & Search Feeds:** The Home feed now strictly tracks folder selections, while the Search tab manages its query independently and resets on back navigation.
+- **FOSS Clean Architecture:** Completely removed cloud sync/upload/download background services and foreground notification requirements from the FOSS build.
+- **Jikan Anime API Guidance:** Added a custom `User-Agent` (`Cobalt-AndroidApp/2.1.2`) and updated the empty search state to provide clear guidance if third-party anime servers time out.
+
+### Fixed
+- **Persistent Permission Nag:** Removed repetitive "Backup Notifications" dialog prompts when saving captures.
+
 ## [2.1.0-beta] - 2026-10-08
 
 ### Added
