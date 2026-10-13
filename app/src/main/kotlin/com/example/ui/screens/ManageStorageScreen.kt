@@ -106,7 +106,9 @@ fun ManageStorageScreen(
     val selectedForBackupIds by viewModel.selectedForBackupIds.collectAsState()
 
     val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("cobalt_prefs", android.content.Context.MODE_PRIVATE) }
     var showPermissionRationale by remember { mutableStateOf(false) }
+    var dontAskAgainBackupNotifs by remember { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -114,7 +116,8 @@ fun ManageStorageScreen(
     }
     
     val handleBackupClick = {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val dontAskAgain = prefs.getBoolean("dont_ask_backup_notifications", false)
+        if (com.example.BuildConfig.FLAVOR != "foss" && !dontAskAgain && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val status = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
             if (status != PackageManager.PERMISSION_GRANTED) {
                 showPermissionRationale = true
@@ -803,14 +806,42 @@ fun ManageStorageScreen(
     
     if (showPermissionRationale) {
         AlertDialog(
-            onDismissRequest = { 
-                showPermissionRationale = false 
-                viewModel.backupSelectedItems() 
+            onDismissRequest = {
+                if (dontAskAgainBackupNotifs) {
+                    prefs.edit().putBoolean("dont_ask_backup_notifications", true).apply()
+                }
+                showPermissionRationale = false
+                viewModel.backupSelectedItems()
             },
             title = { Text("Backup Notifications") },
-            text = { Text("Allow Cobalt to send notifications so you can see live progress of your background backups and know when they complete.") },
+            text = {
+                Column {
+                    Text("Allow Cobalt to send notifications so you can see live progress of your background backups and know when they complete.")
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { dontAskAgainBackupNotifs = !dontAskAgainBackupNotifs }
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Checkbox(
+                            checked = dontAskAgainBackupNotifs,
+                            onCheckedChange = { dontAskAgainBackupNotifs = it }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Don't ask again",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
+                    if (dontAskAgainBackupNotifs) {
+                        prefs.edit().putBoolean("dont_ask_backup_notifications", true).apply()
+                    }
                     showPermissionRationale = false
                     launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }) {
@@ -819,6 +850,9 @@ fun ManageStorageScreen(
             },
             dismissButton = {
                 TextButton(onClick = {
+                    if (dontAskAgainBackupNotifs) {
+                        prefs.edit().putBoolean("dont_ask_backup_notifications", true).apply()
+                    }
                     showPermissionRationale = false
                     viewModel.backupSelectedItems()
                 }) {

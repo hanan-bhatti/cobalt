@@ -987,7 +987,8 @@ fun ProfileMainContent(
                                             context,
                                             Manifest.permission.POST_NOTIFICATIONS
                                         )
-                                        if (permissionCheck == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                        val dontAskAgain = prefs.getBoolean("dont_ask_backup_notifications", false)
+                                        if (permissionCheck == android.content.pm.PackageManager.PERMISSION_GRANTED || dontAskAgain) {
                                             viewModel.startCloudMediaDownload(context)
                                         } else {
                                             permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -1078,7 +1079,8 @@ fun ProfileMainContent(
                                         context,
                                         Manifest.permission.POST_NOTIFICATIONS
                                     )
-                                    if (permissionCheck == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                    val dontAskAgain = prefs.getBoolean("dont_ask_backup_notifications", false)
+                                    if (permissionCheck == android.content.pm.PackageManager.PERMISSION_GRANTED || dontAskAgain) {
                                         viewModel.startCloudMediaDownload(context, resumeInterrupted = true)
                                     } else {
                                         permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -1148,7 +1150,8 @@ fun ProfileMainContent(
                                         context,
                                         Manifest.permission.POST_NOTIFICATIONS
                                     )
-                                    if (permissionCheck == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                    val dontAskAgain = prefs.getBoolean("dont_ask_backup_notifications", false)
+                                    if (permissionCheck == android.content.pm.PackageManager.PERMISSION_GRANTED || dontAskAgain) {
                                         viewModel.startCloudMediaDownload(context, retryFailed = true)
                                     } else {
                                         permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
