@@ -324,8 +324,8 @@ fun GestureRadialFab(
                         // CONSUME the down event so parent/child modifiers don't steal it
                         down.consume()
                         
-                        onToggleExpand(true)
-                        var currentDrag = Offset.Zero
+                        val wasExpandedAtDown = isExpanded
+                        var wasDragged = false
                         var localHighlighted = -1
                         
                         while (true) {
@@ -339,26 +339,28 @@ fun GestureRadialFab(
                             
                             if (change.pressed) {
                                 val posChange = change.position - down.position
-                                currentDrag = posChange
-                                
-                                val dx = currentDrag.x
-                                val dy = currentDrag.y 
-                                var adjustedAngle = Math.toDegrees(kotlin.math.atan2(dy.toDouble(), dx.toDouble()))
-                                if (adjustedAngle < 0) adjustedAngle += 360.0
-                                
-                                var minDiff = Double.MAX_VALUE
-                                var closestIndex = -1
-                                for (i in items.indices) {
-                                    val itemAngle = startAngle + step * i
-                                    val diff = kotlin.math.abs(itemAngle - adjustedAngle)
-                                    if (diff < minDiff) {
-                                        minDiff = diff
-                                        closestIndex = i
-                                    }
-                                }
-                                
+                                val dx = posChange.x
+                                val dy = posChange.y 
                                 val distance = kotlin.math.sqrt(dx*dx + dy*dy)
-                                if (distance > 30.dp.toPx()) {
+
+                                if (distance > 24.dp.toPx()) {
+                                    wasDragged = true
+                                    if (!isExpanded) {
+                                        onToggleExpand(true)
+                                    }
+                                    var adjustedAngle = Math.toDegrees(kotlin.math.atan2(dy.toDouble(), dx.toDouble()))
+                                    if (adjustedAngle < 0) adjustedAngle += 360.0
+                                    
+                                    var minDiff = Double.MAX_VALUE
+                                    var closestIndex = -1
+                                    for (i in items.indices) {
+                                        val itemAngle = startAngle + step * i
+                                        val diff = kotlin.math.abs(itemAngle - adjustedAngle)
+                                        if (diff < minDiff) {
+                                            minDiff = diff
+                                            closestIndex = i
+                                        }
+                                    }
                                     localHighlighted = closestIndex
                                     highlightedIndex = closestIndex
                                 } else {
@@ -367,10 +369,15 @@ fun GestureRadialFab(
                                 }
                             } else {
                                 // Pointer lifted
-                                if (localHighlighted in items.indices) {
-                                    items[localHighlighted].action()
+                                if (wasDragged) {
+                                    if (localHighlighted in items.indices) {
+                                        items[localHighlighted].action()
+                                    }
+                                    onToggleExpand(false)
+                                } else {
+                                    // Plain tap: toggle expansion and keep open
+                                    onToggleExpand(!wasExpandedAtDown)
                                 }
-                                onToggleExpand(false)
                                 highlightedIndex = -1
                                 break
                             }

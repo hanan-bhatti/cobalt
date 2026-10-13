@@ -62,7 +62,6 @@ import android.content.Intent
 import android.os.Build
 import android.content.Context
 import com.example.service.DataDownloadManager
-import com.example.service.DataDownloadService
 import com.example.ui.theme.SuccessGreen
 import com.example.ui.theme.toThemeColor
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -124,12 +123,7 @@ fun ProfileMainContent(
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        val serviceIntent = Intent(context, DataDownloadService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            context.startForegroundService(serviceIntent)
-        } else {
-            context.startService(serviceIntent)
-        }
+        viewModel.startCloudMediaDownload(context)
     }
 
     val hasCloudMedia = remember(allItems) {
@@ -994,18 +988,12 @@ fun ProfileMainContent(
                                             Manifest.permission.POST_NOTIFICATIONS
                                         )
                                         if (permissionCheck == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                                            val serviceIntent = Intent(context, DataDownloadService::class.java)
-                                            context.startForegroundService(serviceIntent)
+                                            viewModel.startCloudMediaDownload(context)
                                         } else {
                                             permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                                         }
                                     } else {
-                                        val serviceIntent = Intent(context, DataDownloadService::class.java)
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                            context.startForegroundService(serviceIntent)
-                                        } else {
-                                            context.startService(serviceIntent)
-                                        }
+                                        viewModel.startCloudMediaDownload(context)
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth(),
@@ -1091,22 +1079,12 @@ fun ProfileMainContent(
                                         Manifest.permission.POST_NOTIFICATIONS
                                     )
                                     if (permissionCheck == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                                        val serviceIntent = Intent(context, DataDownloadService::class.java).apply {
-                                            putExtra("resume_interrupted", true)
-                                        }
-                                        context.startForegroundService(serviceIntent)
+                                        viewModel.startCloudMediaDownload(context, resumeInterrupted = true)
                                     } else {
                                         permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                                     }
                                 } else {
-                                    val serviceIntent = Intent(context, DataDownloadService::class.java).apply {
-                                        putExtra("resume_interrupted", true)
-                                    }
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                        context.startForegroundService(serviceIntent)
-                                    } else {
-                                        context.startService(serviceIntent)
-                                    }
+                                    viewModel.startCloudMediaDownload(context, resumeInterrupted = true)
                                 }
                             },
                             modifier = Modifier.weight(1f)
@@ -1171,22 +1149,12 @@ fun ProfileMainContent(
                                         Manifest.permission.POST_NOTIFICATIONS
                                     )
                                     if (permissionCheck == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                                        val serviceIntent = Intent(context, DataDownloadService::class.java).apply {
-                                            putExtra("retry_failed", true)
-                                        }
-                                        context.startForegroundService(serviceIntent)
+                                        viewModel.startCloudMediaDownload(context, retryFailed = true)
                                     } else {
                                         permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                                     }
                                 } else {
-                                    val serviceIntent = Intent(context, DataDownloadService::class.java).apply {
-                                        putExtra("retry_failed", true)
-                                    }
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                        context.startForegroundService(serviceIntent)
-                                    } else {
-                                        context.startService(serviceIntent)
-                                    }
+                                    viewModel.startCloudMediaDownload(context, retryFailed = true)
                                 }
                             },
                             modifier = Modifier.weight(1f)

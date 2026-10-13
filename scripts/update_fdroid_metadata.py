@@ -56,10 +56,12 @@ def sync_fdroid_yml(version_code, version_name):
 
     build_pattern = f"versionName: {version_name}"
     if build_pattern not in content:
-        new_build = f"  - versionName: {version_name}\n    versionCode: {version_code}\n    commit: {commit_hash}\n    subdir: app\n    gradle:\n      - assembleFossRelease"
+        new_build = f"  - versionName: {version_name}\n    versionCode: {version_code}\n    commit: {commit_hash}\n    subdir: app\n    gradle:\n      - foss\n    prebuild: sed -i -e '/playImplementation/d' build.gradle.kts"
         
-        # Insert before AutoUpdateMode or at the end of Builds:
-        if 'AutoUpdateMode:' in content:
+        # Insert before AllowedAPKSigningKeys:
+        if 'AllowedAPKSigningKeys:' in content:
+            content = content.replace('AllowedAPKSigningKeys:', f"{new_build}\n\nAllowedAPKSigningKeys:")
+        elif 'AutoUpdateMode:' in content:
             content = content.replace('AutoUpdateMode:', f"{new_build}\n\nAutoUpdateMode:")
         else:
             content += f"\n{new_build}\n"

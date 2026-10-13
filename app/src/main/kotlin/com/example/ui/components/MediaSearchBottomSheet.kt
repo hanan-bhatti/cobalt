@@ -138,9 +138,15 @@ fun MediaSearchBottomSheet(viewModel: CobaltViewModel) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (searchQuery.isBlank()) "Type a movie, TV show, or anime name to search" else "No results found",
+                        text = if (searchQuery.isBlank()) {
+                            "Type a movie, TV show, or anime name to search"
+                        } else {
+                            "No results found.\nIf searching for Movies or TV shows, configure a free TMDb key in Settings."
+                        },
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 24.dp)
                     )
                 }
             } else {

@@ -117,7 +117,7 @@ fun HomeScreen(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
-    val items by viewModel.filteredItems.collectAsState()
+    val items by viewModel.homeItems.collectAsState()
     val isInitialLoading by viewModel.isInitialLoading.collectAsState()
     val isSyncing by viewModel.isSyncing.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()

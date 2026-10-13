@@ -1,0 +1,6 @@
+- Added opt-in toggle for GitHub update checks (default off in FOSS).
+- Fixed radial FAB menu to support direct tap selection.
+- Decoupled Home screen feed from Search tab query.
+- Completely removed sync/download background services from FOSS.
+- Added custom User-Agent and guidance for anime search.
+- Removed recurring backup notification dialog on note save.

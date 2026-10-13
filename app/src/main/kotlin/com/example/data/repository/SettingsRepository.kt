@@ -97,6 +97,9 @@ class SettingsRepository(private val context: Context) {
     private val _quickCaptureAction = MutableStateFlow(prefs.getString(KEY_QUICK_CAPTURE_ACTION, "TEXT") ?: "TEXT")
     val quickCaptureAction: StateFlow<String> = _quickCaptureAction.asStateFlow()
 
+    private val _isAutoUpdateCheckEnabled = MutableStateFlow(prefs.getBoolean(KEY_AUTO_UPDATE_CHECK, false))
+    val isAutoUpdateCheckEnabled: StateFlow<Boolean> = _isAutoUpdateCheckEnabled.asStateFlow()
+
     private val _edgePanelAnimPreset = MutableStateFlow(prefs.getString(KEY_EDGE_ANIM_PRESET, "Smooth") ?: "Smooth")
     val edgePanelAnimPreset: StateFlow<String> = _edgePanelAnimPreset.asStateFlow()
 
@@ -299,6 +302,11 @@ class SettingsRepository(private val context: Context) {
         com.example.widget.WidgetUpdater.update(context)
     }
 
+    fun setAutoUpdateCheckEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTO_UPDATE_CHECK, enabled).apply()
+        _isAutoUpdateCheckEnabled.value = enabled
+    }
+
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
             KEY_GEMINI_API_KEY -> _geminiApiKey.value = prefs.getString(KEY_GEMINI_API_KEY, "") ?: ""
@@ -324,6 +332,7 @@ class SettingsRepository(private val context: Context) {
             KEY_BLUR_RADIUS -> _blurRadius.value = prefs.getInt(KEY_BLUR_RADIUS, 25)
             KEY_BLUR_OPACITY -> _blurOpacity.value = prefs.getFloat(KEY_BLUR_OPACITY, 0.30f)
             KEY_DYNAMIC_COLOR -> _dynamicColor.value = prefs.getBoolean(KEY_DYNAMIC_COLOR, true)
+            KEY_AUTO_UPDATE_CHECK -> _isAutoUpdateCheckEnabled.value = prefs.getBoolean(KEY_AUTO_UPDATE_CHECK, false)
             KEY_WIDGET_THEME -> _widgetTheme.value = prefs.getString(KEY_WIDGET_THEME, "System") ?: "System"
             KEY_WIDGET_OPACITY -> _widgetOpacity.value = prefs.getFloat(KEY_WIDGET_OPACITY, 0.85f)
             KEY_WIDGET_SHOW_HEADER -> _widgetShowHeader.value = prefs.getBoolean(KEY_WIDGET_SHOW_HEADER, true)
@@ -359,6 +368,7 @@ class SettingsRepository(private val context: Context) {
         private const val KEY_BLUR_RADIUS = "blur_radius"
         private const val KEY_BLUR_OPACITY = "blur_opacity"
         private const val KEY_DYNAMIC_COLOR = "dynamic_color"
+        private const val KEY_AUTO_UPDATE_CHECK = "auto_update_check_enabled"
         private const val KEY_WIDGET_THEME = "widget_theme"
         private const val KEY_WIDGET_OPACITY = "widget_opacity"
         private const val KEY_WIDGET_SHOW_HEADER = "widget_show_header"
