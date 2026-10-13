@@ -19,17 +19,9 @@ Repo: https://github.com/hanan-bhatti/cobalt.git
 Binaries: https://github.com/hanan-bhatti/cobalt/releases/download/v%v/cobalt-foss-v%v.apk
 
 Builds:
-  - versionName: 2.1.1
-    versionCode: 14
-    commit: f84079ea892062bd7a039d8e3f1d7fa9f7d28c27
-    subdir: app
-    gradle:
-      - foss
-    prebuild: sed -i -e '/playImplementation/d' build.gradle.kts
-
   - versionName: 2.1.2
     versionCode: 15
-    commit: v2.1.2
+    commit: 888cba7e8803ec4667935b17049eea1df392d966
     subdir: app
     gradle:
       - foss
