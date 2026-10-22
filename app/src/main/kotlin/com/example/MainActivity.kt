@@ -113,10 +113,10 @@ class MainActivity : ComponentActivity() {
         // Force widget update on app start to overcome OEM background restrictions
         com.example.widget.WidgetUpdater.update(applicationContext)
 
-        // Auto-start Floating OCR service if enabled and allowed
+        // Auto-start Cobalt SideDock service if enabled and allowed
         val settingsRepo = com.example.data.repository.SettingsRepository(applicationContext)
         if (settingsRepo.isFloatingOcrEnabled.value && com.example.utils.PermissionUtils.hasOverlayPermission(applicationContext)) {
-            val serviceIntent = Intent(applicationContext, CobaltOcrOverlayService::class.java)
+            val serviceIntent = Intent(applicationContext, CobaltSideDockService::class.java)
             try {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                     startForegroundService(serviceIntent)
@@ -124,7 +124,7 @@ class MainActivity : ComponentActivity() {
                     startService(serviceIntent)
                 }
             } catch (e: Exception) {
-                android.util.Log.e("Cobalt", "Failed to start OCR overlay service: ${e.message}", e)
+                android.util.Log.e("Cobalt", "Failed to start Cobalt SideDock service: ${e.message}", e)
             }
         }
 
@@ -186,8 +186,10 @@ class MainActivity : ComponentActivity() {
                         ),
                         onDismissRequest = { viewModel.dismissUpdateBanner() },
                         onUpdateClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(availableUpdate!!.releaseUrl))
-                            startActivity(intent)
+                            com.example.util.CobaltCustomTabsLauncher.launch(
+                                context = this@MainActivity,
+                                url = availableUpdate!!.releaseUrl
+                            )
                         },
                         onViewChangelogClick = {
                             viewModel.dismissUpdateBanner()

@@ -19,6 +19,8 @@
 package com.example.ui.screens
 
 import android.content.Intent
+import androidx.compose.foundation.isSystemInDarkTheme
+import com.example.util.CobaltCustomTabsLauncher
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -210,11 +212,16 @@ fun ArchiveItemCard(
 
                     if (item.type == SavedItemType.LINK) {
                         val context = LocalContext.current
+                        val isDark = isSystemInDarkTheme()
                         IconButton(
                             onClick = {
-                                val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(item.content))
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
+                                CobaltCustomTabsLauncher.launch(
+                                    context = context,
+                                    url = item.content,
+                                    isDarkTheme = isDark,
+                                    itemId = item.id,
+                                    itemTitle = item.title
+                                )
                             },
                             modifier = Modifier.size(24.dp)
                         ) {
@@ -463,6 +470,31 @@ fun ArchiveItemCard(
             expanded = showContextMenu,
             onDismissRequest = { showContextMenu = false }
         ) {
+            if (item.type == SavedItemType.LINK) {
+                val rowContext = LocalContext.current
+                val isDark = isSystemInDarkTheme()
+                DropdownMenuItem(
+                    text = { Text("Open Link") },
+                    onClick = {
+                        showContextMenu = false
+                        CobaltCustomTabsLauncher.launch(
+                            context = rowContext,
+                            url = item.content,
+                            isDarkTheme = isDark,
+                            itemId = item.id,
+                            itemTitle = item.title
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_link_external),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                )
+            }
             DropdownMenuItem(
                 text = { Text("Move to Folder") },
                 onClick = { showContextMenu = false; onManageFolders() },
@@ -712,6 +744,31 @@ fun ArchiveItemRow(
             expanded = showContextMenu,
             onDismissRequest = { showContextMenu = false }
         ) {
+            if (item.type == SavedItemType.LINK) {
+                val rowContext = LocalContext.current
+                val isDark = isSystemInDarkTheme()
+                DropdownMenuItem(
+                    text = { Text("Open Link") },
+                    onClick = {
+                        showContextMenu = false
+                        CobaltCustomTabsLauncher.launch(
+                            context = rowContext,
+                            url = item.content,
+                            isDarkTheme = isDark,
+                            itemId = item.id,
+                            itemTitle = item.title
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_link_external),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                )
+            }
             DropdownMenuItem(
                 text = { Text("Move to Folder") },
                 onClick = { showContextMenu = false; onManageFolders() },

@@ -996,6 +996,7 @@ fun FolderBrowseItemRow(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val isDark = isSystemInDarkTheme()
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     var showContextMenu by remember { mutableStateOf(false) }
     var showMoveDialog by remember { mutableStateOf(false) }
@@ -1133,12 +1134,13 @@ fun FolderBrowseItemRow(
                             text = { Text("Open in Browser", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
                             onClick = {
                                 showContextMenu = false
-                                try {
-                                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(item.content))
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    android.widget.Toast.makeText(context, "Cannot open browser", android.widget.Toast.LENGTH_SHORT).show()
-                                }
+                                com.example.util.CobaltCustomTabsLauncher.launch(
+                                    context = context,
+                                    url = item.content,
+                                    isDarkTheme = isDark,
+                                    itemId = item.id,
+                                    itemTitle = item.title
+                                )
                             },
                             colors = MenuDefaults.itemColors(
                                 textColor = MaterialTheme.colorScheme.onSurface,

@@ -98,6 +98,10 @@
                 android:resource="@xml/quick_capture_widget_info" />
         </receiver>
 
+        <receiver
+            android:name=".util.CobaltCustomTabsActionReceiver"
+            android:exported="false" />
+
         <activity
             android:name=".OcrCaptureActivity"
             android:theme="@style/Theme.MyApplication.Transparent"
@@ -107,7 +111,7 @@
             android:excludeFromRecents="true" />
 
         <service
-            android:name=".CobaltOcrOverlayService"
+            android:name=".CobaltSideDockService"
             android:foregroundServiceType="specialUse"
             android:stopWithTask="false"
             tools:targetApi="q"

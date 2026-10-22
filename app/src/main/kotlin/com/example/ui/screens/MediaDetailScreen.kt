@@ -799,12 +799,11 @@ fun YouTubeTrailerPlayer(
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier
                 .clickable {
-                    try {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(trailerUrl))
-                        context.startActivity(intent)
-                    } catch (e: Exception) {
-                        // ignore
-                    }
+                    com.example.util.CobaltCustomTabsLauncher.launch(
+                        context = context,
+                        url = trailerUrl,
+                        isDarkTheme = true
+                    )
                 }
                 .padding(vertical = 4.dp)
         )

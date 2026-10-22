@@ -214,12 +214,10 @@ fun MovieApiKeyScreen(
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
                             .clickable {
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.themoviedb.org/settings/api"))
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    // Ignore browser errors
-                                }
+                                com.example.util.CobaltCustomTabsLauncher.launch(
+                                    context = context,
+                                    url = "https://www.themoviedb.org/settings/api"
+                                )
                             }
                             .padding(4.dp)
                     )
