@@ -72,7 +72,7 @@ object MediaApiClient {
     private val okHttpClient = okhttp3.OkHttpClient.Builder()
         .addInterceptor { chain ->
             val request = chain.request().newBuilder()
-                .header("User-Agent", "Cobalt-AndroidApp/2.1.2 (https://github.com/hanan-bhatti/cobalt)")
+                .header("User-Agent", "Cobalt-AndroidApp/${com.example.BuildConfig.VERSION_NAME} (https://github.com/hanan-bhatti/cobalt)")
                 .header("Accept", "application/json")
                 .build()
             chain.proceed(request)

@@ -124,6 +124,7 @@ tasks.matching {
 dependencies {
   implementation(libs.jsoup)
   implementation(libs.commonmark)
+  implementation(libs.androidx.browser)
   implementation(platform(libs.androidx.compose.bom))
   "playImplementation"(platform(libs.firebase.bom))
   "playImplementation"(libs.firebase.ai)

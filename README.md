@@ -1,136 +1,272 @@
-# Cobalt
+<div align="center">
 
-A universal capture and personal knowledge archive with minimalist design and Gemini AI OCR region marking.
+# ⚡ Cobalt
+
+### Universal Knowledge Archive & Instant Screen Capture for Android
 
 <p align="center">
-  <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Android/android3.svg" alt="Android Platform" height="30">
-  <img src="https://img.shields.io/badge/Release-v1.0.0--rc01-00796B.svg" alt="Version 1.0.0-rc01" height="30">
-  <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Kotlin/kotlin1.svg" alt="Kotlin" height="30">
-  <img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg" alt="License: AGPL v3" height="30">
+  <a href="https://github.com/hanan-bhatti/cobalt/releases/latest">
+    <img src="https://img.shields.io/github/v/release/hanan-bhatti/cobalt?style=for-the-badge&logo=github&color=00796B&label=Release" alt="Latest GitHub Release" height="28" />
+  </a>
+  <a href="https://f-droid.org/en/packages/com.hanan_bhatti.cobalt/">
+    <img src="https://img.shields.io/f-droid/v/com.hanan_bhatti.cobalt?style=for-the-badge&logo=f-droid&logoColor=white&color=1976D2" alt="F-Droid Package" height="28" />
+  </a>
+  <a href="https://github.com/hanan-bhatti/cobalt">
+    <img src="https://img.shields.io/badge/Platform-Android%207.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Platform: Android 7.0+" height="28" />
+  </a>
+  <a href="https://github.com/hanan-bhatti/cobalt">
+    <img src="https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin 2.1.0" height="28" />
+  </a>
+  <a href="https://github.com/hanan-bhatti/cobalt">
+    <img src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose" height="28" />
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-AGPL%20v3.0-0288D1?style=for-the-badge&logo=gnu&logoColor=white" alt="License: AGPL v3.0" height="28" />
+  </a>
+  <a href="https://github.com/hanan-bhatti/cobalt/stargazers">
+    <img src="https://img.shields.io/github/stars/hanan-bhatti/cobalt?style=for-the-badge&logo=github&color=FFB300" alt="GitHub Stars" height="28" />
+  </a>
 </p>
 
+<p align="center">
+  <b>A minimalist, offline-first personal knowledge base and universal capture suite for Android.</b><br/>
+  Featuring the butter-smooth <b>Cobalt SideDock</b>, on-device Gemini AI OCR region marking, in-app Chrome Custom Tabs, and zero-telemetry local privacy.
+</p>
+
+<p align="center">
+  <a href="https://f-droid.org/en/packages/com.hanan_bhatti.cobalt/">
+    <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="60" />
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://github.com/hanan-bhatti/cobalt/releases/latest">
+    <img src="https://raw.githubusercontent.com/steverichey/google-play-badge-svg/master/img/en_get.svg" alt="Download APK" height="60" />
+  </a>
+</p>
+
+</div>
+
 ---
 
-## Overview
+## 📖 Table of Contents
 
-**Cobalt** (package: `com.hanan_bhatti.cobalt`) is a minimalist, offline-first personal knowledge archive and universal capture app for Android. Designed to eliminate the friction of digital hoarding and info fragmentation, Cobalt acts as your central repository for ideas, documents, audio clips, snapshots, and shared web content. 
-
-The app features an automated, on-device OCR system driven by Google's Gemini API, allowing you to highlight specific regions of your screen and instantly convert visual information into searchable, structured text notes.
+- [Overview](#-overview)
+- [FOSS vs. Play Flavors](#-foss-vs-play-flavors)
+- [Screenshots](#-screenshots)
+- [Key Features](#-key-features)
+  - [⚡ Cobalt SideDock](#-cobalt-sidedock-100-jetpack-compose)
+  - [🔍 Gemini AI OCR & Region Marking](#-gemini-ai-ocr--region-marking)
+  - [🌐 Chrome Custom Tabs](#-chrome-custom-tabs-integration)
+  - [🎙️ AI Voice Memos](#️-ai-voice-memos--markdown-transcription)
+  - [🌍 Multi-Language & RTL](#-automatic-rtl--multi-language-support)
+  - [🎨 Material 3 Expressive UI](#-material-3-expressive-design)
+- [Tech Stack](#-tech-stack)
+- [Permissions](#-permissions)
+- [Building from Source](#-building-from-source)
+- [Star History](#-star-history)
+- [License](#-license)
 
 ---
 
-## Screenshots
+## 🌟 Overview
 
-<p align="center"><img src="assets/screenshots/dashboard_home.png" width="30%" alt="Dashboard Screen"/> <img src="assets/screenshots/floating_edge_panel.png" width="30%" alt="Floating Edge Panel Widget"/> <img src="assets/screenshots/voice_memo_recording.png" width="30%" alt="Voice Memo Player"/></p>
+**Cobalt** (`com.hanan_bhatti.cobalt`) is designed to eliminate the friction of digital hoarding and information fragmentation. It acts as your single, centralized vault for ideas, articles, documents, audio clips, snapshots, and shared web content.
+
+With Cobalt, you never need to leave your current task to save a thought or extract text. A gentle swipe from the screen edge summons the **Cobalt SideDock**, letting you snap notes, launch OCR bounding-box recognition over other apps, bookmark links, or search your library with zero frame drops.
+
+---
+
+## 📦 FOSS vs. Play Flavors
+
+Cobalt is intentionally engineered into **two distinct distribution flavors** to give you total control over privacy, cloud connectivity, and Google dependencies:
+
+<div align="center">
+
+| Feature | 🌿 FOSS Edition (F-Droid) | ⚡ Play Edition (Google Play) |
+|---|---|---|
+| **Distribution** | [F-Droid Package](https://f-droid.org/en/packages/com.hanan_bhatti.cobalt/) & [GitHub Releases](https://github.com/hanan-bhatti/cobalt/releases/latest) | Google Play Store & [GitHub Releases](https://github.com/hanan-bhatti/cobalt/releases/latest) |
+| **Google Dependencies** | **0% — Completely De-Googled** | Google Play Services enabled |
+| **Telemetry & Trackers** | **Zero / None** (No analytics, pure privacy) | Firebase Analytics (Opt-in crash monitoring) |
+| **Primary Database** | Encrypted Local SQLite (Room Database) | Encrypted Local SQLite (Room Database) |
+| **Cloud Synchronization** | Offline-First (Manual JSON Backup & Restore) | Automated Cloud Firestore & Firebase Storage Sync |
+| **Authentication** | None needed (Immediate local access) | Google Sign-In & Passwordless Email Link |
+| **Gemini AI Engine** | Direct user Gemini API Key via Retrofit | Direct Gemini API Key & Firebase AI services |
+| **Background Footprint** | Extremely low battery and memory usage | Cloud sync background services |
+| **License** | 100% Free & Open Source (AGPL v3.0) | 100% Free & Open Source (AGPL v3.0) |
+
+</div>
 
 > [!NOTE]
-> For a full visual walkthrough of all 14 application screens, settings, and custom configurations, please see the [Screenshots Directory Guide](assets/screenshots/README.md).
-
-
----
-
-## Key Features
-
-### 🌍 Multi-Language & RTL Text Support
-*   **Automatic Right-to-Left (RTL) Detection:** Automatically detects scripts like Urdu, Arabic, and Hebrew and adjusts text layout, alignment, and reading direction seamlessly across Markdown renderers, Rich Text editors, and note detail views.
-
-### 🏷️ Dynamic Build Channels & Release Notes Hub
-*   **Color-Coded Build Badges:** Dynamic channel tagging (`RC`, `BETA`, `NIGHTLY`, `ALPHA`, `STABLE`) with curated Material 3 Expressive color palettes.
-*   **In-App Release Notes & Updates Page:** Tap the version badge or access Settings to check for updates in real time with animated `CircularWavyProgressIndicator` feedback and read full version changelogs.
-
-### 📥 Universal & Rapid Capture
-*   **System Share Sheet Interceptor:** Ingest plain text, markdown lists, images, video clips, and web URLs directly from any third-party app with Android's native share handler.
-*   **Deep Linking Support:** Access specific notes and content folders directly via custom `cobalt://item/` deep links.
-*   **Quick Capture FAB:** A dynamic expanding Floating Action Button allows manual note creation, rapid link bookmarking, and instant media attachments.
-*   **Android App Shortcuts:** Launch specific capture workflows directly from your device launcher with dedicated shortcuts (Smart Capture, Create Quick Note).
-
-### 🔍 Floating OCR & Region Capture HUD
-*   **Persistent Edge Panel:** A custom-drawn floating handle sits on the edge of your screen, letting you swipe or tap to invoke the capture suite over any active application.
-*   **Media Projection Snapping:** Capture background screenshots cleanly using Android's `MediaProjection` API (handles system dialog dismissal delays and orientation changes).
-*   **OCR Region Marking:** Tap and drag a bounding box on the captured screen to send specific regions directly to the Gemini API for text extraction.
-*   **Fuzzy Link Detection:** Automatically detects shared links inside screenshots and provides a quick review panel to bookmark URLs.
-
-### 🎙️ AI Voice Memos & Formatting
-*   **Live Waveform Capture:** Record voice notes with visual status monitoring and local audio cache storage.
-*   **Gemini Audio Transcription:** Transcribe complex audio recordings directly into structured text using Gemini AI models.
-*   **Automatic Markdown Formatting:** Auto-format transcripts into polished markdown structures with dynamic heading/title extraction.
-
-### 🎨 Material 3 Expressive UI & Unified Components
-*   **Unified Expressive Dialogs:** Standardized `ExpressiveAlertDialog` and `ExpressiveConfirmationDialog` with `28.dp` corner radii and surface container colors.
-*   **Wavy Progress Indicators:** Unified `CircularWavyProgressIndicator` loading spinners across Home, Auth, Capture, and Settings screens.
-*   **Sticker-Themed Folders:** Group your files into custom folders styled with curated Material Design sticker colors.
-*   **Drag-to-Reorder Gestures:** Sort and prioritize captured memory cards and custom folders on the fly using intuitive drag-and-drop lists.
-*   **Media Categories:** Automated system categorization organizes items by resource type (Links, Images, Videos, Code, Text, Audio).
-
-### 🔒 Privacy & Cloud Synchronization
-*   **Offline-First Cache:** Uses a secure, local Room database as the primary source of truth, ensuring instant launch and data accessibility without network connection.
-*   **Firebase Cloud Backups:** Seamlessly backup metadata and media files (images, audio) to Firebase Firestore and Firebase Storage.
-*   **Passwordless Email & Google Sign-In:** Authenticate securely using Firebase Email Link Authentication or Google Sign-In with Android's Credential Manager.
-*   **Storage Diagnostics:** Monitor storage metrics, compress cached media files, and export/import database backups directly from Settings.
+> **Which flavor should I choose?**
+> * **Choose FOSS** if you value strict privacy, use a de-Googled ROM (GrapheneOS, CalyxOS, LineageOS), or prefer installing updates through [F-Droid](https://f-droid.org/en/packages/com.hanan_bhatti.cobalt/).
+> * **Choose Play** if you want seamless automatic cloud backups across multiple Android devices and convenient Google account synchronization.
 
 ---
 
-## Tech Stack
+## 📱 Screenshots
 
-*   **Framework:** Jetpack Compose (100% Declarative UI)
-*   **Architecture:** MVVM (Model-View-ViewModel) with Kotlin Coroutines StateFlow
-*   **Database:** SQLite via Android Room Database
-*   **Cloud Services:** Firebase Auth, Firebase Firestore, Firebase Storage, and Firebase App Check
-*   **AI Integration:** Gemini API via Retrofit and Google client services (`firebase-ai`)
-*   **Media Engine:** AndroidX Media3 (ExoPlayer) for high-performance audio playback
-*   **Widgets:** Jetpack Glance with Material 3 styling
-*   **Visual Style:** Material Design 3, dynamic typography scaling, custom "Superr" theme color palettes, and glassmorphism blur effects using **Haze**.
+<p align="center">
+  <img src="assets/screenshots/dashboard_home.png" width="31%" alt="Dashboard Screen"/>
+  &nbsp;
+  <img src="assets/screenshots/floating_edge_panel.png" width="31%" alt="Cobalt SideDock Panel"/>
+  &nbsp;
+  <img src="assets/screenshots/voice_memo_recording.png" width="31%" alt="Voice Memo Player"/>
+</p>
+
+<p align="center">
+  <img src="assets/screenshots/ocr_target_screenshot.png" width="31%" alt="OCR Target Selection"/>
+  &nbsp;
+  <img src="assets/screenshots/ocr_extracted_links.png" width="31%" alt="OCR Extracted Links"/>
+  &nbsp;
+  <img src="assets/screenshots/folders_screen.png" width="31%" alt="Folders and Categories"/>
+</p>
+
+> [!TIP]
+> For a full visual walkthrough of all 14 screens, theme variations, and workflows, check out the [Screenshots Directory Guide](assets/screenshots/README.md).
 
 ---
 
-## Permissions
+## 🚀 Key Features
 
-| Permission | Type | Why it's needed |
+### ⚡ Cobalt SideDock (100% Jetpack Compose)
+* **Decoupled Two-Window System**: The idle handle lives at the screen edge occupying a razor-thin window (`thickness + 16dp`), consuming **0% CPU and zero rendering cycles** when resting.
+* **Fluid 60fps / 90fps / 120fps Animations**: When triggered, the dock animates using GPU RenderThread transforms (`Modifier.graphicsLayer`). Zero window layout resizing Binder transactions occur during animation, eliminating all stutter and dropped frames even on budget chipsets.
+* **Inline Quick Note Scratchpad**: Write down thoughts instantly without opening the app; notes are saved directly to Room with automatic home widget updates.
+* **Live Recent Items & Tool Shortcuts**: One-tap access to your 4 latest items, OCR screen capture, link bookmarking, and instant media search.
+* **Smart Gesture Controls**: Swipe inward to expand, swipe toward the edge to dismiss, or long-press and drag to reposition the handle vertically along the display.
+
+### 🔍 Gemini AI OCR & Region Marking
+* **MediaProjection Screen Snapping**: Transparent background snapshotting cleanly captures screen contents without capturing the capture UI.
+* **Interactive Bounding Box**: Drag a marquee box over any region to send cropped visuals directly to the Gemini AI API for instantaneous text extraction.
+* **Smart Link & Content Parsing**: Automatically parses URLs and code snippets within extracted screenshots, allowing 1-tap folder categorization.
+
+### 🌐 Chrome Custom Tabs Integration
+* **Seamless In-App Web Browsing**: Web links open directly inside high-performance, themed Chrome Custom Tabs, preserving your existing browser login sessions and cookies.
+* **Bottom Action Bar**: Includes a 1-tap system share action and clipboard fallback without leaving the current reading view.
+
+### 🎙️ AI Voice Memos & Markdown Transcription
+* **Live Dynamic Waveform Visualizer**: Monitor vocal input with real-time audio amplitudes and local cache buffering.
+* **Gemini Audio Transcription**: High-accuracy speech-to-text powered by Gemini AI models.
+* **Automatic Markdown Polishing**: Automatically structures raw audio notes with contextual titles, bullet lists, and summary paragraphs.
+
+### 🌍 Automatic RTL & Multi-Language Support
+* **Native Bidirectional Layouts**: Intelligently detects Right-to-Left (RTL) scripts (Urdu, Arabic, Hebrew) and dynamically flips reading direction, margins, and typography in Markdown renders and edit fields.
+
+### 🎨 Material 3 Expressive Design
+* **Glassmorphic Haze Effects**: Subtle background blurs and frosted glass backdrops using modern hardware-accelerated Haze shaders.
+* **Dynamic Material You Accents**: Automatically harmonizes with your system wallpaper palette on Android 12+.
+* **Sticker-Themed Folders & Drag-to-Reorder**: Reorder memory cards and organize categories with custom curated color pills.
+
+---
+
+## 🛠️ Tech Stack
+
+Cobalt is built with modern, battle-tested Android architecture:
+
+```mermaid
+graph TD
+    A["Jetpack Compose UI (100% Declarative)"] --> B["MVVM ViewModel (StateFlow)"]
+    B --> C["CobaltRepository (Single Source of Truth)"]
+    C --> D[("SQLite / Room Database (Local Cache)")]
+    C --> E["Gemini AI Client (Retrofit / REST)"]
+    C -. Play Flavor .-> F["Firebase Services (Auth, Firestore, Storage)"]
+    A --> G["Cobalt SideDock (WindowManager + RenderThread GPU)"]
+    A --> H["Media3 / ExoPlayer (Audio Waveforms)"]
+```
+
+* **UI Framework**: [Jetpack Compose](https://developer.android.com/jetpack/compose) with Material Design 3 Expressive
+* **Language & Coroutines**: [Kotlin 2.1](https://kotlinlang.org/) + Coroutines & StateFlow
+* **Database Engine**: [Android Room (SQLite)](https://developer.android.com/training/data-storage/room)
+* **Glassmorphism / Blur**: [Haze 1.7.2](https://github.com/chrisbanes/haze)
+* **Audio & Playback**: [AndroidX Media3 (ExoPlayer)](https://developer.android.com/media/media3)
+* **Web Integration**: [AndroidX Browser (Chrome Custom Tabs)](https://developer.android.com/jetpack/androidx/releases/browser)
+* **Widgets**: [Jetpack Glance](https://developer.android.com/jetpack/compose/glance)
+* **Network & Serializer**: Retrofit 2 + Moshi Kotlin + OkHttp 4
+* **Cloud Services (Play Edition)**: Firebase Firestore, Firebase Storage, Firebase Auth, Google Credential Manager
+
+---
+
+## 🔒 Permissions
+
+Cobalt uses only the permissions required to deliver its capture and background features:
+
+| Permission | Type | Reason |
 |---|---|---|
-| `android.permission.INTERNET` | Normal | To synchronize data with Firebase services, query the Gemini API, and fetch webpage titles/descriptions. |
-| `android.permission.ACCESS_NETWORK_STATE` | Normal | To verify network states and throttle sync jobs to conserve battery when offline. |
-| `android.permission.RECORD_AUDIO` | Dangerous | To capture vocal notes and save recording files. |
-| `android.permission.SYSTEM_ALERT_WINDOW` | Signature/Special | To display the floating edge handle overlay HUD on top of other running apps. |
-| `android.permission.FOREGROUND_SERVICE` | Normal | To allow long-running screen capture and network operations. |
-| `android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION` | Foreground | To project and capture screen contents for region-marked OCR text extraction. |
-| `android.permission.FOREGROUND_SERVICE_DATA_SYNC` | Foreground | To process file synchronization and downloads without interruption. |
-| `android.permission.FOREGROUND_SERVICE_SPECIAL_USE` | Foreground | To host the floating overlay handle service persistently. |
-| `android.permission.POST_NOTIFICATIONS` | Dangerous | To display notifications indicating active screen capture or data sync operations. |
-| `android.permission.RECEIVE_BOOT_COMPLETED` | Normal | To re-register widget update broadcasts and start the floating OCR panel handle automatically on device startup. |
-| Custom Autostart permissions | OEM Custom | Custom permissions for Oppo, Vivo, and Xiaomi/MIUI to prevent system battery managers from freezing background overlays. |
+| `SYSTEM_ALERT_WINDOW` | Special | Renders the featherweight **Cobalt SideDock** handle over other applications. |
+| `FOREGROUND_SERVICE` | Normal | Maintains active OCR region capture and audio transcription services. |
+| `FOREGROUND_SERVICE_MEDIA_PROJECTION` | Foreground | Enables screen projection for region-based OCR screenshot selection. |
+| `FOREGROUND_SERVICE_SPECIAL_USE` | Foreground | Keeps the Cobalt SideDock handle service responsive in background memory. |
+| `RECORD_AUDIO` | Runtime | Captures voice memos for speech-to-text transcription. |
+| `INTERNET` | Normal | Communicates with the Gemini API and fetches link preview metadata. |
+| `ACCESS_NETWORK_STATE` | Normal | Checks network connectivity to optimize API requests and conserve battery. |
+| `POST_NOTIFICATIONS` | Runtime | Displays ongoing status notifications for active screen capture or sync jobs. |
+| `RECEIVE_BOOT_COMPLETED` | Normal | Restores the SideDock handle and glance widget updates upon device reboot. |
 
 ---
 
-## Installation & Build
+## 🔨 Building from Source
 
 ### Prerequisites
-*   **Java Development Kit (JDK):** Version 21
-*   **Minimum SDK:** API Level 24 (Android 7.0)
-*   **Target SDK:** API Level 37 (Android 15+)
+* **Java Development Kit (JDK)**: Version 21
+* **Android SDK**: Compile SDK `35` / Target SDK `35` (Supports Android 7.0+ API 24)
 
-### Local Setup
-1.  **Clone the Repository:**
-    ```bash
-    git clone https://github.com/hanan-bhatti/cobalt.git
-    cd cobalt
-    ```
-2.  **Configure Firebase:**
-    *   Create a Firebase Project in the [Firebase Console](https://console.firebase.google.com/).
-    *   Register an Android App under the package name `com.hanan_bhatti.cobalt`.
-    *   Download your `google-services.json` file and place it in the `app/` directory.
-3.  **Setup Environment Variables:**
-    *   Copy the example environment configuration:
-        ```bash
-        cp .env.example .env
-        ```
-    *   Open `.env` and configure your API keys (e.g., `GEMINI_API_KEY`).
-4.  **Assemble Debug APK:**
-    ```bash
-    ./gradlew assembleDebug
-    ```
+### 1. Clone Repository
+```bash
+git clone https://github.com/hanan-bhatti/cobalt.git
+cd cobalt
+```
+
+### 2. Configure Environment
+Create a `.env` file in the project root:
+```bash
+cp .env.example .env
+```
+Add your Google Gemini API key to `.env`:
+```properties
+GEMINI_API_KEY="your-gemini-api-key-here"
+```
+
+### 3. Build Your Desired Flavor
+
+* **To build the FOSS release APK (De-Googled, F-Droid flavor)**:
+  ```bash
+  ./gradlew assembleFossRelease
+  ```
+  *Output: `app/build/outputs/apk/foss/release/app-foss-release.apk`*
+
+* **To build the Play release APK (Firebase cloud sync flavor)**:
+  ```bash
+  ./gradlew assemblePlayRelease
+  ```
+  *(Requires `app/src/play/google-services.json`)*
+
+* **To build debug APK for rapid development**:
+  ```bash
+  ./gradlew assembleFossDebug
+  ```
 
 ---
 
-## License
+## 📈 Star History
 
-This project is licensed under the **GNU AGPLv3 (GNU Affero General Public License v3.0)** - see the [LICENSE](LICENSE) file for details.
+<div align="center">
+
+<a href="https://www.star-history.com/?repos=hanan-bhatti%2Fcobalt&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=hanan-bhatti/cobalt&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=hanan-bhatti/cobalt&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=hanan-bhatti/cobalt&type=date&legend=top-left" width="100%" />
+ </picture>
+</a>
+
+</div>
+
+---
+
+## 📄 License
+
+Cobalt is free and open-source software released under the terms of the **[GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE)**.
+
+```
+Cobalt - A universal capture and personal knowledge archive
+Copyright (C) 2026 Hanan Bhatti
+```

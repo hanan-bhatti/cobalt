@@ -255,10 +255,15 @@ fun ReleaseUpdatesScreen(
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                 } else if (latestReleaseUrl != null) {
+                                    val releaseUrl = latestReleaseUrl
                                     Button(
                                         onClick = {
-                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(latestReleaseUrl))
-                                            context.startActivity(intent)
+                                            if (releaseUrl != null) {
+                                                com.example.util.CobaltCustomTabsLauncher.launch(
+                                                    context = context,
+                                                    url = releaseUrl
+                                                )
+                                            }
                                         },
                                         shape = RoundedCornerShape(14.dp),
                                         colors = ButtonDefaults.buttonColors(

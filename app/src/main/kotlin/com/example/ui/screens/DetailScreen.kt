@@ -572,8 +572,13 @@ fun DetailScreen(
                                         modifier = Modifier
                                             .size(20.dp)
                                             .clickable {
-                                                urlToOpen = item.content
-                                                showLeaveAppDialog = true
+                                                com.example.util.CobaltCustomTabsLauncher.launch(
+                                                    context = context,
+                                                    url = item.content,
+                                                    isDarkTheme = isDark,
+                                                    itemId = item.id,
+                                                    itemTitle = item.title
+                                                )
                                             },
                                         tint = MaterialTheme.colorScheme.primary
                                     )
@@ -628,12 +633,13 @@ fun DetailScreen(
                     confirmButtonText = "Leave App",
                     onConfirm = {
                         showLeaveAppDialog = false
-                        try {
-                            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(urlToOpen))
-                            context.startActivity(browserIntent)
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "Invalid URL", Toast.LENGTH_SHORT).show()
-                        }
+                        com.example.util.CobaltCustomTabsLauncher.launch(
+                            context = context,
+                            url = urlToOpen,
+                            isDarkTheme = isDark,
+                            itemId = item.id,
+                            itemTitle = item.title
+                        )
                     },
                     dismissButtonText = "Cancel",
                     isDestructive = false,

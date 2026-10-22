@@ -326,8 +326,10 @@ fun SettingsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://aistudio.google.com/apikey"))
-                                context.startActivity(intent)
+                                com.example.util.CobaltCustomTabsLauncher.launch(
+                                    context = context,
+                                    url = "https://aistudio.google.com/apikey"
+                                )
                             }
                             .padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -467,7 +469,7 @@ fun SettingsScreen(
                             checked = isEnabled,
                             onCheckedChange = { enable ->
                                 viewModel.settingsRepository.setFloatingOcrEnabled(enable)
-                                val serviceIntent = Intent(context, com.example.CobaltOcrOverlayService::class.java)
+                                val serviceIntent = Intent(context, com.example.CobaltSideDockService::class.java)
                                 if (enable) {
                                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                                         context.startForegroundService(serviceIntent)
