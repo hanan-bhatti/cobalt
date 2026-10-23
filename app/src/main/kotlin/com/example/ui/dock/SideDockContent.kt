@@ -20,6 +20,7 @@ package com.example.ui.dock
 
 import android.content.res.Configuration
 import android.widget.Toast
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -43,9 +44,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -54,6 +57,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -63,16 +67,23 @@ import coil.request.ImageRequest
 import com.example.R
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
+import com.example.data.model.getBestImagePath
 import com.example.data.remote.MediaSearchResultItem
 import com.example.data.repository.CobaltRepository
 import com.example.util.CobaltCustomTabsLauncher
 import com.example.widget.WidgetUpdater
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private enum class SideDockMode {
     MAIN,
     SEARCH
+}
+
+private enum class DockInputMode {
+    NOTE,
+    LINK
 }
 
 /**
@@ -89,7 +100,7 @@ fun SideDockContent(
     onClose: () -> Unit,
     onCloseFinished: () -> Unit,
     onLaunchOcr: () -> Unit,
-    onLaunchLink: () -> Unit,
+    onLaunchLink: () -> Unit = {},
     onOpenMainApp: (itemId: String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -97,6 +108,7 @@ fun SideDockContent(
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val clipboardManager = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
 
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -147,8 +159,18 @@ fun SideDockContent(
     }
 
     var currentMode by remember { mutableStateOf(SideDockMode.MAIN) }
+    var dockInputMode by remember { mutableStateOf(DockInputMode.NOTE) }
     var noteText by remember { mutableStateOf("") }
-    val noteFocusRequester = remember { FocusRequester() }
+    var linkText by remember { mutableStateOf("") }
+    val inputFocusRequester = remember { FocusRequester() }
+
+    // Clipboard helper for link mode
+    val clipboardText = remember(dockInputMode) {
+        clipboardManager.getText()?.text?.trim().orEmpty()
+    }
+    val hasClipboardUrl = remember(clipboardText) {
+        clipboardText.isNotBlank() && (clipboardText.startsWith("http://") || clipboardText.startsWith("https://") || clipboardText.contains("."))
+    }
 
     // Live Recent items from Room Database Flow
     val allItems by repository.getAllItemsFlow().collectAsState(initial = emptyList())
@@ -156,18 +178,115 @@ fun SideDockContent(
         allItems.sortedByDescending { it.timestamp }.take(4)
     }
 
+    // Geometry & Vertical Anchoring directly to handle position
+    val screenHeight = configuration.screenHeightDp.dp
+    val cardWidth = if (isLandscape) 320.dp else 280.dp
+    val cardHeight = if (isLandscape) 300.dp else 450.dp
+
+    val handleCenterY = screenHeight * yPercent
+    val targetTop = handleCenterY - (cardHeight / 2)
+    val minTop = if (isLandscape) 16.dp else 36.dp
+    val imeBottom = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+    val availableHeight = screenHeight - imeBottom
+    val maxTop = (availableHeight - cardHeight - (if (isLandscape) 16.dp else 36.dp)).coerceAtLeast(minTop)
+    val effectiveTop = targetTop.coerceIn(minTop, maxTop)
+
+    val animatedTop by animateDpAsState(
+        targetValue = effectiveTop,
+        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+        label = "dockTopOffset"
+    )
+
+    // Dynamic animation pivot matching handle position relative to the card
+    val pivotYFraction = remember(screenHeight, cardHeight, effectiveTop, yPercent) {
+        val relativeY = (handleCenterY - effectiveTop) / cardHeight
+        relativeY.coerceIn(0.08f, 0.92f)
+    }
+
+    // Unified submit handler for Note and Link modes
+    fun submitInput() {
+        if (dockInputMode == DockInputMode.LINK) {
+            val rawUrl = linkText.trim()
+            if (rawUrl.isBlank()) return
+            val cleanUrl = if (!rawUrl.startsWith("http://") && !rawUrl.startsWith("https://")) {
+                "https://$rawUrl"
+            } else {
+                rawUrl
+            }
+            val hostName = try {
+                java.net.URI(cleanUrl).host?.removePrefix("www.")?.takeIf { it.isNotBlank() } ?: cleanUrl
+            } catch (_: Exception) {
+                cleanUrl
+            }
+
+            coroutineScope.launch {
+                val newItem = SavedItem(
+                    title = hostName,
+                    content = cleanUrl,
+                    type = SavedItemType.LINK,
+                    folders = listOf("Links")
+                )
+                repository.saveItem(newItem)
+                WidgetUpdater.update(context)
+                Toast.makeText(context, "✓ Link saved", Toast.LENGTH_SHORT).show()
+                linkText = ""
+                keyboardController?.hide()
+
+                // Asynchronous background OpenGraph metadata extraction
+                launch(Dispatchers.IO) {
+                    try {
+                        val meta = repository.fetchLinkMetadata(cleanUrl)
+                        val hasTitle = !meta.title.isNullOrBlank()
+                        val hasDesc = !meta.description.isNullOrBlank()
+                        val hasImage = !meta.imageUrl.isNullOrBlank()
+                        if (hasTitle || hasDesc || hasImage) {
+                            val enriched = newItem.copy(
+                                title = meta.title?.takeIf { it.isNotBlank() } ?: hostName,
+                                linkTitle = meta.title,
+                                linkDescription = meta.description,
+                                linkImage = meta.imageUrl
+                            )
+                            repository.saveItem(enriched)
+                            WidgetUpdater.update(context)
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("CobaltSideDock", "Metadata extraction failed: ${e.message}")
+                    }
+                }
+            }
+        } else {
+            val content = noteText.trim()
+            if (content.isBlank()) return
+            coroutineScope.launch {
+                val lines = content.lines().filter { it.isNotBlank() }
+                val title = if (lines.isNotEmpty()) {
+                    val first = lines.first().trim()
+                    if (first.length > 40) first.take(40) + "..." else first
+                } else {
+                    "Quick Note"
+                }
+                val newItem = SavedItem(
+                    title = title,
+                    content = content,
+                    type = SavedItemType.TEXT
+                )
+                repository.saveItem(newItem)
+                WidgetUpdater.update(context)
+                Toast.makeText(context, "✓ Note saved", Toast.LENGTH_SHORT).show()
+                noteText = ""
+                keyboardController?.hide()
+            }
+        }
+    }
+
     // Full screen container
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .imePadding()
+        modifier = modifier.fillMaxSize()
     ) {
-        // 1. Dimmed Backdrop / Scrim with click to dismiss
-        val backdropAlpha = (animProgress.value * 0.35f).coerceIn(0f, 0.35f)
+        // 1. 100% Transparent Outside Touch Interceptor with click to dismiss
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = backdropAlpha))
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() }
@@ -180,13 +299,11 @@ fun SideDockContent(
         val slideDistancePx = with(density) { 340.dp.toPx() }
         val directionMultiplier = if (isRightSide) 1f else -1f
 
-        val cardWidth = if (isLandscape) 320.dp else 280.dp
-        val cardHeight = if (isLandscape) 300.dp else 450.dp
-
         Surface(
             modifier = Modifier
-                .align(if (isRightSide) Alignment.CenterEnd else Alignment.CenterStart)
+                .align(if (isRightSide) Alignment.TopEnd else Alignment.TopStart)
                 .padding(
+                    top = animatedTop,
                     start = if (!isRightSide) 12.dp else 0.dp,
                     end = if (isRightSide) 12.dp else 0.dp
                 )
@@ -195,8 +312,12 @@ fun SideDockContent(
                 .graphicsLayer {
                     translationX = directionMultiplier * (1f - animProgress.value) * slideDistancePx
                     alpha = animProgress.value.coerceIn(0f, 1f)
-                    scaleX = 0.94f + 0.06f * animProgress.value
-                    scaleY = 0.94f + 0.06f * animProgress.value
+                    scaleX = 0.92f + 0.08f * animProgress.value
+                    scaleY = 0.92f + 0.08f * animProgress.value
+                    transformOrigin = TransformOrigin(
+                        pivotFractionX = if (isRightSide) 1f else 0f,
+                        pivotFractionY = pivotYFraction
+                    )
                     clip = true
                     shape = RoundedCornerShape(24.dp)
                     shadowElevation = 8.dp.toPx()
@@ -237,7 +358,7 @@ fun SideDockContent(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_school),
+                                    painter = painterResource(id = R.drawable.ic_custom_tools),
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(15.dp)
@@ -276,6 +397,7 @@ fun SideDockContent(
                         QuickActionItem(
                             iconRes = R.drawable.ic_custom_ocr,
                             label = "OCR",
+                            isSelected = false,
                             onClick = {
                                 dismissDock { onLaunchOcr() }
                             }
@@ -283,28 +405,38 @@ fun SideDockContent(
                         QuickActionItem(
                             iconRes = R.drawable.ic_custom_text,
                             label = "Note",
+                            isSelected = dockInputMode == DockInputMode.NOTE,
                             onClick = {
-                                noteFocusRequester.requestFocus()
+                                dockInputMode = DockInputMode.NOTE
+                                inputFocusRequester.requestFocus()
                                 keyboardController?.show()
-                            }
-                        )
-                        QuickActionItem(
-                            iconRes = R.drawable.ic_custom_movie,
-                            label = "Search",
-                            onClick = {
-                                currentMode = SideDockMode.SEARCH
                             }
                         )
                         QuickActionItem(
                             iconRes = R.drawable.ic_custom_link,
                             label = "Link",
+                            isSelected = dockInputMode == DockInputMode.LINK,
                             onClick = {
-                                dismissDock { onLaunchLink() }
+                                dockInputMode = DockInputMode.LINK
+                                inputFocusRequester.requestFocus()
+                                keyboardController?.show()
+                                if (linkText.isBlank() && hasClipboardUrl) {
+                                    linkText = clipboardText
+                                }
+                            }
+                        )
+                        QuickActionItem(
+                            iconRes = R.drawable.ic_custom_movie,
+                            label = "Media",
+                            isSelected = false,
+                            onClick = {
+                                currentMode = SideDockMode.SEARCH
                             }
                         )
                         QuickActionItem(
                             iconRes = R.drawable.ic_custom_home,
-                            label = "Cobalt",
+                            label = "Home",
+                            isSelected = false,
                             onClick = {
                                 dismissDock { onOpenMainApp(null) }
                             }
@@ -313,9 +445,11 @@ fun SideDockContent(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // ════════════ INLINE QUICK NOTE ════════════
+                    // ════════════ INLINE EXPANDABLE QUICK NOTE / LINK ════════════
                     Surface(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .animateContentSize(animationSpec = tween(150)),
                         shape = RoundedCornerShape(14.dp),
                         color = MaterialTheme.colorScheme.surfaceContainer,
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
@@ -323,79 +457,126 @@ fun SideDockContent(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                                .padding(horizontal = 10.dp, vertical = 7.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Box(modifier = Modifier.weight(1f)) {
-                                if (noteText.isEmpty()) {
+                            // Leading Mode Icon
+                            Icon(
+                                painter = painterResource(
+                                    id = if (dockInputMode == DockInputMode.LINK) R.drawable.ic_custom_link else R.drawable.ic_custom_text
+                                ),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(15.dp)
+                            )
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(vertical = 2.dp)
+                            ) {
+                                val currentText = if (dockInputMode == DockInputMode.LINK) linkText else noteText
+                                if (currentText.isEmpty()) {
                                     Text(
-                                        text = "Quick thought...",
+                                        text = if (dockInputMode == DockInputMode.LINK) "Paste or type link..." else "Quick thought...",
                                         style = MaterialTheme.typography.bodyMedium.copy(
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                            fontSize = 12.sp
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                                            fontSize = 12.sp,
+                                            lineHeight = 16.sp
                                         )
                                     )
                                 }
                                 BasicTextField(
-                                    value = noteText,
-                                    onValueChange = { noteText = it },
+                                    value = currentText,
+                                    onValueChange = { newText ->
+                                        if (dockInputMode == DockInputMode.LINK) {
+                                            linkText = newText
+                                        } else {
+                                            noteText = newText
+                                        }
+                                    },
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .focusRequester(noteFocusRequester),
+                                        .focusRequester(inputFocusRequester),
                                     textStyle = TextStyle(
                                         color = MaterialTheme.colorScheme.onSurface,
                                         fontSize = 12.sp,
-                                        fontWeight = FontWeight.Normal
+                                        fontWeight = FontWeight.Normal,
+                                        lineHeight = 16.sp
                                     ),
-                                    singleLine = true,
+                                    singleLine = dockInputMode == DockInputMode.LINK,
+                                    minLines = 1,
+                                    maxLines = if (dockInputMode == DockInputMode.LINK) 1 else 3,
                                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                                    keyboardActions = KeyboardActions(onDone = {
-                                        val content = noteText.trim()
-                                        if (content.isNotBlank()) {
-                                            coroutineScope.launch {
-                                                val newItem = SavedItem(
-                                                    title = "Quick Dock Note",
-                                                    content = content,
-                                                    type = SavedItemType.TEXT
-                                                )
-                                                repository.saveItem(newItem)
-                                                WidgetUpdater.update(context)
-                                                Toast.makeText(context, "✓ Saved to Cobalt", Toast.LENGTH_SHORT).show()
-                                                noteText = ""
-                                                keyboardController?.hide()
-                                            }
+                                    keyboardOptions = KeyboardOptions(
+                                        keyboardType = if (dockInputMode == DockInputMode.LINK) KeyboardType.Uri else KeyboardType.Text,
+                                        imeAction = if (dockInputMode == DockInputMode.LINK) ImeAction.Done else ImeAction.Default
+                                    ),
+                                    keyboardActions = KeyboardActions(
+                                        onDone = {
+                                            submitInput()
                                         }
-                                    })
+                                    )
                                 )
                             }
 
+                            // Quick Paste Pill when in Link mode, text is empty, and clipboard has a link
+                            if (dockInputMode == DockInputMode.LINK && linkText.isBlank() && hasClipboardUrl) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                                    modifier = Modifier
+                                        .padding(end = 4.dp)
+                                        .clickable {
+                                            linkText = clipboardText
+                                            inputFocusRequester.requestFocus()
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_custom_copy),
+                                            contentDescription = "Paste",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(11.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(3.dp))
+                                        Text(
+                                            text = "Paste",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(4.dp))
+
+                            // Send Button
+                            val isSendable = if (dockInputMode == DockInputMode.LINK) linkText.isNotBlank() else noteText.isNotBlank()
                             IconButton(
                                 onClick = {
-                                    val content = noteText.trim()
-                                    if (content.isNotBlank()) {
-                                        coroutineScope.launch {
-                                            val newItem = SavedItem(
-                                                title = "Quick Dock Note",
-                                                content = content,
-                                                type = SavedItemType.TEXT
-                                            )
-                                            repository.saveItem(newItem)
-                                            WidgetUpdater.update(context)
-                                            Toast.makeText(context, "✓ Saved to Cobalt", Toast.LENGTH_SHORT).show()
-                                            noteText = ""
-                                            keyboardController?.hide()
-                                        }
-                                    }
+                                    submitInput()
                                 },
+                                enabled = isSendable,
                                 modifier = Modifier
                                     .size(28.dp)
-                                    .background(MaterialTheme.colorScheme.primary, shape = CircleShape)
+                                    .background(
+                                        if (isSendable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
+                                        shape = CircleShape
+                                    )
                             ) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_custom_send),
-                                    contentDescription = "Save Note",
-                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    contentDescription = if (dockInputMode == DockInputMode.LINK) "Save Link" else "Save Note",
+                                    tint = if (isSendable) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                                     modifier = Modifier.size(13.dp)
                                 )
                             }
@@ -467,6 +648,7 @@ fun SideDockContent(
 private fun QuickActionItem(
     iconRes: Int,
     label: String,
+    isSelected: Boolean = false,
     onClick: () -> Unit
 ) {
     Column(
@@ -482,14 +664,17 @@ private fun QuickActionItem(
         Surface(
             modifier = Modifier.size(38.dp),
             shape = RoundedCornerShape(13.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+            border = BorderStroke(
+                width = if (isSelected) 1.5.dp else 1.dp,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+            )
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     painter = painterResource(id = iconRes),
                     contentDescription = label,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -499,7 +684,8 @@ private fun QuickActionItem(
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(
                 fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )
         )
     }
@@ -510,6 +696,7 @@ private fun RecentItemRow(
     item: SavedItem,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -530,29 +717,94 @@ private fun RecentItemRow(
                 SavedItemType.VIDEO -> Pair(R.drawable.ic_custom_video, Color(0xFFAB47BC))
                 SavedItemType.AUDIO -> Pair(R.drawable.ic_custom_voice, MaterialTheme.colorScheme.primary)
                 SavedItemType.MEDIA -> Pair(R.drawable.ic_custom_movie, Color(0xFFE91E63))
+                SavedItemType.CODE -> Pair(R.drawable.ic_custom_code, Color(0xFFFFB74D))
                 else -> Pair(R.drawable.ic_custom_text, MaterialTheme.colorScheme.primary)
             }
 
-            Surface(
-                modifier = Modifier.size(28.dp),
-                shape = RoundedCornerShape(8.dp),
-                color = iconTint.copy(alpha = 0.15f)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        painter = painterResource(id = iconRes),
-                        contentDescription = null,
-                        tint = iconTint,
-                        modifier = Modifier.size(15.dp)
-                    )
+            val thumbUrl = remember(item) { item.getBestImagePath() }
+
+            if (!thumbUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(thumbUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Surface(
+                    modifier = Modifier.size(28.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    color = iconTint.copy(alpha = 0.15f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            painter = painterResource(id = iconRes),
+                            contentDescription = null,
+                            tint = iconTint,
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.width(8.dp))
 
+            val displayTitle = remember(item) {
+                if (item.title.isNotBlank() && item.title != "Untitled") {
+                    item.title
+                } else {
+                    when (item.type) {
+                        SavedItemType.LINK -> {
+                            try {
+                                val uri = java.net.URI(item.content)
+                                uri.host?.removePrefix("www.")?.takeIf { it.isNotBlank() } ?: item.content
+                            } catch (_: Exception) {
+                                item.content.takeIf { it.isNotBlank() } ?: "Saved Link"
+                            }
+                        }
+                        SavedItemType.IMAGE -> "Image Attachment"
+                        SavedItemType.VIDEO -> "Video Recording"
+                        SavedItemType.AUDIO -> "Voice Memo"
+                        SavedItemType.MEDIA -> "Media"
+                        SavedItemType.CODE -> "Code Snippet"
+                        else -> {
+                            val firstLine = item.content.lines().firstOrNull { it.isNotBlank() }?.trim()
+                            if (!firstLine.isNullOrBlank()) {
+                                if (firstLine.length > 35) firstLine.take(35) + "..." else firstLine
+                            } else {
+                                "Untitled Note"
+                            }
+                        }
+                    }
+                }
+            }
+
+            val displaySnippet = remember(item) {
+                when {
+                    !item.linkDescription.isNullOrBlank() -> item.linkDescription
+                    item.type == SavedItemType.LINK -> item.content
+                    item.content.startsWith("http://") || item.content.startsWith("https://") -> "Cloud attachment"
+                    item.content.startsWith("/data/") || item.content.startsWith("/storage/") -> "Local media file"
+                    item.content.isNotBlank() -> {
+                        val lines = item.content.lines().filter { it.isNotBlank() }
+                        if (lines.size > 1 && item.title == lines.first().trim()) {
+                            lines.drop(1).firstOrNull()?.trim() ?: item.content
+                        } else {
+                            item.content
+                        }
+                    }
+                    else -> ""
+                }
+            }
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (item.title.isNotBlank()) item.title else "Untitled",
+                    text = displayTitle,
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -560,9 +812,9 @@ private fun RecentItemRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (item.content.isNotBlank()) {
+                if (displaySnippet.isNotBlank()) {
                     Text(
-                        text = item.content,
+                        text = displaySnippet,
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
