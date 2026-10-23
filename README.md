@@ -1,49 +1,27 @@
 <div align="center">
 
-  <img src="assets/logo.png" alt="Cobalt Logo" width="112" height="112" />
+  <img src="assets/banner.png" alt="Cobalt Hero Banner" width="100%" />
 
-  # Cobalt
-
-  ### Universal Knowledge Archive & Instant Screen Capture for Android
+  <br/><br/>
 
   <p align="center">
-    <a href="https://github.com/hanan-bhatti/cobalt/releases/latest">
-      <img src="https://img.shields.io/github/v/release/hanan-bhatti/cobalt?style=for-the-badge&color=006874&labelColor=004F58&logo=github&logoColor=9EEFFD&label=Latest%20Release" alt="Latest GitHub Release" height="30" />
-    </a>
-    <a href="https://f-droid.org/en/packages/com.hanan_bhatti.cobalt/">
-      <img src="https://img.shields.io/f-droid/v/com.hanan_bhatti.cobalt?style=for-the-badge&color=0061A4&labelColor=00487D&logo=f-droid&logoColor=D1E4FF" alt="F-Droid Package" height="30" />
-    </a>
-    <a href="LICENSE">
-      <img src="https://img.shields.io/badge/License-AGPL_v3.0-526070?style=for-the-badge&labelColor=3A4857&logo=gnu&logoColor=D5E4F7" alt="License: AGPL v3.0" height="30" />
-    </a>
-    <a href="https://github.com/hanan-bhatti/cobalt/stargazers">
-      <img src="https://img.shields.io/github/stars/hanan-bhatti/cobalt?style=for-the-badge&color=7D5700&labelColor=5D4000&logo=star&logoColor=FFDEA7" alt="GitHub Stars" height="30" />
-    </a>
-  </p>
-
-  <p align="center">
-    <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Android/android3.svg" alt="Android Platform" height="28" />
-    &nbsp;
-    <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Kotlin/kotlin1.svg" alt="Kotlin" height="28" />
-    &nbsp;
-    <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/SQLite/sqlite1.svg" alt="SQLite" height="28" />
-    &nbsp;
-    <img src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Firebase/firebase1.svg" alt="Firebase" height="28" />
+    <a href="https://github.com/hanan-bhatti/cobalt/releases/latest"><img src="https://img.shields.io/github/v/release/hanan-bhatti/cobalt?style=flat-square&color=00796B&label=Release" alt="Latest Release" /></a>
+    <a href="https://f-droid.org/en/packages/com.hanan_bhatti.cobalt/"><img src="https://img.shields.io/badge/F--Droid-v2.1.2-1976D2?style=flat-square&logo=f-droid&logoColor=white" alt="F-Droid" /></a>
+    <a href="https://github.com/hanan-bhatti/cobalt"><img src="https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Platform" /></a>
+    <a href="https://github.com/hanan-bhatti/cobalt"><img src="https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" /></a>
+    <a href="https://github.com/hanan-bhatti/cobalt"><img src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white" alt="Compose" /></a>
+    <a href="https://github.com/hanan-bhatti/cobalt"><img src="https://img.shields.io/badge/AI-Google%20Gemini-8E75C2?style=flat-square&logo=google&logoColor=white" alt="Gemini AI" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3.0-526070?style=flat-square&logo=gnu&logoColor=white" alt="License" /></a>
+    <a href="https://github.com/hanan-bhatti/cobalt/stargazers"><img src="https://img.shields.io/github/stars/hanan-bhatti/cobalt?style=flat-square&color=FFB300&logo=github" alt="Stars" /></a>
   </p>
 
   <p align="center">
     <b>A minimalist, offline-first personal knowledge base and universal capture suite for Android.</b><br/>
-    Featuring the butter-smooth <b>Cobalt SideDock</b>, on-device Gemini AI OCR region marking, in-app Chrome Custom Tabs, and zero-telemetry local privacy.
+    Featuring the 60/120fps <b>Cobalt SideDock</b>, on-device Gemini AI OCR region marking, in-app Chrome Custom Tabs, and zero-telemetry local privacy.
   </p>
 
   <p align="center">
-    <a href="https://f-droid.org/en/packages/com.hanan_bhatti.cobalt/">
-      <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="56" />
-    </a>
-    &nbsp;&nbsp;&nbsp;&nbsp;
-    <a href="https://github.com/hanan-bhatti/cobalt/releases/latest">
-      <img src="https://img.shields.io/badge/Download-Latest_APK_(GitHub)-006874?style=for-the-badge&logo=android&logoColor=white" alt="Download Latest APK" height="52" />
-    </a>
+    <a href="https://f-droid.org/en/packages/com.hanan_bhatti.cobalt/"><img src="https://img.shields.io/badge/Get%20it%20on-F--Droid-1976D2?style=for-the-badge&logo=f-droid&logoColor=white" height="38" alt="Get it on F-Droid" /></a>&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://github.com/hanan-bhatti/cobalt/releases/latest"><img src="https://img.shields.io/badge/Download-GitHub%20APK-24292e?style=for-the-badge&logo=github&logoColor=white" height="38" alt="Download on GitHub" /></a>
   </p>
 
 </div>
