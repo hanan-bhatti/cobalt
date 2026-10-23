@@ -455,6 +455,9 @@ class CobaltSideDockService : Service() {
                     SideDockContent(
                         side = getEdgePanelSide(),
                         yPercent = getEdgePanelYPercent(),
+                        handleHeightDp = getEdgePanelHeight(),
+                        handleThicknessDp = getEdgePanelThickness(),
+                        handleOpacity = getEdgePanelOpacity(),
                         animPreset = getAnimPreset(),
                         repository = repository,
                         onClose = {

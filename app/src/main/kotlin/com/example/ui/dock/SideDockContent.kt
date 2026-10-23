@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -61,6 +62,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -95,6 +97,9 @@ private enum class DockInputMode {
 fun SideDockContent(
     side: String,
     yPercent: Float,
+    handleHeightDp: Int = 100,
+    handleThicknessDp: Int = 6,
+    handleOpacity: Float = 0.7f,
     animPreset: String,
     repository: CobaltRepository,
     onClose: () -> Unit,
@@ -106,7 +111,6 @@ fun SideDockContent(
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
-    val density = LocalDensity.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val clipboardManager = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
@@ -114,28 +118,29 @@ fun SideDockContent(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val isRightSide = side == "Right"
 
-    // Animation Specs based on selected preset
+    // Animation Specs based on selected preset with fluid Oppo-style water-drop spring physics
     val (enterSpec, exitSpec) = remember(animPreset) {
         when (animPreset) {
             "Bouncy" -> Pair(
-                spring<Float>(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
-                tween<Float>(durationMillis = 200, easing = FastOutSlowInEasing)
+                spring<Float>(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = 320f),
+                spring<Float>(dampingRatio = 0.78f, stiffness = 420f)
             )
             "Snappy" -> Pair(
-                tween<Float>(durationMillis = 180, easing = FastOutSlowInEasing),
-                tween<Float>(durationMillis = 150, easing = FastOutLinearInEasing)
+                spring<Float>(dampingRatio = 0.85f, stiffness = 650f),
+                spring<Float>(dampingRatio = 0.95f, stiffness = 750f)
             )
             "Fluid" -> Pair(
-                tween<Float>(durationMillis = 420, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)),
-                tween<Float>(durationMillis = 260, easing = CubicBezierEasing(0.4f, 0f, 1f, 1f))
+                // Oppo ColorOS Water-drop elastic spring
+                spring<Float>(dampingRatio = 0.68f, stiffness = 320f),
+                spring<Float>(dampingRatio = 0.82f, stiffness = 460f)
             )
             "Instant" -> Pair(
                 snap<Float>(),
                 snap<Float>()
             )
-            else -> Pair( // "Smooth"
-                spring<Float>(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
-                tween<Float>(durationMillis = 220, easing = FastOutSlowInEasing)
+            else -> Pair( // "Smooth" (Default Oppo-like fluid water-drop physics)
+                spring<Float>(dampingRatio = 0.72f, stiffness = 360f),
+                spring<Float>(dampingRatio = 0.84f, stiffness = 480f)
             )
         }
     }
@@ -178,12 +183,14 @@ fun SideDockContent(
         allItems.sortedByDescending { it.timestamp }.take(4)
     }
 
-    // Geometry & Vertical Anchoring directly to handle position
+    // Geometry & Dynamic Morphing Bounds
     val screenHeight = configuration.screenHeightDp.dp
     val cardWidth = if (isLandscape) 320.dp else 280.dp
     val cardHeight = if (isLandscape) 300.dp else 450.dp
 
     val handleCenterY = screenHeight * yPercent
+    val handleTop = handleCenterY - (handleHeightDp.dp / 2)
+
     val targetTop = handleCenterY - (cardHeight / 2)
     val minTop = if (isLandscape) 16.dp else 36.dp
     val imeBottom = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
@@ -191,17 +198,42 @@ fun SideDockContent(
     val maxTop = (availableHeight - cardHeight - (if (isLandscape) 16.dp else 36.dp)).coerceAtLeast(minTop)
     val effectiveTop = targetTop.coerceIn(minTop, maxTop)
 
-    val animatedTop by animateDpAsState(
-        targetValue = effectiveTop,
-        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
-        label = "dockTopOffset"
+    // Animated morph parameters
+    val p = animProgress.value
+    val currentWidth = lerp(handleThicknessDp.dp, cardWidth, p).coerceAtLeast(handleThicknessDp.dp)
+    val currentHeight = lerp(handleHeightDp.dp, cardHeight, p).coerceAtLeast(handleHeightDp.dp)
+    val currentTop = lerp(handleTop, effectiveTop, p)
+    val currentMargin = lerp(0.dp, 12.dp, p.coerceIn(0f, 1f))
+
+    // Morphing Corner Shape (starts as flush handle pill, expands into rounded 24.dp card)
+    val innerCornerRadius = lerp(8.dp, 24.dp, p.coerceIn(0f, 1f))
+    val outerCornerRadius = lerp(0.dp, 24.dp, p.coerceIn(0f, 1f))
+    val morphShape = if (isRightSide) {
+        RoundedCornerShape(
+            topStart = innerCornerRadius,
+            bottomStart = innerCornerRadius,
+            topEnd = outerCornerRadius,
+            bottomEnd = outerCornerRadius
+        )
+    } else {
+        RoundedCornerShape(
+            topEnd = innerCornerRadius,
+            bottomEnd = innerCornerRadius,
+            topStart = outerCornerRadius,
+            bottomStart = outerCornerRadius
+        )
+    }
+
+    // Morphing Colors & Borders
+    val handleAccentColor = Color(0xFF3B82F6).copy(alpha = handleOpacity)
+    val dockSurfaceColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    val containerColor = lerp(
+        start = handleAccentColor,
+        stop = dockSurfaceColor,
+        fraction = ((p - 0.08f) / 0.45f).coerceIn(0f, 1f)
     )
 
-    // Dynamic animation pivot matching handle position relative to the card
-    val pivotYFraction = remember(screenHeight, cardHeight, effectiveTop, yPercent) {
-        val relativeY = (handleCenterY - effectiveTop) / cardHeight
-        relativeY.coerceIn(0.08f, 0.92f)
-    }
+    val borderAlpha = ((p - 0.3f) / 0.7f).coerceIn(0f, 1f) * 0.45f
 
     // Unified submit handler for Note and Link modes
     fun submitInput() {
@@ -295,33 +327,20 @@ fun SideDockContent(
                 }
         )
 
-        // 2. Hardware-accelerated SideDock Card
-        val slideDistancePx = with(density) { 340.dp.toPx() }
+        // 2. Hardware-accelerated Morphing SideDock Card
         val directionMultiplier = if (isRightSide) 1f else -1f
 
         Surface(
             modifier = Modifier
                 .align(if (isRightSide) Alignment.TopEnd else Alignment.TopStart)
                 .padding(
-                    top = animatedTop,
-                    start = if (!isRightSide) 12.dp else 0.dp,
-                    end = if (isRightSide) 12.dp else 0.dp
+                    top = currentTop,
+                    start = if (!isRightSide) currentMargin else 0.dp,
+                    end = if (isRightSide) currentMargin else 0.dp
                 )
-                .width(cardWidth)
-                .height(cardHeight)
-                .graphicsLayer {
-                    translationX = directionMultiplier * (1f - animProgress.value) * slideDistancePx
-                    alpha = animProgress.value.coerceIn(0f, 1f)
-                    scaleX = 0.92f + 0.08f * animProgress.value
-                    scaleY = 0.92f + 0.08f * animProgress.value
-                    transformOrigin = TransformOrigin(
-                        pivotFractionX = if (isRightSide) 1f else 0f,
-                        pivotFractionY = pivotYFraction
-                    )
-                    clip = true
-                    shape = RoundedCornerShape(24.dp)
-                    shadowElevation = 8.dp.toPx()
-                }
+                .width(currentWidth)
+                .height(currentHeight)
+                .clip(morphShape)
                 .pointerInput(isRightSide) {
                     detectHorizontalDragGestures { _, dragAmount ->
                         // Swipe toward the screen edge dismisses the dock
@@ -332,312 +351,351 @@ fun SideDockContent(
                         }
                     }
                 },
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
-            tonalElevation = 6.dp
+            shape = morphShape,
+            color = containerColor,
+            border = if (borderAlpha > 0.01f) {
+                BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = borderAlpha))
+            } else null,
+            tonalElevation = lerp(2.dp, 6.dp, p.coerceIn(0f, 1f)),
+            shadowElevation = lerp(1.dp, 8.dp, p.coerceIn(0f, 1f))
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(14.dp)
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = if (isRightSide) Alignment.TopEnd else Alignment.TopStart
             ) {
-                if (currentMode == SideDockMode.MAIN) {
-                    // ════════════ HEADER ════════════
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_tools),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(15.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Cobalt SideDock",
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                )
-                            }
+                // Fixed-dimension inner card content (reveals gracefully without awkward reflows)
+                val contentProgress = ((p - 0.22f) / 0.68f).coerceIn(0f, 1f)
+
+                Box(
+                    modifier = Modifier
+                        .width(cardWidth)
+                        .height(cardHeight)
+                        .graphicsLayer {
+                            alpha = contentProgress
+                            translationX = directionMultiplier * (1f - contentProgress) * 20.dp.toPx()
                         }
-
-                        IconButton(
-                            onClick = { dismissDock() },
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_close),
-                                contentDescription = "Close",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // ════════════ QUICK ACTIONS (5 ICONS) ════════════
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        QuickActionItem(
-                            iconRes = R.drawable.ic_custom_ocr,
-                            label = "OCR",
-                            isSelected = false,
-                            onClick = {
-                                dismissDock { onLaunchOcr() }
-                            }
-                        )
-                        QuickActionItem(
-                            iconRes = R.drawable.ic_custom_text,
-                            label = "Note",
-                            isSelected = dockInputMode == DockInputMode.NOTE,
-                            onClick = {
-                                dockInputMode = DockInputMode.NOTE
-                                inputFocusRequester.requestFocus()
-                                keyboardController?.show()
-                            }
-                        )
-                        QuickActionItem(
-                            iconRes = R.drawable.ic_custom_link,
-                            label = "Link",
-                            isSelected = dockInputMode == DockInputMode.LINK,
-                            onClick = {
-                                dockInputMode = DockInputMode.LINK
-                                inputFocusRequester.requestFocus()
-                                keyboardController?.show()
-                                if (linkText.isBlank() && hasClipboardUrl) {
-                                    linkText = clipboardText
-                                }
-                            }
-                        )
-                        QuickActionItem(
-                            iconRes = R.drawable.ic_custom_movie,
-                            label = "Media",
-                            isSelected = false,
-                            onClick = {
-                                currentMode = SideDockMode.SEARCH
-                            }
-                        )
-                        QuickActionItem(
-                            iconRes = R.drawable.ic_custom_home,
-                            label = "Home",
-                            isSelected = false,
-                            onClick = {
-                                dismissDock { onOpenMainApp(null) }
-                            }
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // ════════════ INLINE EXPANDABLE QUICK NOTE / LINK ════════════
-                    Surface(
+                ) {
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .animateContentSize(animationSpec = tween(150)),
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            .fillMaxSize()
+                            .padding(14.dp)
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 10.dp, vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Leading Mode Icon
-                            Icon(
-                                painter = painterResource(
-                                    id = if (dockInputMode == DockInputMode.LINK) R.drawable.ic_custom_link else R.drawable.ic_custom_text
-                                ),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(15.dp)
-                            )
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(vertical = 2.dp)
+                        if (currentMode == SideDockMode.MAIN) {
+                            // ════════════ HEADER ════════════
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                val currentText = if (dockInputMode == DockInputMode.LINK) linkText else noteText
-                                if (currentText.isEmpty()) {
-                                    Text(
-                                        text = if (dockInputMode == DockInputMode.LINK) "Paste or type link..." else "Quick thought...",
-                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
-                                            fontSize = 12.sp,
-                                            lineHeight = 16.sp
-                                        )
-                                    )
-                                }
-                                BasicTextField(
-                                    value = currentText,
-                                    onValueChange = { newText ->
-                                        if (dockInputMode == DockInputMode.LINK) {
-                                            linkText = newText
-                                        } else {
-                                            noteText = newText
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .focusRequester(inputFocusRequester),
-                                    textStyle = TextStyle(
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Normal,
-                                        lineHeight = 16.sp
-                                    ),
-                                    singleLine = dockInputMode == DockInputMode.LINK,
-                                    minLines = 1,
-                                    maxLines = if (dockInputMode == DockInputMode.LINK) 1 else 3,
-                                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                                    keyboardOptions = KeyboardOptions(
-                                        keyboardType = if (dockInputMode == DockInputMode.LINK) KeyboardType.Uri else KeyboardType.Text,
-                                        imeAction = if (dockInputMode == DockInputMode.LINK) ImeAction.Done else ImeAction.Default
-                                    ),
-                                    keyboardActions = KeyboardActions(
-                                        onDone = {
-                                            submitInput()
-                                        }
-                                    )
-                                )
-                            }
-
-                            // Quick Paste Pill when in Link mode, text is empty, and clipboard has a link
-                            if (dockInputMode == DockInputMode.LINK && linkText.isBlank() && hasClipboardUrl) {
                                 Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                                    modifier = Modifier
-                                        .padding(end = 4.dp)
-                                        .clickable {
-                                            linkText = clipboardText
-                                            inputFocusRequester.requestFocus()
-                                        }
+                                    shape = CircleShape,
+                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Icon(
-                                            painter = painterResource(id = R.drawable.ic_custom_copy),
-                                            contentDescription = "Paste",
+                                            painter = painterResource(id = R.drawable.ic_custom_tools),
+                                            contentDescription = null,
                                             tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(11.dp)
+                                            modifier = Modifier.size(15.dp)
                                         )
-                                        Spacer(modifier = Modifier.width(3.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = "Paste",
-                                            style = MaterialTheme.typography.labelSmall.copy(
-                                                fontSize = 10.sp,
+                                            text = "Cobalt SideDock",
+                                            style = MaterialTheme.typography.labelMedium.copy(
                                                 fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.primary
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer
                                             )
                                         )
                                     }
                                 }
-                            }
 
-                            Spacer(modifier = Modifier.width(4.dp))
-
-                            // Send Button
-                            val isSendable = if (dockInputMode == DockInputMode.LINK) linkText.isNotBlank() else noteText.isNotBlank()
-                            IconButton(
-                                onClick = {
-                                    submitInput()
-                                },
-                                enabled = isSendable,
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .background(
-                                        if (isSendable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
-                                        shape = CircleShape
+                                IconButton(
+                                    onClick = { dismissDock() },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_close),
+                                        contentDescription = "Close",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(16.dp)
                                     )
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_send),
-                                    contentDescription = if (dockInputMode == DockInputMode.LINK) "Save Link" else "Save Note",
-                                    tint = if (isSendable) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                    modifier = Modifier.size(13.dp)
-                                )
+                                }
                             }
-                        }
-                    }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
 
-                    // ════════════ RECENTS LIST ════════════
-                    Text(
-                        text = "RECENTS",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        ),
-                        modifier = Modifier.padding(start = 2.dp, bottom = 4.dp)
-                    )
-
-                    if (recentItems.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "No recent items yet",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                )
-                            )
-                        }
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            items(recentItems, key = { it.id }) { item ->
-                                RecentItemRow(
-                                    item = item,
+                            // ════════════ QUICK ACTIONS (5 ICONS) ════════════
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                QuickActionItem(
+                                    iconRes = R.drawable.ic_custom_ocr,
+                                    label = "OCR",
+                                    isSelected = false,
                                     onClick = {
-                                        dismissDock {
-                                            if (item.type == SavedItemType.LINK && item.content.startsWith("http")) {
-                                                CobaltCustomTabsLauncher.launch(context, item.content)
-                                            } else {
-                                                onOpenMainApp(item.id)
-                                            }
+                                        dismissDock { onLaunchOcr() }
+                                    }
+                                )
+                                QuickActionItem(
+                                    iconRes = R.drawable.ic_custom_text,
+                                    label = "Note",
+                                    isSelected = dockInputMode == DockInputMode.NOTE,
+                                    onClick = {
+                                        dockInputMode = DockInputMode.NOTE
+                                        inputFocusRequester.requestFocus()
+                                        keyboardController?.show()
+                                    }
+                                )
+                                QuickActionItem(
+                                    iconRes = R.drawable.ic_custom_link,
+                                    label = "Link",
+                                    isSelected = dockInputMode == DockInputMode.LINK,
+                                    onClick = {
+                                        dockInputMode = DockInputMode.LINK
+                                        inputFocusRequester.requestFocus()
+                                        keyboardController?.show()
+                                        if (linkText.isBlank() && hasClipboardUrl) {
+                                            linkText = clipboardText
                                         }
                                     }
                                 )
+                                QuickActionItem(
+                                    iconRes = R.drawable.ic_custom_movie,
+                                    label = "Media",
+                                    isSelected = false,
+                                    onClick = {
+                                        currentMode = SideDockMode.SEARCH
+                                    }
+                                )
+                                QuickActionItem(
+                                    iconRes = R.drawable.ic_custom_home,
+                                    label = "Home",
+                                    isSelected = false,
+                                    onClick = {
+                                        dismissDock { onOpenMainApp(null) }
+                                    }
+                                )
                             }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // ════════════ INLINE EXPANDABLE QUICK NOTE / LINK ════════════
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .animateContentSize(animationSpec = tween(150)),
+                                shape = RoundedCornerShape(14.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 10.dp, vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Leading Mode Icon
+                                    Icon(
+                                        painter = painterResource(
+                                            id = if (dockInputMode == DockInputMode.LINK) R.drawable.ic_custom_link else R.drawable.ic_custom_text
+                                        ),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(vertical = 2.dp)
+                                    ) {
+                                        val currentText = if (dockInputMode == DockInputMode.LINK) linkText else noteText
+                                        if (currentText.isEmpty()) {
+                                            Text(
+                                                text = if (dockInputMode == DockInputMode.LINK) "Paste or type link..." else "Quick thought...",
+                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                                                    fontSize = 12.sp,
+                                                    lineHeight = 16.sp
+                                                )
+                                            )
+                                        }
+                                        BasicTextField(
+                                            value = currentText,
+                                            onValueChange = { newText ->
+                                                if (dockInputMode == DockInputMode.LINK) {
+                                                    linkText = newText
+                                                } else {
+                                                    noteText = newText
+                                                }
+                                            },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .focusRequester(inputFocusRequester),
+                                            textStyle = TextStyle(
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Normal,
+                                                lineHeight = 16.sp
+                                            ),
+                                            singleLine = dockInputMode == DockInputMode.LINK,
+                                            minLines = 1,
+                                            maxLines = if (dockInputMode == DockInputMode.LINK) 1 else 3,
+                                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                            keyboardOptions = KeyboardOptions(
+                                                keyboardType = if (dockInputMode == DockInputMode.LINK) KeyboardType.Uri else KeyboardType.Text,
+                                                imeAction = if (dockInputMode == DockInputMode.LINK) ImeAction.Done else ImeAction.Default
+                                            ),
+                                            keyboardActions = KeyboardActions(
+                                                onDone = {
+                                                    submitInput()
+                                                }
+                                            )
+                                        )
+                                    }
+
+                                    // Quick Paste Pill when in Link mode, text is empty, and clipboard has a link
+                                    if (dockInputMode == DockInputMode.LINK && linkText.isBlank() && hasClipboardUrl) {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                                            modifier = Modifier
+                                                .padding(end = 4.dp)
+                                                .clickable {
+                                                    linkText = clipboardText
+                                                    inputFocusRequester.requestFocus()
+                                                }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(id = R.drawable.ic_custom_copy),
+                                                    contentDescription = "Paste",
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(11.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(3.dp))
+                                                Text(
+                                                    text = "Paste",
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.width(4.dp))
+
+                                    // Send Button
+                                    val isSendable = if (dockInputMode == DockInputMode.LINK) linkText.isNotBlank() else noteText.isNotBlank()
+                                    IconButton(
+                                        onClick = {
+                                            submitInput()
+                                        },
+                                        enabled = isSendable,
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .background(
+                                                if (isSendable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
+                                                shape = CircleShape
+                                            )
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_custom_send),
+                                            contentDescription = if (dockInputMode == DockInputMode.LINK) "Save Link" else "Save Note",
+                                            tint = if (isSendable) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                            modifier = Modifier.size(13.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // ════════════ RECENTS LIST ════════════
+                            Text(
+                                text = "RECENTS",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                ),
+                                modifier = Modifier.padding(start = 2.dp, bottom = 4.dp)
+                            )
+
+                            if (recentItems.isEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxWidth(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "No recent items yet",
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                        )
+                                    )
+                                }
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    items(recentItems, key = { it.id }) { item ->
+                                        RecentItemRow(
+                                            item = item,
+                                            onClick = {
+                                                dismissDock {
+                                                    if (item.type == SavedItemType.LINK && item.content.startsWith("http")) {
+                                                        CobaltCustomTabsLauncher.launch(context, item.content)
+                                                    } else {
+                                                        onOpenMainApp(item.id)
+                                                    }
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            // ════════════ SEARCH SUBPAGE ════════════
+                            SearchSubpageContent(
+                                repository = repository,
+                                onBack = { currentMode = SideDockMode.MAIN },
+                                onClose = { dismissDock() }
+                            )
                         }
                     }
-                } else {
-                    // ════════════ SEARCH SUBPAGE ════════════
-                    SearchSubpageContent(
-                        repository = repository,
-                        onBack = { currentMode = SideDockMode.MAIN },
-                        onClose = { dismissDock() }
-                    )
+                }
+
+                // During initial elastic pull, show subtle handle pill indicator in center
+                if (p < 0.35f) {
+                    val pillAlpha = (1f - (p / 0.30f)).coerceIn(0f, 1f)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer { alpha = pillAlpha },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(2.5.dp)
+                                .height(28.dp)
+                                .background(Color.White.copy(alpha = 0.8f), RoundedCornerShape(1.5.dp))
+                        )
+                    }
                 }
             }
         }
