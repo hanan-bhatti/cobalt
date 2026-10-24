@@ -27,6 +27,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.ServiceInfo
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
@@ -53,6 +54,7 @@ import com.example.data.repository.SettingsRepository
 import com.example.ui.dock.SideDockContent
 import com.example.ui.theme.MyApplicationTheme
 import com.example.util.OverlayLifecycleOwner
+import com.example.utils.DevicePerformance
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -71,6 +73,9 @@ class CobaltSideDockService : Service() {
     private var handlePillView: View? = null
 
     private var dockComposeView: ComposeView? = null
+    private var scrimView: View? = null
+    private var dismissDockAction: (() -> Unit)? = null
+    private var lastBlurRadiusPx = -1
     private var dockLifecycleOwner: OverlayLifecycleOwner? = null
     private var isDockExpanded = false
 
@@ -86,8 +91,33 @@ class CobaltSideDockService : Service() {
     private fun getEdgePanelYPercent(): Float = prefs.getFloat("edge_panel_y_percent", 0.4f)
     private fun getEdgePanelThickness(): Int = prefs.getInt("edge_panel_thickness", 6)
     private fun getEdgePanelHeight(): Int = prefs.getInt("edge_panel_height", 100)
+    private fun getEffectiveHandleHeightDp(): Int {
+        val base = getEdgePanelHeight()
+        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        return if (isLandscape) {
+            val screenHDp = resources.configuration.screenHeightDp
+            (screenHDp * 0.14f).toInt().coerceIn(44, 68)
+        } else {
+            base
+        }
+    }
     private fun getEdgePanelOpacity(): Float = prefs.getFloat("edge_panel_opacity", 0.7f)
     private fun getAnimPreset(): String = prefs.getString("edge_panel_anim_preset", "Smooth") ?: "Smooth"
+    private fun getAnimStiffness(): Float = prefs.getFloat("edge_panel_anim_stiffness", 340f)
+    private fun getAnimDamping(): Float = prefs.getFloat("edge_panel_anim_damping", 0.72f)
+    private fun getBlurRadius(): Int = prefs.getInt("blur_radius", 25)
+    private fun getBlurOpacity(): Float = prefs.getFloat("blur_opacity", 0.30f)
+    private fun canUseBlur(): Boolean {
+        if (!DevicePerformance.shouldUseBlur(this)) return false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            return try {
+                windowManager.isCrossWindowBlurEnabled
+            } catch (_: Throwable) {
+                false
+            }
+        }
+        return false
+    }
 
     private fun isDarkTheme(): Boolean {
         val theme = prefs.getString("theme_mode", "Light") ?: "Light"
@@ -105,7 +135,9 @@ class CobaltSideDockService : Service() {
         if (key in listOf(
                 "edge_panel_height", "edge_panel_thickness", "edge_panel_opacity",
                 "edge_panel_side", "edge_panel_y_percent", "floating_ocr_enabled",
-                "dynamic_color", "theme_mode", "edge_panel_anim_preset"
+                "dynamic_color", "theme_mode", "edge_panel_anim_preset",
+                "edge_panel_anim_stiffness", "edge_panel_anim_damping",
+                "force_disable_blur", "blur_radius", "blur_opacity"
             )
         ) {
             mainHandler.post {
@@ -182,7 +214,7 @@ class CobaltSideDockService : Service() {
         val side = getEdgePanelSide()
         val yPercent = getEdgePanelYPercent()
         val thickness = getEdgePanelThickness()
-        val height = getEdgePanelHeight()
+        val height = getEffectiveHandleHeightDp()
         val opacity = getEdgePanelOpacity()
 
         val params = WindowManager.LayoutParams(
@@ -267,7 +299,9 @@ class CobaltSideDockService : Service() {
 
                     if (isDraggingY) {
                         layoutParams.y = (initialY + deltaY).toInt()
-                        val usableHeight = resources.displayMetrics.heightPixels - dpToPx(160)
+                        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                        val insetDp = if (isLandscape) 80 else 160
+                        val usableHeight = (resources.displayMetrics.heightPixels - dpToPx(insetDp)).coerceAtLeast(dpToPx(60))
                         val halfHeight = usableHeight / 2
                         if (layoutParams.y < -halfHeight) layoutParams.y = -halfHeight
                         if (layoutParams.y > halfHeight) layoutParams.y = halfHeight
@@ -309,7 +343,9 @@ class CobaltSideDockService : Service() {
                         val absDeltaY = Math.abs(deltaY)
 
                         if (isDraggingY) {
-                            val usableHeight = resources.displayMetrics.heightPixels - dpToPx(160)
+                            val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                            val insetDp = if (isLandscape) 80 else 160
+                            val usableHeight = (resources.displayMetrics.heightPixels - dpToPx(insetDp)).coerceAtLeast(dpToPx(60))
                             val halfHeight = usableHeight / 2
                             val finalY = layoutParams.y
                             val newPercent = (finalY + halfHeight).toFloat() / usableHeight.toFloat()
@@ -365,7 +401,7 @@ class CobaltSideDockService : Service() {
         val side = getEdgePanelSide()
         val yPercent = getEdgePanelYPercent()
         val thickness = getEdgePanelThickness()
-        val height = getEdgePanelHeight()
+        val height = getEffectiveHandleHeightDp()
         val opacity = getEdgePanelOpacity()
 
         handlePillView?.let { pill ->
@@ -417,13 +453,76 @@ class CobaltSideDockService : Service() {
         if (isDockExpanded) return
         isDockExpanded = true
 
+        val location = IntArray(2)
+        handlePillView?.getLocationOnScreen(location)
+        val density = resources.displayMetrics.density
+        val pillHeightPx = handlePillView?.height ?: dpToPx(getEffectiveHandleHeightDp())
+        val pillWidthPx = handlePillView?.width ?: dpToPx(getEdgePanelThickness())
+        val handleCenterYPx = location[1] + (pillHeightPx / 2f)
+        val exactHandleCenterYDp = if (location[1] > 0) handleCenterYPx / density else null
+
         // Hide handle while dock is open
         handlePillView?.visibility = View.INVISIBLE
         updateSystemGestureExclusions()
 
-        val fullScreenParams = WindowManager.LayoutParams(
+        val isBlurSupported = canUseBlur()
+        val currentBlurRadius = getBlurRadius()
+        val currentBlurOpacity = getBlurOpacity()
+
+        val isRightSide = getEdgePanelSide() == "Right"
+        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val cardWidthDp = if (isLandscape) 330 else 280
+        val screenHDp = resources.configuration.screenHeightDp
+        val cardHeightDp = if (isLandscape) (screenHDp - 48).coerceAtMost(330) else 460
+        val edgeMarginDp = 12
+
+        val rawCenterYDp = exactHandleCenterYDp ?: (screenHDp * getEdgePanelYPercent())
+        val minTopDp = if (isLandscape) 12f else 36f
+        val maxTopDp = (screenHDp - cardHeightDp - (if (isLandscape) 12f else 36f)).coerceAtLeast(minTopDp)
+        val baseTopDp = rawCenterYDp - (cardHeightDp / 2f)
+        val effectiveTopDp = baseTopDp.coerceIn(minTopDp, maxTopDp)
+
+        // 1. WINDOW 1: Full-Screen Touch-to-Dismiss Scrim (100% UNBLURRED background)
+        val scrim = View(this).apply {
+            setBackgroundColor(Color.TRANSPARENT)
+            setOnClickListener {
+                dismissDockAction?.invoke() ?: closeDock()
+            }
+        }
+        scrimView = scrim
+
+        val scrimParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                @Suppress("DEPRECATION")
+                WindowManager.LayoutParams.TYPE_PHONE
+            },
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+            }
+            gravity = Gravity.TOP or Gravity.START
+        }
+
+        try {
+            windowManager.addView(scrim, scrimParams)
+        } catch (e: Exception) {
+            android.util.Log.e("CobaltSideDock", "Failed to add scrim window: ${e.message}", e)
+        }
+
+        // 2. WINDOW 2: Bounded strictly to the Dock Card region on the screen edge
+        val windowWidthPx = dpToPx(cardWidthDp + edgeMarginDp)
+        val windowHeightPx = dpToPx(cardHeightDp + 48)
+        val dockParams = WindowManager.LayoutParams(
+            windowWidthPx,
+            windowHeightPx,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             } else {
@@ -434,14 +533,50 @@ class CobaltSideDockService : Service() {
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+            gravity = Gravity.TOP or (if (isRightSide) Gravity.END else Gravity.START)
+            x = 0
+            y = dpToPx(effectiveTopDp.toInt())
         }
 
         val lifecycleOwner = OverlayLifecycleOwner().apply { onStart() }
         dockLifecycleOwner = lifecycleOwner
 
-        val composeView = ComposeView(this).apply {
+        val composeView = ComposeView(this)
+        dockComposeView = composeView
+
+        var blurDrawable: Any? = null
+        var setBlurRadiusMethod: java.lang.reflect.Method? = null
+        var setCornerRadiusMethod: java.lang.reflect.Method? = null
+
+        composeView.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isBlurSupported) {
+                    try {
+                        val getRootMethod = View::class.java.getDeclaredMethod("getViewRootImpl")
+                        getRootMethod.isAccessible = true
+                        val root = getRootMethod.invoke(v)
+                        if (root != null) {
+                            val createMethod = root.javaClass.getMethod("createBackgroundBlurDrawable")
+                            val drawable = createMethod.invoke(root)
+                            if (drawable is android.graphics.drawable.Drawable) {
+                                blurDrawable = drawable
+                                setBlurRadiusMethod = drawable.javaClass.getMethod("setBlurRadius", Int::class.javaPrimitiveType)
+                                setCornerRadiusMethod = drawable.javaClass.getMethod("setCornerRadius", Float::class.javaPrimitiveType)
+                                setBlurRadiusMethod?.invoke(drawable, dpToPx(currentBlurRadius))
+                                setCornerRadiusMethod?.invoke(drawable, dpToPx(24).toFloat())
+                                v.background = drawable
+                                android.util.Log.i("CobaltSideDock", "Successfully created and set BackgroundBlurDrawable!")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.w("CobaltSideDock", "createBackgroundBlurDrawable not available: ${e.message}")
+                    }
+                }
+            }
+            override fun onViewDetachedFromWindow(v: View) {}
+        })
+
+        composeView.apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool)
             setViewTreeLifecycleOwner(lifecycleOwner)
             setViewTreeViewModelStoreOwner(lifecycleOwner)
@@ -455,11 +590,33 @@ class CobaltSideDockService : Service() {
                     SideDockContent(
                         side = getEdgePanelSide(),
                         yPercent = getEdgePanelYPercent(),
-                        handleHeightDp = getEdgePanelHeight(),
+                        handleCenterYDp = exactHandleCenterYDp,
+                        handleHeightDp = getEffectiveHandleHeightDp(),
                         handleThicknessDp = getEdgePanelThickness(),
                         handleOpacity = getEdgePanelOpacity(),
                         animPreset = getAnimPreset(),
+                        animStiffness = getAnimStiffness(),
+                        animDamping = getAnimDamping(),
+                        useBlur = isBlurSupported,
+                        blurRadius = currentBlurRadius,
+                        blurOpacity = currentBlurOpacity,
                         repository = repository,
+                        onRegisterDismiss = { action ->
+                            dismissDockAction = action
+                        },
+                        onProgressChanged = { progress ->
+                            // Progressive Scrim: transparent -> 10% black -> transparent
+                            scrimView?.setBackgroundColor(
+                                Color.argb((255 * 0.10f * progress.coerceIn(0f, 1f)).toInt(), 0, 0, 0)
+                            )
+                            // Progressive blur on dock background blur drawable if active
+                            if (blurDrawable != null) {
+                                val targetRadius = (currentBlurRadius * progress.coerceIn(0f, 1f)).toInt()
+                                try {
+                                    setBlurRadiusMethod?.invoke(blurDrawable, dpToPx(targetRadius))
+                                } catch (_: Exception) {}
+                            }
+                        },
                         onClose = {
                             // Handled via SideDockContent's dismiss animation
                         },
@@ -472,18 +629,16 @@ class CobaltSideDockService : Service() {
                         onLaunchLink = {
                             launchLinkCapture()
                         },
-                        onOpenMainApp = { itemId ->
-                            openMainApp(itemId)
+                        onOpenMainApp = { itemId, destination ->
+                            openMainApp(itemId, destination)
                         }
                     )
                 }
             }
         }
 
-        dockComposeView = composeView
-
         try {
-            windowManager.addView(composeView, fullScreenParams)
+            windowManager.addView(composeView, dockParams)
         } catch (e: Exception) {
             android.util.Log.e("CobaltSideDock", "Failed to add dock window: ${e.message}", e)
             closeDock()
@@ -492,12 +647,20 @@ class CobaltSideDockService : Service() {
 
     private fun closeDock() {
         isDockExpanded = false
+        scrimView?.let { view ->
+            try {
+                windowManager.removeView(view)
+            } catch (_: Exception) {}
+            scrimView = null
+        }
         dockComposeView?.let { view ->
             try {
                 windowManager.removeView(view)
             } catch (_: Exception) {}
             dockComposeView = null
         }
+        dismissDockAction = null
+        lastBlurRadiusPx = -1
         dockLifecycleOwner?.onDestroy()
         dockLifecycleOwner = null
 
@@ -534,11 +697,14 @@ class CobaltSideDockService : Service() {
         startActivity(intent)
     }
 
-    private fun openMainApp(itemId: String?) {
+    private fun openMainApp(itemId: String?, destination: String? = null) {
         val intent = Intent(applicationContext, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             if (itemId != null) {
                 putExtra("OPEN_ITEM_ID", itemId)
+            }
+            if (destination != null) {
+                putExtra("NAVIGATE_TO", destination)
             }
         }
         startActivity(intent)
@@ -581,13 +747,11 @@ class CobaltSideDockService : Service() {
     }
 
     private fun calculateYPosition(yPercent: Float, heightDp: Int = 100): Int {
-        val screenHeight = resources.displayMetrics.heightPixels
-        val targetCenterY = screenHeight * yPercent
-        val halfHeight = dpToPx(heightDp) / 2
-        val minCenterY = halfHeight.toFloat() + dpToPx(24)
-        val maxCenterY = (screenHeight.toFloat() - halfHeight - dpToPx(24)).coerceAtLeast(minCenterY)
-        val clampedCenterY = targetCenterY.coerceIn(minCenterY, maxCenterY)
-        return (clampedCenterY - (screenHeight / 2f)).toInt()
+        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val insetDp = if (isLandscape) 80 else 160
+        val usableHeight = (resources.displayMetrics.heightPixels - dpToPx(insetDp)).coerceAtLeast(dpToPx(60))
+        val halfHeight = usableHeight / 2
+        return (yPercent.coerceIn(0f, 1f) * usableHeight - halfHeight).toInt()
     }
 
     private fun createNotificationChannel() {

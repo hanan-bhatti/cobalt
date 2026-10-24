@@ -183,7 +183,7 @@ fun CaptureScreen(
 
     LaunchedEffect(ocrError) {
         ocrError?.let {
-            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            Toast.makeText(context, com.example.util.GoogleApiErrorMapper.formatUserFriendlyError(it), Toast.LENGTH_LONG).show()
             viewModel.clearOcrError()
         }
     }

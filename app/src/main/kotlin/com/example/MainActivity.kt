@@ -63,6 +63,9 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import com.example.ui.screens.SettingsCategory
 import com.example.ui.screens.ProfileScreen
 import com.example.ui.screens.AuthScreen
 import com.example.ui.screens.CaptureScreen
@@ -76,6 +79,13 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import com.example.ui.components.CustomBottomBar
 import com.example.ui.components.BottomBarItem
+import com.example.ui.components.ScreenWrapper
+import com.example.ui.navigation.aospSharedAxisEnter
+import com.example.ui.navigation.aospSharedAxisExit
+import com.example.ui.navigation.aospSharedAxisPopEnter
+import com.example.ui.navigation.aospSharedAxisPopExit
+import com.example.ui.navigation.mainRootEnterTransition
+import com.example.ui.navigation.mainRootExitTransition
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import androidx.compose.material.icons.filled.Home
@@ -105,10 +115,12 @@ import androidx.compose.material.icons.outlined.Search
 
 class MainActivity : ComponentActivity() {
     private val viewModel: CobaltViewModel by viewModels()
+    private val pendingNavDestination = androidx.compose.runtime.mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        pendingNavDestination.value = intent?.getStringExtra("NAVIGATE_TO")
 
         // Force widget update on app start to overcome OEM background restrictions
         com.example.widget.WidgetUpdater.update(applicationContext)
@@ -158,6 +170,19 @@ class MainActivity : ComponentActivity() {
 
                 BackHandler(enabled = activeDetailItem != null) {
                     viewModel.closeDetailItem()
+                }
+
+                val navDest by pendingNavDestination
+                LaunchedEffect(navDest) {
+                    val dest = navDest
+                    if (!dest.isNullOrBlank()) {
+                        try {
+                            navController.navigate(dest) {
+                                launchSingleTop = true
+                            }
+                        } catch (_: Exception) {}
+                        pendingNavDestination.value = null
+                    }
                 }
 
                 if (pendingCrashReport != null) {
@@ -238,132 +263,239 @@ class MainActivity : ComponentActivity() {
                                      navController = navController,
                                      startDestination = "home",
                                      enterTransition = {
-                                         slideIntoContainer(
-                                             towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                                             animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
-                                         ) + fadeIn(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow))
+                                         mainRootEnterTransition(
+                                             fromRoute = initialState.destination.route,
+                                             toRoute = targetState.destination.route,
+                                             fallback = aospSharedAxisEnter()
+                                         )
                                      },
                                      exitTransition = {
-                                         slideOutOfContainer(
-                                             towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                                             animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
-                                         ) + fadeOut(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow))
+                                         mainRootExitTransition(
+                                             fromRoute = initialState.destination.route,
+                                             toRoute = targetState.destination.route,
+                                             fallback = aospSharedAxisExit()
+                                         )
                                      },
                                      popEnterTransition = {
-                                         slideIntoContainer(
-                                             towards = AnimatedContentTransitionScope.SlideDirection.End,
-                                             animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
-                                         ) + fadeIn(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow))
+                                         mainRootEnterTransition(
+                                             fromRoute = initialState.destination.route,
+                                             toRoute = targetState.destination.route,
+                                             fallback = aospSharedAxisPopEnter()
+                                         )
                                      },
                                      popExitTransition = {
-                                         slideOutOfContainer(
-                                             towards = AnimatedContentTransitionScope.SlideDirection.End,
-                                             animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
-                                         ) + fadeOut(animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow))
+                                         mainRootExitTransition(
+                                             fromRoute = initialState.destination.route,
+                                             toRoute = targetState.destination.route,
+                                             fallback = aospSharedAxisPopExit()
+                                         )
                                      }
                                  ) {
                                     composable("home") {
-                                        HomeScreen(
-                                            onNavigateToSearch = { navController.navigate("search") },
-                                            viewModel = viewModel,
-                                            onNavigateToProfile = { navController.navigate("profile") },
-                                            onNavigateToMediaHub = { navController.navigate("media_hub") },
-                                            sharedTransitionScope = this@SharedTransitionLayout,
-                                            animatedVisibilityScope = this@composable
-                                        )
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            HomeScreen(
+                                                onNavigateToSearch = { navController.navigate("search") },
+                                                viewModel = viewModel,
+                                                onNavigateToProfile = { navController.navigate("profile") },
+                                                onNavigateToMediaHub = { navController.navigate("media_hub") },
+                                                sharedTransitionScope = this@SharedTransitionLayout,
+                                                animatedVisibilityScope = this@composable
+                                            )
+                                        }
                                     }
                                     composable("search") {
-                                        com.example.ui.screens.SearchScreen(
-                                            viewModel = viewModel,
-                                            onNavigateBack = { navController.popBackStack() },
-                                            onItemClick = { item -> viewModel.showDetailItem(item) }
-                                        )
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.SearchScreen(
+                                                viewModel = viewModel,
+                                                onNavigateBack = { navController.popBackStack() },
+                                                onItemClick = { item -> viewModel.showDetailItem(item) }
+                                            )
+                                        }
                                     }
-                                     composable("folders") {
-                                        FoldersScreen(
-                                            viewModel = viewModel,
-                                            hazeState = hazeState
-                                        )
+                                    composable("folders") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            FoldersScreen(
+                                                viewModel = viewModel,
+                                                hazeState = hazeState
+                                            )
+                                        }
                                     }
                                     composable("profile") {
-                                        ProfileScreen(
-                                            viewModel = viewModel,
-                                            onNavigateBack = { navController.popBackStack() },
-                                            onNavigateToAuth = { if (viewModel.isFirebaseAvailable) navController.navigate("auth") },
-                                            onNavigateToLegal = { route -> navController.navigate(route) },
-                                            onNavigateToManageStorage = { if (viewModel.isFirebaseAvailable) navController.navigate("manage_storage") },
-                                            onNavigateToCategory = { category ->
-                                                viewModel.setFolderFilter(category)
-                                                navController.navigate("home") {
-                                                    popUpTo("home") { inclusive = false }
-                                                }
-                                            }
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            ProfileScreen(
+                                                viewModel = viewModel,
+                                                onNavigateBack = { navController.popBackStack() },
+                                                onNavigateToAuth = { if (viewModel.isFirebaseAvailable) navController.navigate("auth") },
+                                                onNavigateToLegal = { route -> navController.navigate(route) },
+                                                onNavigateToManageStorage = { if (viewModel.isFirebaseAvailable) navController.navigate("manage_storage") },
+                                                onNavigateToCategory = { category ->
+                                                    viewModel.setFolderFilter(category)
+                                                    navController.navigate("home") {
+                                                        popUpTo("home") { inclusive = false }
+                                                    }
+                                                },
+                                                onNavigateToSettings = { navController.navigate("settings") },
+                                                onNavigateToDevices = { navController.navigate("devices") },
+                                                onNavigateToMovieApiKey = { navController.navigate("movie_api_key") }
+                                            )
+                                        }
+                                    }
+                                    composable("settings") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.SettingsScreen(
+                                                viewModel = viewModel,
+                                                onNavigateBack = { navController.popBackStack() },
+                                                onNavigateToCategory = { category ->
+                                                    navController.navigate("settings_category/${category.name}")
+                                                },
+                                                onNavigateToEdgePanelSettings = { navController.navigate("edge_panel_settings") },
+                                                onNavigateToWidgetSettings = { navController.navigate("widget_settings") },
+                                                onNavigateToEdgeAnimSettings = { navController.navigate("edge_anim_settings") }
+                                            )
+                                        }
+                                    }
+                                    composable(
+                                        route = "settings_category/{categoryId}",
+                                        arguments = listOf(
+                                            navArgument("categoryId") { type = NavType.StringType }
                                         )
+                                    ) { backStackEntry ->
+                                        val categoryId = backStackEntry.arguments?.getString("categoryId")
+                                        val category = SettingsCategory.entries.find { it.name == categoryId } ?: SettingsCategory.APPEARANCE
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.SettingsCategoryDetailScreen(
+                                                category = category,
+                                                viewModel = viewModel,
+                                                onNavigateBack = { navController.popBackStack() },
+                                                onNavigateToEdgePanelSettings = { navController.navigate("edge_panel_settings") },
+                                                onNavigateToWidgetSettings = { navController.navigate("widget_settings") },
+                                                onNavigateToEdgeAnimSettings = { navController.navigate("edge_anim_settings") }
+                                            )
+                                        }
+                                    }
+                                    composable("devices") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.DevicesScreen(
+                                                viewModel = viewModel,
+                                                onNavigateBack = { navController.popBackStack() }
+                                            )
+                                        }
+                                    }
+                                    composable("movie_api_key") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.MovieApiKeyScreen(
+                                                viewModel = viewModel,
+                                                onNavigateBack = { navController.popBackStack() }
+                                            )
+                                        }
+                                    }
+                                    composable("edge_panel_settings") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.EdgePanelSettingsScreen(
+                                                viewModel = viewModel,
+                                                onNavigateBack = { navController.popBackStack() }
+                                            )
+                                        }
+                                    }
+                                    composable("widget_settings") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.WidgetSettingsScreen(
+                                                viewModel = viewModel,
+                                                onNavigateBack = { navController.popBackStack() }
+                                            )
+                                        }
+                                    }
+                                    composable("edge_anim_settings") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                             com.example.ui.screens.EdgePanelAnimationSettingsScreen(
+                                                 viewModel = viewModel,
+                                                 onNavigateBack = { navController.popBackStack() }
+                                             )
+                                        }
                                     }
                                     composable("auth") {
-                                        AuthScreen(
-                                            viewModel = viewModel,
-                                            onNavigateBack = { navController.popBackStack() },
-                                            onNavigateToLegal = { route -> navController.navigate(route) }
-                                        )
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            AuthScreen(
+                                                viewModel = viewModel,
+                                                onNavigateBack = { navController.popBackStack() },
+                                                onNavigateToLegal = { route -> navController.navigate(route) }
+                                            )
+                                        }
                                     }
                                     composable("privacy") {
-                                        com.example.ui.screens.LegalScreen(
-                                            title = "Privacy Policy",
-                                            markdownContent = com.example.ui.screens.LegalDocs.privacyPolicy,
-                                            onBack = { navController.popBackStack() }
-                                        )
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.LegalScreen(
+                                                title = "Privacy Policy",
+                                                markdownContent = com.example.ui.screens.LegalDocs.privacyPolicy,
+                                                onBack = { navController.popBackStack() }
+                                            )
+                                        }
                                     }
                                     composable("terms") {
-                                        com.example.ui.screens.LegalScreen(
-                                            title = "Terms & Conditions",
-                                            markdownContent = com.example.ui.screens.LegalDocs.termsOfConditions,
-                                            onBack = { navController.popBackStack() }
-                                        )
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.LegalScreen(
+                                                title = "Terms & Conditions",
+                                                markdownContent = com.example.ui.screens.LegalDocs.termsOfConditions,
+                                                onBack = { navController.popBackStack() }
+                                            )
+                                        }
                                     }
                                     composable("faq") {
-                                        com.example.ui.screens.FaqScreen(
-
-                                            markdownContent = com.example.ui.screens.LegalDocs.faq,
-                                            onBack = { navController.popBackStack() }
-                                        )
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.FaqScreen(
+                                                markdownContent = com.example.ui.screens.LegalDocs.faq,
+                                                onBack = { navController.popBackStack() }
+                                            )
+                                        }
                                     }
                                     composable("manage_storage") {
-                                        com.example.ui.screens.ManageStorageScreen(
-                                            onNavigateBack = { navController.popBackStack() },
-                                            viewModel = viewModel
-                                        )
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.ManageStorageScreen(
+                                                onNavigateBack = { navController.popBackStack() },
+                                                viewModel = viewModel
+                                            )
+                                        }
                                     }
-                                     composable("release_updates") {
-                                         com.example.ui.screens.ReleaseUpdatesScreen(
-                                             onNavigateBack = { navController.popBackStack() }
-                                         )
-                                     }
-                                     composable("support") {
-                                         com.example.ui.screens.SupportScreen(
-                                             onNavigateBack = { navController.popBackStack() },
-                                             onNavigateToFeedback = { tabIndex -> navController.navigate("feedback") }
-                                         )
-                                     }
-                                     composable("feedback") {
-                                         com.example.ui.screens.FeedbackScreen(
-                                             viewModel = viewModel,
-                                             onNavigateBack = { navController.popBackStack() }
-                                         )
-                                     }
-                                     composable("about") {
-                                         com.example.ui.screens.LegalScreen(
-                                             title = "About",
-                                             markdownContent = com.example.ui.screens.LegalDocs.about,
-                                             onBack = { navController.popBackStack() }
-                                         )
-                                     }
-                                     composable("media_hub") {
-                                         com.example.ui.screens.MediaHubScreen(
-                                             viewModel = viewModel,
-                                             onMediaClick = { item -> viewModel.showDetailItem(item) }
-                                         )
-                                     }
+                                    composable("release_updates") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.ReleaseUpdatesScreen(
+                                                onNavigateBack = { navController.popBackStack() }
+                                            )
+                                        }
+                                    }
+                                    composable("support") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.SupportScreen(
+                                                onNavigateBack = { navController.popBackStack() },
+                                                onNavigateToFeedback = { tabIndex -> navController.navigate("feedback") }
+                                            )
+                                        }
+                                    }
+                                    composable("feedback") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.FeedbackScreen(
+                                                viewModel = viewModel,
+                                                onNavigateBack = { navController.popBackStack() }
+                                            )
+                                        }
+                                    }
+                                    composable("about") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.LegalScreen(
+                                                title = "About",
+                                                markdownContent = com.example.ui.screens.LegalDocs.about,
+                                                onBack = { navController.popBackStack() }
+                                            )
+                                        }
+                                    }
+                                    composable("media_hub") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.MediaHubScreen(
+                                                viewModel = viewModel,
+                                                onMediaClick = { item -> viewModel.showDetailItem(item) }
+                                            )
+                                        }
+                                    }
                                  }
 
                                  // Sliding overlay for the capture screen - mimics Apple's native share action sheet
@@ -432,7 +564,7 @@ class MainActivity : ComponentActivity() {
                             val items = listOf(
                                 BottomBarItem("home", R.drawable.ic_custom_home, "Home"),
                                 BottomBarItem("search", R.drawable.ic_custom_search, "Search"),
-                                BottomBarItem("media_hub", R.drawable.ic_custom_movie, "Hub"),
+                                BottomBarItem("media_hub", R.drawable.ic_custom_movie, "Media"),
                                 BottomBarItem("folders", R.drawable.ic_custom_folder, "Folders"),
                                 BottomBarItem(
                                     "profile",
@@ -498,6 +630,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleIntent(intent)
+        pendingNavDestination.value = intent.getStringExtra("NAVIGATE_TO")
     }
 
     private fun handleIntent(intent: Intent?) {

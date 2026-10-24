@@ -561,26 +561,41 @@ fun ProfileMainContent(
                 }
             }
 
-            // APP
-            SectionContainer(title = "APP") {
-                ClickableRow(title = "Settings", onClick = onNavigateToSettings)
+            // PREFERENCES & TOOLS
+            SectionContainer(title = "PREFERENCES & TOOLS") {
+                ClickableRow(
+                    title = "Appearance & Preferences",
+                    subtitle = "Theme, frosted blur, Gemini AI, and floating capture dock",
+                    leadingIconRes = R.drawable.ic_custom_settings,
+                    onClick = onNavigateToSettings
+                )
                 if (isFirebaseAvailable) {
                     HorizontalDivider(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                        modifier = Modifier.padding(horizontal = 20.dp)
+                        modifier = Modifier.padding(horizontal = 16.dp)
                     )
-                    ClickableRow(title = "Devices", onClick = onNavigateToDevices)
+                    ClickableRow(
+                        title = "Connected Devices",
+                        subtitle = "Active sessions and cross-device sync",
+                        leadingIconRes = R.drawable.ic_custom_sync,
+                        onClick = onNavigateToDevices
+                    )
                 }
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                    modifier = Modifier.padding(horizontal = 20.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 )
-                ClickableRow(title = "Movie & TV Integration", onClick = onNavigateToMovieApiKey)
+                ClickableRow(
+                    title = "Movie & TV Metadata",
+                    subtitle = "TMDB API credentials and discovery settings",
+                    leadingIconRes = R.drawable.ic_custom_movie,
+                    onClick = onNavigateToMovieApiKey
+                )
             }
 
             if (com.example.BuildConfig.FLAVOR != "foss") {
             // STORAGE SECTION
-            SectionContainer(title = "STORAGE") {
+            SectionContainer(title = "STORAGE & BACKUPS") {
                 Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
                     if (isFirebaseAvailable) {
                         val cloudUsedStorageBytes by viewModel.cloudUsedStorageBytes.collectAsState()
@@ -768,18 +783,21 @@ fun ProfileMainContent(
                     ClickableRow(
                         title = "Help & Support Diagnostics",
                         subtitle = "System health, FAQs, & diagnostic tests",
+                        leadingIconRes = R.drawable.ic_custom_info,
                         onClick = { onNavigateToLegal("support") }
                     )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
                     ClickableRow(
                         title = "Feedback & Bug Reports",
                         subtitle = "Report bugs or request new features",
+                        leadingIconRes = R.drawable.ic_custom_edit,
                         onClick = { onNavigateToLegal("feedback") }
                     )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
                     ClickableRow(
                         title = "Take App Experience Survey",
                         subtitle = "Help shape v1.0 • Earn Contributor Badge",
+                        leadingIconRes = R.drawable.ic_custom_star,
                         onClick = { showSurveySheet = true }
                     )
                 }
@@ -791,12 +809,14 @@ fun ProfileMainContent(
                     ClickableRow(
                         title = "App Updates & Release Notes",
                         subtitle = "v${com.example.util.AppVersionManager.currentVersionName} • Check for updates",
+                        leadingIconRes = R.drawable.ic_custom_sync,
                         onClick = { onNavigateToLegal("release_updates") }
                     )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
                     ClickableRow(
                         title = "About Cobalt",
                         subtitle = "Universal capture & personal archive",
+                        leadingIconRes = R.drawable.ic_custom_info,
                         onClick = { onNavigateToLegal("about") }
                     )
                 }
@@ -808,12 +828,14 @@ fun ProfileMainContent(
                     ClickableRow(
                         title = "Privacy Policy",
                         subtitle = "Data protection & privacy rights",
+                        leadingIconRes = R.drawable.ic_custom_lock,
                         onClick = { onNavigateToLegal("privacy") }
                     )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), modifier = Modifier.padding(horizontal = 20.dp))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
                     ClickableRow(
                         title = "Terms & Conditions",
                         subtitle = "GNU AGPL v3 license terms",
+                        leadingIconRes = R.drawable.ic_custom_link,
                         onClick = { onNavigateToLegal("terms") }
                     )
                 }
@@ -1206,19 +1228,22 @@ fun ProfileMainContent(
 }
 
 @Composable
-fun SectionContainer(title: String, content: @Composable () -> Unit) {
-    Column {
+fun SectionContainer(
+    title: String,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Column(modifier = modifier) {
         Text(
             text = title,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
         )
         Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
             modifier = Modifier.fillMaxWidth()
         ) {
             Column {
@@ -1281,31 +1306,64 @@ fun ArchiveStatRow(
 }
 
 @Composable
-fun ClickableRow(title: String, subtitle: String? = null, onClick: () -> Unit) {
+fun ClickableRow(
+    title: String,
+    subtitle: String? = null,
+    leadingIconRes: Int? = null,
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(20.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-            if (subtitle != null) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            if (leadingIconRes != null) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = leadingIconRes),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    modifier = Modifier.padding(top = 2.dp)
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
             }
         }
         Icon(
             painter = painterResource(id = R.drawable.ic_custom_chevron_right),
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp)
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            modifier = Modifier.size(18.dp)
         )
     }
 }

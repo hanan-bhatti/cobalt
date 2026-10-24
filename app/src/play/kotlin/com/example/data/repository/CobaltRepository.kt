@@ -113,8 +113,8 @@ class CobaltRepository(private val context: Context) {
             val response = com.example.data.remote.RetrofitClient.geminiService.generateContent("models/$model", apiKey, request)
             response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
         } catch (e: Exception) {
-            Log.e("CobaltRepo", "Gemini Audio call failed: ${e.message}")
-            "Error: ${e.localizedMessage ?: "Transcription failed"}"
+            Log.e("CobaltRepo", "Gemini Audio call failed: ${e.message}", e)
+            "Error: ${com.example.util.GoogleApiErrorMapper.formatException(e)}"
         }
     }
 
@@ -154,8 +154,8 @@ class CobaltRepository(private val context: Context) {
             val response = com.example.data.remote.RetrofitClient.geminiService.generateContent("models/$model", apiKey, request)
             response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
         } catch (e: Exception) {
-            Log.e("CobaltRepo", "Gemini Speech format call failed: ${e.message}")
-            "Error: ${e.localizedMessage ?: "Formatting failed"}"
+            Log.e("CobaltRepo", "Gemini Speech format call failed: ${e.message}", e)
+            "Error: ${com.example.util.GoogleApiErrorMapper.formatException(e)}"
         }
     }
 
@@ -1504,8 +1504,8 @@ class CobaltRepository(private val context: Context) {
             val response = RetrofitClient.geminiService.generateContent("models/$model", apiKey, request)
             response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
         } catch (e: Exception) {
-            Log.e("CobaltRepo", "Gemini API call failed: ${e.message}")
-            "Error: ${e.localizedMessage ?: "OCR failed"}"
+            Log.e("CobaltRepo", "Gemini API call failed: ${e.message}", e)
+            "Error: ${com.example.util.GoogleApiErrorMapper.formatException(e)}"
         }
     }
 
