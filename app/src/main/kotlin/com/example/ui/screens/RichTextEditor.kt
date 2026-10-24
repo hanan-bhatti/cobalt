@@ -155,12 +155,6 @@ fun RichTextEditor(
                         )
                     }
                 }
-
-                Text(
-                    text = if (isPreviewMode) "Markdown Preview" else "Supports English & اردو",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                )
             }
 
             HorizontalDivider(

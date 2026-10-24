@@ -541,6 +541,10 @@ class CobaltSideDockService : Service() {
         val rootLayout = DockRootLayout(this, lifecycleOwner.onBackPressedDispatcher).apply {
             isFocusable = true
             isFocusableInTouchMode = true
+            setViewTreeLifecycleOwner(lifecycleOwner)
+            setViewTreeViewModelStoreOwner(lifecycleOwner)
+            setViewTreeSavedStateRegistryOwner(lifecycleOwner)
+            setViewTreeOnBackPressedDispatcherOwner(lifecycleOwner)
         }
         dockRootView = rootLayout
 
@@ -552,11 +556,25 @@ class CobaltSideDockService : Service() {
             setViewTreeOnBackPressedDispatcherOwner(lifecycleOwner)
 
             setContent {
+                val isDark = isDarkTheme()
+                val customTabsUriHandler = androidx.compose.runtime.remember(this@CobaltSideDockService, isDark) {
+                    object : androidx.compose.ui.platform.UriHandler {
+                        override fun openUri(uri: String) {
+                            dismissDockAction?.invoke() ?: closeDock()
+                            com.example.util.CobaltCustomTabsLauncher.launch(
+                                context = this@CobaltSideDockService,
+                                url = uri,
+                                isDarkTheme = isDark
+                            )
+                        }
+                    }
+                }
                 CompositionLocalProvider(
-                    LocalOnBackPressedDispatcherOwner provides lifecycleOwner
+                    LocalOnBackPressedDispatcherOwner provides lifecycleOwner,
+                    androidx.compose.ui.platform.LocalUriHandler provides customTabsUriHandler
                 ) {
                     MyApplicationTheme(
-                        darkTheme = isDarkTheme(),
+                        darkTheme = isDark,
                         dynamicColor = prefs.getBoolean("dynamic_color", true)
                     ) {
                         SideDockContent(
@@ -583,12 +601,15 @@ class CobaltSideDockService : Service() {
                                 closeDock()
                             },
                             onLaunchOcr = {
+                                dismissDockAction?.invoke() ?: closeDock()
                                 launchOcrCapture()
                             },
                             onLaunchLink = {
+                                dismissDockAction?.invoke() ?: closeDock()
                                 launchLinkCapture()
                             },
                             onOpenMainApp = { itemId, destination ->
+                                dismissDockAction?.invoke() ?: closeDock()
                                 openMainApp(itemId, destination)
                             }
                         )

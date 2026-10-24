@@ -70,4 +70,21 @@ class CobaltCustomTabsTest {
         // Passes without crashing
         assertTrue(true)
     }
+
+    @Test
+    fun testParseMarkdownLinkAnnotationInvokesListener() {
+        var clickedUrl = ""
+        val annotated = com.example.ui.screens.parseMarkdown(
+            text = "Here is a [Google](https://google.com) link and https://cobalt.app",
+            onLinkClick = { clickedUrl = it }
+        )
+        assertNotNull(annotated)
+        val linkAnnotations = annotated.getLinkAnnotations(0, annotated.length)
+        assertEquals(2, linkAnnotations.size)
+        val firstLink = linkAnnotations[0].item as androidx.compose.ui.text.LinkAnnotation.Url
+        assertEquals("https://google.com", firstLink.url)
+        assertNotNull(firstLink.linkInteractionListener)
+        firstLink.linkInteractionListener?.onClick(firstLink)
+        assertEquals("https://google.com", clickedUrl)
+    }
 }

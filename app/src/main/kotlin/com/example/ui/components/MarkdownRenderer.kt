@@ -19,6 +19,7 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -44,8 +46,10 @@ import org.commonmark.parser.Parser
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.LinkInteractionListener
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.withLink
+import com.example.util.CobaltCustomTabsLauncher
 import com.example.utils.isRtlText
 
 /**
@@ -59,10 +63,13 @@ fun MarkdownText(
     markdown: String,
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.onSurface,
-    maxLines: Int = Int.MAX_VALUE
+    maxLines: Int = Int.MAX_VALUE,
+    onLinkClick: ((String) -> Unit)? = null
 ) {
     if (markdown.isBlank()) return
 
+    val context = LocalContext.current
+    val isDark = isSystemInDarkTheme()
     val parser = remember { Parser.builder().build() }
     val document = remember(markdown) { parser.parse(markdown) }
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -71,12 +78,20 @@ fun MarkdownText(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        RenderNode(document, color, primaryColor, maxLines)
+        RenderNode(document, color, primaryColor, maxLines, onLinkClick, context, isDark)
     }
 }
 
 @Composable
-private fun ColumnScope.RenderNode(node: Node, color: Color, primaryColor: Color, maxLines: Int) {
+private fun ColumnScope.RenderNode(
+    node: Node,
+    color: Color,
+    primaryColor: Color,
+    maxLines: Int,
+    onLinkClick: ((String) -> Unit)?,
+    context: android.content.Context,
+    isDark: Boolean
+) {
     var child = node.firstChild
     var bulletIndex = 1
     val isOrderedList = node is OrderedList
@@ -86,7 +101,7 @@ private fun ColumnScope.RenderNode(node: Node, color: Color, primaryColor: Color
         when (currentChild) {
             is org.commonmark.node.Paragraph -> {
                 val annotatedString = buildAnnotatedString {
-                    AppendInlineNodes(currentChild, color, primaryColor)
+                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark)
                 }
                 val isRtl = isRtlText(annotatedString.text)
                 val blockDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
@@ -98,7 +113,7 @@ private fun ColumnScope.RenderNode(node: Node, color: Color, primaryColor: Color
                             textDirection = TextDirection.Content,
                             lineHeight = 22.sp
                         ),
-                        textAlign = if (isRtl) TextAlign.End else TextAlign.Start,
+                        textAlign = if (isRtl) TextAlign.Right else TextAlign.Left,
                         modifier = Modifier.fillMaxWidth(),
                         maxLines = maxLines
                     )
@@ -106,7 +121,7 @@ private fun ColumnScope.RenderNode(node: Node, color: Color, primaryColor: Color
             }
             is Heading -> {
                 val annotatedString = buildAnnotatedString {
-                    AppendInlineNodes(currentChild, color, primaryColor)
+                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark)
                 }
                 val isRtl = isRtlText(annotatedString.text)
                 val blockDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
@@ -121,7 +136,7 @@ private fun ColumnScope.RenderNode(node: Node, color: Color, primaryColor: Color
                         text = annotatedString,
                         color = color,
                         style = style,
-                        textAlign = if (isRtl) TextAlign.End else TextAlign.Start,
+                        textAlign = if (isRtl) TextAlign.Right else TextAlign.Left,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 8.dp, bottom = 2.dp),
@@ -134,7 +149,7 @@ private fun ColumnScope.RenderNode(node: Node, color: Color, primaryColor: Color
                     modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 2.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    RenderNode(currentChild, color, primaryColor, maxLines)
+                    RenderNode(currentChild, color, primaryColor, maxLines, onLinkClick, context, isDark)
                 }
             }
             is OrderedList -> {
@@ -142,7 +157,7 @@ private fun ColumnScope.RenderNode(node: Node, color: Color, primaryColor: Color
                     modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 2.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    RenderNode(currentChild, color, primaryColor, maxLines)
+                    RenderNode(currentChild, color, primaryColor, maxLines, onLinkClick, context, isDark)
                 }
             }
             is ListItem -> {
@@ -161,7 +176,7 @@ private fun ColumnScope.RenderNode(node: Node, color: Color, primaryColor: Color
                         )
                         if (isOrderedList) bulletIndex++
                         Column(modifier = Modifier.weight(1f)) {
-                            RenderNode(currentChild, color, primaryColor, maxLines)
+                            RenderNode(currentChild, color, primaryColor, maxLines, onLinkClick, context, isDark)
                         }
                     }
                 }
@@ -187,7 +202,7 @@ private fun ColumnScope.RenderNode(node: Node, color: Color, primaryColor: Color
                             }
                             .padding(start = if (isRtl) 0.dp else 12.dp, end = if (isRtl) 12.dp else 0.dp)
                     ) {
-                        RenderNode(currentChild, color.copy(alpha = 0.85f), primaryColor, maxLines)
+                        RenderNode(currentChild, color.copy(alpha = 0.85f), primaryColor, maxLines, onLinkClick, context, isDark)
                     }
                 }
             }
@@ -267,7 +282,14 @@ private fun extractPlainText(node: Node): String {
     return sb.toString()
 }
 
-private fun AnnotatedString.Builder.AppendInlineNodes(node: Node, color: Color, primaryColor: Color) {
+private fun AnnotatedString.Builder.AppendInlineNodes(
+    node: Node,
+    color: Color,
+    primaryColor: Color,
+    onLinkClick: ((String) -> Unit)?,
+    context: android.content.Context,
+    isDark: Boolean
+) {
     var child = node.firstChild
     while (child != null) {
         val currentChild = child
@@ -289,7 +311,19 @@ private fun AnnotatedString.Builder.AppendInlineNodes(node: Node, color: Color, 
                         append(literal.substring(lastIndex, match.range.first))
                     }
                     val url = match.value
-                    withLink(LinkAnnotation.Url(url = url, styles = linkStyles)) {
+                    val linkListener = LinkInteractionListener { annotation ->
+                        val clickedUrl = (annotation as? LinkAnnotation.Url)?.url ?: url
+                        if (onLinkClick != null) {
+                            onLinkClick(clickedUrl)
+                        } else {
+                            CobaltCustomTabsLauncher.launch(
+                                context = context,
+                                url = clickedUrl,
+                                isDarkTheme = isDark
+                            )
+                        }
+                    }
+                    withLink(LinkAnnotation.Url(url = url, styles = linkStyles, linkInteractionListener = linkListener)) {
                         append(url)
                     }
                     lastIndex = match.range.last + 1
@@ -300,12 +334,12 @@ private fun AnnotatedString.Builder.AppendInlineNodes(node: Node, color: Color, 
             }
             is StrongEmphasis -> {
                 withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                    AppendInlineNodes(currentChild, color, primaryColor)
+                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark)
                 }
             }
             is Emphasis -> {
                 withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
-                    AppendInlineNodes(currentChild, color, primaryColor)
+                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark)
                 }
             }
             is Code -> {
@@ -321,6 +355,7 @@ private fun AnnotatedString.Builder.AppendInlineNodes(node: Node, color: Color, 
                 }
             }
             is Link -> {
+                val destination = currentChild.destination
                 val linkStyles = TextLinkStyles(
                     style = SpanStyle(
                         color = primaryColor,
@@ -328,8 +363,20 @@ private fun AnnotatedString.Builder.AppendInlineNodes(node: Node, color: Color, 
                         fontWeight = FontWeight.SemiBold
                     )
                 )
-                withLink(LinkAnnotation.Url(url = currentChild.destination, styles = linkStyles)) {
-                    AppendInlineNodes(currentChild, color, primaryColor)
+                val linkListener = LinkInteractionListener { annotation ->
+                    val clickedUrl = (annotation as? LinkAnnotation.Url)?.url ?: destination
+                    if (onLinkClick != null) {
+                        onLinkClick(clickedUrl)
+                    } else {
+                        CobaltCustomTabsLauncher.launch(
+                            context = context,
+                            url = clickedUrl,
+                            isDarkTheme = isDark
+                        )
+                    }
+                }
+                withLink(LinkAnnotation.Url(url = destination, styles = linkStyles, linkInteractionListener = linkListener)) {
+                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark)
                 }
             }
             is HardLineBreak -> {
@@ -339,7 +386,7 @@ private fun AnnotatedString.Builder.AppendInlineNodes(node: Node, color: Color, 
                 append("\n") // Use clean single line break instead of double space
             }
             else -> {
-                AppendInlineNodes(currentChild, color, primaryColor)
+                AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark)
             }
         }
         child = currentChild.next

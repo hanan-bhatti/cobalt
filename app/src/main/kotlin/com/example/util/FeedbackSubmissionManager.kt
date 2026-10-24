@@ -334,10 +334,7 @@ object FeedbackSubmissionManager {
             val encodedBody = java.net.URLEncoder.encode(body, "UTF-8")
             val encodedLabels = java.net.URLEncoder.encode(labels, "UTF-8")
             val url = "https://github.com/hanan-bhatti/cobalt/issues/new?title=$encodedTitle&body=$encodedBody&labels=$encodedLabels"
-            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
+            CobaltCustomTabsLauncher.launch(context, url)
         } catch (e: Exception) {
             Log.e("FeedbackSubmissionManager", "Failed to launch GitHub issue: ${e.message}", e)
         }
@@ -355,10 +352,7 @@ object FeedbackSubmissionManager {
             val encodedTitle = java.net.URLEncoder.encode(title, "UTF-8")
             val encodedBody = java.net.URLEncoder.encode(body, "UTF-8")
             val url = "https://github.com/hanan-bhatti/cobalt/discussions/new?title=$encodedTitle&body=$encodedBody"
-            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(intent)
+            CobaltCustomTabsLauncher.launch(context, url)
         } catch (e: Exception) {
             Log.e("FeedbackSubmissionManager", "Failed to launch GitHub discussion: ${e.message}", e)
         }

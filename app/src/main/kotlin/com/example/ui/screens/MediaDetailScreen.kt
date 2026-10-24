@@ -58,6 +58,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.text.style.TextAlign
+import com.example.utils.isRtlText
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -224,14 +228,23 @@ fun MediaDetailSection(
                 }
 
                 // Main Title Overlay
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                val isTitleRtl = remember(item.title) { isRtlText(item.title) }
+                CompositionLocalProvider(
+                    LocalLayoutDirection provides if (isTitleRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
+                ) {
+                    Text(
+                        text = item.title,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = if (isTitleRtl) TextAlign.Right else TextAlign.Left,
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            textDirection = androidx.compose.ui.text.style.TextDirection.Content
+                        ),
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
 
@@ -535,6 +548,7 @@ fun MediaDetailSection(
                 )
                 MarkdownText(
                     markdown = item.content,
+                    modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 if (item.tagline?.isNotBlank() == true || item.runtime != null || item.budget != null || item.revenue != null || item.status != null || item.productionCompanies.isNotEmpty()) {

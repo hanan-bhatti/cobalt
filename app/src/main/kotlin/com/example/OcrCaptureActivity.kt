@@ -163,7 +163,23 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
             }
 
             MyApplicationTheme(darkTheme = isDarkTheme, dynamicColor = dynamicColorEnabled) {
-                OcrOverlayUI()
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val customTabsUriHandler = androidx.compose.runtime.remember(context, isDarkTheme) {
+                    object : androidx.compose.ui.platform.UriHandler {
+                        override fun openUri(uri: String) {
+                            com.example.util.CobaltCustomTabsLauncher.launch(
+                                context = context,
+                                url = uri,
+                                isDarkTheme = isDarkTheme
+                            )
+                        }
+                    }
+                }
+                androidx.compose.runtime.CompositionLocalProvider(
+                    androidx.compose.ui.platform.LocalUriHandler provides customTabsUriHandler
+                ) {
+                    OcrOverlayUI()
+                }
             }
         }
     }
