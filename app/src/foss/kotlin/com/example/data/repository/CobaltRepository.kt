@@ -70,15 +70,21 @@ class CobaltRepository(private val context: Context) {
             return@withContext "API Key Missing. Enter your key in the AI Studio Secrets panel or the Profile page."
         }
 
-        val promptText = "Transcribe this audio memo and format it as clear markdown notes. Give it a nice title as an H1, and format the rest appropriately."
+        // Dedicated transcribe models do not need or expect prompt wrappers
+        val parts = if (model.contains("transcribe", ignoreCase = true)) {
+            listOf(
+                Part(inlineData = InlineData(mimeType = "audio/mp4", data = base64Audio))
+            )
+        } else {
+            val promptText = "Transcribe this audio memo and format it as clear markdown notes. Give it a nice title as an H1, and format the rest appropriately."
+            listOf(
+                Part(text = promptText),
+                Part(inlineData = InlineData(mimeType = "audio/mp4", data = base64Audio))
+            )
+        }
         val request = GenerateContentRequest(
             contents = listOf(
-                Content(
-                    parts = listOf(
-                        Part(text = promptText),
-                        Part(inlineData = InlineData(mimeType = "audio/mp4", data = base64Audio))
-                    )
-                )
+                Content(parts = parts)
             )
         )
 
@@ -669,7 +675,8 @@ class CobaltRepository(private val context: Context) {
         height: Int,
         apiKey: String,
         model: String,
-        sensitivity: String = "Medium"
+        sensitivity: String = "Medium",
+        customPrompt: String? = null
     ): String? = withContext(Dispatchers.IO) {
         if (apiKey.isBlank()) {
             Log.e("CobaltRepo", "Gemini API key is missing or blank.")
@@ -696,27 +703,16 @@ class CobaltRepository(private val context: Context) {
         croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
         val base64Data = Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
 
-        // Build prompt: specifically requests OCR text extraction + return as URL if it resembles one
-        val basePrompt = """
-            You are a precise OCR and formatting engine. Extract all text from this image.
-
-            FORMATTING RULES for extractedText:
-            - Preserve bold text using **bold** markdown syntax.
-            - Preserve headings using # / ## / ### based on visual hierarchy (font size, weight, position).
-            - Preserve bullet points and numbered lists using standard Markdown syntax (- item, 1. item).
-            - If the text is written right-to-left (e.g. Urdu, Arabic), preserve the original script and reading order exactly. Do not transliterate, translate, or reorder the words.
-            - Preserve paragraph breaks and line breaks as they visually appear.
-            - Do not invent formatting that is not visually present in the image.
-
-            URL EXTRACTION RULES for urls:
-            - Transcribe every URL or web address character-for-character with maximum precision, including hyphens, underscores, dots, subdomains, and path segments. Do not guess, simplify, or "clean up" a URL — copy it exactly as it visually appears.
-            - If a URL has no scheme (e.g. "example.com" or "my-site.dev"), prepend "https://" without altering any other character.
-            - If you are not fully confident in a specific character within a URL (e.g. due to blur or small font), re-examine that specific region of the image before finalizing your answer, prioritizing accuracy over speed.
-        """.trimIndent()
+        // Build prompt: custom user prompt if provided, else system default OCR prompt
+        val basePrompt = if (!customPrompt.isNullOrBlank()) {
+            customPrompt.trim()
+        } else {
+            SettingsRepository.DEFAULT_OCR_PROMPT
+        }
         val sensitivityPrompt = when (sensitivity) {
-            "Low" -> " Extract only the most prominent, large text. Ignore small details, noise, or blurry text."
-            "High" -> " Extract all visible text perfectly, inferring missing characters or fixing typos caused by blurriness, and preserve the layout logic."
-            else -> " Extract all clearly visible text."
+            "Low" -> "\n\nExtract only the most prominent, large text. Ignore small details, noise, or blurry text."
+            "High" -> "\n\nExtract all visible text perfectly, inferring missing characters or fixing typos caused by blurriness, and preserve the layout logic."
+            else -> "\n\nExtract all clearly visible text."
         }
         val promptText = basePrompt + sensitivityPrompt
 
@@ -863,6 +859,15 @@ class CobaltRepository(private val context: Context) {
     suspend fun submitFeedbackToCloud(collection: String, payload: Map<String, Any?>): Boolean = withContext(Dispatchers.IO) {
         // Not supported in FOSS build, handled locally by saveLocally()
         true // Return true so it doesn't fail the operation, as saving locally is the intended behavior for FOSS
+    }
+
+    suspend fun wipeLocalData() = withContext(Dispatchers.IO) {
+        try {
+            db.clearAllTables()
+            context.cacheDir.deleteRecursively()
+        } catch (e: Exception) {
+            Log.e("CobaltRepo", "Failed to wipe local data: ${e.message}", e)
+        }
     }
 }
 

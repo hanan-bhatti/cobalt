@@ -1,14 +1,41 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Restrict access to user's own media folder
-    match /users/{userId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
     
-    // Allow users to upload bug report attachments
+    // Helper to verify user ownership
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Helper to enforce the 512 MB aggregate storage limit using Firestore cross-service lookup
+    function isWithinStorageQuota(userId) {
+      let userDocPath = /databases/(default)/documents/users/$(userId);
+      return !firestore.exists(userDocPath) ||
+             !('usedStorageBytes' in firestore.get(userDocPath).data) ||
+             (firestore.get(userDocPath).data.usedStorageBytes + request.resource.size <= 512 * 1024 * 1024);
+    }
+
+    // Restrict access to user's personal media folder
+    match /users/{userId}/{allPaths=**} {
+      // Allow reading and deleting existing files freely for the owner
+      allow read, delete: if isOwner(userId);
+
+      // Enforce:
+      // 1. Owner authenticated
+      // 2. Individual file <= 50 MB
+      // 3. User's cumulative storage will not exceed 512 MB
+      allow create, update: if isOwner(userId)
+                            && request.resource.size <= 50 * 1024 * 1024
+                            && isWithinStorageQuota(userId);
+    }
+
+    // Restrict feedback/bug report attachments
     match /feedback_attachments/{allPaths=**} {
-      allow create: if true;
+      allow read: if request.auth != null;
+      // Allow creation only if under 10 MB and valid image content
+      allow create: if request.resource.size <= 10 * 1024 * 1024
+                    && request.resource.contentType.matches('image/.*');
+      allow update, delete: if false;
     }
   }
 }

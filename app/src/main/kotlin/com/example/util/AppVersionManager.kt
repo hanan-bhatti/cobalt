@@ -121,12 +121,52 @@ object AppVersionManager {
      */
     val releaseHistory: List<ReleaseNote> = listOf(
         ReleaseNote(
+            versionName = "2.2.0",
+            versionCode = 16,
+            releaseDate = "October 24, 2026",
+            tag = AppVersionTag.STABLE,
+            isCurrent = true,
+            isLatest = true,
+            highlights = listOf(
+                "Material 3 Expressive Settings Hub",
+                "Side Dock Physics Studio & In-Dock Details",
+                "Vision vs Audio AI Segregation & Custom Prompts",
+                "Bi-Directional Mixed Markdown & Motion Engine"
+            ),
+            features = listOf(
+                "Categorized Settings hub (Appearance, AI Intelligence, Dock, Widgets, Help & Support) with connected pill shapes and collapsible headers",
+                "Fluid elastic side dock morph curves with dynamic physics sliders (stiffness & damping) and live Canvas preview studio",
+                "Direct in-dock detail view permitting reading, copying, and scrolling notes without leaving external apps",
+                "Segregated Gemini Vision and Audio transcription model selectors with Gemini 2.5/2.0/1.5 support",
+                "Customizable OCR system prompt and human-friendly error mapper (GoogleApiErrorMapper)",
+                "Humorous rotating loading messages during image OCR analysis (OcrLoadingMessages)",
+                "Inline folder creation with integrated icon picker across Capture, OCR, and Home card management (InlineNewFolderCreator)",
+                "Dual bold/outline navigation icons with state persistence and directional AOSP Shared Axis transitions",
+                "Full text selection in DetailScreen via SelectionContainer",
+                "Cobalt Contributor profile badge awarded to survey respondents"
+            ),
+            improvements = listOf(
+                "Removed simulated diagnostics in favor of an honest, verified Help Center & FAQ knowledge base",
+                "Folder screen cards now display clean titles, descriptions, and media thumbnails without raw file URIs",
+                "Unified item sharing across Folder screen context menus with FileProvider progress feedback",
+                "Upgraded MarkdownRenderer with per-node RTL detection (Urdu, Arabic, Hebrew) and Compose LinkAnnotation links",
+                "Switched clipboard APIs across the codebase from deprecated LocalClipboardManager to Compose LocalClipboard",
+                "Dock blur confined strictly to the dock panel, keeping background display sharp with a subtle scrim",
+                "Real-time clipboard URL detection chip on Capture Screen for instant single-tap pasting"
+            ),
+            bugFixes = listOf(
+                "Added ProGuard keep rules preserving Firebase Auth reflection methods in Play builds",
+                "Fixed white blank card blink during detail screen dismissal via cached displayedItem",
+                "Fixed landscape handle overflow by dynamically constraining handle height to screen height"
+            )
+        ),
+        ReleaseNote(
             versionName = "2.1.2",
             versionCode = 15,
             releaseDate = "October 13, 2026",
             tag = AppVersionTag.STABLE,
-            isCurrent = true,
-            isLatest = true,
+            isCurrent = false,
+            isLatest = false,
             highlights = listOf(
                 "F-Droid Tester Feedback Fixes",
                 "Decoupled Home & Search Feeds",

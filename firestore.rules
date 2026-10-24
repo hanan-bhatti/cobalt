@@ -1,9 +1,20 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Restrict access to user's own document and specific subcollections
+    
+    // Restrict access to user's own document and subcollections
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow user creation without setting arbitrary usedStorageBytes
+      allow create: if request.auth != null && request.auth.uid == userId
+                    && (!request.resource.data.keys().hasAny(['usedStorageBytes']) || request.resource.data.usedStorageBytes == 0);
+      
+      // Client cannot manually tamper with usedStorageBytes (maintained securely by Cloud Functions)
+      allow update: if request.auth != null && request.auth.uid == userId
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['usedStorageBytes']));
+      
+      allow delete: if request.auth != null && request.auth.uid == userId;
 
       match /items/{itemId} {
         allow read, write: if request.auth != null && request.auth.uid == userId;

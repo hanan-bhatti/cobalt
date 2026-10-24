@@ -33,7 +33,8 @@ internal fun isMainRootRoute(route: String?): Boolean = when (route) {
     "search",
     "media_hub",
     "folders",
-    "profile" -> true
+    "profile",
+    "settings" -> true
     else -> false
 }
 
@@ -42,7 +43,7 @@ internal fun mainRootRouteIndex(route: String?): Int? = when (route) {
     "search" -> 1
     "media_hub" -> 2
     "folders" -> 3
-    "profile" -> 4
+    "profile", "settings" -> 4
     else -> null
 }
 
@@ -51,14 +52,14 @@ private enum class MainRootDirection {
     BACKWARD
 }
 
-private const val BOTTOM_NAV_TRANSITION_DURATION = 380
+private const val BOTTOM_NAV_TRANSITION_DURATION = 260
 private val BottomNavEasing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
 
 private val MAIN_ROOT_TRANSITION_SPEC =
     tween<IntOffset>(durationMillis = BOTTOM_NAV_TRANSITION_DURATION, easing = BottomNavEasing)
 
 private val MAIN_ROOT_FADE_SPEC =
-    tween<Float>(durationMillis = BOTTOM_NAV_TRANSITION_DURATION / 2, easing = BottomNavEasing)
+    tween<Float>(durationMillis = BOTTOM_NAV_TRANSITION_DURATION, easing = BottomNavEasing)
 
 private fun mainRootDirection(
     fromRoute: String?,
@@ -78,13 +79,13 @@ fun mainRootEnterTransition(
     MainRootDirection.FORWARD -> {
         slideInHorizontally(
             animationSpec = MAIN_ROOT_TRANSITION_SPEC,
-            initialOffsetX = { (it * 0.5f).toInt() }
+            initialOffsetX = { (it * 0.10f).toInt() }
         ) + fadeIn(animationSpec = MAIN_ROOT_FADE_SPEC)
     }
     MainRootDirection.BACKWARD -> {
         slideInHorizontally(
             animationSpec = MAIN_ROOT_TRANSITION_SPEC,
-            initialOffsetX = { -(it * 0.5f).toInt() }
+            initialOffsetX = { -(it * 0.10f).toInt() }
         ) + fadeIn(animationSpec = MAIN_ROOT_FADE_SPEC)
     }
     null -> fallback
@@ -98,13 +99,13 @@ fun mainRootExitTransition(
     MainRootDirection.FORWARD -> {
         slideOutHorizontally(
             animationSpec = MAIN_ROOT_TRANSITION_SPEC,
-            targetOffsetX = { -(it * 0.5f).toInt() }
+            targetOffsetX = { -(it * 0.10f).toInt() }
         ) + fadeOut(animationSpec = MAIN_ROOT_FADE_SPEC)
     }
     MainRootDirection.BACKWARD -> {
         slideOutHorizontally(
             animationSpec = MAIN_ROOT_TRANSITION_SPEC,
-            targetOffsetX = { (it * 0.5f).toInt() }
+            targetOffsetX = { (it * 0.10f).toInt() }
         ) + fadeOut(animationSpec = MAIN_ROOT_FADE_SPEC)
     }
     null -> fallback

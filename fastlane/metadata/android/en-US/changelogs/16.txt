@@ -1,0 +1,7 @@
+- Redesigned Settings into 5 categorized groups with collapsible headers.
+- Fluid elastic side dock physics with live Canvas preview studio.
+- In-Dock Detail View: Read, scroll, and copy notes without leaving apps.
+- Segregated Vision and Audio Gemini models with Gemini 2.5/2.0 support.
+- Customizable OCR prompt and human-friendly Google API error mapper.
+- Playful rotating loading messages during image OCR analysis.
+- Dual bold/outline nav icons and directional Shared Axis transitions.

@@ -533,6 +533,9 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     private val _availableModels = MutableStateFlow<List<String>>(emptyList())
     val availableModels: StateFlow<List<String>> = _availableModels.asStateFlow()
 
+    private val _availableAudioModels = MutableStateFlow<List<String>>(emptyList())
+    val availableAudioModels: StateFlow<List<String>> = _availableAudioModels.asStateFlow()
+
     private val _userFeedback = MutableStateFlow<com.example.util.UserFeedbackMessage?>(null)
     val userFeedback: StateFlow<com.example.util.UserFeedbackMessage?> = _userFeedback.asStateFlow()
 
@@ -618,21 +621,70 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             try {
                 val response = com.example.data.remote.RetrofitClient.geminiService.listModels(apiKey)
-                val models = response.models?.map { it.name.replace("models/", "") }
-                    ?.filter { it.contains("gemini") && (it.contains("pro") || it.contains("flash") || it.contains("vision")) }
-                    ?: emptyList()
-                _availableModels.value = models
+                val rawModels = response.models?.map { it.name.replace("models/", "") } ?: emptyList()
 
-                if (models.isNotEmpty()) {
+                // Vision / OCR models: multimodal LLMs excluding non-vision specialized models
+                val visionModels = rawModels.filter { modelName ->
+                    modelName.contains("gemini", ignoreCase = true) &&
+                    !modelName.contains("embedding", ignoreCase = true) &&
+                    !modelName.contains("embed", ignoreCase = true) &&
+                    !modelName.contains("tts", ignoreCase = true) &&
+                    !modelName.contains("transcribe", ignoreCase = true) &&
+                    !modelName.contains("imagen", ignoreCase = true)
+                }.sortedWith(
+                    compareByDescending<String> { it.contains("2.5") }
+                        .thenByDescending { it.contains("2.0") }
+                        .thenByDescending { it.contains("1.5") }
+                        .thenByDescending { it.contains("flash") }
+                )
+                _availableModels.value = visionModels
+
+                if (visionModels.isNotEmpty()) {
                     val currentSelected = settingsRepository.selectedModel.value
-                    if (currentSelected.isBlank() || !models.contains(currentSelected)) {
-                        val defaultModel = models.firstOrNull { it.contains("1.5-flash") || it.contains("2.0-flash") || it.contains("flash") } ?: models.first()
+                    if (currentSelected.isBlank() || !visionModels.contains(currentSelected)) {
+                        val defaultModel = visionModels.firstOrNull { it.contains("2.5-flash") }
+                            ?: visionModels.firstOrNull { it.contains("2.0-flash") }
+                            ?: visionModels.firstOrNull { it.contains("1.5-flash") }
+                            ?: visionModels.firstOrNull { it.contains("flash") }
+                            ?: visionModels.first()
                         settingsRepository.setSelectedModel(defaultModel)
                     }
                 }
 
+                // Audio transcribe models: dedicated speech-to-text models or audio-capable multimodal flash models
+                val audioModels = rawModels.filter { modelName ->
+                    modelName.contains("gemini", ignoreCase = true) &&
+                    !modelName.contains("embedding", ignoreCase = true) &&
+                    !modelName.contains("embed", ignoreCase = true) &&
+                    !modelName.contains("tts", ignoreCase = true) &&
+                    !modelName.contains("imagen", ignoreCase = true) &&
+                    (modelName.contains("transcribe", ignoreCase = true) ||
+                     modelName.contains("flash", ignoreCase = true) ||
+                     modelName.contains("pro", ignoreCase = true))
+                }.sortedWith(
+                    compareByDescending<String> { it.contains("transcribe", ignoreCase = true) }
+                        .thenByDescending { it.contains("2.5") }
+                        .thenByDescending { it.contains("2.0") }
+                        .thenByDescending { it.contains("1.5") }
+                        .thenByDescending { it.contains("flash") }
+                )
+                _availableAudioModels.value = audioModels
+
+                if (audioModels.isNotEmpty()) {
+                    val currentAudioSelected = settingsRepository.selectedAudioModel.value
+                    if (currentAudioSelected.isBlank() || !audioModels.contains(currentAudioSelected)) {
+                        val defaultAudio = audioModels.firstOrNull { it.contains("transcribe", ignoreCase = true) }
+                            ?: audioModels.firstOrNull { it.contains("2.5-flash") }
+                            ?: audioModels.firstOrNull { it.contains("2.0-flash") }
+                            ?: audioModels.firstOrNull { it.contains("1.5-flash") }
+                            ?: audioModels.firstOrNull { it.contains("flash") }
+                            ?: audioModels.first()
+                        settingsRepository.setSelectedAudioModel(defaultAudio)
+                    }
+                }
+
                 if (isUserTriggered) {
-                    showToast("Refreshed ${models.size} models successfully.")
+                    showToast("Refreshed ${visionModels.size} vision and ${audioModels.size} audio models.")
                 }
             } catch (e: Exception) {
                 Log.e("CobaltVM", "Failed to fetch models: ${e.message}")
@@ -1023,6 +1075,25 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         _userEmail.value = null
     }
 
+    fun deleteAccountAndEraseAll(onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val auth = repository.firebaseAuth
+                val user = auth?.currentUser
+                if (user != null) {
+                    user.delete().await()
+                }
+                repository.wipeLocalData()
+                prefs.edit().clear().apply()
+                _userEmail.value = null
+                onResult(true, null)
+            } catch (e: Exception) {
+                Log.e("CobaltVM", "Failed to delete account and erase data", e)
+                onResult(false, e.localizedMessage ?: "Failed to delete account.")
+            }
+        }
+    }
+
     fun sendSignInLink(email: String) {
         _authSuccess.value = null
         if (email.isBlank()) {
@@ -1357,10 +1428,12 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     return@launch
                 }
 
+                val audioModel = settingsRepository.selectedAudioModel.value.takeIf { it.isNotBlank() }
+                    ?: settingsRepository.selectedModel.value
                 val result = repository.extractTextFromAudio(
                     base64Audio = base64Data,
                     apiKey = apiKey,
-                    model = settingsRepository.selectedModel.value
+                    model = audioModel
                 )
 
                 if (result != null && !result.startsWith("Error")) {
@@ -1510,7 +1583,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     x = 0, y = 0, width = bitmap.width, height = bitmap.height,
                     apiKey = apiKey,
                     model = settingsRepository.selectedModel.value,
-                    sensitivity = "High"
+                    sensitivity = "High",
+                    customPrompt = settingsRepository.customOcrPrompt.value
                 )
 
                 if (resultText?.startsWith("Error") == true) {
@@ -1562,7 +1636,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 }
                 val model = settingsRepository.selectedModel.value
                 val sensitivity = settingsRepository.ocrSensitivity.value
-                val resultText = repository.extractTextFromRegion(bitmap, x, y, width, height, apiKey, model, sensitivity)
+                val customPrompt = settingsRepository.customOcrPrompt.value
+                val resultText = repository.extractTextFromRegion(bitmap, x, y, width, height, apiKey, model, sensitivity, customPrompt)
                 if (resultText?.startsWith("Error") == true) {
                     _ocrError.value = com.example.util.GoogleApiErrorMapper.formatUserFriendlyError(resultText)
                 } else if (resultText != null) {

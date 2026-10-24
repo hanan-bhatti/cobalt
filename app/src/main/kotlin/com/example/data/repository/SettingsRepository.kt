@@ -31,8 +31,16 @@ class SettingsRepository(private val context: Context) {
     val geminiApiKey: StateFlow<String> = _geminiApiKey.asStateFlow()
 
     private val _selectedModel =
-        MutableStateFlow(prefs.getString(KEY_SELECTED_MODEL, "gemini-1.5-flash") ?: "gemini-1.5-flash")
+        MutableStateFlow(prefs.getString(KEY_SELECTED_MODEL, "") ?: "")
     val selectedModel: StateFlow<String> = _selectedModel.asStateFlow()
+
+    private val _selectedAudioModel =
+        MutableStateFlow(prefs.getString(KEY_SELECTED_AUDIO_MODEL, "") ?: "")
+    val selectedAudioModel: StateFlow<String> = _selectedAudioModel.asStateFlow()
+
+    private val _customOcrPrompt =
+        MutableStateFlow(prefs.getString(KEY_CUSTOM_OCR_PROMPT, "") ?: "")
+    val customOcrPrompt: StateFlow<String> = _customOcrPrompt.asStateFlow()
 
     private val _ocrSensitivity = MutableStateFlow(prefs.getString(KEY_OCR_SENSITIVITY, "Medium") ?: "Medium")
     val ocrSensitivity: StateFlow<String> = _ocrSensitivity.asStateFlow()
@@ -117,6 +125,21 @@ class SettingsRepository(private val context: Context) {
     fun setSelectedModel(model: String) {
         prefs.edit().putString(KEY_SELECTED_MODEL, model).apply()
         _selectedModel.value = model
+    }
+
+    fun setSelectedAudioModel(model: String) {
+        prefs.edit().putString(KEY_SELECTED_AUDIO_MODEL, model).apply()
+        _selectedAudioModel.value = model
+    }
+
+    fun setCustomOcrPrompt(prompt: String) {
+        prefs.edit().putString(KEY_CUSTOM_OCR_PROMPT, prompt).apply()
+        _customOcrPrompt.value = prompt
+    }
+
+    fun resetCustomOcrPrompt() {
+        prefs.edit().remove(KEY_CUSTOM_OCR_PROMPT).apply()
+        _customOcrPrompt.value = ""
     }
 
     fun setOcrSensitivity(sensitivity: String) {
@@ -298,7 +321,11 @@ class SettingsRepository(private val context: Context) {
         when (key) {
             KEY_GEMINI_API_KEY -> _geminiApiKey.value = prefs.getString(KEY_GEMINI_API_KEY, "") ?: ""
             KEY_SELECTED_MODEL -> _selectedModel.value =
-                prefs.getString(KEY_SELECTED_MODEL, "gemini-1.5-flash") ?: "gemini-1.5-flash"
+                prefs.getString(KEY_SELECTED_MODEL, "") ?: ""
+            KEY_SELECTED_AUDIO_MODEL -> _selectedAudioModel.value =
+                prefs.getString(KEY_SELECTED_AUDIO_MODEL, "") ?: ""
+            KEY_CUSTOM_OCR_PROMPT -> _customOcrPrompt.value =
+                prefs.getString(KEY_CUSTOM_OCR_PROMPT, "") ?: ""
 
             KEY_OCR_SENSITIVITY -> _ocrSensitivity.value = prefs.getString(KEY_OCR_SENSITIVITY, "Medium") ?: "Medium"
             KEY_THEME_MODE -> _themeMode.value = prefs.getString(KEY_THEME_MODE, "System Default") ?: "System Default"
@@ -337,8 +364,25 @@ class SettingsRepository(private val context: Context) {
     }
 
     companion object {
-        private const val KEY_GEMINI_API_KEY = "gemini_api_key"
-        private const val KEY_SELECTED_MODEL = "selected_model"
+        const val KEY_GEMINI_API_KEY = "gemini_api_key"
+        const val KEY_SELECTED_MODEL = "selected_model"
+        const val KEY_SELECTED_AUDIO_MODEL = "selected_audio_model"
+        const val KEY_CUSTOM_OCR_PROMPT = "custom_ocr_prompt"
+
+        const val DEFAULT_OCR_PROMPT = """You are a precise OCR and formatting engine. Extract all text from this image.
+
+FORMATTING RULES for extractedText:
+- Preserve bold text using **bold** markdown syntax.
+- Preserve headings using # / ## / ### based on visual hierarchy (font size, weight, position).
+- Preserve bullet points and numbered lists using standard Markdown syntax (- item, 1. item).
+- If the text is written right-to-left (e.g. Urdu, Arabic), preserve the original script and reading order exactly. Do not transliterate, translate, or reorder the words.
+- Preserve paragraph breaks and line breaks as they visually appear.
+- Do not invent formatting that is not visually present in the image.
+
+URL EXTRACTION RULES for urls:
+- Transcribe every URL or web address character-for-character with maximum precision, including hyphens, underscores, dots, subdomains, and path segments. Do not guess, simplify, or "clean up" a URL — copy it exactly as it visually appears.
+- If a URL has no scheme (e.g. "example.com" or "my-site.dev"), prepend "https://" without altering any other character.
+- If you are not fully confident in a specific character within a URL (e.g. due to blur or small font), re-examine that specific region of the image before finalizing your answer, prioritizing accuracy over speed."""
         private const val KEY_OCR_SENSITIVITY = "ocr_sensitivity"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_FLOATING_OCR = "floating_ocr_enabled"

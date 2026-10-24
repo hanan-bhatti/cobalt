@@ -53,8 +53,10 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.example.ui.components.bounceClick
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import android.widget.Toast
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.Manifest
@@ -105,6 +107,7 @@ fun ProfileMainContent(
     var showSurveySheet by remember { mutableStateOf(false) }
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
     var deleteConfirmChecked by remember { mutableStateOf(false) }
+    var isDeletingAccount by remember { mutableStateOf(false) }
 
     val totalItems = allItems.size
     val totalLinks = allItems.count { it.type == SavedItemType.LINK }
@@ -139,6 +142,7 @@ fun ProfileMainContent(
     var showSignOutOnlyConfirmDialog by remember { mutableStateOf(false) }
 
     val prefs = remember { context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE) }
+    val isContributor = remember(showSurveySheet) { prefs.getBoolean("survey_submitted", false) }
     var showInterruptedBackupDialog by remember {
         mutableStateOf(
             prefs.getBoolean("interrupted_backup_in_progress", false) &&
@@ -171,7 +175,7 @@ fun ProfileMainContent(
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                painter = painterResource(id = if (com.example.BuildConfig.FLAVOR == "foss") R.drawable.ic_custom_settings else R.drawable.ic_custom_profile),
+                                painter = painterResource(id = if (com.example.BuildConfig.FLAVOR == "foss") R.drawable.ic_nav_settings_outline else R.drawable.ic_nav_profile_outline),
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(24.dp)
@@ -336,7 +340,7 @@ fun ProfileMainContent(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_profile),
+                                painter = painterResource(id = R.drawable.ic_nav_profile_outline),
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(48.dp)
@@ -354,6 +358,31 @@ fun ProfileMainContent(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
+                        if (isContributor) {
+                            Surface(
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.EmojiEvents,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = "Cobalt Contributor",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                        }
                     }
                 } else if (userEmail == null) {
                     // Signed out
@@ -369,7 +398,7 @@ fun ProfileMainContent(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_profile),
+                                painter = painterResource(id = R.drawable.ic_nav_profile_outline),
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(48.dp)
@@ -446,6 +475,34 @@ fun ProfileMainContent(
                                     Box(modifier = Modifier.size(8.dp).background(indicatorColor, CircleShape))
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(syncText, style = MaterialTheme.typography.bodySmall, color = indicatorColor, fontWeight = FontWeight.Medium)
+
+                                    if (isContributor) {
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.EmojiEvents,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(12.dp)
+                                                )
+                                                Text(
+                                                    text = "Contributor",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                    fontSize = 10.sp
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -566,7 +623,7 @@ fun ProfileMainContent(
                 ClickableRow(
                     title = "Appearance & Preferences",
                     subtitle = "Theme, frosted blur, Gemini AI, and floating capture dock",
-                    leadingIconRes = R.drawable.ic_custom_settings,
+                    leadingIconRes = R.drawable.ic_nav_settings_outline,
                     onClick = onNavigateToSettings
                 )
                 if (isFirebaseAvailable) {
@@ -577,7 +634,7 @@ fun ProfileMainContent(
                     ClickableRow(
                         title = "Connected Devices",
                         subtitle = "Active sessions and cross-device sync",
-                        leadingIconRes = R.drawable.ic_custom_sync,
+                        leadingIconRes = R.drawable.ic_custom_devices,
                         onClick = onNavigateToDevices
                     )
                 }
@@ -781,23 +838,23 @@ fun ProfileMainContent(
             SectionContainer(title = "HELP & COMMUNITY") {
                 Column {
                     ClickableRow(
-                        title = "Help & Support Diagnostics",
-                        subtitle = "System health, FAQs, & diagnostic tests",
-                        leadingIconRes = R.drawable.ic_custom_info,
+                        title = "Help & Support",
+                        subtitle = "Frequently asked questions & guides",
+                        leadingIconRes = R.drawable.ic_custom_help,
                         onClick = { onNavigateToLegal("support") }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
                     ClickableRow(
                         title = "Feedback & Bug Reports",
                         subtitle = "Report bugs or request new features",
-                        leadingIconRes = R.drawable.ic_custom_edit,
+                        leadingIconRes = R.drawable.ic_custom_feedback,
                         onClick = { onNavigateToLegal("feedback") }
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
                     ClickableRow(
-                        title = "Take App Experience Survey",
-                        subtitle = "Help shape v1.0 • Earn Contributor Badge",
-                        leadingIconRes = R.drawable.ic_custom_star,
+                        title = if (isContributor) "App Experience Survey" else "Take App Experience Survey",
+                        subtitle = if (isContributor) "Completed • Contributor Badge Unlocked" else "Help shape future updates • Earn Contributor Badge",
+                        leadingIconRes = R.drawable.ic_custom_survey,
                         onClick = { showSurveySheet = true }
                     )
                 }
@@ -835,7 +892,7 @@ fun ProfileMainContent(
                     ClickableRow(
                         title = "Terms & Conditions",
                         subtitle = "GNU AGPL v3 license terms",
-                        leadingIconRes = R.drawable.ic_custom_link,
+                        leadingIconRes = R.drawable.ic_custom_terms,
                         onClick = { onNavigateToLegal("terms") }
                     )
                 }
@@ -957,26 +1014,39 @@ fun ProfileMainContent(
                 confirmButton = {
                     Button(
                         onClick = {
-                            showDeleteAccountDialog = false
-                            try {
-                                val clazz = Class.forName("com.google.firebase.auth.FirebaseAuth")
-                                val instance = clazz.getMethod("getInstance").invoke(null)
-                                val user = clazz.getMethod("getCurrentUser").invoke(instance)
-                                user?.javaClass?.getMethod("delete")?.invoke(user)
-                            } catch (e: Throwable) {
-                                // Handled or FOSS build
+                            isDeletingAccount = true
+                            viewModel.deleteAccountAndEraseAll { success, errorMsg ->
+                                isDeletingAccount = false
+                                showDeleteAccountDialog = false
+                                if (!success && errorMsg != null) {
+                                    Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
+                                } else {
+                                    Toast.makeText(context, "Account and all data erased.", Toast.LENGTH_SHORT).show()
+                                }
                             }
-                            viewModel.signOut()
                         },
-                        enabled = deleteConfirmChecked,
+                        enabled = deleteConfirmChecked && !isDeletingAccount,
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Permanently Delete", fontWeight = FontWeight.Bold)
+                        if (isDeletingAccount) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = MaterialTheme.colorScheme.onError,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Erasing...", fontWeight = FontWeight.Bold)
+                        } else {
+                            Text("Permanently Delete", fontWeight = FontWeight.Bold)
+                        }
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showDeleteAccountDialog = false }) {
+                    TextButton(
+                        onClick = { showDeleteAccountDialog = false },
+                        enabled = !isDeletingAccount
+                    ) {
                         Text("Cancel")
                     }
                 }

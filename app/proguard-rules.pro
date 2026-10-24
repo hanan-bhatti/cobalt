@@ -39,3 +39,14 @@
 # Ignore missing Firebase classes during R8 minification for FOSS build
 -dontwarn com.google.firebase.**
 
+# Preserve Firebase Auth methods accessed via reflection in Play builds
+-keep class com.google.firebase.auth.FirebaseAuth {
+    public static com.google.firebase.auth.FirebaseAuth getInstance();
+    public com.google.firebase.auth.FirebaseUser getCurrentUser();
+}
+-keep class com.google.firebase.auth.FirebaseUser {
+    public java.lang.String getEmail();
+    public java.lang.String getUid();
+    public boolean isAnonymous();
+}
+

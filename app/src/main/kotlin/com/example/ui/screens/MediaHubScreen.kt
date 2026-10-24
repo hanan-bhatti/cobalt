@@ -109,7 +109,7 @@ fun MediaHubScreen(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_movie),
+                            painter = painterResource(id = R.drawable.ic_nav_media_outline),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(24.dp)

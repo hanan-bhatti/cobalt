@@ -47,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
@@ -320,7 +321,7 @@ fun SideDockContent(
     // Material 3 container (never transparent!) ensuring pristine contrast and zero visual artifacts.
     val baseSurfaceColor = if (useBlur) {
         MaterialTheme.colorScheme.surfaceContainerHigh.copy(
-            alpha = (blurOpacity + 0.45f).coerceIn(0.65f, 0.85f)
+            alpha = (blurOpacity + 0.35f).coerceIn(0.45f, 0.82f)
         )
     } else {
         MaterialTheme.colorScheme.surfaceContainerHigh
@@ -340,7 +341,7 @@ fun SideDockContent(
     val borderColor = lerp(
         start = Color.Transparent,
         stop = if (useBlur) {
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.50f)
         } else {
             MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)
         },
@@ -481,6 +482,23 @@ fun SideDockContent(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = if (isRightSide) Alignment.TopEnd else Alignment.TopStart
             ) {
+                if (useBlur) {
+                    // Delicate top glass specular sheen for frosted glass realism
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(110.dp)
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.05f * p.coerceIn(0f, 1f)),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
+                    )
+                }
+
                 // Fixed-dimension inner card content (reveals gracefully without awkward reflows)
                 val contentProgress = ((p - 0.38f) / 0.62f).coerceIn(0f, 1f)
 

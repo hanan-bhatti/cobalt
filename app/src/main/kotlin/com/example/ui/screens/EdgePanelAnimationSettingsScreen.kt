@@ -18,12 +18,15 @@
 
 package com.example.ui.screens
 
+import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -38,13 +41,25 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.CobaltSideDockService
 import com.example.R
 import com.example.ui.viewmodel.CobaltViewModel
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,6 +67,7 @@ fun EdgePanelAnimationSettingsScreen(
     viewModel: CobaltViewModel,
     onNavigateBack: () -> Unit
 ) {
+    val context = LocalContext.current
     val currentPreset by viewModel.settingsRepository.edgePanelAnimPreset.collectAsState()
     val stiffness by viewModel.settingsRepository.edgePanelAnimStiffness.collectAsState()
     val damping by viewModel.settingsRepository.edgePanelAnimDamping.collectAsState()
@@ -67,18 +83,16 @@ fun EdgePanelAnimationSettingsScreen(
                 stiffness = 340f,
                 damping = 0.72f,
                 badgeText = "340 Tension · 0.72 Damping",
-                tooltip = "The default recommended profile. Strikes an optimal balance between responsiveness and smooth visual clarity with a cushioned finish.",
-                iconRes = R.drawable.ic_custom_star
+                tooltip = "The default recommended profile. Strikes an optimal balance between responsiveness and smooth visual clarity with a cushioned finish."
             ),
             PhysicsPresetInfo(
                 id = "Fluid",
-                title = "Aquamorphic Fluid",
-                subtitle = "Relaxed water-drop spring with organic elastic stretch",
+                title = "Fluid Elastic",
+                subtitle = "Relaxed spring with organic liquid stretch",
                 stiffness = 320f,
                 damping = 0.68f,
                 badgeText = "320 Tension · 0.68 Damping",
-                tooltip = "Inspired by Oppo ColorOS Aquamorphic design. Delivers a soft, liquid elasticity that unfolds organically from the screen edge.",
-                iconRes = R.drawable.ic_custom_sync
+                tooltip = "Delivers a soft, liquid elasticity that unfolds organically from the screen edge using calibrated spring physics."
             ),
             PhysicsPresetInfo(
                 id = "Bouncy",
@@ -87,8 +101,7 @@ fun EdgePanelAnimationSettingsScreen(
                 stiffness = 320f,
                 damping = 0.58f,
                 badgeText = "320 Tension · 0.58 Damping",
-                tooltip = "Adds a noticeable physical bounce when the card blooms open, creating an energetic and playful tactile sensation.",
-                iconRes = R.drawable.ic_custom_heart
+                tooltip = "Adds a noticeable physical bounce when the card blooms open, creating an energetic and playful tactile sensation."
             ),
             PhysicsPresetInfo(
                 id = "Snappy",
@@ -97,8 +110,7 @@ fun EdgePanelAnimationSettingsScreen(
                 stiffness = 650f,
                 damping = 0.85f,
                 badgeText = "650 Tension · 0.85 Damping",
-                tooltip = "Optimized for speed and minimal visual latency. The dock snaps into place almost instantly with zero wasted travel time.",
-                iconRes = R.drawable.ic_custom_history
+                tooltip = "Optimized for speed and minimal visual latency. The dock snaps into place almost instantly with zero wasted travel time."
             ),
             PhysicsPresetInfo(
                 id = "Instant",
@@ -107,8 +119,7 @@ fun EdgePanelAnimationSettingsScreen(
                 stiffness = 1000f,
                 damping = 1.0f,
                 badgeText = "0ms · No Motion",
-                tooltip = "Bypasses animation physics entirely. The dock appears instantly upon tapping, ideal for low-power operation or maximum speed.",
-                iconRes = R.drawable.ic_custom_close
+                tooltip = "Bypasses animation physics entirely. The dock appears instantly upon tapping, ideal for low-power operation or maximum speed."
             )
         )
     }
@@ -150,43 +161,85 @@ fun EdgePanelAnimationSettingsScreen(
         ) {
             // ════════════ OVERVIEW HEADER CARD ════════════
             Surface(
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(20.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerLow,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_tools),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp)
+                        DockPhysicsAnimatedIcon(
+                            presetId = currentPreset,
+                            stiffness = stiffness,
+                            damping = damping,
+                            isSelected = true,
+                            modifier = Modifier.size(52.dp)
                         )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Fluid Morphing Dynamics",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "The side dock smoothly morphs from the screen edge handle using genuine spring-damper physics with zero layout overhead.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                lineHeight = 16.sp
+                            )
+                        }
                     }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Fluid Morphing Dynamics",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleSmall
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "The side dock smoothly morphs from the screen edge handle using genuine spring-damper physics with zero layout overhead.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            lineHeight = 16.sp
-                        )
+
+                    // Active Profile Badge & Test Trigger
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+                        ) {
+                            Text(
+                                text = "Active: ${presets.find { it.id.equals(currentPreset, true) }?.title ?: currentPreset}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                val intent = Intent(context, CobaltSideDockService::class.java).apply {
+                                    action = "com.example.ACTION_TOGGLE_PANEL"
+                                }
+                                try {
+                                    context.startService(intent)
+                                } catch (_: Exception) {}
+                            },
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_tools),
+                                contentDescription = null,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Test Dock Now",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
@@ -257,38 +310,25 @@ fun EdgePanelAnimationSettingsScreen(
                             Column(modifier = Modifier.padding(14.dp)) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(40.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                                                else MaterialTheme.colorScheme.surfaceVariant
-                                            ),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(id = preset.iconRes),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(20.dp),
-                                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
+                                    // Animated dock icon showcasing exact spring motion
+                                    DockPhysicsAnimatedIcon(
+                                        presetId = preset.id,
+                                        stiffness = preset.stiffness,
+                                        damping = preset.damping,
+                                        isSelected = isSelected,
+                                        modifier = Modifier.size(48.dp)
+                                    )
 
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                        ) {
-                                            Text(
-                                                text = preset.title,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 15.sp,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                        }
+                                        Text(
+                                            text = preset.title,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = preset.subtitle,
                                             fontSize = 12.sp,
@@ -405,6 +445,36 @@ fun EdgePanelAnimationSettingsScreen(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(20.dp)
                     ) {
+                        // Live Interactive Custom Simulator Icon
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            DockPhysicsAnimatedIcon(
+                                presetId = "Custom",
+                                stiffness = stiffness,
+                                damping = damping,
+                                isSelected = currentPreset.equals("Custom", ignoreCase = true),
+                                modifier = Modifier.size(50.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Live Physics Simulator",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Real-time preview of your custom tension and rebound settings.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    lineHeight = 15.sp
+                                )
+                            }
+                        }
+
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+
                         // 1. SPRING STIFFNESS (TENSION)
                         var showStiffnessTooltip by remember { mutableStateOf(false) }
                         val stiffnessDesc = when {
@@ -551,6 +621,224 @@ fun EdgePanelAnimationSettingsScreen(
     }
 }
 
+/**
+ * Minimal, clean, animated vector preview icon for each SideDock physics profile.
+ * Renders an interactive phone frame where a miniature edge handle morphs into an expanded
+ * dock card following the profile's exact mass-spring physics curve.
+ */
+@Composable
+fun DockPhysicsAnimatedIcon(
+    presetId: String,
+    stiffness: Float = 340f,
+    damping: Float = 0.72f,
+    isSelected: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val animProgress = remember { Animatable(0f) }
+
+    val (enterSpec, exitSpec) = remember(presetId, stiffness, damping) {
+        when (presetId) {
+            "Bouncy" -> Pair(
+                spring<Float>(dampingRatio = 0.58f, stiffness = 320f),
+                spring<Float>(dampingRatio = 0.78f, stiffness = 420f)
+            )
+            "Snappy" -> Pair(
+                spring<Float>(dampingRatio = 0.85f, stiffness = 650f),
+                spring<Float>(dampingRatio = 0.95f, stiffness = 750f)
+            )
+            "Fluid" -> Pair(
+                spring<Float>(dampingRatio = 0.68f, stiffness = 320f),
+                spring<Float>(dampingRatio = 0.82f, stiffness = 460f)
+            )
+            "Instant" -> Pair(
+                snap<Float>(),
+                snap<Float>()
+            )
+            "Custom" -> Pair(
+                spring<Float>(
+                    dampingRatio = damping.coerceIn(0.45f, 1.0f),
+                    stiffness = stiffness.coerceIn(120f, 900f)
+                ),
+                spring<Float>(
+                    dampingRatio = (damping + 0.10f).coerceIn(0.55f, 1.0f),
+                    stiffness = (stiffness + 60f).coerceIn(180f, 1000f)
+                )
+            )
+            else -> Pair( // "Smooth"
+                spring<Float>(dampingRatio = 0.72f, stiffness = 340f),
+                spring<Float>(dampingRatio = 0.82f, stiffness = 380f)
+            )
+        }
+    }
+
+    LaunchedEffect(presetId, stiffness, damping) {
+        while (true) {
+            delay(500)
+            animProgress.animateTo(1f, animationSpec = enterSpec)
+            delay(1300)
+            animProgress.animateTo(0f, animationSpec = exitSpec)
+            delay(800)
+        }
+    }
+
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val outlineColor = MaterialTheme.colorScheme.outlineVariant
+    val surfaceColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val accentBlue = Color(0xFF3B82F6)
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (isSelected) primaryColor.copy(alpha = 0.12f)
+                else MaterialTheme.colorScheme.surfaceContainerLow
+            )
+            .padding(4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val p = animProgress.value
+            val w = size.width
+            val h = size.height
+
+            // 1. Device Mockup Frame
+            val strokeWidth = 1.2.dp.toPx()
+            val cornerRadius = 6.dp.toPx()
+            val frameRect = Rect(
+                left = strokeWidth / 2f,
+                top = strokeWidth / 2f,
+                right = w - strokeWidth / 2f,
+                bottom = h - strokeWidth / 2f
+            )
+            drawRoundRect(
+                color = if (isSelected) primaryColor.copy(alpha = 0.45f) else outlineColor.copy(alpha = 0.5f),
+                topLeft = Offset(frameRect.left, frameRect.top),
+                size = Size(frameRect.width, frameRect.height),
+                cornerRadius = CornerRadius(cornerRadius, cornerRadius),
+                style = Stroke(width = strokeWidth)
+            )
+
+            // Phone speaker slit
+            val slitWidth = 6.dp.toPx()
+            drawLine(
+                color = if (isSelected) primaryColor.copy(alpha = 0.5f) else outlineColor.copy(alpha = 0.6f),
+                start = Offset(w / 2f - slitWidth / 2f, frameRect.top + 2.dp.toPx()),
+                end = Offset(w / 2f + slitWidth / 2f, frameRect.top + 2.dp.toPx()),
+                strokeWidth = 1.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+
+            // 2. Morphing Handle & Dock Card
+            val rightBezel = frameRect.right
+            val centerY = h / 2f
+            val idleWidth = 2.5.dp.toPx()
+            val idleHeight = 13.dp.toPx()
+            val targetDockWidth = 18.dp.toPx()
+            val targetDockHeight = 23.dp.toPx()
+
+            val pClamped = p.coerceAtLeast(0f)
+            val currentWidth = (idleWidth + (targetDockWidth - idleWidth) * p).coerceAtLeast(idleWidth)
+            val currentHeight = (idleHeight + (targetDockHeight - idleHeight) * pClamped).coerceAtLeast(idleHeight)
+
+            val margin = 2.dp.toPx() * p.coerceIn(0f, 1f)
+            val cardRight = rightBezel - margin
+            val cardLeft = cardRight - currentWidth
+            val cardTop = centerY - currentHeight / 2f
+
+            val innerRadius = 1.5.dp.toPx() + (4.dp.toPx() - 1.5.dp.toPx()) * p.coerceIn(0f, 1f)
+            val outerRadius = 4.dp.toPx() * p.coerceIn(0f, 1f)
+
+            val dockPath = Path().apply {
+                addRoundRect(
+                    RoundRect(
+                        left = cardLeft,
+                        top = cardTop,
+                        right = cardRight,
+                        bottom = cardTop + currentHeight,
+                        topLeftCornerRadius = CornerRadius(innerRadius, innerRadius),
+                        bottomLeftCornerRadius = CornerRadius(innerRadius, innerRadius),
+                        topRightCornerRadius = CornerRadius(outerRadius, outerRadius),
+                        bottomRightCornerRadius = CornerRadius(outerRadius, outerRadius)
+                    )
+                )
+            }
+
+            // Fill color transition from Blue handle to Solid Card
+            val fillColor = lerp(
+                start = accentBlue,
+                stop = if (isSelected) primaryColor.copy(alpha = 0.25f) else surfaceColor,
+                fraction = (p / 0.35f).coerceIn(0f, 1f)
+            )
+            drawPath(dockPath, color = fillColor)
+
+            // Card outline stroke
+            if (p > 0.08f) {
+                drawPath(
+                    dockPath,
+                    color = if (isSelected) primaryColor.copy(alpha = 0.75f) else outlineColor.copy(alpha = 0.7f),
+                    style = Stroke(width = 0.9.dp.toPx())
+                )
+            }
+
+            // 3. Miniature Skeleton Elements Inside Dock Card
+            if (p > 0.45f) {
+                val contentAlpha = ((p - 0.45f) / 0.55f).coerceIn(0f, 1f)
+
+                // Mini header pill
+                val headerW = 6.dp.toPx()
+                val headerH = 2.dp.toPx()
+                drawRoundRect(
+                    color = accentBlue.copy(alpha = contentAlpha * 0.85f),
+                    topLeft = Offset(cardLeft + 2.5.dp.toPx(), cardTop + 2.5.dp.toPx()),
+                    size = Size(headerW, headerH),
+                    cornerRadius = CornerRadius(1.dp.toPx(), 1.dp.toPx())
+                )
+
+                // Mini lines
+                val lineStart = cardLeft + 2.5.dp.toPx()
+                val lineEnd1 = (cardRight - 2.5.dp.toPx()).coerceAtLeast(lineStart + 2f)
+                val lineEnd2 = (cardRight - 5.dp.toPx()).coerceAtLeast(lineStart + 2f)
+
+                drawLine(
+                    color = onSurfaceColor.copy(alpha = contentAlpha * 0.45f),
+                    start = Offset(lineStart, cardTop + 7.5.dp.toPx()),
+                    end = Offset(lineEnd1, cardTop + 7.5.dp.toPx()),
+                    strokeWidth = 1.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
+
+                drawLine(
+                    color = onSurfaceColor.copy(alpha = contentAlpha * 0.35f),
+                    start = Offset(lineStart, cardTop + 11.dp.toPx()),
+                    end = Offset(lineEnd2, cardTop + 11.dp.toPx()),
+                    strokeWidth = 1.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
+
+                // Bottom 3 action dots
+                val dotY = cardTop + currentHeight - 3.dp.toPx()
+                val dotRadius = 1.dp.toPx()
+                drawCircle(
+                    color = primaryColor.copy(alpha = contentAlpha * 0.8f),
+                    radius = dotRadius,
+                    center = Offset(cardLeft + 3.5.dp.toPx(), dotY)
+                )
+                drawCircle(
+                    color = onSurfaceColor.copy(alpha = contentAlpha * 0.45f),
+                    radius = dotRadius,
+                    center = Offset(cardLeft + 7.5.dp.toPx(), dotY)
+                )
+                drawCircle(
+                    color = onSurfaceColor.copy(alpha = contentAlpha * 0.45f),
+                    radius = dotRadius,
+                    center = Offset(cardLeft + 11.5.dp.toPx(), dotY)
+                )
+            }
+        }
+    }
+}
+
 private data class PhysicsPresetInfo(
     val id: String,
     val title: String,
@@ -558,6 +846,5 @@ private data class PhysicsPresetInfo(
     val stiffness: Float,
     val damping: Float,
     val badgeText: String,
-    val tooltip: String,
-    val iconRes: Int
+    val tooltip: String
 )

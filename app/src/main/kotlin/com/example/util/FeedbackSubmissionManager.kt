@@ -212,4 +212,188 @@ object FeedbackSubmissionManager {
             Log.e("FeedbackSubmissionManager", "Failed to save feedback locally: ${e.message}", e)
         }
     }
+
+    /**
+     * Formats a bug report into clean GitHub / Email markdown.
+     */
+    fun formatBugReportMarkdown(
+        title: String,
+        description: String,
+        steps: List<String>,
+        userEmail: String,
+        deviceModel: String,
+        osVersion: String,
+        appVersion: String
+    ): String {
+        val nonBlankSteps = steps.filter { it.isNotBlank() }
+        val stepsText = if (nonBlankSteps.isNotEmpty()) {
+            nonBlankSteps.mapIndexed { idx, s -> "${idx + 1}. $s" }.joinToString("\n")
+        } else {
+            "_No specific steps provided_"
+        }
+
+        return """
+            ### Bug Summary
+            $title
+
+            ### Description
+            $description
+
+            ### Steps to Reproduce
+            $stepsText
+
+            ### Device & Environment Details
+            - **App Version:** v$appVersion (FOSS)
+            - **Device:** $deviceModel
+            - **Android OS:** $osVersion
+            - **Reporter:** $userEmail
+        """.trimIndent()
+    }
+
+    /**
+     * Formats a feature request into clean GitHub / Email markdown.
+     */
+    fun formatFeatureRequestMarkdown(
+        title: String,
+        problemStatement: String,
+        proposedSolution: String,
+        priority: String,
+        userEmail: String,
+        deviceModel: String,
+        osVersion: String,
+        appVersion: String
+    ): String {
+        return """
+            ### Feature Summary
+            $title
+
+            ### Problem Statement
+            $problemStatement
+
+            ### Proposed Solution
+            $proposedSolution
+
+            ### Priority
+            $priority
+
+            ### Device & Environment Details
+            - **App Version:** v$appVersion (FOSS)
+            - **Device:** $deviceModel
+            - **Android OS:** $osVersion
+            - **Requester:** $userEmail
+        """.trimIndent()
+    }
+
+    /**
+     * Formats a survey into clean GitHub / Email markdown.
+     */
+    fun formatSurveyMarkdown(
+        reaction: String,
+        favoriteFeatures: List<String>,
+        desiredImprovements: List<String>,
+        npsScore: Int,
+        customFeedback: String,
+        userEmail: String,
+        deviceModel: String,
+        osVersion: String,
+        appVersion: String
+    ): String {
+        val favs = if (favoriteFeatures.isNotEmpty()) favoriteFeatures.joinToString(", ") else "None specified"
+        val imps = if (desiredImprovements.isNotEmpty()) desiredImprovements.joinToString(", ") else "None specified"
+        val comments = if (customFeedback.isNotBlank()) customFeedback else "_No additional feedback entered_"
+
+        return """
+            ### Cobalt In-App Survey Response
+            - **Experience Sentiment:** $reaction
+            - **Net Promoter Score (NPS):** $npsScore / 10
+            - **Favorite Features:** $favs
+            - **Desired Improvements:** $imps
+
+            ### User Feedback & Ideas
+            $comments
+
+            ### Device & Version
+            - **App Version:** v$appVersion (FOSS)
+            - **Device:** $deviceModel
+            - **Android OS:** $osVersion
+            - **Respondent:** $userEmail
+        """.trimIndent()
+    }
+
+    /**
+     * Launches the user's browser with a pre-filled GitHub issue URL.
+     */
+    fun launchGitHubIssue(
+        context: Context,
+        title: String,
+        body: String,
+        labels: String = "bug"
+    ) {
+        try {
+            val encodedTitle = java.net.URLEncoder.encode(title, "UTF-8")
+            val encodedBody = java.net.URLEncoder.encode(body, "UTF-8")
+            val encodedLabels = java.net.URLEncoder.encode(labels, "UTF-8")
+            val url = "https://github.com/hanan-bhatti/cobalt/issues/new?title=$encodedTitle&body=$encodedBody&labels=$encodedLabels"
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Log.e("FeedbackSubmissionManager", "Failed to launch GitHub issue: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Launches the user's browser with a pre-filled GitHub discussion URL.
+     */
+    fun launchGitHubDiscussion(
+        context: Context,
+        title: String,
+        body: String
+    ) {
+        try {
+            val encodedTitle = java.net.URLEncoder.encode(title, "UTF-8")
+            val encodedBody = java.net.URLEncoder.encode(body, "UTF-8")
+            val url = "https://github.com/hanan-bhatti/cobalt/discussions/new?title=$encodedTitle&body=$encodedBody"
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Log.e("FeedbackSubmissionManager", "Failed to launch GitHub discussion: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Launches the user's email client with pre-filled subject, body, and recipient.
+     */
+    fun launchEmailClient(
+        context: Context,
+        subject: String,
+        body: String,
+        recipient: String = "hananbhatti.dev@gmail.com"
+    ) {
+        try {
+            val mailtoUri = Uri.parse("mailto:$recipient")
+            val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO, mailtoUri).apply {
+                putExtra(android.content.Intent.EXTRA_SUBJECT, subject)
+                putExtra(android.content.Intent.EXTRA_TEXT, body)
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            try {
+                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "message/rfc822"
+                    putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf(recipient))
+                    putExtra(android.content.Intent.EXTRA_SUBJECT, subject)
+                    putExtra(android.content.Intent.EXTRA_TEXT, body)
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(android.content.Intent.createChooser(shareIntent, "Send Feedback via Email"))
+            } catch (e2: Exception) {
+                Log.e("FeedbackSubmissionManager", "Failed to launch email client: ${e2.message}", e2)
+            }
+        }
+    }
 }
