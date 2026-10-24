@@ -101,12 +101,19 @@ fun DetailScreen(
     hazeState: HazeState,
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
-    animatedVisibilityScope: AnimatedVisibilityScope? = null
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    itemId: String? = null
 ) {
     val activeItem by viewModel.activeDetailItem.collectAsState()
+    val allItems by viewModel.allItems.collectAsState()
     var displayedItem by remember { mutableStateOf(activeItem) }
     if (activeItem != null) {
         displayedItem = activeItem
+    } else if (itemId != null && (displayedItem == null || displayedItem?.id != itemId)) {
+        val found = allItems.find { it.id == itemId }
+        if (found != null) {
+            displayedItem = found
+        }
     }
     val item = displayedItem ?: return
 

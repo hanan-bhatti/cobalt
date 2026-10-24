@@ -31,7 +31,7 @@ import androidx.compose.ui.graphics.Shape
 @OptIn(ExperimentalSharedTransitionApi::class)
 val PhysicsSpringBoundsTransform = BoundsTransform { _, _ ->
     spring(
-        dampingRatio = Spring.DampingRatioLowBouncy,
+        dampingRatio = Spring.DampingRatioNoBouncy,
         stiffness = Spring.StiffnessMediumLow
     )
 }
@@ -72,13 +72,37 @@ fun Modifier.maybeSharedBounds(
                     sharedContentState = rememberSharedContentState(key = key),
                     animatedVisibilityScope = animatedVisibilityScope,
                     boundsTransform = boundsTransform,
-                    clipInOverlayDuringTransition = clip
+                    clipInOverlayDuringTransition = clip,
+                    enter = androidx.compose.animation.fadeIn(
+                        animationSpec = androidx.compose.animation.core.tween(
+                            durationMillis = 240,
+                            easing = androidx.compose.animation.core.LinearOutSlowInEasing
+                        )
+                    ),
+                    exit = androidx.compose.animation.fadeOut(
+                        animationSpec = androidx.compose.animation.core.tween(
+                            durationMillis = 200,
+                            easing = androidx.compose.animation.core.FastOutLinearInEasing
+                        )
+                    )
                 )
             } else {
                 this@composed.sharedBounds(
                     sharedContentState = rememberSharedContentState(key = key),
                     animatedVisibilityScope = animatedVisibilityScope,
-                    boundsTransform = boundsTransform
+                    boundsTransform = boundsTransform,
+                    enter = androidx.compose.animation.fadeIn(
+                        animationSpec = androidx.compose.animation.core.tween(
+                            durationMillis = 240,
+                            easing = androidx.compose.animation.core.LinearOutSlowInEasing
+                        )
+                    ),
+                    exit = androidx.compose.animation.fadeOut(
+                        animationSpec = androidx.compose.animation.core.tween(
+                            durationMillis = 200,
+                            easing = androidx.compose.animation.core.FastOutLinearInEasing
+                        )
+                    )
                 )
             }
         }

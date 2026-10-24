@@ -21,6 +21,8 @@ package com.example.ui.dock
 import android.content.Intent
 import android.content.res.Configuration
 import android.widget.Toast
+import androidx.activity.compose.PredictiveBackHandler
+import kotlinx.coroutines.CancellationException
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
@@ -198,6 +200,46 @@ fun SideDockContent(
     var linkText by remember { mutableStateOf("") }
     val inputFocusRequester = remember { FocusRequester() }
 
+    var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
+
+    // Predictive back handler for Detail Mode -> return to Main Mode
+    PredictiveBackHandler(enabled = currentMode == SideDockMode.DETAIL) { progress ->
+        try {
+            progress.collect { /* detail predictive progress */ }
+            currentMode = SideDockMode.MAIN
+            selectedItemForDetail = null
+        } catch (_: CancellationException) {
+        }
+    }
+
+    // Predictive back handler for Hub Mode -> return to Main Mode
+    PredictiveBackHandler(enabled = currentMode == SideDockMode.HUB) { progress ->
+        try {
+            progress.collect { /* hub predictive progress */ }
+            currentMode = SideDockMode.MAIN
+        } catch (_: CancellationException) {
+        }
+    }
+
+    // Predictive back handler for Main Mode -> fluid gesture dismiss
+    PredictiveBackHandler(enabled = currentMode == SideDockMode.MAIN && !isDismissing) { progress ->
+        try {
+            progress.collect { backEvent ->
+                predictiveBackProgress = backEvent.progress
+            }
+            predictiveBackProgress = 0f
+            dismissDock()
+        } catch (e: CancellationException) {
+            Animatable(predictiveBackProgress).animateTo(
+                0f,
+                animationSpec = spring(dampingRatio = 0.8f, stiffness = 420f)
+            ) {
+                predictiveBackProgress = value
+            }
+            predictiveBackProgress = 0f
+        }
+    }
+
     // Clipboard helper for link mode
     var clipboardText by remember { mutableStateOf("") }
     LaunchedEffect(dockInputMode, clipboard) {
@@ -286,8 +328,9 @@ fun SideDockContent(
     // Oppo ColorOS Aquamorphic Water-drop squash & stretch:
     // Scale X leads with elastic spring tension, while Scale Y smoothly unfolds
     val pClamped = p.coerceAtLeast(0f)
-    val currentScaleX = (minScaleX + (1f - minScaleX) * pClamped).coerceAtLeast(minScaleX)
-    val currentScaleY = (minScaleY + (1f - minScaleY) * pClamped).coerceAtLeast(minScaleY)
+    val backScale = 1f - (predictiveBackProgress * 0.12f)
+    val currentScaleX = ((minScaleX + (1f - minScaleX) * pClamped).coerceAtLeast(minScaleX)) * backScale
+    val currentScaleY = ((minScaleY + (1f - minScaleY) * pClamped).coerceAtLeast(minScaleY)) * backScale
 
     // Edge translation: starts flush against the screen bezel (0dp), smoothly settles at 12dp margin
     val edgeMargin = 12.dp
@@ -426,12 +469,17 @@ fun SideDockContent(
 
     // Full screen container
     Box(
-        modifier = modifier.fillMaxSize()
+        modifier = modifier
+            .fillMaxSize()
+            .imePadding()
     ) {
         // 1. Outside Touch Interceptor within dock window margins to dismiss
+        val effectiveP = (p * (1f - predictiveBackProgress * 0.35f)).coerceIn(0f, 1f)
+        val scrimAlpha = (effectiveP * 0.12f).coerceIn(0f, 0.12f)
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(Color.Black.copy(alpha = scrimAlpha))
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() }
@@ -442,13 +490,15 @@ fun SideDockContent(
 
         // 2. Hardware-accelerated Morphing SideDock Card
         val directionMultiplier = if (isRightSide) 1f else -1f
+        val backTranslationX = cardWidth.value * density * 0.35f * predictiveBackProgress * directionMultiplier
 
         Surface(
             modifier = Modifier
                 .align(if (isRightSide) Alignment.TopEnd else Alignment.TopStart)
                 .padding(
                     start = if (!isRightSide) edgeMargin else 0.dp,
-                    end = if (isRightSide) edgeMargin else 0.dp
+                    end = if (isRightSide) edgeMargin else 0.dp,
+                    top = effectiveTop
                 )
                 .width(cardWidth)
                 .height(cardHeight)
@@ -456,7 +506,7 @@ fun SideDockContent(
                     transformOrigin = TransformOrigin(pivotFractionX, 0.5f)
                     scaleX = currentScaleX
                     scaleY = currentScaleY
-                    translationX = directionMultiplier * (1f - p.coerceIn(0f, 1f)) * edgeMargin.toPx()
+                    translationX = (directionMultiplier * (1f - p.coerceIn(0f, 1f)) * edgeMargin.toPx()) + backTranslationX
                     translationY = (startOffsetY * (1f - p.coerceIn(0f, 1f))).toPx()
                     alpha = containerAlpha
                     shape = morphShape
