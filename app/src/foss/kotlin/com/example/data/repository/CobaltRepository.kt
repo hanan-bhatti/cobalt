@@ -70,8 +70,10 @@ class CobaltRepository(private val context: Context) {
             return@withContext "API Key Missing. Enter your key in the AI Studio Secrets panel or the Profile page."
         }
 
+        val cleanModel = model.removePrefix("models/").ifBlank { "gemini-2.0-flash" }
+
         // Dedicated transcribe models do not need or expect prompt wrappers
-        val parts = if (model.contains("transcribe", ignoreCase = true)) {
+        val parts = if (cleanModel.contains("transcribe", ignoreCase = true)) {
             listOf(
                 Part(inlineData = InlineData(mimeType = "audio/mp4", data = base64Audio))
             )
@@ -89,10 +91,25 @@ class CobaltRepository(private val context: Context) {
         )
 
         try {
-            val response = RetrofitClient.geminiService.generateContent("models/$model", apiKey, request)
-            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
+            val response = RetrofitClient.geminiService.generateContent("models/$cleanModel", apiKey, request)
+            val candidateText = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
+            if (!candidateText.isNullOrBlank()) {
+                candidateText
+            } else {
+                val finishReason = response.candidates?.firstOrNull()?.finishReason
+                val blockReason = response.promptFeedback?.blockReason
+                Log.w("CobaltRepo", "Gemini Audio call produced no text. finishReason=$finishReason, blockReason=$blockReason")
+                when {
+                    blockReason != null -> "Error: Audio transcription was blocked ($blockReason)."
+                    finishReason == "SAFETY" -> "Error: Transcription was blocked by safety filters."
+                    finishReason == "RECITATION" -> "Error: Transcription was blocked by recitation filters."
+                    finishReason != null -> "Error: Audio transcription stopped ($finishReason)."
+                    else -> "Error: No speech detected in the audio recording."
+                }
+            }
         } catch (e: Exception) {
-            Log.e("CobaltRepo", "Gemini Audio call failed: ${e.message}", e)
+            val errorBody = (e as? retrofit2.HttpException)?.response()?.errorBody()?.string()
+            Log.e("CobaltRepo", "Gemini Audio call failed: ${e.message}, errorBody: $errorBody", e)
             "Error: ${com.example.util.GoogleApiErrorMapper.formatException(e)}"
         }
     }

@@ -39,6 +39,9 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
@@ -168,7 +171,10 @@ class MainActivity : ComponentActivity() {
                 val context = androidx.compose.ui.platform.LocalContext.current
                 var pendingCrashReport by remember { mutableStateOf(com.example.util.FossCrashReporter.getPendingCrashReport(context)) }
 
-                BackHandler(enabled = activeDetailItem != null) {
+                BackHandler(enabled = activeDetailItem != null || navController.currentDestination?.route?.startsWith("detail") == true) {
+                    if (navController.currentDestination?.route?.startsWith("detail") == true) {
+                        navController.popBackStack()
+                    }
                     viewModel.closeDetailItem()
                 }
 
@@ -231,6 +237,9 @@ class MainActivity : ComponentActivity() {
                     val listener = androidx.navigation.NavController.OnDestinationChangedListener { _, destination, _ ->
                         val route = destination.route ?: return@OnDestinationChangedListener
                         logScreenView(context, route)
+                        if (!route.startsWith("detail") && viewModel.activeDetailItem.value != null) {
+                            viewModel.closeDetailItem()
+                        }
                     }
                     navController.addOnDestinationChangedListener(listener)
                     onDispose {
@@ -245,8 +254,12 @@ class MainActivity : ComponentActivity() {
                 }
 
                 LaunchedEffect(activeDetailItem) {
-                    if (activeDetailItem != null) {
+                    val item = activeDetailItem
+                    if (item != null) {
                         logScreenView(context, "note_detail")
+                        if (navController.currentDestination?.route?.startsWith("detail") != true) {
+                            navController.navigate("detail/${item.id}")
+                        }
                     }
                 }
 
@@ -263,32 +276,48 @@ class MainActivity : ComponentActivity() {
                                      navController = navController,
                                      startDestination = "home",
                                      enterTransition = {
-                                         mainRootEnterTransition(
-                                             fromRoute = initialState.destination.route,
-                                             toRoute = targetState.destination.route,
-                                             fallback = aospSharedAxisEnter()
-                                         )
+                                         if (targetState.destination.route?.startsWith("detail") == true) {
+                                             fadeIn(animationSpec = tween(durationMillis = 320, easing = LinearOutSlowInEasing))
+                                         } else {
+                                             mainRootEnterTransition(
+                                                 fromRoute = initialState.destination.route,
+                                                 toRoute = targetState.destination.route,
+                                                 fallback = aospSharedAxisEnter()
+                                             )
+                                         }
                                      },
                                      exitTransition = {
-                                         mainRootExitTransition(
-                                             fromRoute = initialState.destination.route,
-                                             toRoute = targetState.destination.route,
-                                             fallback = aospSharedAxisExit()
-                                         )
+                                         if (targetState.destination.route?.startsWith("detail") == true) {
+                                             fadeOut(animationSpec = tween(durationMillis = 300, easing = FastOutLinearInEasing))
+                                         } else {
+                                             mainRootExitTransition(
+                                                 fromRoute = initialState.destination.route,
+                                                 toRoute = targetState.destination.route,
+                                                 fallback = aospSharedAxisExit()
+                                             )
+                                         }
                                      },
                                      popEnterTransition = {
-                                         mainRootEnterTransition(
-                                             fromRoute = initialState.destination.route,
-                                             toRoute = targetState.destination.route,
-                                             fallback = aospSharedAxisPopEnter()
-                                         )
+                                         if (initialState.destination.route?.startsWith("detail") == true) {
+                                             fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing))
+                                         } else {
+                                             mainRootEnterTransition(
+                                                 fromRoute = initialState.destination.route,
+                                                 toRoute = targetState.destination.route,
+                                                 fallback = aospSharedAxisPopEnter()
+                                             )
+                                         }
                                      },
                                      popExitTransition = {
-                                         mainRootExitTransition(
-                                             fromRoute = initialState.destination.route,
-                                             toRoute = targetState.destination.route,
-                                             fallback = aospSharedAxisPopExit()
-                                         )
+                                         if (initialState.destination.route?.startsWith("detail") == true) {
+                                             fadeOut(animationSpec = tween(durationMillis = 280, easing = FastOutLinearInEasing))
+                                         } else {
+                                             mainRootExitTransition(
+                                                 fromRoute = initialState.destination.route,
+                                                 toRoute = targetState.destination.route,
+                                                 fallback = aospSharedAxisPopExit()
+                                             )
+                                         }
                                      }
                                  ) {
                                     composable("home") {
@@ -299,7 +328,11 @@ class MainActivity : ComponentActivity() {
                                                 onNavigateToProfile = { navController.navigate("profile") },
                                                 onNavigateToMediaHub = { navController.navigate("media_hub") },
                                                 sharedTransitionScope = this@SharedTransitionLayout,
-                                                animatedVisibilityScope = this@composable
+                                                animatedVisibilityScope = this@composable,
+                                                onItemClick = { item ->
+                                                    viewModel.showDetailItem(item)
+                                                    navController.navigate("detail/${item.id}")
+                                                }
                                             )
                                         }
                                     }
@@ -308,7 +341,10 @@ class MainActivity : ComponentActivity() {
                                             com.example.ui.screens.SearchScreen(
                                                 viewModel = viewModel,
                                                 onNavigateBack = { navController.popBackStack() },
-                                                onItemClick = { item -> viewModel.showDetailItem(item) }
+                                                onItemClick = { item ->
+                                                    viewModel.showDetailItem(item)
+                                                    navController.navigate("detail/${item.id}")
+                                                }
                                             )
                                         }
                                     }
@@ -316,7 +352,11 @@ class MainActivity : ComponentActivity() {
                                         ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
                                             FoldersScreen(
                                                 viewModel = viewModel,
-                                                hazeState = hazeState
+                                                hazeState = hazeState,
+                                                onItemClick = { item ->
+                                                    viewModel.showDetailItem(item)
+                                                    navController.navigate("detail/${item.id}")
+                                                }
                                             )
                                         }
                                     }
@@ -517,9 +557,38 @@ class MainActivity : ComponentActivity() {
                                         ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
                                             com.example.ui.screens.MediaHubScreen(
                                                 viewModel = viewModel,
-                                                onMediaClick = { item -> viewModel.showDetailItem(item) }
+                                                onMediaClick = { item ->
+                                                    viewModel.showDetailItem(item)
+                                                    navController.navigate("detail/${item.id}")
+                                                }
                                             )
                                         }
+                                    }
+                                    composable(
+                                        route = "detail/{itemId}",
+                                        arguments = listOf(navArgument("itemId") { type = NavType.StringType })
+                                    ) { backStackEntry ->
+                                        val itemId = backStackEntry.arguments?.getString("itemId") ?: ""
+                                        DetailScreen(
+                                            viewModel = viewModel,
+                                            itemId = itemId,
+                                            onClose = {
+                                                if (navController.currentDestination?.route?.startsWith("detail") == true) {
+                                                    navController.popBackStack()
+                                                }
+                                                viewModel.closeDetailItem()
+                                            },
+                                            onEdit = { item ->
+                                                if (navController.currentDestination?.route?.startsWith("detail") == true) {
+                                                    navController.popBackStack()
+                                                }
+                                                viewModel.closeDetailItem()
+                                                viewModel.startEditItem(item)
+                                            },
+                                            hazeState = hazeState,
+                                            sharedTransitionScope = this@SharedTransitionLayout,
+                                            animatedVisibilityScope = this@composable
+                                        )
                                     }
                                  }
 
@@ -548,34 +617,7 @@ class MainActivity : ComponentActivity() {
                                      CaptureScreen(viewModel = viewModel)
                                  }
 
-                                 // Transition overlay for the memory detail view screen using spring physics
-                                 AnimatedVisibility(
-                                     visible = activeDetailItem != null,
-                                     enter = fadeIn(
-                                         animationSpec = spring(
-                                             dampingRatio = Spring.DampingRatioLowBouncy,
-                                             stiffness = Spring.StiffnessMediumLow
-                                         )
-                                     ),
-                                     exit = fadeOut(
-                                         animationSpec = spring(
-                                             dampingRatio = Spring.DampingRatioNoBouncy,
-                                             stiffness = Spring.StiffnessMediumLow
-                                         )
-                                     )
-                                 ) {
-                                     DetailScreen(
-                                         viewModel = viewModel,
-                                         onClose = { viewModel.closeDetailItem() },
-                                         onEdit = { item ->
-                                             viewModel.closeDetailItem()
-                                             viewModel.startEditItem(item)
-                                         },
-                                         hazeState = hazeState,
-                                         sharedTransitionScope = this@SharedTransitionLayout,
-                                         animatedVisibilityScope = this
-                                     )
-                                 }
+
                             }
                         }
 

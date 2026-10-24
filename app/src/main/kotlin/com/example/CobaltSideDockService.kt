@@ -36,6 +36,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
@@ -43,6 +44,9 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.Toast
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import androidx.activity.setViewTreeOnBackPressedDispatcherOwner
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.app.NotificationCompat
@@ -61,6 +65,30 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 
 /**
+ * FrameLayout wrapper providing key event interception for 3-button navigation
+ * and hardware back key handling on WindowManager system overlays.
+ */
+private class DockRootLayout(
+    context: Context,
+    private val dispatcher: androidx.activity.OnBackPressedDispatcher
+) : FrameLayout(context) {
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+            if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) {
+                if (dispatcher.hasEnabledCallbacks()) {
+                    dispatcher.onBackPressed()
+                    return true
+                }
+            } else if (event.action == KeyEvent.ACTION_DOWN) {
+                return true
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+}
+
+/**
  * CobaltSideDockService: Ultra-lightweight, 60fps/120fps system overlay service.
  * Employs a decoupled two-window architecture:
  * 1. A featherweight, idle handle overlay consuming zero CPU/GPU at rest.
@@ -72,6 +100,7 @@ class CobaltSideDockService : Service() {
     private var handleContainerView: FrameLayout? = null
     private var handlePillView: View? = null
 
+    private var dockRootView: View? = null
     private var dockComposeView: ComposeView? = null
     private var scrimView: View? = null
     private var dismissDockAction: (() -> Unit)? = null
@@ -482,16 +511,7 @@ class CobaltSideDockService : Service() {
         val baseTopDp = rawCenterYDp - (cardHeightDp / 2f)
         val effectiveTopDp = baseTopDp.coerceIn(minTopDp, maxTopDp)
 
-        // 1. WINDOW 1: Full-Screen Touch-to-Dismiss Scrim (100% UNBLURRED background)
-        val scrim = View(this).apply {
-            setBackgroundColor(Color.TRANSPARENT)
-            setOnClickListener {
-                dismissDockAction?.invoke() ?: closeDock()
-            }
-        }
-        scrimView = scrim
-
-        val scrimParams = WindowManager.LayoutParams(
+        val fullScreenParams = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             WindowManager.LayoutParams.MATCH_PARENT,
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -500,7 +520,7 @@ class CobaltSideDockService : Service() {
                 @Suppress("DEPRECATION")
                 WindowManager.LayoutParams.TYPE_PHONE
             },
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                     WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
@@ -511,95 +531,96 @@ class CobaltSideDockService : Service() {
             gravity = Gravity.TOP or Gravity.START
         }
 
-        try {
-            windowManager.addView(scrim, scrimParams)
-        } catch (e: Exception) {
-            android.util.Log.e("CobaltSideDock", "Failed to add scrim window: ${e.message}", e)
-        }
-
-        // 2. WINDOW 2: Bounded strictly to the Dock Card region on the screen edge
-        val windowWidthPx = dpToPx(cardWidthDp + edgeMarginDp)
-        val windowHeightPx = dpToPx(cardHeightDp + 48)
-        val dockParams = WindowManager.LayoutParams(
-            windowWidthPx,
-            windowHeightPx,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            } else {
-                @Suppress("DEPRECATION")
-                WindowManager.LayoutParams.TYPE_PHONE
-            },
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.TOP or (if (isRightSide) Gravity.END else Gravity.START)
-            x = 0
-            y = dpToPx(effectiveTopDp.toInt())
-        }
-
-        val lifecycleOwner = OverlayLifecycleOwner().apply { onStart() }
+        val lifecycleOwner = OverlayLifecycleOwner(
+            fallbackOnBackPressed = Runnable {
+                dismissDockAction?.invoke() ?: closeDock()
+            }
+        ).apply { onStart() }
         dockLifecycleOwner = lifecycleOwner
 
-        val composeView = ComposeView(this)
-        dockComposeView = composeView
+        val rootLayout = DockRootLayout(this, lifecycleOwner.onBackPressedDispatcher).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
+        }
+        dockRootView = rootLayout
 
-        composeView.apply {
+        val composeView = ComposeView(this).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool)
             setViewTreeLifecycleOwner(lifecycleOwner)
             setViewTreeViewModelStoreOwner(lifecycleOwner)
             setViewTreeSavedStateRegistryOwner(lifecycleOwner)
+            setViewTreeOnBackPressedDispatcherOwner(lifecycleOwner)
 
             setContent {
-                MyApplicationTheme(
-                    darkTheme = isDarkTheme(),
-                    dynamicColor = prefs.getBoolean("dynamic_color", true)
+                CompositionLocalProvider(
+                    LocalOnBackPressedDispatcherOwner provides lifecycleOwner
                 ) {
-                    SideDockContent(
-                        side = getEdgePanelSide(),
-                        yPercent = getEdgePanelYPercent(),
-                        handleCenterYDp = exactHandleCenterYDp,
-                        handleHeightDp = getEffectiveHandleHeightDp(),
-                        handleThicknessDp = getEdgePanelThickness(),
-                        handleOpacity = getEdgePanelOpacity(),
-                        animPreset = getAnimPreset(),
-                        animStiffness = getAnimStiffness(),
-                        animDamping = getAnimDamping(),
-                        useBlur = false,
-                        blurRadius = currentBlurRadius,
-                        blurOpacity = currentBlurOpacity,
-                        repository = repository,
-                        onRegisterDismiss = { action ->
-                            dismissDockAction = action
-                        },
-                        onProgressChanged = { progress ->
-                            // Progressive Scrim: transparent -> 10% black -> transparent
-                            scrimView?.setBackgroundColor(
-                                Color.argb((255 * 0.10f * progress.coerceIn(0f, 1f)).toInt(), 0, 0, 0)
-                            )
-                        },
-                        onClose = {
-                            // Handled via SideDockContent's dismiss animation
-                        },
-                        onCloseFinished = {
-                            closeDock()
-                        },
-                        onLaunchOcr = {
-                            launchOcrCapture()
-                        },
-                        onLaunchLink = {
-                            launchLinkCapture()
-                        },
-                        onOpenMainApp = { itemId, destination ->
-                            openMainApp(itemId, destination)
-                        }
-                    )
+                    MyApplicationTheme(
+                        darkTheme = isDarkTheme(),
+                        dynamicColor = prefs.getBoolean("dynamic_color", true)
+                    ) {
+                        SideDockContent(
+                            side = getEdgePanelSide(),
+                            yPercent = getEdgePanelYPercent(),
+                            handleCenterYDp = exactHandleCenterYDp,
+                            handleHeightDp = getEffectiveHandleHeightDp(),
+                            handleThicknessDp = getEdgePanelThickness(),
+                            handleOpacity = getEdgePanelOpacity(),
+                            animPreset = getAnimPreset(),
+                            animStiffness = getAnimStiffness(),
+                            animDamping = getAnimDamping(),
+                            useBlur = false,
+                            blurRadius = currentBlurRadius,
+                            blurOpacity = currentBlurOpacity,
+                            repository = repository,
+                            onRegisterDismiss = { action ->
+                                dismissDockAction = action
+                            },
+                            onClose = {
+                                // Handled via SideDockContent's dismiss animation
+                            },
+                            onCloseFinished = {
+                                closeDock()
+                            },
+                            onLaunchOcr = {
+                                launchOcrCapture()
+                            },
+                            onLaunchLink = {
+                                launchLinkCapture()
+                            },
+                            onOpenMainApp = { itemId, destination ->
+                                openMainApp(itemId, destination)
+                            }
+                        )
+                    }
                 }
             }
         }
+        dockComposeView = composeView
+
+        rootLayout.addView(
+            composeView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        rootLayout.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val dispatcher = v.findOnBackInvokedDispatcher()
+                    if (dispatcher != null) {
+                        lifecycleOwner.onBackPressedDispatcher.setOnBackInvokedDispatcher(dispatcher)
+                    }
+                }
+                v.requestFocus()
+            }
+            override fun onViewDetachedFromWindow(v: View) {}
+        })
 
         try {
-            windowManager.addView(composeView, dockParams)
+            windowManager.addView(rootLayout, fullScreenParams)
         } catch (e: Exception) {
             android.util.Log.e("CobaltSideDock", "Failed to add dock window: ${e.message}", e)
             closeDock()
@@ -608,18 +629,14 @@ class CobaltSideDockService : Service() {
 
     private fun closeDock() {
         isDockExpanded = false
-        scrimView?.let { view ->
+        dockRootView?.let { view ->
             try {
                 windowManager.removeView(view)
             } catch (_: Exception) {}
-            scrimView = null
+            dockRootView = null
         }
-        dockComposeView?.let { view ->
-            try {
-                windowManager.removeView(view)
-            } catch (_: Exception) {}
-            dockComposeView = null
-        }
+        dockComposeView = null
+        scrimView = null
         dismissDockAction = null
         lastBlurRadiusPx = -1
         dockLifecycleOwner?.onDestroy()

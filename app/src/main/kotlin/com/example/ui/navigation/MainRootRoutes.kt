@@ -33,8 +33,7 @@ internal fun isMainRootRoute(route: String?): Boolean = when (route) {
     "search",
     "media_hub",
     "folders",
-    "profile",
-    "settings" -> true
+    "profile" -> true
     else -> false
 }
 
@@ -43,7 +42,7 @@ internal fun mainRootRouteIndex(route: String?): Int? = when (route) {
     "search" -> 1
     "media_hub" -> 2
     "folders" -> 3
-    "profile", "settings" -> 4
+    "profile" -> 4
     else -> null
 }
 

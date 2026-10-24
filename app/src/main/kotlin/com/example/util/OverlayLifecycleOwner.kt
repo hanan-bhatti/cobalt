@@ -18,6 +18,8 @@
 
 package com.example.util
 
+import androidx.activity.OnBackPressedDispatcher
+import androidx.activity.OnBackPressedDispatcherOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewModelStore
@@ -27,16 +29,19 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 
 /**
- * A lightweight LifecycleOwner + SavedStateRegistryOwner + ViewModelStoreOwner
+ * A lightweight LifecycleOwner + SavedStateRegistryOwner + ViewModelStoreOwner + OnBackPressedDispatcherOwner
  * tailored for hosting Jetpack Compose ComposeViews outside of an Activity (such as in
  * WindowManager system overlays).
  */
-class OverlayLifecycleOwner : SavedStateRegistryOwner, ViewModelStoreOwner {
+class OverlayLifecycleOwner(
+    fallbackOnBackPressed: Runnable? = null
+) : SavedStateRegistryOwner, ViewModelStoreOwner, OnBackPressedDispatcherOwner {
 
     private val lifecycleRegistry: LifecycleRegistry = LifecycleRegistry(this)
     private val savedStateRegistryController: SavedStateRegistryController =
         SavedStateRegistryController.create(this)
     private val appViewModelStore: ViewModelStore = ViewModelStore()
+    private val dispatcher: OnBackPressedDispatcher = OnBackPressedDispatcher(fallbackOnBackPressed)
 
     init {
         savedStateRegistryController.performAttach()
@@ -52,6 +57,9 @@ class OverlayLifecycleOwner : SavedStateRegistryOwner, ViewModelStoreOwner {
 
     override val viewModelStore: ViewModelStore
         get() = appViewModelStore
+
+    override val onBackPressedDispatcher: OnBackPressedDispatcher
+        get() = dispatcher
 
     fun onStart() {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)

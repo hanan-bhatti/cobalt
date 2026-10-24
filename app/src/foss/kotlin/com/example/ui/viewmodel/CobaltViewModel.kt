@@ -926,6 +926,12 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
         viewModelScope.launch {
             try {
+                if (!file.exists() || file.length() < 1024) {
+                    _ocrError.value = "Recording was too short or empty. Please record for at least 1-2 seconds."
+                    _isOcrLoading.value = false
+                    return@launch
+                }
+
                 val bytes = file.readBytes()
                 pendingMediaBytes = bytes
                 val localPath = repository.saveToLocalCache("audio_${java.util.UUID.randomUUID()}.mp4", bytes)
@@ -939,7 +945,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 }
 
                 val audioModel = settingsRepository.selectedAudioModel.value.takeIf { it.isNotBlank() }
-                    ?: settingsRepository.selectedModel.value
+                    ?: settingsRepository.selectedModel.value.takeIf { it.isNotBlank() }
+                    ?: "gemini-2.0-flash"
                 val result = repository.extractTextFromAudio(
                     base64Audio = base64Data,
                     apiKey = apiKey,
@@ -958,6 +965,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     _ocrError.value = result ?: "Failed to transcribe audio."
                 }
             } catch (e: Exception) {
+                Log.e("CobaltVM", "transcribeAudioMemo error: ${e.message}", e)
                 _ocrError.value = e.localizedMessage ?: "Unknown error"
             } finally {
                 _isOcrLoading.value = false

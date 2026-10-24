@@ -126,7 +126,24 @@ object GoogleApiErrorMapper {
      */
     fun formatException(throwable: Throwable): String {
         return when (throwable) {
-            is retrofit2.HttpException -> getMessageForHttpCode(throwable.code())
+            is retrofit2.HttpException -> {
+                val errorBody = try {
+                    throwable.response()?.errorBody()?.string()
+                } catch (_: Exception) {
+                    null
+                }
+                if (!errorBody.isNullOrBlank()) {
+                    val messageMatch = Regex(""""message"\s*:\s*"([^"]+)"""").find(errorBody)
+                    if (messageMatch != null) {
+                        val serverMessage = messageMatch.groupValues[1]
+                        formatUserFriendlyError(serverMessage)
+                    } else {
+                        getMessageForHttpCode(throwable.code())
+                    }
+                } else {
+                    getMessageForHttpCode(throwable.code())
+                }
+            }
             is UnknownHostException -> "No internet connection. Please check your Wi-Fi or mobile data."
             is SocketTimeoutException -> "Connection timed out. Please check your network and try again."
             is ConnectException -> "Unable to reach Google servers. Please check your internet connection."

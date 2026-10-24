@@ -76,12 +76,19 @@ data class GenerationConfig(
 
 @JsonClass(generateAdapter = true)
 data class GenerateContentResponse(
-    @param:Json(name = "candidates") val candidates: List<Candidate>? = null
+    @param:Json(name = "candidates") val candidates: List<Candidate>? = null,
+    @param:Json(name = "promptFeedback") val promptFeedback: PromptFeedback? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class PromptFeedback(
+    @param:Json(name = "blockReason") val blockReason: String? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class Candidate(
-    @param:Json(name = "content") val content: Content? = null
+    @param:Json(name = "content") val content: Content? = null,
+    @param:Json(name = "finishReason") val finishReason: String? = null
 )
 
 @JsonClass(generateAdapter = true)

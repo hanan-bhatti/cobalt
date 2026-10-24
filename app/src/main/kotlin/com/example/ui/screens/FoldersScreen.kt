@@ -163,7 +163,8 @@ fun FolderIcon(
 fun FoldersScreen(
     viewModel: CobaltViewModel,
     hazeState: HazeState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onItemClick: ((SavedItem) -> Unit)? = null
 ) {
     val allItems by viewModel.allItems.collectAsState()
     val customFolderEntities by viewModel.customFolderEntities.collectAsState()
@@ -240,7 +241,8 @@ fun FoldersScreen(
                 folderName = browseFolder,
                 viewModel = viewModel,
                 onBack = { activeBrowseFolder = null },
-                hazeState = hazeState
+                hazeState = hazeState,
+                onItemClick = onItemClick
             )
         } else {
             // MAIN FOLDERS DIRECTORY LIST VIEW
@@ -806,7 +808,8 @@ fun FolderContentsBrowser(
     folderName: String,
     viewModel: CobaltViewModel,
     onBack: () -> Unit,
-    hazeState: HazeState
+    hazeState: HazeState,
+    onItemClick: ((SavedItem) -> Unit)? = null
 ) {
     val items by viewModel.allItems.collectAsState()
     val isSyncing by viewModel.isSyncing.collectAsState()
@@ -999,7 +1002,7 @@ fun FolderContentsBrowser(
                         FolderBrowseItemRow(
                             item = item,
                             viewModel = viewModel,
-                            onClick = { viewModel.showDetailItem(item) },
+                            onClick = { onItemClick?.invoke(item) ?: viewModel.showDetailItem(item) },
                             modifier = Modifier.animateItem()
                         )
                     }

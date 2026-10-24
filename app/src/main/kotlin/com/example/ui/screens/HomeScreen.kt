@@ -116,8 +116,17 @@ fun HomeScreen(
     onNavigateToMediaHub: () -> Unit = {},
     modifier: Modifier = Modifier,
     sharedTransitionScope: SharedTransitionScope? = null,
-    animatedVisibilityScope: AnimatedVisibilityScope? = null
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    onItemClick: ((SavedItem) -> Unit)? = null
 ) {
+    val handleItemClick: (SavedItem) -> Unit = { clickedItem ->
+        if (onItemClick != null) {
+            onItemClick(clickedItem)
+        } else {
+            viewModel.showDetailItem(clickedItem)
+        }
+    }
+
     val items by viewModel.homeItems.collectAsState()
     val isInitialLoading by viewModel.isInitialLoading.collectAsState()
     val isSyncing by viewModel.isSyncing.collectAsState()
@@ -470,7 +479,7 @@ fun HomeScreen(
                             items(recentItems, key = { it.id + "_recent" }) { item ->
                                 RecentCaptureMicroCard(
                                     item = item,
-                                    onClick = { viewModel.showDetailItem(item) }
+                                    onClick = { handleItemClick(item) }
                                 )
                             }
                         }
@@ -668,7 +677,7 @@ fun HomeScreen(
                                                     if (isSelectionMode) {
                                                         viewModel.toggleSelection(item.id)
                                                     } else {
-                                                        viewModel.showDetailItem(item)
+                                                        handleItemClick(item)
                                                     }
                                                 },
                                                 onDelete = {
@@ -734,7 +743,7 @@ fun HomeScreen(
                                             if (isSelectionMode) {
                                                 viewModel.toggleSelection(item.id)
                                             } else {
-                                                viewModel.showDetailItem(item)
+                                                handleItemClick(item)
                                             }
                                         },
                                         onDelete = {
