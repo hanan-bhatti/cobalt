@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.LinkInteractionListener
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.input.OffsetMapping
@@ -37,7 +38,11 @@ import com.example.ui.theme.LinkBlue
 
 import androidx.compose.ui.unit.sp
 
-fun parseMarkdown(text: String, primaryColor: Color = LinkBlue): AnnotatedString {
+fun parseMarkdown(
+    text: String,
+    primaryColor: Color = LinkBlue,
+    onLinkClick: ((String) -> Unit)? = null
+): AnnotatedString {
     return buildAnnotatedString {
         val lines = text.split("\n")
         lines.forEachIndexed { i, line ->
@@ -80,7 +85,13 @@ fun parseMarkdown(text: String, primaryColor: Color = LinkBlue): AnnotatedString
                             val linkStyles = TextLinkStyles(
                                 style = SpanStyle(color = primaryColor, textDecoration = TextDecoration.Underline, fontWeight = FontWeight.SemiBold)
                             )
-                            withLink(LinkAnnotation.Url(url = url, styles = linkStyles)) {
+                            val linkListener = onLinkClick?.let { onClick ->
+                                LinkInteractionListener { annotation ->
+                                    val target = (annotation as? LinkAnnotation.Url)?.url ?: url
+                                    onClick(target)
+                                }
+                            }
+                            withLink(LinkAnnotation.Url(url = url, styles = linkStyles, linkInteractionListener = linkListener)) {
                                 append(linkText)
                             }
                         } else if (match.groups[6] != null) {
@@ -92,7 +103,13 @@ fun parseMarkdown(text: String, primaryColor: Color = LinkBlue): AnnotatedString
                             val linkStyles = TextLinkStyles(
                                 style = SpanStyle(color = primaryColor, textDecoration = TextDecoration.Underline, fontWeight = FontWeight.SemiBold)
                             )
-                            withLink(LinkAnnotation.Url(url = url, styles = linkStyles)) {
+                            val linkListener = onLinkClick?.let { onClick ->
+                                LinkInteractionListener { annotation ->
+                                    val target = (annotation as? LinkAnnotation.Url)?.url ?: url
+                                    onClick(target)
+                                }
+                            }
+                            withLink(LinkAnnotation.Url(url = url, styles = linkStyles, linkInteractionListener = linkListener)) {
                                 append(url)
                             }
                         }

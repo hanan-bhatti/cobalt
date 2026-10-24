@@ -101,7 +101,9 @@ fun ScreenWrapper(
     }
     val currentRoute = currentBackStackEntryState?.destination?.route
     val isCurrentNonMainRoot = currentRoute?.let { !isMainRootRoute(it) } == true
-    val shouldRunDepthEffects = !isMainRootScreen || hasVisibleNonMainRootScreen || isCurrentNonMainRoot
+    val isDetailTransition = currentRoute?.startsWith("detail") == true ||
+        syncVisibleEntries.any { it.destination.route?.startsWith("detail") == true }
+    val shouldRunDepthEffects = (!isMainRootScreen || hasVisibleNonMainRootScreen || isCurrentNonMainRoot) && !isDetailTransition
 
     // Dim/Blur Logic: the screen "behind" during any transition — forward push, committed pop,
     // or an in-progress predictive back gesture — is always the entry directly below the top of

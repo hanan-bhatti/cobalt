@@ -84,6 +84,7 @@ import com.example.data.model.SavedItemType
 import com.example.data.model.getBestImagePath
 import com.example.data.remote.MediaSearchResultItem
 import com.example.data.repository.CobaltRepository
+import com.example.ui.screens.parseMarkdown
 import com.example.util.CobaltCustomTabsLauncher
 import com.example.widget.WidgetUpdater
 import java.text.SimpleDateFormat
@@ -886,6 +887,9 @@ fun SideDockContent(
                                     onClose = { dismissDock() },
                                     onOpenFullHub = {
                                         dismissDock { onOpenMainApp(null, "media_hub") }
+                                    },
+                                    onOpenItemInApp = { mediaId ->
+                                        dismissDock { onOpenMainApp(mediaId, "media_hub") }
                                     }
                                 )
                             }
@@ -903,6 +907,11 @@ fun SideDockContent(
                                         onClose = { dismissDock() },
                                         onOpenInApp = {
                                             dismissDock { onOpenMainApp(item.id, null) }
+                                        },
+                                        onOpenLink = { url ->
+                                            dismissDock {
+                                                CobaltCustomTabsLauncher.launch(context, url)
+                                            }
                                         }
                                     )
                                 } ?: run {
@@ -1163,7 +1172,8 @@ private fun DockItemDetailContent(
     useBlur: Boolean = false,
     onBack: () -> Unit,
     onClose: () -> Unit,
-    onOpenInApp: () -> Unit
+    onOpenInApp: () -> Unit,
+    onOpenLink: (String) -> Unit
 ) {
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
@@ -1197,6 +1207,7 @@ private fun DockItemDetailContent(
     }
 
     val shareContent = {
+        onClose()
         val sendIntent = Intent().apply {
             action = Intent.ACTION_SEND
             putExtra(Intent.EXTRA_TEXT, if (item.type == SavedItemType.LINK) item.content else item.extractedText ?: item.content)
@@ -1356,7 +1367,11 @@ private fun DockItemDetailContent(
                         ) {
                             SelectionContainer {
                                 Text(
-                                    text = item.extractedText.trim(),
+                                    text = parseMarkdown(
+                                        text = item.extractedText.trim(),
+                                        primaryColor = MaterialTheme.colorScheme.primary,
+                                        onLinkClick = onOpenLink
+                                    ),
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         color = MaterialTheme.colorScheme.onSurface,
                                         fontSize = 11.5.sp,
@@ -1379,7 +1394,7 @@ private fun DockItemDetailContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                CobaltCustomTabsLauncher.launch(context, item.content)
+                                onOpenLink(item.content)
                             }
                     ) {
                         Row(
@@ -1416,7 +1431,11 @@ private fun DockItemDetailContent(
                     if (!item.linkDescription.isNullOrBlank() && !isRawUrlOrPath(item.linkDescription)) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = item.linkDescription.trim(),
+                            text = parseMarkdown(
+                                text = item.linkDescription.trim(),
+                                primaryColor = MaterialTheme.colorScheme.primary,
+                                onLinkClick = onOpenLink
+                            ),
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 12.sp,
@@ -1447,7 +1466,11 @@ private fun DockItemDetailContent(
 
                     if (item.content.isNotBlank() && !isRawUrlOrPath(item.content)) {
                         Text(
-                            text = item.content.trim(),
+                            text = parseMarkdown(
+                                text = item.content.trim(),
+                                primaryColor = MaterialTheme.colorScheme.primary,
+                                onLinkClick = onOpenLink
+                            ),
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 12.sp,
@@ -1461,7 +1484,11 @@ private fun DockItemDetailContent(
                     if (item.content.isNotBlank()) {
                         SelectionContainer {
                             Text(
-                                text = item.content,
+                                text = parseMarkdown(
+                                    text = item.content,
+                                    primaryColor = MaterialTheme.colorScheme.primary,
+                                    onLinkClick = onOpenLink
+                                ),
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     color = MaterialTheme.colorScheme.onSurface,
                                     fontSize = 12.sp,
@@ -1490,7 +1517,11 @@ private fun DockItemDetailContent(
                         ) {
                             SelectionContainer {
                                 Text(
-                                    text = item.extractedText.trim(),
+                                    text = parseMarkdown(
+                                        text = item.extractedText.trim(),
+                                        primaryColor = MaterialTheme.colorScheme.primary,
+                                        onLinkClick = onOpenLink
+                                    ),
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontSize = 11.sp,
@@ -1554,7 +1585,7 @@ private fun DockItemDetailContent(
                 if (item.type == SavedItemType.LINK && item.content.startsWith("http")) {
                     TextButton(
                         onClick = {
-                            CobaltCustomTabsLauncher.launch(context, item.content)
+                            onOpenLink(item.content)
                         },
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                     ) {
@@ -1619,7 +1650,8 @@ private fun MediaHubSubpageContent(
     useBlur: Boolean = false,
     onBack: () -> Unit,
     onClose: () -> Unit,
-    onOpenFullHub: () -> Unit
+    onOpenFullHub: () -> Unit,
+    onOpenItemInApp: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -1705,32 +1737,40 @@ private fun MediaHubSubpageContent(
 
     val searchInputBar = @Composable {
         Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            color = hubContainerColor,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp),
+            shape = RoundedCornerShape(14.dp),
+            color = if (useBlur) MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.70f) else MaterialTheme.colorScheme.surfaceContainerHigh,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
         ) {
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_custom_search),
-                    contentDescription = null,
+                    contentDescription = "Search",
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(14.dp)
+                    modifier = Modifier.size(17.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
-                Box(modifier = Modifier.weight(1f)) {
+                Spacer(modifier = Modifier.width(10.dp))
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.CenterStart
+                ) {
                     if (query.isEmpty()) {
                         Text(
                             text = "Search movies, TV shows, anime...",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                fontSize = 11.sp
-                            )
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                                fontSize = 12.5.sp,
+                                lineHeight = 16.sp
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                     BasicTextField(
@@ -1739,16 +1779,31 @@ private fun MediaHubSubpageContent(
                         modifier = Modifier.fillMaxWidth(),
                         textStyle = TextStyle(
                             color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 11.sp
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.Medium,
+                            lineHeight = 16.sp
                         ),
                         singleLine = true,
-                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Search
+                        )
                     )
                 }
-                if (query.isNotEmpty()) {
+                if (isLoading) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else if (query.isNotEmpty()) {
+                    Spacer(modifier = Modifier.width(6.dp))
                     IconButton(
                         onClick = { query = "" },
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier
+                            .size(22.dp)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest, shape = CircleShape)
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_custom_close),
@@ -1815,7 +1870,34 @@ private fun MediaHubSubpageContent(
                     var isSaved by remember { mutableStateOf(false) }
 
                     Surface(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                coroutineScope.launch {
+                                    try {
+                                        val savedItem = SavedItem(
+                                            id = item.id,
+                                            type = SavedItemType.MEDIA,
+                                            title = item.title,
+                                            content = item.overview ?: "",
+                                            thumbnailPath = item.posterUrl,
+                                            backdropUrl = item.backdropUrl,
+                                            mediaType = item.mediaType,
+                                            watchStatus = "Plan to Watch",
+                                            releaseYear = item.releaseYear,
+                                            genres = item.genres,
+                                            watchProviders = item.watchProviders,
+                                            trailerUrl = item.trailerUrl,
+                                            rating = item.rating,
+                                            folders = listOf("Media")
+                                        )
+                                        val enriched = repository.enrichMediaItemDetails(savedItem, saveToDb = false)
+                                        repository.saveItem(enriched)
+                                        WidgetUpdater.update(context)
+                                    } catch (_: Exception) {}
+                                    onOpenItemInApp(item.id)
+                                }
+                            },
                         shape = RoundedCornerShape(10.dp),
                         color = hubContainerColor,
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))

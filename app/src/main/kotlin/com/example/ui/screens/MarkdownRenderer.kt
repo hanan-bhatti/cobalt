@@ -23,6 +23,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.withLink
@@ -34,15 +35,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.LinkInteractionListener
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.util.CobaltCustomTabsLauncher
+import com.example.utils.isRtlText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -71,7 +80,9 @@ private fun parseBlocks(markdown: String): List<MdBlock> {
 }
 
 @Composable
-private fun buildRichText(raw: String): AnnotatedString {
+private fun buildRichText(raw: String, onLinkClick: ((String) -> Unit)? = null): AnnotatedString {
+    val context = LocalContext.current
+    val isDark = isSystemInDarkTheme()
     val builder = AnnotatedString.Builder()
     var cursor = 0
     val combined = Regex("""(\*\*[^*]+\*\*)|(\[[^\]]+]\([^)]+\))""")
@@ -94,7 +105,19 @@ private fun buildRichText(raw: String): AnnotatedString {
                     fontWeight = FontWeight.SemiBold
                 )
             )
-            builder.withLink(LinkAnnotation.Url(url = url, styles = linkStyles)) {
+            val linkListener = LinkInteractionListener { annotation ->
+                val clickedUrl = (annotation as? LinkAnnotation.Url)?.url ?: url
+                if (onLinkClick != null) {
+                    onLinkClick(clickedUrl)
+                } else {
+                    CobaltCustomTabsLauncher.launch(
+                        context = context,
+                        url = clickedUrl,
+                        isDarkTheme = isDark
+                    )
+                }
+            }
+            builder.withLink(LinkAnnotation.Url(url = url, styles = linkStyles, linkInteractionListener = linkListener)) {
                 append(label)
             }
         }
@@ -105,16 +128,28 @@ private fun buildRichText(raw: String): AnnotatedString {
 }
 
 @Composable
-private fun RichTextLine(raw: String, style: androidx.compose.ui.text.TextStyle) {
-    val text = buildRichText(raw)
-    Text(
-        text = text,
-        style = style.copy(color = LocalContentColor.current)
-    )
+private fun RichTextLine(raw: String, style: androidx.compose.ui.text.TextStyle, onLinkClick: ((String) -> Unit)? = null) {
+    val text = buildRichText(raw, onLinkClick)
+    val isRtl = isRtlText(text.text)
+    CompositionLocalProvider(LocalLayoutDirection provides if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
+        Text(
+            text = text,
+            style = style.copy(
+                color = LocalContentColor.current,
+                textDirection = TextDirection.Content
+            ),
+            textAlign = if (isRtl) TextAlign.Right else TextAlign.Left,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
 }
 
 @Composable
-fun ExpressiveMarkdown(markdown: String, modifier: Modifier = Modifier) {
+fun ExpressiveMarkdown(
+    markdown: String,
+    modifier: Modifier = Modifier,
+    onLinkClick: ((String) -> Unit)? = null
+) {
     val blocks = remember(markdown) { parseBlocks(markdown) }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -142,27 +177,38 @@ fun ExpressiveMarkdown(markdown: String, modifier: Modifier = Modifier) {
             ) {
                 when (block) {
                     is MdBlock.Header -> {
-                        Column(modifier = Modifier.padding(top = if (index == 0) 0.dp else 20.dp, bottom = 6.dp)) {
-                            Text(
-                                text = block.text,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Box(
+                        val isRtl = isRtlText(block.text)
+                        CompositionLocalProvider(LocalLayoutDirection provides if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
+                            Column(
                                 modifier = Modifier
-                                    .padding(top = 6.dp)
-                                    .height(3.dp)
-                                    .width(32.dp)
-                                    .clip(RoundedCornerShape(50))
-                                    .background(MaterialTheme.colorScheme.primary)
-                            )
+                                    .fillMaxWidth()
+                                    .padding(top = if (index == 0) 0.dp else 20.dp, bottom = 6.dp),
+                                horizontalAlignment = if (isRtl) Alignment.End else Alignment.Start
+                            ) {
+                                Text(
+                                    text = block.text,
+                                    style = MaterialTheme.typography.titleMedium.copy(textDirection = TextDirection.Content),
+                                    fontWeight = FontWeight.ExtraBold,
+                                    textAlign = if (isRtl) TextAlign.Right else TextAlign.Left,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .padding(top = 6.dp)
+                                        .height(3.dp)
+                                        .width(32.dp)
+                                        .clip(RoundedCornerShape(50))
+                                        .background(MaterialTheme.colorScheme.primary)
+                                )
+                            }
                         }
                     }
                     is MdBlock.Paragraph -> {
                         RichTextLine(
                             raw = block.raw,
-                            style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp)
+                            style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
+                            onLinkClick = onLinkClick
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                     }
@@ -180,7 +226,8 @@ fun ExpressiveMarkdown(markdown: String, modifier: Modifier = Modifier) {
                             )
                             RichTextLine(
                                 raw = block.raw,
-                                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp)
+                                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
+                                onLinkClick = onLinkClick
                             )
                         }
                     }

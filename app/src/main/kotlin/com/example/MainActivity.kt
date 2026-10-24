@@ -42,6 +42,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
@@ -164,12 +165,26 @@ class MainActivity : ComponentActivity() {
                 }
             }
             MyApplicationTheme(darkTheme = isDarkTheme, dynamicColor = dynamicColorEnabled) {
-                val navController = rememberNavController()
-                val activeCaptureItem by viewModel.activeCaptureItem.collectAsState()
-                val activeDetailItem by viewModel.activeDetailItem.collectAsState()
-                val availableUpdate by viewModel.availableUpdate.collectAsState()
                 val context = androidx.compose.ui.platform.LocalContext.current
-                var pendingCrashReport by remember { mutableStateOf(com.example.util.FossCrashReporter.getPendingCrashReport(context)) }
+                val customTabsUriHandler = remember(context, isDarkTheme) {
+                    object : androidx.compose.ui.platform.UriHandler {
+                        override fun openUri(uri: String) {
+                            com.example.util.CobaltCustomTabsLauncher.launch(
+                                context = context,
+                                url = uri,
+                                isDarkTheme = isDarkTheme
+                            )
+                        }
+                    }
+                }
+                androidx.compose.runtime.CompositionLocalProvider(
+                    androidx.compose.ui.platform.LocalUriHandler provides customTabsUriHandler
+                ) {
+                    val navController = rememberNavController()
+                    val activeCaptureItem by viewModel.activeCaptureItem.collectAsState()
+                    val activeDetailItem by viewModel.activeDetailItem.collectAsState()
+                    val availableUpdate by viewModel.availableUpdate.collectAsState()
+                    var pendingCrashReport by remember { mutableStateOf(com.example.util.FossCrashReporter.getPendingCrashReport(context)) }
 
                 BackHandler(enabled = activeDetailItem != null || navController.currentDestination?.route?.startsWith("detail") == true) {
                     if (navController.currentDestination?.route?.startsWith("detail") == true) {
@@ -277,7 +292,7 @@ class MainActivity : ComponentActivity() {
                                      startDestination = "home",
                                      enterTransition = {
                                          if (targetState.destination.route?.startsWith("detail") == true) {
-                                             fadeIn(animationSpec = tween(durationMillis = 320, easing = LinearOutSlowInEasing))
+                                             fadeIn(animationSpec = tween(durationMillis = 350, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)))
                                          } else {
                                              mainRootEnterTransition(
                                                  fromRoute = initialState.destination.route,
@@ -288,7 +303,7 @@ class MainActivity : ComponentActivity() {
                                      },
                                      exitTransition = {
                                          if (targetState.destination.route?.startsWith("detail") == true) {
-                                             fadeOut(animationSpec = tween(durationMillis = 300, easing = FastOutLinearInEasing))
+                                             fadeOut(animationSpec = tween(durationMillis = 300, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)))
                                          } else {
                                              mainRootExitTransition(
                                                  fromRoute = initialState.destination.route,
@@ -299,7 +314,7 @@ class MainActivity : ComponentActivity() {
                                      },
                                      popEnterTransition = {
                                          if (initialState.destination.route?.startsWith("detail") == true) {
-                                             fadeIn(animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing))
+                                             fadeIn(animationSpec = tween(durationMillis = 320, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)))
                                          } else {
                                              mainRootEnterTransition(
                                                  fromRoute = initialState.destination.route,
@@ -310,7 +325,7 @@ class MainActivity : ComponentActivity() {
                                      },
                                      popExitTransition = {
                                          if (initialState.destination.route?.startsWith("detail") == true) {
-                                             fadeOut(animationSpec = tween(durationMillis = 280, easing = FastOutLinearInEasing))
+                                             fadeOut(animationSpec = tween(durationMillis = 280, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)))
                                          } else {
                                              mainRootExitTransition(
                                                  fromRoute = initialState.destination.route,
@@ -688,6 +703,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
     }
 
     override fun onNewIntent(intent: Intent) {

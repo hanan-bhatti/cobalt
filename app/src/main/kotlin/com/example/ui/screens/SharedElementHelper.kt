@@ -67,42 +67,34 @@ fun Modifier.maybeSharedBounds(
     if (sharedTransitionScope != null && animatedVisibilityScope != null) {
         with(sharedTransitionScope) {
             val clip = if (clipShape != null) OverlayClip(clipShape) else null
+            val enterSpec = androidx.compose.animation.fadeIn(
+                animationSpec = androidx.compose.animation.core.tween(
+                    durationMillis = 320,
+                    easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+                )
+            )
+            val exitSpec = androidx.compose.animation.fadeOut(
+                animationSpec = androidx.compose.animation.core.tween(
+                    durationMillis = 280,
+                    easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+                )
+            )
             if (clip != null) {
                 this@composed.sharedBounds(
                     sharedContentState = rememberSharedContentState(key = key),
                     animatedVisibilityScope = animatedVisibilityScope,
                     boundsTransform = boundsTransform,
                     clipInOverlayDuringTransition = clip,
-                    enter = androidx.compose.animation.fadeIn(
-                        animationSpec = androidx.compose.animation.core.tween(
-                            durationMillis = 240,
-                            easing = androidx.compose.animation.core.LinearOutSlowInEasing
-                        )
-                    ),
-                    exit = androidx.compose.animation.fadeOut(
-                        animationSpec = androidx.compose.animation.core.tween(
-                            durationMillis = 200,
-                            easing = androidx.compose.animation.core.FastOutLinearInEasing
-                        )
-                    )
+                    enter = enterSpec,
+                    exit = exitSpec
                 )
             } else {
                 this@composed.sharedBounds(
                     sharedContentState = rememberSharedContentState(key = key),
                     animatedVisibilityScope = animatedVisibilityScope,
                     boundsTransform = boundsTransform,
-                    enter = androidx.compose.animation.fadeIn(
-                        animationSpec = androidx.compose.animation.core.tween(
-                            durationMillis = 240,
-                            easing = androidx.compose.animation.core.LinearOutSlowInEasing
-                        )
-                    ),
-                    exit = androidx.compose.animation.fadeOut(
-                        animationSpec = androidx.compose.animation.core.tween(
-                            durationMillis = 200,
-                            easing = androidx.compose.animation.core.FastOutLinearInEasing
-                        )
-                    )
+                    enter = enterSpec,
+                    exit = exitSpec
                 )
             }
         }

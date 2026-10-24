@@ -91,6 +91,10 @@ import com.example.ui.theme.CategoryAudio
 import com.example.ui.theme.CategoryMedia
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.example.ui.theme.toThemeColor
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.text.style.TextAlign
+import com.example.utils.isRtlText
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
@@ -106,16 +110,11 @@ fun DetailScreen(
 ) {
     val activeItem by viewModel.activeDetailItem.collectAsState()
     val allItems by viewModel.allItems.collectAsState()
-    var displayedItem by remember { mutableStateOf(activeItem) }
-    if (activeItem != null) {
-        displayedItem = activeItem
-    } else if (itemId != null && (displayedItem == null || displayedItem?.id != itemId)) {
-        val found = allItems.find { it.id == itemId }
-        if (found != null) {
-            displayedItem = found
-        }
-    }
-    val item = displayedItem ?: return
+    val item = remember(activeItem, allItems, itemId) {
+        activeItem?.takeIf { itemId.isNullOrBlank() || it.id == itemId }
+            ?: (if (!itemId.isNullOrBlank()) allItems.find { it.id == itemId } else null)
+            ?: activeItem
+    } ?: return
 
     val localHazeState = remember { HazeState() }
 
@@ -332,13 +331,20 @@ fun DetailScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     // Title
                     val displayTitle = item.title.ifBlank { item.linkTitle ?: "Untitled Item" }
-                    Text(
-                        text = displayTitle,
-                        style = MaterialTheme.typography.displayMedium.copy(
-                            textDirection = androidx.compose.ui.text.style.TextDirection.Content
-                        ),
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
+                    val isTitleRtl = remember(displayTitle) { isRtlText(displayTitle) }
+                    CompositionLocalProvider(
+                        LocalLayoutDirection provides if (isTitleRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
+                    ) {
+                        Text(
+                            text = displayTitle,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = if (isTitleRtl) TextAlign.Right else TextAlign.Left,
+                            style = MaterialTheme.typography.displayMedium.copy(
+                                textDirection = androidx.compose.ui.text.style.TextDirection.Content
+                            ),
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
 
                     // Meta row
                     Row(
@@ -491,6 +497,10 @@ fun DetailScreen(
                     item.extractedText?.takeIf { it.isNotBlank() }
                         ?: item.linkDescription?.takeIf { it.isNotBlank() }
                 }
+                SavedItemType.AUDIO -> {
+                    item.extractedText?.takeIf { it.isNotBlank() }
+                        ?: item.content.takeIf { it.isNotBlank() }
+                }
                 SavedItemType.CODE, SavedItemType.MEDIA -> null
                 else -> item.content.takeIf { it.isNotBlank() }
             }
@@ -573,6 +583,7 @@ fun DetailScreen(
                     // Rendered Markdown/Text with full bidirectional support
                     MarkdownText(
                         markdown = descriptionToShow,
+                        modifier = Modifier.fillMaxWidth(),
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
                     )
                 }
@@ -648,11 +659,24 @@ fun DetailScreen(
                             parseMarkdown(item.content, MaterialTheme.colorScheme.primary)
                         }
 
-                        Text(
-                            text = codeText,
-                            style = if (item.type == SavedItemType.CODE) MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace) else MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        val isCodeRtl = remember(item.content) { isRtlText(item.content) }
+                        CompositionLocalProvider(
+                            LocalLayoutDirection provides if (item.type != SavedItemType.CODE && isCodeRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
+                        ) {
+                            Text(
+                                text = codeText,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = if (item.type != SavedItemType.CODE && isCodeRtl) TextAlign.Right else TextAlign.Left,
+                                style = if (item.type == SavedItemType.CODE) {
+                                    MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
+                                } else {
+                                    MaterialTheme.typography.bodyMedium.copy(
+                                        textDirection = androidx.compose.ui.text.style.TextDirection.Content
+                                    )
+                                },
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
