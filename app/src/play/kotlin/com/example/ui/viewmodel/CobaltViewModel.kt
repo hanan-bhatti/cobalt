@@ -1514,7 +1514,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 )
 
                 if (resultText?.startsWith("Error") == true) {
-                    _ocrError.value = resultText
+                    _ocrError.value = com.example.util.GoogleApiErrorMapper.formatUserFriendlyError(resultText)
                 } else if (resultText != null) {
                     val (parsedExtractedText, urlsList) = parseGeminiOcrResult(resultText)
 
@@ -1532,10 +1532,10 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     }
                     _extractedLinksToReview.value = reviews
                 } else {
-                    _ocrError.value = "Gemini OCR returned an empty result."
+                    _ocrError.value = "No readable text or hyperlinks found. Try selecting a clearer region."
                 }
             } catch (e: Exception) {
-                _ocrError.value = "OCR Failed: ${e.localizedMessage}"
+                _ocrError.value = com.example.util.GoogleApiErrorMapper.formatException(e)
             } finally {
                 _isOcrLoading.value = false
             }
@@ -1564,7 +1564,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 val sensitivity = settingsRepository.ocrSensitivity.value
                 val resultText = repository.extractTextFromRegion(bitmap, x, y, width, height, apiKey, model, sensitivity)
                 if (resultText?.startsWith("Error") == true) {
-                    _ocrError.value = resultText
+                    _ocrError.value = com.example.util.GoogleApiErrorMapper.formatUserFriendlyError(resultText)
                 } else if (resultText != null) {
                     val (parsedExtractedText, urlsList) = parseGeminiOcrResult(resultText)
 
@@ -1588,11 +1588,11 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     }
                     _extractedLinksToReview.value = reviews
                 } else {
-                    _ocrError.value = "Gemini OCR was unable to read this region. Please select a clearer region."
+                    _ocrError.value = "No readable text or hyperlinks found. Try selecting a clearer region."
                 }
             } catch (e: Exception) {
                 Log.e("CobaltVM", "OCR region extraction failed: ${e.message}")
-                _ocrError.value = e.message ?: "OCR region extraction failed. Please try again."
+                _ocrError.value = com.example.util.GoogleApiErrorMapper.formatException(e)
             } finally {
                 _isOcrLoading.value = false
             }

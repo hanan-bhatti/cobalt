@@ -35,6 +35,7 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.BasicTextField
@@ -52,6 +53,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -63,7 +65,16 @@ import com.example.data.model.SavedItemType
 import com.example.ui.screens.ImageMarkingCanvas
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.CobaltViewModel
+import com.example.util.GoogleApiErrorMapper
+import com.example.util.OcrLoadingMessages
+import com.example.utils.DevicePerformance
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import androidx.compose.animation.core.*
 import androidx.compose.ui.graphics.StrokeCap
@@ -225,6 +236,12 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
         val context = LocalContext.current
         var shownToast by remember { mutableStateOf(false) }
 
+        val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
+        val blurRadius by viewModel.blurRadius.collectAsState()
+        val blurOpacity by viewModel.blurOpacity.collectAsState()
+        val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
+        val hazeState = remember { HazeState() }
+
         LaunchedEffect(capturedBitmap) {
             if (capturedBitmap != null && !shownToast) {
                 Toast.makeText(
@@ -236,12 +253,6 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
             }
         }
 
-        LaunchedEffect(ocrError) {
-            ocrError?.let { error ->
-                Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
-            }
-        }
-
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -250,22 +261,80 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
             if (capturedBitmap != null) {
                 // Show visual screenshot selection interface
                 Box(modifier = Modifier.fillMaxSize()) {
-                    // Selection Canvas
-                    ImageMarkingCanvas(
-                        bitmap = capturedBitmap!!,
-                        onRegionSelected = { x, y, w, h ->
-                            viewModel.performRegionOcr(x, y, w, h)
-                        },
-                        enabled = !isOcrLoading,
-                        modifier = Modifier.fillMaxSize()
-                    )
-
-                    // OCR Progress Overlay
-                    if (isOcrLoading) {
-                        OcrProgressOverlay(modifier = Modifier.align(Alignment.Center))
+                    // Selection Canvas wrapped in hazeSource for background blur
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .hazeSource(state = hazeState)
+                    ) {
+                        ImageMarkingCanvas(
+                            bitmap = capturedBitmap!!,
+                            onRegionSelected = { x, y, w, h ->
+                                viewModel.performRegionOcr(x, y, w, h)
+                            },
+                            enabled = !isOcrLoading,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
 
-                    // Extracted Results bottom review panel
+                    // Floating Exit / Close Button (Always visible at top-right)
+                    Surface(
+                        shape = CircleShape,
+                        color = if (useBlur) Color.Transparent else MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .statusBarsPadding()
+                            .padding(top = 16.dp, end = 16.dp)
+                            .size(38.dp)
+                            .then(
+                                if (useBlur) {
+                                    Modifier
+                                        .clip(CircleShape)
+                                        .hazeEffect(
+                                            state = hazeState,
+                                            style = HazeStyle(
+                                                backgroundColor = MaterialTheme.colorScheme.surface,
+                                                tint = HazeTint(MaterialTheme.colorScheme.surface.copy(alpha = blurOpacity)),
+                                                blurRadius = blurRadius.dp,
+                                                noiseFactor = 0.02f
+                                            )
+                                        )
+                                } else Modifier
+                            )
+                            .clickable {
+                                viewModel.clearOcrError()
+                                viewModel.cancelCapture()
+                                finish()
+                            }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_close),
+                                contentDescription = "Exit OCR Capture",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    // OCR Progress Overlay (Redesigned with frosted glass & funny rotating messages)
+                    if (isOcrLoading) {
+                        OcrProgressOverlay(
+                            hazeState = hazeState,
+                            useBlur = useBlur,
+                            blurRadius = blurRadius,
+                            blurOpacity = blurOpacity,
+                            onCancel = {
+                                viewModel.clearOcrError()
+                                viewModel.cancelCapture()
+                                finish()
+                            },
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+
+                    // Extracted Results / Error bottom review panel
                     var userSelectedTab by remember { mutableStateOf<String?>(null) }
                     val activeTab = userSelectedTab ?: if (extractedLinks.isNotEmpty()) "Links" else "Note"
                     var noteTitle by remember { mutableStateOf("Extracted Note") }
@@ -291,14 +360,35 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                             .align(Alignment.BottomCenter)
                             .navigationBarsPadding()
                     ) {
-                        Surface(
-                            modifier = Modifier
+                        val sheetModifier = if (useBlur) {
+                            Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(16.dp)
+                                .clip(RoundedCornerShape(28.dp))
+                                .hazeEffect(
+                                    state = hazeState,
+                                    style = HazeStyle(
+                                        backgroundColor = MaterialTheme.colorScheme.surface,
+                                        tint = HazeTint(MaterialTheme.colorScheme.surface.copy(alpha = blurOpacity)),
+                                        blurRadius = blurRadius.dp,
+                                        noiseFactor = 0.02f
+                                    )
+                                )
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), RoundedCornerShape(28.dp))
+                        } else {
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                                .clip(RoundedCornerShape(28.dp))
+                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.94f), RoundedCornerShape(28.dp))
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(28.dp))
+                        }
+
+                        Surface(
+                            modifier = sheetModifier,
                             shape = RoundedCornerShape(28.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                            tonalElevation = 8.dp
+                            color = Color.Transparent,
+                            tonalElevation = 0.dp
                         ) {
                             Column(
                                 modifier = Modifier
@@ -312,27 +402,79 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text(
-                                        text = "OCR Intelligence Hub",
+                                        text = if (ocrError != null) "Extraction Notice" else "OCR Intelligence Hub",
                                         fontWeight = FontWeight.Black,
                                         style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = if (ocrError != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
                                     )
                                     IconButton(
                                         onClick = {
-                                            // Reset the capture state so they can draw a box again on the current capturedBitmap!
-                                            if (capturedBitmap != null) {
-                                                viewModel.startFloatingOcrCapture(capturedBitmap!!)
-                                            } else {
-                                                viewModel.cancelCapture()
-                                            }
+                                            viewModel.clearOcrError()
+                                            viewModel.cancelCapture()
+                                            finish()
                                         },
                                         modifier = Modifier.size(28.dp)
                                     ) {
-                                        Icon(painter = painterResource(id = R.drawable.ic_custom_close), contentDescription = "Clear", modifier = Modifier.size(18.dp))
+                                        Icon(painter = painterResource(id = R.drawable.ic_custom_close), contentDescription = "Close", modifier = Modifier.size(18.dp))
                                     }
                                 }
 
-                                if (ocrError == null) {
+                                if (ocrError != null) {
+                                    // Dedicated friendly error presentation
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                                    ) {
+                                        val cleanErrorMessage = GoogleApiErrorMapper.formatUserFriendlyError(ocrError)
+
+                                        Text(
+                                            text = cleanErrorMessage,
+                                            style = MaterialTheme.typography.bodySmall.copy(
+                                                fontSize = 12.5.sp,
+                                                lineHeight = 17.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                textAlign = TextAlign.Center
+                                            ),
+                                            modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp)
+                                        )
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            OutlinedButton(
+                                                onClick = {
+                                                    viewModel.clearOcrError()
+                                                    viewModel.cancelCapture()
+                                                    finish()
+                                                },
+                                                shape = RoundedCornerShape(16.dp),
+                                                modifier = Modifier.weight(1f).height(44.dp)
+                                            ) {
+                                                Text("Close", fontWeight = FontWeight.SemiBold)
+                                            }
+
+                                            Button(
+                                                onClick = {
+                                                    if (capturedBitmap != null) {
+                                                        viewModel.startFloatingOcrCapture(capturedBitmap!!)
+                                                    } else {
+                                                        viewModel.cancelCapture()
+                                                        finish()
+                                                    }
+                                                },
+                                                shape = RoundedCornerShape(16.dp),
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = MaterialTheme.colorScheme.primary
+                                                ),
+                                                modifier = Modifier.weight(1f).height(44.dp)
+                                            ) {
+                                                Text("Select Again", fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
+                                } else {
                                     // Gorgeous Pill-shaped Tab Selector (Switch between Links and Note)
                                     Row(
                                         modifier = Modifier
@@ -745,41 +887,151 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun OcrProgressOverlay(modifier: Modifier = Modifier) {
+private fun OcrProgressOverlay(
+    hazeState: HazeState,
+    useBlur: Boolean,
+    blurRadius: Int,
+    blurOpacity: Float,
+    onCancel: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var currentMessage by remember { mutableStateOf(OcrLoadingMessages.getRandomMessage()) }
+
+    LaunchedEffect(Unit) {
+        while (isActive) {
+            delay(8000L) // Rotates every 8 seconds (in the 7-10s window)
+            currentMessage = OcrLoadingMessages.getRandomMessage(exclude = currentMessage)
+        }
+    }
+
+    val cardModifier = if (useBlur) {
+        modifier
+            .padding(horizontal = 28.dp)
+            .widthIn(max = 310.dp)
+            .clip(RoundedCornerShape(32.dp))
+            .hazeEffect(
+                state = hazeState,
+                style = HazeStyle(
+                    backgroundColor = MaterialTheme.colorScheme.surface,
+                    tint = HazeTint(MaterialTheme.colorScheme.surface.copy(alpha = blurOpacity)),
+                    blurRadius = blurRadius.dp,
+                    noiseFactor = 0.02f
+                )
+            )
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f)
+                    )
+                ),
+                shape = RoundedCornerShape(32.dp)
+            )
+    } else {
+        modifier
+            .padding(horizontal = 28.dp)
+            .widthIn(max = 310.dp)
+            .clip(RoundedCornerShape(32.dp))
+            .background(
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                shape = RoundedCornerShape(32.dp)
+            )
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                shape = RoundedCornerShape(32.dp)
+            )
+    }
+
     Surface(
-        modifier = modifier
-            .padding(32.dp)
-            .widthIn(max = 280.dp),
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
-        tonalElevation = 8.dp
+        modifier = cardModifier,
+        shape = RoundedCornerShape(32.dp),
+        color = Color.Transparent,
+        tonalElevation = 0.dp
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 28.dp),
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 26.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            CircularWavyProgressIndicator(
-                modifier = Modifier.size(48.dp),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+            // Modern Expressive Progress Indicator
+            Box(contentAlignment = Alignment.Center) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    modifier = Modifier.size(62.dp)
+                ) {}
+                CircularWavyProgressIndicator(
+                    modifier = Modifier.size(46.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                )
+            }
+
+            // Headline (Clean, no mention of Gemini!)
             Text(
-                text = "Reading Region\nwith Gemini...",
-                fontWeight = FontWeight.ExtraBold,
+                text = "Reading Selection...",
+                fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.titleMedium,
-                lineHeight = 22.sp,
-                color = MaterialTheme.colorScheme.onSurface
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontSize = 17.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             )
-            Text(
-                text = "Analyzing visual layout\nto locate text and hyperlinks.",
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodySmall,
-                lineHeight = 16.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+
+            // Animated witty / sarcastic polite messages
+            AnimatedContent(
+                targetState = currentMessage,
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(500)) + slideInVertically { it / 3 })
+                        .togetherWith(fadeOut(animationSpec = tween(350)) + slideOutVertically { -it / 3 })
+                },
+                label = "ocr_loading_message"
+            ) { msg ->
+                Text(
+                    text = msg,
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = 12.5.sp,
+                        lineHeight = 18.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 40.dp)
+                )
+            }
+
+            // Subtle cancel button so the user can abort anytime
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(onClick = onCancel)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_custom_close),
+                        contentDescription = "Cancel",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Text(
+                        text = "Cancel",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
+                }
+            }
         }
     }
 }

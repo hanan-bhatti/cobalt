@@ -55,8 +55,26 @@ fun ProfileScreen(
     onNavigateToAuth: () -> Unit,
     onNavigateToLegal: (String) -> Unit = {},
     onNavigateToManageStorage: () -> Unit = {},
-    onNavigateToCategory: (String) -> Unit = {}
+    onNavigateToCategory: (String) -> Unit = {},
+    onNavigateToSettings: (() -> Unit)? = null,
+    onNavigateToDevices: (() -> Unit)? = null,
+    onNavigateToMovieApiKey: (() -> Unit)? = null
 ) {
+    if (onNavigateToSettings != null && onNavigateToDevices != null && onNavigateToMovieApiKey != null) {
+        ProfileMainContent(
+            viewModel = viewModel,
+            onNavigateBack = onNavigateBack,
+            onNavigateToAuth = onNavigateToAuth,
+            onNavigateToLegal = onNavigateToLegal,
+            onNavigateToSettings = onNavigateToSettings,
+            onNavigateToDevices = onNavigateToDevices,
+            onNavigateToMovieApiKey = onNavigateToMovieApiKey,
+            onNavigateToManageStorage = onNavigateToManageStorage,
+            onNavigateToCategory = onNavigateToCategory
+        )
+        return
+    }
+
     var currentScreen by remember { mutableStateOf(ProfileSubScreen.MAIN) }
 
     BackHandler(enabled = currentScreen != ProfileSubScreen.MAIN) {

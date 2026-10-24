@@ -18,6 +18,7 @@
 
 package com.example.ui.dock
 
+import android.content.Intent
 import android.content.res.Configuration
 import android.widget.Toast
 import androidx.compose.animation.animateContentSize
@@ -30,11 +31,14 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -48,13 +52,18 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
+import android.content.ClipData
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -74,13 +83,17 @@ import com.example.data.remote.MediaSearchResultItem
 import com.example.data.repository.CobaltRepository
 import com.example.util.CobaltCustomTabsLauncher
 import com.example.widget.WidgetUpdater
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private enum class SideDockMode {
     MAIN,
-    SEARCH
+    HUB,
+    DETAIL
 }
 
 private enum class DockInputMode {
@@ -97,32 +110,40 @@ private enum class DockInputMode {
 fun SideDockContent(
     side: String,
     yPercent: Float,
+    handleCenterYDp: Float? = null,
     handleHeightDp: Int = 100,
     handleThicknessDp: Int = 6,
     handleOpacity: Float = 0.7f,
-    animPreset: String,
+    animPreset: String = "Smooth",
+    animStiffness: Float = 340f,
+    animDamping: Float = 0.72f,
+    useBlur: Boolean = false,
+    blurRadius: Int = 25,
+    blurOpacity: Float = 0.30f,
     repository: CobaltRepository,
+    onRegisterDismiss: ((() -> Unit) -> Unit)? = null,
+    onProgressChanged: (Float) -> Unit = {},
     onClose: () -> Unit,
     onCloseFinished: () -> Unit,
     onLaunchOcr: () -> Unit,
     onLaunchLink: () -> Unit = {},
-    onOpenMainApp: (itemId: String?) -> Unit,
+    onOpenMainApp: (itemId: String?, destination: String?) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val coroutineScope = rememberCoroutineScope()
 
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val isRightSide = side == "Right"
 
-    // Animation Specs based on selected preset with fluid Oppo-style water-drop spring physics
-    val (enterSpec, exitSpec) = remember(animPreset) {
+    // Animation Specs based on selected preset or custom spring physics
+    val (enterSpec, exitSpec) = remember(animPreset, animStiffness, animDamping) {
         when (animPreset) {
             "Bouncy" -> Pair(
-                spring<Float>(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = 320f),
+                spring<Float>(dampingRatio = 0.58f, stiffness = 320f),
                 spring<Float>(dampingRatio = 0.78f, stiffness = 420f)
             )
             "Snappy" -> Pair(
@@ -138,19 +159,25 @@ fun SideDockContent(
                 snap<Float>(),
                 snap<Float>()
             )
+            "Custom" -> Pair(
+                spring<Float>(
+                    dampingRatio = animDamping.coerceIn(0.45f, 1.0f),
+                    stiffness = animStiffness.coerceIn(120f, 900f)
+                ),
+                spring<Float>(
+                    dampingRatio = (animDamping + 0.10f).coerceIn(0.55f, 1.0f),
+                    stiffness = (animStiffness + 60f).coerceIn(180f, 1000f)
+                )
+            )
             else -> Pair( // "Smooth" (Default Oppo-like fluid water-drop physics)
-                spring<Float>(dampingRatio = 0.72f, stiffness = 360f),
-                spring<Float>(dampingRatio = 0.84f, stiffness = 480f)
+                spring<Float>(dampingRatio = 0.72f, stiffness = 340f),
+                spring<Float>(dampingRatio = 0.82f, stiffness = 380f)
             )
         }
     }
 
     val animProgress = remember { Animatable(0f) }
     var isDismissing by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        animProgress.animateTo(1f, animationSpec = enterSpec)
-    }
 
     fun dismissDock(onDone: () -> Unit = {}) {
         if (isDismissing) return
@@ -164,48 +191,107 @@ fun SideDockContent(
     }
 
     var currentMode by remember { mutableStateOf(SideDockMode.MAIN) }
+    var selectedItemForDetail by remember { mutableStateOf<SavedItem?>(null) }
     var dockInputMode by remember { mutableStateOf(DockInputMode.NOTE) }
     var noteText by remember { mutableStateOf("") }
     var linkText by remember { mutableStateOf("") }
     val inputFocusRequester = remember { FocusRequester() }
 
     // Clipboard helper for link mode
-    val clipboardText = remember(dockInputMode) {
-        clipboardManager.getText()?.text?.trim().orEmpty()
+    var clipboardText by remember { mutableStateOf("") }
+    LaunchedEffect(dockInputMode, clipboard) {
+        val entry = clipboard.getClipEntry()
+        val text = entry?.clipData?.let { data ->
+            if (data.itemCount > 0) data.getItemAt(0).text?.toString()?.trim().orEmpty() else ""
+        } ?: ""
+        clipboardText = text
     }
     val hasClipboardUrl = remember(clipboardText) {
         clipboardText.isNotBlank() && (clipboardText.startsWith("http://") || clipboardText.startsWith("https://") || clipboardText.contains("."))
     }
 
-    // Live Recent items from Room Database Flow
+    // Live Recent items from Room Database Flow (expanded to first 15 recent items)
     val allItems by repository.getAllItemsFlow().collectAsState(initial = emptyList())
     val recentItems = remember(allItems) {
-        allItems.sortedByDescending { it.timestamp }.take(4)
+        allItems.sortedByDescending { it.timestamp }.take(15)
     }
 
     // Geometry & Dynamic Morphing Bounds
+    val screenWidth = configuration.screenWidthDp.dp
     val screenHeight = configuration.screenHeightDp.dp
-    val cardWidth = if (isLandscape) 320.dp else 280.dp
-    val cardHeight = if (isLandscape) 300.dp else 450.dp
+    val cardWidth = if (isLandscape) 330.dp else 280.dp
+    val cardHeight = if (isLandscape) (screenHeight - 48.dp).coerceAtMost(330.dp) else 460.dp
 
-    val handleCenterY = screenHeight * yPercent
-    val handleTop = handleCenterY - (handleHeightDp.dp / 2)
+    // Dynamically compensate for any ComposeView window screen top offset (e.g. status bar insets)
+    val view = LocalView.current
+    val density = LocalDensity.current.density
+    var viewOffsetY by remember { mutableIntStateOf(0) }
+    DisposableEffect(view) {
+        val listener = android.view.View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            val loc = IntArray(2)
+            view.getLocationOnScreen(loc)
+            viewOffsetY = loc[1]
+        }
+        view.addOnLayoutChangeListener(listener)
+        val initialLoc = IntArray(2)
+        view.getLocationOnScreen(initialLoc)
+        viewOffsetY = initialLoc[1]
+        onDispose {
+            view.removeOnLayoutChangeListener(listener)
+        }
+    }
 
-    val targetTop = handleCenterY - (cardHeight / 2)
-    val minTop = if (isLandscape) 16.dp else 36.dp
-    val imeBottom = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
-    val availableHeight = screenHeight - imeBottom
-    val maxTop = (availableHeight - cardHeight - (if (isLandscape) 16.dp else 36.dp)).coerceAtLeast(minTop)
-    val effectiveTop = targetTop.coerceIn(minTop, maxTop)
+    // Exact handle center Y: measured directly from the physical handle View on screen,
+    // converted into local Compose window coordinates
+    val rawCenterYDp = handleCenterYDp ?: (screenHeight.value * yPercent)
+    val handleCenterY = rawCenterYDp.dp
+    val baseTop = handleCenterY - (cardHeight / 2)
+
+    val minTop = if (isLandscape) 12.dp else 36.dp
+    val maxTop = (screenHeight - cardHeight - (if (isLandscape) 12.dp else 36.dp)).coerceAtLeast(minTop)
+    val effectiveTop = baseTop.coerceIn(minTop, maxTop)
+
+    // Ergonomics & Thumb Reachability:
+    // If the dock sits in the upper half of the screen, user's thumb naturally reaches the bottom of the card.
+    // In that position, we put Quick Actions and Input Box at the BOTTOM, and Recents above them.
+    // If the dock sits in the lower half of the screen, the top of the card is already in thumb reach.
+    val isTopDock = (effectiveTop + cardHeight / 2) < (screenHeight / 2)
 
     // Animated morph parameters
     val p = animProgress.value
-    val currentWidth = lerp(handleThicknessDp.dp, cardWidth, p).coerceAtLeast(handleThicknessDp.dp)
-    val currentHeight = lerp(handleHeightDp.dp, cardHeight, p).coerceAtLeast(handleHeightDp.dp)
-    val currentTop = lerp(handleTop, effectiveTop, p)
-    val currentMargin = lerp(0.dp, 12.dp, p.coerceIn(0f, 1f))
 
-    // Morphing Corner Shape (starts as flush handle pill, expands into rounded 24.dp card)
+    LaunchedEffect(p) {
+        onProgressChanged(p)
+    }
+
+    LaunchedEffect(Unit) {
+        onRegisterDismiss?.invoke {
+            dismissDock()
+        }
+        // Wait 1 frame for initial layout & GPU pipeline warm-up so the spring clock doesn't advance during setup
+        withFrameNanos { }
+        animProgress.animateTo(1f, animationSpec = enterSpec)
+    }
+
+    // Relative vertical shift: starts at handle center, settles at 0 inside window
+    val startOffsetY = baseTop - effectiveTop
+
+    val pivotFractionX = if (isRightSide) 1.0f else 0.0f
+
+    // Min scale factors corresponding to the physical handle dimensions
+    val minScaleX = (handleThicknessDp.toFloat() / cardWidth.value).coerceIn(0.01f, 0.25f)
+    val minScaleY = (handleHeightDp.toFloat() / cardHeight.value).coerceIn(0.05f, 0.45f)
+
+    // Oppo ColorOS Aquamorphic Water-drop squash & stretch:
+    // Scale X leads with elastic spring tension, while Scale Y smoothly unfolds
+    val pClamped = p.coerceAtLeast(0f)
+    val currentScaleX = (minScaleX + (1f - minScaleX) * pClamped).coerceAtLeast(minScaleX)
+    val currentScaleY = (minScaleY + (1f - minScaleY) * pClamped).coerceAtLeast(minScaleY)
+
+    // Edge translation: starts flush against the screen bezel (0dp), smoothly settles at 12dp margin
+    val edgeMargin = 12.dp
+
+    // Morphing Corner Shape (starts as flush handle pill against bezel, blossoms into rounded 24.dp card)
     val innerCornerRadius = lerp(8.dp, 24.dp, p.coerceIn(0f, 1f))
     val outerCornerRadius = lerp(0.dp, 24.dp, p.coerceIn(0f, 1f))
     val morphShape = if (isRightSide) {
@@ -224,16 +310,42 @@ fun SideDockContent(
         )
     }
 
-    // Morphing Colors & Borders
-    val handleAccentColor = Color(0xFF3B82F6).copy(alpha = handleOpacity)
-    val dockSurfaceColor = MaterialTheme.colorScheme.surfaceContainerHigh
-    val containerColor = lerp(
-        start = handleAccentColor,
-        stop = dockSurfaceColor,
-        fraction = ((p - 0.08f) / 0.45f).coerceIn(0f, 1f)
-    )
+    // Container alpha for graceful exit handoff
+    val containerAlpha = if (isDismissing) (p / 0.04f).coerceIn(0f, 1f) else 1f
 
-    val borderAlpha = ((p - 0.3f) / 0.7f).coerceIn(0f, 1f) * 0.45f
+    // Seamless Color Morphing:
+    // When blur is supported and active, we use a frosted-glass translucent surface tint
+    // so the hardware-blurred OS background shines through.
+    // If blur is unsupported by hardware or disabled by user settings, we use a 100% SOLID opaque
+    // Material 3 container (never transparent!) ensuring pristine contrast and zero visual artifacts.
+    val baseSurfaceColor = if (useBlur) {
+        MaterialTheme.colorScheme.surfaceContainerHigh.copy(
+            alpha = (blurOpacity + 0.45f).coerceIn(0.65f, 0.85f)
+        )
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHigh
+    }
+
+    val handleBlueColor = if (useBlur) {
+        Color(0xFF3B82F6).copy(alpha = handleOpacity.coerceIn(0.6f, 1f))
+    } else {
+        Color(0xFF3B82F6)
+    }
+
+    val dockSurfaceColor = lerp(
+        start = handleBlueColor,
+        stop = baseSurfaceColor,
+        fraction = (p / 0.32f).coerceIn(0f, 1f)
+    )
+    val borderColor = lerp(
+        start = Color.Transparent,
+        stop = if (useBlur) {
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+        } else {
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)
+        },
+        fraction = p.coerceIn(0f, 1f)
+    )
 
     // Unified submit handler for Note and Link modes
     fun submitInput() {
@@ -315,7 +427,7 @@ fun SideDockContent(
     Box(
         modifier = modifier.fillMaxSize()
     ) {
-        // 1. 100% Transparent Outside Touch Interceptor with click to dismiss
+        // 1. Outside Touch Interceptor within dock window margins to dismiss
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -334,13 +446,21 @@ fun SideDockContent(
             modifier = Modifier
                 .align(if (isRightSide) Alignment.TopEnd else Alignment.TopStart)
                 .padding(
-                    top = currentTop,
-                    start = if (!isRightSide) currentMargin else 0.dp,
-                    end = if (isRightSide) currentMargin else 0.dp
+                    start = if (!isRightSide) edgeMargin else 0.dp,
+                    end = if (isRightSide) edgeMargin else 0.dp
                 )
-                .width(currentWidth)
-                .height(currentHeight)
-                .clip(morphShape)
+                .width(cardWidth)
+                .height(cardHeight)
+                .graphicsLayer {
+                    transformOrigin = TransformOrigin(pivotFractionX, 0.5f)
+                    scaleX = currentScaleX
+                    scaleY = currentScaleY
+                    translationX = directionMultiplier * (1f - p.coerceIn(0f, 1f)) * edgeMargin.toPx()
+                    translationY = (startOffsetY * (1f - p.coerceIn(0f, 1f))).toPx()
+                    alpha = containerAlpha
+                    shape = morphShape
+                    clip = true
+                }
                 .pointerInput(isRightSide) {
                     detectHorizontalDragGestures { _, dragAmount ->
                         // Swipe toward the screen edge dismisses the dock
@@ -352,27 +472,24 @@ fun SideDockContent(
                     }
                 },
             shape = morphShape,
-            color = containerColor,
-            border = if (borderAlpha > 0.01f) {
-                BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = borderAlpha))
-            } else null,
-            tonalElevation = lerp(2.dp, 6.dp, p.coerceIn(0f, 1f)),
-            shadowElevation = lerp(1.dp, 8.dp, p.coerceIn(0f, 1f))
+            color = dockSurfaceColor,
+            border = BorderStroke(1.dp, borderColor),
+            tonalElevation = if (useBlur) 0.dp else 4.dp,
+            shadowElevation = lerp(0.dp, if (useBlur) 12.dp else 6.dp, p.coerceIn(0f, 1f))
         ) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = if (isRightSide) Alignment.TopEnd else Alignment.TopStart
             ) {
                 // Fixed-dimension inner card content (reveals gracefully without awkward reflows)
-                val contentProgress = ((p - 0.22f) / 0.68f).coerceIn(0f, 1f)
+                val contentProgress = ((p - 0.38f) / 0.62f).coerceIn(0f, 1f)
 
                 Box(
                     modifier = Modifier
-                        .width(cardWidth)
-                        .height(cardHeight)
+                        .fillMaxSize()
                         .graphicsLayer {
                             alpha = contentProgress
-                            translationX = directionMultiplier * (1f - contentProgress) * 20.dp.toPx()
+                            translationX = directionMultiplier * (1f - contentProgress) * 16.dp.toPx()
                         }
                 ) {
                     Column(
@@ -380,8 +497,8 @@ fun SideDockContent(
                             .fillMaxSize()
                             .padding(14.dp)
                     ) {
-                        if (currentMode == SideDockMode.MAIN) {
-                            // ════════════ HEADER ════════════
+                        // ── MODULAR REUSABLE UI BLOCKS FOR REACHABILITY UX ──
+                        val dockHeader = @Composable {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -424,10 +541,9 @@ fun SideDockContent(
                                     )
                                 }
                             }
+                        }
 
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            // ════════════ QUICK ACTIONS (5 ICONS) ════════════
+                        val dockQuickActions = @Composable {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
@@ -436,6 +552,7 @@ fun SideDockContent(
                                     iconRes = R.drawable.ic_custom_ocr,
                                     label = "OCR",
                                     isSelected = false,
+                                    useBlur = useBlur,
                                     onClick = {
                                         dismissDock { onLaunchOcr() }
                                     }
@@ -444,6 +561,7 @@ fun SideDockContent(
                                     iconRes = R.drawable.ic_custom_text,
                                     label = "Note",
                                     isSelected = dockInputMode == DockInputMode.NOTE,
+                                    useBlur = useBlur,
                                     onClick = {
                                         dockInputMode = DockInputMode.NOTE
                                         inputFocusRequester.requestFocus()
@@ -454,6 +572,7 @@ fun SideDockContent(
                                     iconRes = R.drawable.ic_custom_link,
                                     label = "Link",
                                     isSelected = dockInputMode == DockInputMode.LINK,
+                                    useBlur = useBlur,
                                     onClick = {
                                         dockInputMode = DockInputMode.LINK
                                         inputFocusRequester.requestFocus()
@@ -465,31 +584,32 @@ fun SideDockContent(
                                 )
                                 QuickActionItem(
                                     iconRes = R.drawable.ic_custom_movie,
-                                    label = "Media",
-                                    isSelected = false,
+                                    label = "Hub",
+                                    isSelected = currentMode == SideDockMode.HUB,
+                                    useBlur = useBlur,
                                     onClick = {
-                                        currentMode = SideDockMode.SEARCH
+                                        currentMode = SideDockMode.HUB
                                     }
                                 )
                                 QuickActionItem(
                                     iconRes = R.drawable.ic_custom_home,
                                     label = "Home",
                                     isSelected = false,
+                                    useBlur = useBlur,
                                     onClick = {
-                                        dismissDock { onOpenMainApp(null) }
+                                        dismissDock { onOpenMainApp(null, null) }
                                     }
                                 )
                             }
+                        }
 
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            // ════════════ INLINE EXPANDABLE QUICK NOTE / LINK ════════════
+                        val dockInputField = @Composable {
                             Surface(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .animateContentSize(animationSpec = tween(150)),
                                 shape = RoundedCornerShape(14.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                color = if (useBlur) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.75f) else MaterialTheme.colorScheme.surfaceContainer,
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                             ) {
                                 Row(
@@ -620,10 +740,9 @@ fun SideDockContent(
                                     }
                                 }
                             }
+                        }
 
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            // ════════════ RECENTS LIST ════════════
+                        val dockRecentsSection: @Composable ColumnScope.() -> Unit = {
                             Text(
                                 text = "RECENTS",
                                 style = MaterialTheme.typography.labelSmall.copy(
@@ -656,45 +775,73 @@ fun SideDockContent(
                                     items(recentItems, key = { it.id }) { item ->
                                         RecentItemRow(
                                             item = item,
+                                            useBlur = useBlur,
                                             onClick = {
-                                                dismissDock {
-                                                    if (item.type == SavedItemType.LINK && item.content.startsWith("http")) {
-                                                        CobaltCustomTabsLauncher.launch(context, item.content)
-                                                    } else {
-                                                        onOpenMainApp(item.id)
-                                                    }
-                                                }
+                                                selectedItemForDetail = item
+                                                currentMode = SideDockMode.DETAIL
                                             }
                                         )
                                     }
                                 }
                             }
-                        } else {
-                            // ════════════ SEARCH SUBPAGE ════════════
-                            SearchSubpageContent(
-                                repository = repository,
-                                onBack = { currentMode = SideDockMode.MAIN },
-                                onClose = { dismissDock() }
-                            )
                         }
-                    }
-                }
 
-                // During initial elastic pull, show subtle handle pill indicator in center
-                if (p < 0.35f) {
-                    val pillAlpha = (1f - (p / 0.30f)).coerceIn(0f, 1f)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .graphicsLayer { alpha = pillAlpha },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .width(2.5.dp)
-                                .height(28.dp)
-                                .background(Color.White.copy(alpha = 0.8f), RoundedCornerShape(1.5.dp))
-                        )
+                        when (currentMode) {
+                            SideDockMode.MAIN -> {
+                                if (isTopDock) {
+                                    // ═════════ TOP DOCK REACHABILITY: Quick Actions at Bottom ═════════
+                                    dockHeader()
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    dockRecentsSection()
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    dockInputField()
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    dockQuickActions()
+                                } else {
+                                    // ═════════ BOTTOM DOCK REACHABILITY: Quick Actions at Top ═════════
+                                    dockHeader()
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    dockQuickActions()
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    dockInputField()
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    dockRecentsSection()
+                                }
+                            }
+                            SideDockMode.HUB -> {
+                                // ════════════ MEDIA HUB SUBPAGE ════════════
+                                MediaHubSubpageContent(
+                                    repository = repository,
+                                    isTopDock = isTopDock,
+                                    useBlur = useBlur,
+                                    onBack = { currentMode = SideDockMode.MAIN },
+                                    onClose = { dismissDock() },
+                                    onOpenFullHub = {
+                                        dismissDock { onOpenMainApp(null, "media_hub") }
+                                    }
+                                )
+                            }
+                            SideDockMode.DETAIL -> {
+                                // ════════════ INLINE DETAIL VIEWER ════════════
+                                selectedItemForDetail?.let { item ->
+                                    DockItemDetailContent(
+                                        item = item,
+                                        isTopDock = isTopDock,
+                                        useBlur = useBlur,
+                                        onBack = {
+                                            currentMode = SideDockMode.MAIN
+                                            selectedItemForDetail = null
+                                        },
+                                        onClose = { dismissDock() },
+                                        onOpenInApp = {
+                                            dismissDock { onOpenMainApp(item.id, null) }
+                                        }
+                                    )
+                                } ?: run {
+                                    currentMode = SideDockMode.MAIN
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -707,6 +854,7 @@ private fun QuickActionItem(
     iconRes: Int,
     label: String,
     isSelected: Boolean = false,
+    useBlur: Boolean = false,
     onClick: () -> Unit
 ) {
     Column(
@@ -722,7 +870,13 @@ private fun QuickActionItem(
         Surface(
             modifier = Modifier.size(38.dp),
             shape = RoundedCornerShape(13.dp),
-            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+            color = if (isSelected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else if (useBlur) {
+                MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.70f)
+            } else {
+                MaterialTheme.colorScheme.surfaceContainer
+            },
             border = BorderStroke(
                 width = if (isSelected) 1.5.dp else 1.dp,
                 color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
@@ -749,38 +903,106 @@ private fun QuickActionItem(
     }
 }
 
+private fun isRawUrlOrPath(text: String?): Boolean {
+    if (text.isNullOrBlank()) return false
+    val t = text.trim()
+    return t.startsWith("/") ||
+            t.startsWith("file://") ||
+            t.startsWith("content://") ||
+            t.startsWith("https://firebasestorage.") ||
+            t.startsWith("http://") ||
+            t.startsWith("https://")
+}
+
+private fun getCleanItemTitle(item: SavedItem): String {
+    val rawTitle = item.title.trim()
+    if (rawTitle.isNotBlank() && !isRawUrlOrPath(rawTitle)) {
+        return rawTitle
+    }
+    // Title is blank or a raw file path / storage url
+    if (item.type == SavedItemType.LINK && !item.linkTitle.isNullOrBlank() && !isRawUrlOrPath(item.linkTitle)) {
+        return item.linkTitle.trim()
+    }
+    // Exactly matches the home card default in ArchiveCards.kt and DetailScreen.kt
+    return "Untitled Item"
+}
+
+private fun getCleanItemDescription(item: SavedItem): String {
+    return when (item.type) {
+        SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.AUDIO -> {
+            // For images and videos, NEVER show raw file paths or storage URLs!
+            // Only show clean extracted OCR text / transcription if available.
+            item.extractedText?.trim().orEmpty()
+        }
+        SavedItemType.LINK -> {
+            if (!item.linkDescription.isNullOrBlank() && !isRawUrlOrPath(item.linkDescription)) {
+                item.linkDescription.trim()
+            } else {
+                try {
+                    val uri = java.net.URI(item.content)
+                    uri.host?.removePrefix("www.")?.takeIf { it.isNotBlank() } ?: ""
+                } catch (_: Exception) {
+                    ""
+                }
+            }
+        }
+        SavedItemType.MEDIA -> {
+            if (!item.content.isNullOrBlank() && !isRawUrlOrPath(item.content)) {
+                item.content.trim()
+            } else {
+                ""
+            }
+        }
+        SavedItemType.TEXT, SavedItemType.CODE -> {
+            val cleanTitle = getCleanItemTitle(item)
+            val lines = item.content.lines().filter { it.isNotBlank() }
+            if (lines.size > 1 && cleanTitle == lines.first().trim()) {
+                lines.drop(1).joinToString(" ").trim()
+            } else if (item.content.trim() != cleanTitle) {
+                item.content.trim()
+            } else {
+                ""
+            }
+        }
+    }
+}
+
 @Composable
 private fun RecentItemRow(
     item: SavedItem,
+    useBlur: Boolean = false,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val (iconRes, iconTint) = when (item.type) {
+        SavedItemType.LINK -> Pair(R.drawable.ic_custom_link, Color(0xFF42A5F5))
+        SavedItemType.IMAGE -> Pair(R.drawable.ic_custom_image, Color(0xFF66BB6A))
+        SavedItemType.VIDEO -> Pair(R.drawable.ic_custom_video, Color(0xFFAB47BC))
+        SavedItemType.AUDIO -> Pair(R.drawable.ic_custom_voice, MaterialTheme.colorScheme.primary)
+        SavedItemType.MEDIA -> Pair(R.drawable.ic_custom_movie, Color(0xFFE91E63))
+        SavedItemType.CODE -> Pair(R.drawable.ic_custom_code, Color(0xFFFFB74D))
+        else -> Pair(R.drawable.ic_custom_text, MaterialTheme.colorScheme.primary)
+    }
+
+    val thumbUrl = remember(item) { item.getBestImagePath() ?: item.linkImage }
+    val displayTitle = remember(item) { getCleanItemTitle(item) }
+    val displayDescription = remember(item) { getCleanItemDescription(item) }
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(13.dp))
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(13.dp),
+        color = if (useBlur) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.75f) else MaterialTheme.colorScheme.surfaceContainer,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 7.dp),
+                .padding(horizontal = 9.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val (iconRes, iconTint) = when (item.type) {
-                SavedItemType.LINK -> Pair(R.drawable.ic_custom_link, Color(0xFF42A5F5))
-                SavedItemType.IMAGE -> Pair(R.drawable.ic_custom_image, Color(0xFF66BB6A))
-                SavedItemType.VIDEO -> Pair(R.drawable.ic_custom_video, Color(0xFFAB47BC))
-                SavedItemType.AUDIO -> Pair(R.drawable.ic_custom_voice, MaterialTheme.colorScheme.primary)
-                SavedItemType.MEDIA -> Pair(R.drawable.ic_custom_movie, Color(0xFFE91E63))
-                SavedItemType.CODE -> Pair(R.drawable.ic_custom_code, Color(0xFFFFB74D))
-                else -> Pair(R.drawable.ic_custom_text, MaterialTheme.colorScheme.primary)
-            }
-
-            val thumbUrl = remember(item) { item.getBestImagePath() }
-
             if (!thumbUrl.isNullOrBlank()) {
                 AsyncImage(
                     model = ImageRequest.Builder(context)
@@ -789,14 +1011,14 @@ private fun RecentItemRow(
                         .build(),
                     contentDescription = null,
                     modifier = Modifier
-                        .size(28.dp)
-                        .clip(RoundedCornerShape(8.dp)),
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(9.dp)),
                     contentScale = ContentScale.Crop
                 )
             } else {
                 Surface(
-                    modifier = Modifier.size(28.dp),
-                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.size(34.dp),
+                    shape = RoundedCornerShape(9.dp),
                     color = iconTint.copy(alpha = 0.15f)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -804,103 +1026,536 @@ private fun RecentItemRow(
                             painter = painterResource(id = iconRes),
                             contentDescription = null,
                             tint = iconTint,
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
-
-            val displayTitle = remember(item) {
-                if (item.title.isNotBlank() && item.title != "Untitled") {
-                    item.title
-                } else {
-                    when (item.type) {
-                        SavedItemType.LINK -> {
-                            try {
-                                val uri = java.net.URI(item.content)
-                                uri.host?.removePrefix("www.")?.takeIf { it.isNotBlank() } ?: item.content
-                            } catch (_: Exception) {
-                                item.content.takeIf { it.isNotBlank() } ?: "Saved Link"
-                            }
-                        }
-                        SavedItemType.IMAGE -> "Image Attachment"
-                        SavedItemType.VIDEO -> "Video Recording"
-                        SavedItemType.AUDIO -> "Voice Memo"
-                        SavedItemType.MEDIA -> "Media"
-                        SavedItemType.CODE -> "Code Snippet"
-                        else -> {
-                            val firstLine = item.content.lines().firstOrNull { it.isNotBlank() }?.trim()
-                            if (!firstLine.isNullOrBlank()) {
-                                if (firstLine.length > 35) firstLine.take(35) + "..." else firstLine
-                            } else {
-                                "Untitled Note"
-                            }
-                        }
-                    }
-                }
-            }
-
-            val displaySnippet = remember(item) {
-                when {
-                    !item.linkDescription.isNullOrBlank() -> item.linkDescription
-                    item.type == SavedItemType.LINK -> item.content
-                    item.content.startsWith("http://") || item.content.startsWith("https://") -> "Cloud attachment"
-                    item.content.startsWith("/data/") || item.content.startsWith("/storage/") -> "Local media file"
-                    item.content.isNotBlank() -> {
-                        val lines = item.content.lines().filter { it.isNotBlank() }
-                        if (lines.size > 1 && item.title == lines.first().trim()) {
-                            lines.drop(1).firstOrNull()?.trim() ?: item.content
-                        } else {
-                            item.content
-                        }
-                    }
-                    else -> ""
-                }
-            }
+            Spacer(modifier = Modifier.width(9.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = displayTitle,
-                    style = MaterialTheme.typography.bodySmall.copy(
+                    style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurface
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (displaySnippet.isNotBlank()) {
+                if (displayDescription.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = displaySnippet,
+                        text = displayDescription,
                         style = MaterialTheme.typography.bodySmall.copy(
-                            fontSize = 10.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            fontSize = 10.5.sp,
+                            lineHeight = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
                         ),
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
             }
 
+            Spacer(modifier = Modifier.width(6.dp))
+
             Icon(
                 painter = painterResource(id = R.drawable.ic_custom_chevron_right),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f),
                 modifier = Modifier.size(14.dp)
             )
         }
     }
 }
 
+private fun formatTimestamp(timestamp: Long): String {
+    val diff = System.currentTimeMillis() - timestamp
+    val oneMinute = 60 * 1000L
+    val oneHour = 60 * oneMinute
+    val oneDay = 24 * oneHour
+
+    return when {
+        diff < 0L -> "Just now"
+        diff < oneMinute -> "Just now"
+        diff < oneHour -> "${diff / oneMinute}m ago"
+        diff < oneDay -> "${diff / oneHour}h ago"
+        diff < 7 * oneDay -> "${diff / oneDay}d ago"
+        else -> SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(timestamp))
+    }
+}
+
 @Composable
-private fun SearchSubpageContent(
-    repository: CobaltRepository,
+private fun DockItemDetailContent(
+    item: SavedItem,
+    isTopDock: Boolean,
+    useBlur: Boolean = false,
     onBack: () -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onOpenInApp: () -> Unit
+) {
+    val context = LocalContext.current
+    val clipboard = LocalClipboard.current
+    val coroutineScope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
+    val detailContainerColor = if (useBlur) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.75f) else MaterialTheme.colorScheme.surfaceContainer
+
+    val (iconRes, iconTint, typeName) = when (item.type) {
+        SavedItemType.LINK -> Triple(R.drawable.ic_custom_link, Color(0xFF42A5F5), item.type.displayName)
+        SavedItemType.IMAGE -> Triple(R.drawable.ic_custom_image, Color(0xFF66BB6A), item.type.displayName)
+        SavedItemType.VIDEO -> Triple(R.drawable.ic_custom_video, Color(0xFFAB47BC), item.type.displayName)
+        SavedItemType.AUDIO -> Triple(R.drawable.ic_custom_voice, MaterialTheme.colorScheme.primary, item.type.displayName)
+        SavedItemType.MEDIA -> Triple(R.drawable.ic_custom_movie, Color(0xFFE91E63), item.type.displayName)
+        SavedItemType.CODE -> Triple(R.drawable.ic_custom_code, Color(0xFFFFB74D), item.type.displayName)
+        else -> Triple(R.drawable.ic_custom_text, MaterialTheme.colorScheme.primary, item.type.displayName)
+    }
+
+    val displayTitle = remember(item) { getCleanItemTitle(item) }
+
+    val copyContent = {
+        val textToCopy = when {
+            item.type == SavedItemType.LINK -> item.content
+            !item.extractedText.isNullOrBlank() -> item.extractedText
+            else -> item.content
+        }
+        coroutineScope.launch {
+            val clipData = ClipData.newPlainText("Copied content", textToCopy)
+            clipboard.setClipEntry(clipData.toClipEntry())
+            Toast.makeText(context, "✓ Copied to clipboard", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val shareContent = {
+        val sendIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            putExtra(Intent.EXTRA_TEXT, if (item.type == SavedItemType.LINK) item.content else item.extractedText ?: item.content)
+            type = "text/plain"
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(Intent.createChooser(sendIntent, "Share").apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        })
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // ════════════ HEADER (CLEAN & NON-DUPLICATED) ════════════
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.size(28.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_custom_back),
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(6.dp))
+
+            Surface(
+                shape = CircleShape,
+                color = iconTint.copy(alpha = 0.15f)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(id = iconRes),
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Text(
+                        text = typeName,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = iconTint,
+                            fontSize = 10.sp
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            IconButton(
+                onClick = onClose,
+                modifier = Modifier.size(28.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_custom_close),
+                    contentDescription = "Close",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // ════════════ SCROLLABLE CONTENT BODY ════════════
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+        ) {
+            // Title
+            Text(
+                text = displayTitle,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    lineHeight = 20.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            )
+
+            // Metadata row
+            Row(
+                modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = formatTimestamp(item.timestamp),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        fontSize = 10.sp
+                    )
+                )
+                if (item.folders.isNotEmpty()) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "• ${item.folders.first()}",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+                }
+            }
+
+            // Visual attachment or link preview if present
+            val thumbUrl = item.getBestImagePath() ?: item.linkImage
+            if (!thumbUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context)
+                        .data(thumbUrl)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+
+            // Adaptive content representation:
+            when (item.type) {
+                SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.AUDIO -> {
+                    // NEVER show raw file paths or storage URLs!
+                    // Only show clean extracted text / transcription if present:
+                    if (!item.extractedText.isNullOrBlank()) {
+                        Text(
+                            text = if (item.type == SavedItemType.AUDIO) "TRANSCRIPT" else "EXTRACTED TEXT",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 9.sp,
+                                letterSpacing = 1.sp
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = detailContainerColor,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            SelectionContainer {
+                                Text(
+                                    text = item.extractedText.trim(),
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 11.5.sp,
+                                        lineHeight = 16.sp
+                                    ),
+                                    modifier = Modifier.padding(10.dp)
+                                )
+                            }
+                        }
+                    }
+                    // If no extracted text, keep it clean and empty (no raw path dumped!)
+                }
+
+                SavedItemType.LINK -> {
+                    val host = try { java.net.URI(item.content).host?.removePrefix("www.") } catch (_: Exception) { null }
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = detailContainerColor,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                CobaltCustomTabsLauncher.launch(context, item.content)
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_globe),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = host ?: "Visit Link",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_link_external),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(13.dp)
+                            )
+                        }
+                    }
+
+                    if (!item.linkDescription.isNullOrBlank() && !isRawUrlOrPath(item.linkDescription)) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = item.linkDescription.trim(),
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 12.sp,
+                                lineHeight = 17.sp
+                            )
+                        )
+                    }
+                }
+
+                SavedItemType.MEDIA -> {
+                    if (item.genres.isNotEmpty() || !item.releaseYear.isNullOrBlank()) {
+                        val genreMeta = buildList {
+                            if (!item.releaseYear.isNullOrBlank()) add(item.releaseYear)
+                            if (item.rating != null && item.rating > 0) add("★ ${String.format(Locale.US, "%.1f", item.rating)}")
+                            addAll(item.genres.take(2))
+                        }.joinToString(" • ")
+
+                        Text(
+                            text = genreMeta,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = MaterialTheme.colorScheme.primary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                    }
+
+                    if (item.content.isNotBlank() && !isRawUrlOrPath(item.content)) {
+                        Text(
+                            text = item.content.trim(),
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 12.sp,
+                                lineHeight = 17.sp
+                            )
+                        )
+                    }
+                }
+
+                SavedItemType.TEXT, SavedItemType.CODE -> {
+                    if (item.content.isNotBlank()) {
+                        SelectionContainer {
+                            Text(
+                                text = item.content,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 12.sp,
+                                    lineHeight = 18.sp
+                                )
+                            )
+                        }
+                    }
+
+                    if (!item.extractedText.isNullOrBlank() && item.extractedText != item.content) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "EXTRACTED TEXT",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 9.sp,
+                                letterSpacing = 1.sp
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = detailContainerColor,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            SelectionContainer {
+                                Text(
+                                    text = item.extractedText.trim(),
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 11.sp,
+                                        lineHeight = 16.sp
+                                    ),
+                                    modifier = Modifier.padding(8.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // ════════════ FOOTER ACTION BAR (CLEAN, ADAPTIVE & IN THUMB REACH) ════════════
+        val hasTextToCopy = when (item.type) {
+            SavedItemType.TEXT, SavedItemType.CODE -> item.content.isNotBlank()
+            SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.AUDIO -> !item.extractedText.isNullOrBlank()
+            SavedItemType.LINK -> item.content.isNotBlank()
+            SavedItemType.MEDIA -> item.content.isNotBlank()
+        }
+
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = detailContainerColor,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                // Adaptive Action 1: Copy (only when meaningful!)
+                if (hasTextToCopy) {
+                    TextButton(
+                        onClick = { copyContent() },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_copy),
+                            contentDescription = null,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        val copyLabel = when (item.type) {
+                            SavedItemType.LINK -> "Copy Link"
+                            SavedItemType.IMAGE, SavedItemType.VIDEO -> "Copy OCR"
+                            SavedItemType.AUDIO -> "Copy Transcript"
+                            else -> "Copy"
+                        }
+                        Text(copyLabel, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+
+                // Adaptive Action 2: Open Link (if link), Hub (if media), or Share
+                if (item.type == SavedItemType.LINK && item.content.startsWith("http")) {
+                    TextButton(
+                        onClick = {
+                            CobaltCustomTabsLauncher.launch(context, item.content)
+                        },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_globe),
+                            contentDescription = null,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Open Link", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                } else if (item.type == SavedItemType.MEDIA) {
+                    TextButton(
+                        onClick = onOpenInApp,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_movie),
+                            contentDescription = null,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Hub", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                } else {
+                    TextButton(
+                        onClick = { shareContent() },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_share),
+                            contentDescription = null,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Share", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+
+                // Adaptive Action 3: Open in App
+                TextButton(
+                    onClick = onOpenInApp,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_custom_link_external),
+                        contentDescription = null,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("In App", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MediaHubSubpageContent(
+    repository: CobaltRepository,
+    isTopDock: Boolean,
+    useBlur: Boolean = false,
+    onBack: () -> Unit,
+    onClose: () -> Unit,
+    onOpenFullHub: () -> Unit
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val hubContainerColor = if (useBlur) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.75f) else MaterialTheme.colorScheme.surfaceContainer
     var query by remember { mutableStateOf("") }
     var searchResults by remember { mutableStateOf<List<MediaSearchResultItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
@@ -923,8 +1578,7 @@ private fun SearchSubpageContent(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Header
+    val searchHeader = @Composable {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -941,14 +1595,32 @@ private fun SearchSubpageContent(
                 )
             }
             Spacer(modifier = Modifier.width(6.dp))
+            Icon(
+                painter = painterResource(id = R.drawable.ic_custom_movie),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(17.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = "Media & Content Search",
+                text = "Media Hub",
                 style = MaterialTheme.typography.titleSmall.copy(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 ),
                 modifier = Modifier.weight(1f)
             )
+            IconButton(
+                onClick = onOpenFullHub,
+                modifier = Modifier.size(28.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_custom_link_external),
+                    contentDescription = "Open Full Media Hub",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(15.dp)
+                )
+            }
             IconButton(
                 onClick = onClose,
                 modifier = Modifier.size(28.dp)
@@ -961,14 +1633,13 @@ private fun SearchSubpageContent(
                 )
             }
         }
+    }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Search Input
+    val searchInputBar = @Composable {
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer,
+            color = hubContainerColor,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
         ) {
             Row(
@@ -1021,10 +1692,9 @@ private fun SearchSubpageContent(
                 }
             }
         }
+    }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Results Container
+    val searchResultsContent: @Composable ColumnScope.() -> Unit = {
         if (isLoading) {
             Box(
                 modifier = Modifier
@@ -1079,7 +1749,7 @@ private fun SearchSubpageContent(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        color = hubContainerColor,
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
                     ) {
                         Row(
@@ -1199,6 +1869,24 @@ private fun SearchSubpageContent(
                     }
                 }
             }
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        if (isTopDock) {
+            // ═════════ TOP DOCK REACHABILITY: Search Bar at Bottom ═════════
+            searchHeader()
+            Spacer(modifier = Modifier.height(6.dp))
+            searchResultsContent()
+            Spacer(modifier = Modifier.height(8.dp))
+            searchInputBar()
+        } else {
+            // ═════════ BOTTOM DOCK REACHABILITY: Search Bar at Top ═════════
+            searchHeader()
+            Spacer(modifier = Modifier.height(8.dp))
+            searchInputBar()
+            Spacer(modifier = Modifier.height(8.dp))
+            searchResultsContent()
         }
     }
 }

@@ -103,14 +103,11 @@ class SettingsRepository(private val context: Context) {
     private val _edgePanelAnimPreset = MutableStateFlow(prefs.getString(KEY_EDGE_ANIM_PRESET, "Smooth") ?: "Smooth")
     val edgePanelAnimPreset: StateFlow<String> = _edgePanelAnimPreset.asStateFlow()
 
-    private val _edgePanelAnimDuration = MutableStateFlow(prefs.getInt(KEY_EDGE_ANIM_DURATION, 350))
-    val edgePanelAnimDuration: StateFlow<Int> = _edgePanelAnimDuration.asStateFlow()
+    private val _edgePanelAnimStiffness = MutableStateFlow(prefs.getFloat(KEY_EDGE_ANIM_STIFFNESS, 340f))
+    val edgePanelAnimStiffness: StateFlow<Float> = _edgePanelAnimStiffness.asStateFlow()
 
-    private val _edgePanelAnimInterpolator = MutableStateFlow(prefs.getString(KEY_EDGE_ANIM_INTERPOLATOR, "Emphasized") ?: "Emphasized")
-    val edgePanelAnimInterpolator: StateFlow<String> = _edgePanelAnimInterpolator.asStateFlow()
-
-    private val _edgePanelAnimScale = MutableStateFlow(prefs.getFloat(KEY_EDGE_ANIM_SCALE, 0.96f))
-    val edgePanelAnimScale: StateFlow<Float> = _edgePanelAnimScale.asStateFlow()
+    private val _edgePanelAnimDamping = MutableStateFlow(prefs.getFloat(KEY_EDGE_ANIM_DAMPING, 0.72f))
+    val edgePanelAnimDamping: StateFlow<Float> = _edgePanelAnimDamping.asStateFlow()
 
     fun setGeminiApiKey(key: String) {
         prefs.edit().putString(KEY_GEMINI_API_KEY, key).apply()
@@ -220,48 +217,38 @@ class SettingsRepository(private val context: Context) {
         _edgePanelAnimPreset.value = preset
     }
 
-    fun setEdgePanelAnimDuration(duration: Int) {
-        prefs.edit().putInt(KEY_EDGE_ANIM_DURATION, duration).apply()
-        _edgePanelAnimDuration.value = duration
+    fun setEdgePanelAnimStiffness(stiffness: Float) {
+        prefs.edit().putFloat(KEY_EDGE_ANIM_STIFFNESS, stiffness).apply()
+        _edgePanelAnimStiffness.value = stiffness
     }
 
-    fun setEdgePanelAnimInterpolator(interpolator: String) {
-        prefs.edit().putString(KEY_EDGE_ANIM_INTERPOLATOR, interpolator).apply()
-        _edgePanelAnimInterpolator.value = interpolator
-    }
-
-    fun setEdgePanelAnimScale(scale: Float) {
-        prefs.edit().putFloat(KEY_EDGE_ANIM_SCALE, scale).apply()
-        _edgePanelAnimScale.value = scale
+    fun setEdgePanelAnimDamping(damping: Float) {
+        prefs.edit().putFloat(KEY_EDGE_ANIM_DAMPING, damping).apply()
+        _edgePanelAnimDamping.value = damping
     }
 
     fun applyEdgePanelAnimPreset(preset: String) {
         setEdgePanelAnimPreset(preset)
         when (preset) {
-            "Snappy" -> {
-                setEdgePanelAnimDuration(180)
-                setEdgePanelAnimInterpolator("Decelerate")
-                setEdgePanelAnimScale(0.98f)
+            "Fluid" -> {
+                setEdgePanelAnimStiffness(320f)
+                setEdgePanelAnimDamping(0.68f)
             }
             "Bouncy" -> {
-                setEdgePanelAnimDuration(450)
-                setEdgePanelAnimInterpolator("Overshoot")
-                setEdgePanelAnimScale(0.90f)
+                setEdgePanelAnimStiffness(320f)
+                setEdgePanelAnimDamping(0.58f)
             }
-            "Fluid" -> {
-                setEdgePanelAnimDuration(550)
-                setEdgePanelAnimInterpolator("Emphasized")
-                setEdgePanelAnimScale(0.92f)
+            "Snappy" -> {
+                setEdgePanelAnimStiffness(650f)
+                setEdgePanelAnimDamping(0.85f)
             }
             "Instant" -> {
-                setEdgePanelAnimDuration(100)
-                setEdgePanelAnimInterpolator("Linear")
-                setEdgePanelAnimScale(1.0f)
+                setEdgePanelAnimStiffness(1000f)
+                setEdgePanelAnimDamping(1.0f)
             }
-            else -> { // "Smooth" / Default
-                setEdgePanelAnimDuration(350)
-                setEdgePanelAnimInterpolator("Emphasized")
-                setEdgePanelAnimScale(0.96f)
+            else -> { // "Smooth" (Default Oppo-like fluid water-drop physics)
+                setEdgePanelAnimStiffness(340f)
+                setEdgePanelAnimDamping(0.72f)
             }
         }
     }
@@ -340,9 +327,8 @@ class SettingsRepository(private val context: Context) {
             KEY_WIDGET_MAX_ITEMS -> _widgetMaxItems.value = prefs.getInt(KEY_WIDGET_MAX_ITEMS, 10)
             KEY_QUICK_CAPTURE_ACTION -> _quickCaptureAction.value = prefs.getString(KEY_QUICK_CAPTURE_ACTION, "TEXT") ?: "TEXT"
             KEY_EDGE_ANIM_PRESET -> _edgePanelAnimPreset.value = prefs.getString(KEY_EDGE_ANIM_PRESET, "Smooth") ?: "Smooth"
-            KEY_EDGE_ANIM_DURATION -> _edgePanelAnimDuration.value = prefs.getInt(KEY_EDGE_ANIM_DURATION, 350)
-            KEY_EDGE_ANIM_INTERPOLATOR -> _edgePanelAnimInterpolator.value = prefs.getString(KEY_EDGE_ANIM_INTERPOLATOR, "Emphasized") ?: "Emphasized"
-            KEY_EDGE_ANIM_SCALE -> _edgePanelAnimScale.value = prefs.getFloat(KEY_EDGE_ANIM_SCALE, 0.96f)
+            KEY_EDGE_ANIM_STIFFNESS -> _edgePanelAnimStiffness.value = prefs.getFloat(KEY_EDGE_ANIM_STIFFNESS, 340f)
+            KEY_EDGE_ANIM_DAMPING -> _edgePanelAnimDamping.value = prefs.getFloat(KEY_EDGE_ANIM_DAMPING, 0.72f)
         }
     }
 
@@ -376,8 +362,7 @@ class SettingsRepository(private val context: Context) {
         private const val KEY_WIDGET_MAX_ITEMS = "widget_max_items"
         private const val KEY_QUICK_CAPTURE_ACTION = "quick_capture_action"
         private const val KEY_EDGE_ANIM_PRESET = "edge_panel_anim_preset"
-        private const val KEY_EDGE_ANIM_DURATION = "edge_panel_anim_duration"
-        private const val KEY_EDGE_ANIM_INTERPOLATOR = "edge_panel_anim_interpolator"
-        private const val KEY_EDGE_ANIM_SCALE = "edge_panel_anim_scale"
+        private const val KEY_EDGE_ANIM_STIFFNESS = "edge_panel_anim_stiffness"
+        private const val KEY_EDGE_ANIM_DAMPING = "edge_panel_anim_damping"
     }
 }

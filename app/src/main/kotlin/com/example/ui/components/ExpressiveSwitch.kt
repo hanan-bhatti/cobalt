@@ -1,10 +1,15 @@
 package com.example.ui.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -13,13 +18,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 
 /**
- * Modern Material 3 Expressive Switch with animated thumb icon, custom colors, and haptic feedback.
+ * Modern Material 3 Expressive Switch with animated thumb icon morphing, custom colors, and haptic feedback.
+ * Inspired by PixelPlayer's expressive toggle switch design.
  */
 @Composable
 fun ExpressiveSwitch(
@@ -34,36 +39,32 @@ fun ExpressiveSwitch(
     Switch(
         checked = checked,
         onCheckedChange = { newValue ->
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            onCheckedChange?.invoke(newValue)
+            if (enabled) {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onCheckedChange?.invoke(newValue)
+            }
         },
         enabled = enabled,
         thumbContent = {
-            if (checked) {
+            AnimatedContent(
+                targetState = checked,
+                transitionSpec = { fadeIn(tween(120)) togetherWith fadeOut(tween(120)) },
+                label = "switch_thumb_icon"
+            ) { isChecked ->
                 Icon(
-                    imageVector = Icons.Default.Check,
+                    imageVector = if (isChecked) Icons.Rounded.Check else Icons.Rounded.Close,
                     contentDescription = null,
-                    modifier = Modifier.size(SwitchDefaults.IconSize),
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = null,
-                    modifier = Modifier.size(SwitchDefaults.IconSize),
-                    tint = MaterialTheme.colorScheme.outline
+                    modifier = Modifier.size(SwitchDefaults.IconSize)
                 )
             }
         },
         colors = SwitchDefaults.colors(
-            checkedThumbColor = MaterialTheme.colorScheme.primary,
-            checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-            checkedBorderColor = Color.Transparent,
-            checkedIconColor = MaterialTheme.colorScheme.onPrimary,
-            uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            uncheckedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-            uncheckedIconColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+            checkedTrackColor = MaterialTheme.colorScheme.primary,
+            checkedIconColor = MaterialTheme.colorScheme.primary,
+            uncheckedThumbColor = MaterialTheme.colorScheme.onSurface,
+            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+            uncheckedIconColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         modifier = modifier.scale(scale)
     )
