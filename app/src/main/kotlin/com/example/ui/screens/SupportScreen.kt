@@ -86,7 +86,7 @@ import kotlinx.coroutines.launch
 data class FaqCategory(
     val id: String,
     val name: String,
-    @DrawableRes val iconRes: Int,
+    @param:DrawableRes val iconRes: Int,
     val accentColor: Color
 )
 

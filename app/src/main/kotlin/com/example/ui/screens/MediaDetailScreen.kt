@@ -20,7 +20,11 @@ package com.example.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import android.view.View
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.animation.core.*
@@ -740,7 +744,33 @@ fun YouTubeTrailerPlayer(
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (videoId != null) {
             var isLoading by remember { mutableStateOf(true) }
-            val embedUrl = "https://www.youtube-nocookie.com/embed/$videoId?autoplay=0&rel=0&playsinline=1&modestbranding=1"
+            val embedHtml = remember(videoId) {
+                """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; background-color: #000000; }
+                        html, body { width: 100%; height: 100%; overflow: hidden; background-color: #000000; }
+                        .container { position: relative; width: 100%; height: 100%; }
+                        iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <iframe 
+                            src="https://www.youtube-nocookie.com/embed/$videoId?enablejsapi=1&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&origin=https://www.youtube.com" 
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                            allowfullscreen 
+                            referrerpolicy="strict-origin-when-cross-origin">
+                        </iframe>
+                    </div>
+                </body>
+                </html>
+                """.trimIndent()
+            }
 
             Box(
                 modifier = modifier
@@ -753,14 +783,16 @@ fun YouTubeTrailerPlayer(
                 AndroidView(
                     factory = { ctx ->
                         WebView(ctx).apply {
+                            setLayerType(View.LAYER_TYPE_HARDWARE, null)
                             settings.apply {
                                 javaScriptEnabled = true
                                 domStorageEnabled = true
                                 mediaPlaybackRequiresUserGesture = false
-                                allowFileAccess = true
+                                allowFileAccess = false
+                                loadsImagesAutomatically = true
                                 useWideViewPort = true
                                 loadWithOverviewMode = true
-                                userAgentString = "Mozilla/5.0 (Linux; Android 16; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Mobile Safari/537.36"
+                                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                             }
                             webChromeClient = WebChromeClient()
                             webViewClient = object : WebViewClient() {
@@ -768,9 +800,34 @@ fun YouTubeTrailerPlayer(
                                     super.onPageFinished(view, url)
                                     isLoading = false
                                 }
+
+                                override fun onReceivedError(
+                                    view: WebView?,
+                                    request: WebResourceRequest?,
+                                    error: WebResourceError?
+                                ) {
+                                    super.onReceivedError(view, request, error)
+                                    if (request?.isForMainFrame == true) {
+                                        isLoading = false
+                                    }
+                                }
                             }
-                            val headers = mutableMapOf("Referer" to "https://www.youtube.com")
-                            loadUrl(embedUrl, headers)
+                            loadDataWithBaseURL("https://www.youtube.com", embedHtml, "text/html", "UTF-8", null)
+                        }
+                    },
+                    update = { webView ->
+                        if (webView.tag != videoId) {
+                            webView.tag = videoId
+                            webView.loadDataWithBaseURL("https://www.youtube.com", embedHtml, "text/html", "UTF-8", null)
+                        }
+                    },
+                    onRelease = { webView ->
+                        try {
+                            webView.stopLoading()
+                            webView.loadUrl("about:blank")
+                            webView.destroy()
+                        } catch (e: Exception) {
+                            // Ignored during cleanup
                         }
                     },
                     modifier = Modifier.fillMaxSize()
@@ -811,11 +868,15 @@ fun YouTubeTrailerPlayer(
 }
 
 fun extractYouTubeVideoId(url: String): String? {
-    if (url.isBlank()) return null
+    val trimmed = url.trim()
+    if (trimmed.isBlank()) return null
+    if (trimmed.length == 11 && trimmed.matches(Regex("^[a-zA-Z0-9_-]{11}$"))) {
+        return trimmed
+    }
     val pattern = "(?:youtube\\.com\\/(?:[^\\/]+\\/.+\\/|(?:v|e(?:mbed)?)\\/" +
             "|.*[?&]v=)|youtu\\.be\\/)([^\"&?\\/\\s]{11})"
     val regex = Regex(pattern, RegexOption.IGNORE_CASE)
-    val matchResult = regex.find(url)
+    val matchResult = regex.find(trimmed)
     return matchResult?.groupValues?.getOrNull(1)
 }
 
