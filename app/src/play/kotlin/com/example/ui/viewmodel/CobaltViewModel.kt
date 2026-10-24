@@ -1081,6 +1081,14 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 val auth = repository.firebaseAuth
                 val user = auth?.currentUser
                 if (user != null) {
+                    val uid = user.uid
+                    // Trigger backend Cloud Functions cleanup by deleting user document
+                    try {
+                        repository.firestore?.collection("users")?.document(uid)?.delete()?.await()
+                    } catch (e: Exception) {
+                        Log.w("CobaltVM", "Could not delete user Firestore doc: ${e.message}")
+                    }
+                    // Delete Auth account
                     user.delete().await()
                 }
                 repository.wipeLocalData()
