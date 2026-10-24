@@ -544,38 +544,6 @@ class CobaltSideDockService : Service() {
         val composeView = ComposeView(this)
         dockComposeView = composeView
 
-        var blurDrawable: Any? = null
-        var setBlurRadiusMethod: java.lang.reflect.Method? = null
-        var setCornerRadiusMethod: java.lang.reflect.Method? = null
-
-        composeView.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-            override fun onViewAttachedToWindow(v: View) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && isBlurSupported) {
-                    try {
-                        val getRootMethod = View::class.java.getDeclaredMethod("getViewRootImpl")
-                        getRootMethod.isAccessible = true
-                        val root = getRootMethod.invoke(v)
-                        if (root != null) {
-                            val createMethod = root.javaClass.getMethod("createBackgroundBlurDrawable")
-                            val drawable = createMethod.invoke(root)
-                            if (drawable is android.graphics.drawable.Drawable) {
-                                blurDrawable = drawable
-                                setBlurRadiusMethod = drawable.javaClass.getMethod("setBlurRadius", Int::class.javaPrimitiveType)
-                                setCornerRadiusMethod = drawable.javaClass.getMethod("setCornerRadius", Float::class.javaPrimitiveType)
-                                setBlurRadiusMethod?.invoke(drawable, dpToPx(currentBlurRadius))
-                                setCornerRadiusMethod?.invoke(drawable, dpToPx(24).toFloat())
-                                v.background = drawable
-                                android.util.Log.i("CobaltSideDock", "Successfully created and set BackgroundBlurDrawable!")
-                            }
-                        }
-                    } catch (e: Exception) {
-                        android.util.Log.w("CobaltSideDock", "createBackgroundBlurDrawable not available: ${e.message}")
-                    }
-                }
-            }
-            override fun onViewDetachedFromWindow(v: View) {}
-        })
-
         composeView.apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool)
             setViewTreeLifecycleOwner(lifecycleOwner)
@@ -597,7 +565,7 @@ class CobaltSideDockService : Service() {
                         animPreset = getAnimPreset(),
                         animStiffness = getAnimStiffness(),
                         animDamping = getAnimDamping(),
-                        useBlur = isBlurSupported,
+                        useBlur = false,
                         blurRadius = currentBlurRadius,
                         blurOpacity = currentBlurOpacity,
                         repository = repository,
@@ -609,13 +577,6 @@ class CobaltSideDockService : Service() {
                             scrimView?.setBackgroundColor(
                                 Color.argb((255 * 0.10f * progress.coerceIn(0f, 1f)).toInt(), 0, 0, 0)
                             )
-                            // Progressive blur on dock background blur drawable if active
-                            if (blurDrawable != null) {
-                                val targetRadius = (currentBlurRadius * progress.coerceIn(0f, 1f)).toInt()
-                                try {
-                                    setBlurRadiusMethod?.invoke(blurDrawable, dpToPx(targetRadius))
-                                } catch (_: Exception) {}
-                            }
                         },
                         onClose = {
                             // Handled via SideDockContent's dismiss animation

@@ -23,13 +23,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.NewReleases
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -61,8 +54,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.R
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.AppVersionBadge
 import com.example.ui.components.ReleaseNoteItemCard
@@ -99,7 +94,7 @@ fun ReleaseUpdatesScreen(
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
-                                    imageVector = Icons.Default.NewReleases,
+                                    painter = painterResource(id = R.drawable.ic_custom_sync),
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
@@ -130,8 +125,9 @@ fun ReleaseUpdatesScreen(
                         modifier = Modifier.testTag("back_button_release_updates")
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            painter = painterResource(id = R.drawable.ic_custom_back),
+                            contentDescription = "Back",
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 },
@@ -188,7 +184,7 @@ fun ReleaseUpdatesScreen(
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
                                             Icon(
-                                                imageVector = Icons.Default.SystemUpdate,
+                                                painter = painterResource(id = R.drawable.ic_custom_sync),
                                                 contentDescription = null,
                                                 tint = MaterialTheme.colorScheme.onPrimary,
                                                 modifier = Modifier.size(26.dp)
@@ -236,7 +232,7 @@ fun ReleaseUpdatesScreen(
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Icon(
-                                        imageVector = if (latestReleaseUrl != null || AppVersionManager.isUpdateAvailable()) Icons.Default.Download else Icons.Default.CheckCircle,
+                                        painter = painterResource(id = if (latestReleaseUrl != null || AppVersionManager.isUpdateAvailable()) R.drawable.ic_custom_cloud_queue else R.drawable.ic_custom_check),
                                         contentDescription = null,
                                         tint = if (latestReleaseUrl != null || AppVersionManager.isUpdateAvailable()) MaterialTheme.colorScheme.primary else Color(0xFF10B981),
                                         modifier = Modifier.size(20.dp)
@@ -271,7 +267,7 @@ fun ReleaseUpdatesScreen(
                                         ),
                                         modifier = Modifier.bounceClick()
                                     ) {
-                                        Icon(imageVector = Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Icon(painter = painterResource(id = R.drawable.ic_custom_cloud_queue), contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text("Download", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                     }
@@ -307,7 +303,7 @@ fun ReleaseUpdatesScreen(
                                         modifier = Modifier.bounceClick().testTag("check_updates_screen_button")
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.Refresh,
+                                            painter = painterResource(id = R.drawable.ic_custom_sync),
                                             contentDescription = null,
                                             modifier = Modifier.size(16.dp)
                                         )

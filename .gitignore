@@ -25,3 +25,7 @@ Commit.md
 docs/superpowers/
 plans/
 raw_screenshots/
+
+# Firebase logs
+firebase-debug.log
+firebase-debug.*.log

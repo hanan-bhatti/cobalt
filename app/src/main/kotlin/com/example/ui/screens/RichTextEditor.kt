@@ -37,8 +37,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.components.bounceClick
@@ -78,21 +80,21 @@ fun RichTextEditor(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
                         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
                     )
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Mode toggle pill
+                // Mode toggle segmented pill
                 Row(
                     modifier = Modifier
                         .background(
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                             shape = RoundedCornerShape(12.dp)
                         )
-                        .padding(4.dp),
+                        .padding(3.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -103,10 +105,12 @@ fun RichTextEditor(
 
                     Row(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(9.dp))
                             .background(editBtnColor)
                             .clickable { isPreviewMode = false }
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                            .bounceClick()
+                            .testTag("markdown_edit_tab"),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
@@ -127,10 +131,12 @@ fun RichTextEditor(
 
                     Row(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(9.dp))
                             .background(previewBtnColor)
                             .clickable { isPreviewMode = true }
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                            .bounceClick()
+                            .testTag("markdown_preview_tab"),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
@@ -149,6 +155,12 @@ fun RichTextEditor(
                         )
                     }
                 }
+
+                Text(
+                    text = if (isPreviewMode) "Markdown Preview" else "Supports English & اردو",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
             }
 
             HorizontalDivider(
@@ -157,46 +169,60 @@ fun RichTextEditor(
             )
 
             if (!isPreviewMode) {
-                // Formatting Toolbar
+                // Formatting Toolbar - Bear / Obsidian inspired ergonomic mobile accessory bar
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color.Transparent)
+                        .background(MaterialTheme.colorScheme.surface)
                         .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val toolbarActions = listOf(
-                        MarkdownAction(Icons.Default.FormatBold, "Bold", FormatType.Bold),
-                        MarkdownAction(Icons.Default.FormatItalic, "Italic", FormatType.Italic),
-                        MarkdownAction(Icons.Default.FormatStrikethrough, "Strikethrough", FormatType.Strikethrough),
-                        MarkdownAction(Icons.Default.Title, "Heading", FormatType.Heading),
-                        MarkdownAction(Icons.AutoMirrored.Filled.FormatListBulleted, "Bullet List", FormatType.BulletList),
-                        MarkdownAction(Icons.Default.FormatListNumbered, "Numbered List", FormatType.NumberedList),
-                        MarkdownAction(Icons.Default.Code, "Code Inline", FormatType.CodeInline),
-                        MarkdownAction(Icons.Default.Terminal, "Code Block", FormatType.CodeBlock),
-                        MarkdownAction(Icons.Default.Link, "Link", FormatType.Link)
+                        MarkdownToolbarAction("H1", "Header 1", FormatType.Heading1),
+                        MarkdownToolbarAction("H2", "Header 2", FormatType.Heading2),
+                        MarkdownToolbarAction("B", "Bold", FormatType.Bold, isBoldLabel = true),
+                        MarkdownToolbarAction("I", "Italic", FormatType.Italic, isItalicLabel = true),
+                        MarkdownToolbarAction("S", "Strikethrough", FormatType.Strikethrough),
+                        MarkdownToolbarAction("”", "Quote", FormatType.Quote),
+                        MarkdownToolbarAction("•", "Bullet List", FormatType.BulletList),
+                        MarkdownToolbarAction("1.", "Numbered List", FormatType.NumberedList),
+                        MarkdownToolbarAction("☑", "Checklist", FormatType.Checklist),
+                        MarkdownToolbarAction("<>", "Code Inline", FormatType.CodeInline),
+                        MarkdownToolbarAction("```", "Code Block", FormatType.CodeBlock),
+                        MarkdownToolbarAction("🔗", "Link", FormatType.Link)
                     )
 
                     toolbarActions.forEach { action ->
-                        IconButton(
+                        Surface(
                             onClick = {
                                 applyMarkdownFormat(textFieldValue, action.type) { updated ->
                                     textFieldValue = updated
                                     onValueChange(updated.text)
                                 }
                             },
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                             modifier = Modifier
-                                .size(32.dp)
+                                .height(34.dp)
+                                .defaultMinSize(minWidth = 36.dp)
                                 .bounceClick()
+                                .testTag("markdown_action_${action.label}")
                         ) {
-                            Icon(
-                                imageVector = action.icon,
-                                contentDescription = action.description,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            ) {
+                                Text(
+                                    text = action.label,
+                                    fontSize = 13.sp,
+                                    fontWeight = if (action.isBoldLabel) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                    fontStyle = if (action.isItalicLabel) androidx.compose.ui.text.font.FontStyle.Italic else androidx.compose.ui.text.font.FontStyle.Normal,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
                 }
@@ -206,32 +232,35 @@ fun RichTextEditor(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                // Input field (borderless standard TextField)
-                val layoutDirection = remember(textFieldValue.text) { com.example.utils.getLayoutDirectionForText(textFieldValue.text) }
-                androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides layoutDirection) {
-                    TextField(
-                        value = textFieldValue,
-                        onValueChange = {
-                            textFieldValue = it
-                            onValueChange(it.text)
-                        },
-                        placeholder = placeholder,
-                        minLines = minLines,
-                        maxLines = maxLines,
-                        visualTransformation = MarkdownVisualTransformation(),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            disabledContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            disabledIndicatorColor = Color.Transparent
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
-                    )
-                }
+                // Input field with natural Bidirectional / Urdu + English support
+                TextField(
+                    value = textFieldValue,
+                    onValueChange = {
+                        textFieldValue = it
+                        onValueChange(it.text)
+                    },
+                    placeholder = placeholder,
+                    minLines = minLines,
+                    maxLines = maxLines,
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        textDirection = TextDirection.Content,
+                        lineHeight = 24.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    visualTransformation = MarkdownVisualTransformation(),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+                )
             } else {
                 // Live Preview Mode
                 Box(
@@ -245,7 +274,9 @@ fun RichTextEditor(
                     if (value.isBlank()) {
                         Text(
                             "Nothing to preview yet. Start typing in Edit mode!",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                textDirection = TextDirection.Content
+                            ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )
                     } else {
@@ -260,14 +291,16 @@ fun RichTextEditor(
     }
 }
 
-private data class MarkdownAction(
-    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+private data class MarkdownToolbarAction(
+    val label: String,
     val description: String,
-    val type: FormatType
+    val type: FormatType,
+    val isBoldLabel: Boolean = false,
+    val isItalicLabel: Boolean = false
 )
 
 private enum class FormatType {
-    Bold, Italic, Strikethrough, Heading, BulletList, NumberedList, CodeInline, CodeBlock, Link
+    Bold, Italic, Strikethrough, Heading1, Heading2, Quote, BulletList, NumberedList, Checklist, CodeInline, CodeBlock, Link
 }
 
 private fun applyMarkdownFormat(
@@ -301,9 +334,23 @@ private fun applyMarkdownFormat(
             val end = start + selectedText.length
             updated to TextRange(start, end)
         }
-        FormatType.Heading -> {
+        FormatType.Heading1 -> {
             val isLineStart = selection.start == 0 || text.getOrNull(selection.start - 1) == '\n'
-            val prefix = if (isLineStart) "### " else "\n### "
+            val prefix = if (isLineStart) "# " else "\n# "
+            val updated = text.substring(0, selection.start) + prefix + selectedText + text.substring(selection.end)
+            val pos = selection.start + prefix.length + selectedText.length
+            updated to TextRange(pos, pos)
+        }
+        FormatType.Heading2 -> {
+            val isLineStart = selection.start == 0 || text.getOrNull(selection.start - 1) == '\n'
+            val prefix = if (isLineStart) "## " else "\n## "
+            val updated = text.substring(0, selection.start) + prefix + selectedText + text.substring(selection.end)
+            val pos = selection.start + prefix.length + selectedText.length
+            updated to TextRange(pos, pos)
+        }
+        FormatType.Quote -> {
+            val isLineStart = selection.start == 0 || text.getOrNull(selection.start - 1) == '\n'
+            val prefix = if (isLineStart) "> " else "\n> "
             val updated = text.substring(0, selection.start) + prefix + selectedText + text.substring(selection.end)
             val pos = selection.start + prefix.length + selectedText.length
             updated to TextRange(pos, pos)
@@ -318,6 +365,13 @@ private fun applyMarkdownFormat(
         FormatType.NumberedList -> {
             val isLineStart = selection.start == 0 || text.getOrNull(selection.start - 1) == '\n'
             val prefix = if (isLineStart) "1. " else "\n1. "
+            val updated = text.substring(0, selection.start) + prefix + selectedText + text.substring(selection.end)
+            val pos = selection.start + prefix.length + selectedText.length
+            updated to TextRange(pos, pos)
+        }
+        FormatType.Checklist -> {
+            val isLineStart = selection.start == 0 || text.getOrNull(selection.start - 1) == '\n'
+            val prefix = if (isLineStart) "- [ ] " else "\n- [ ] "
             val updated = text.substring(0, selection.start) + prefix + selectedText + text.substring(selection.end)
             val pos = selection.start + prefix.length + selectedText.length
             updated to TextRange(pos, pos)

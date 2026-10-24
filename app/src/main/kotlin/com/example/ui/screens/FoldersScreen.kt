@@ -61,6 +61,9 @@ import com.example.R
 import com.example.data.local.CustomFolderEntity
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
+import com.example.data.model.getBestImagePath
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import com.example.ui.components.bounceClick
 import com.example.ui.viewmodel.CobaltViewModel
 import dev.chrisbanes.haze.HazeState
@@ -199,6 +202,25 @@ fun FoldersScreen(
     val blurRadius by viewModel.blurRadius.collectAsState()
     val blurOpacity by viewModel.blurOpacity.collectAsState()
 
+    val shareDownloadProgress by viewModel.shareDownloadProgress.collectAsState()
+    if (shareDownloadProgress != null) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Preparing Share...", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Downloading media from the cloud so it can be shared.")
+                    LinearProgressIndicator(
+                        progress = { shareDownloadProgress ?: 0f },
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            },
+            confirmButton = {}
+        )
+    }
+
     AnimatedContent(
         targetState = activeBrowseFolder,
         transitionSpec = {
@@ -233,7 +255,7 @@ fun FoldersScreen(
                             title = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-                                        painter = painterResource(id = R.drawable.ic_custom_folder),
+                                        painter = painterResource(id = R.drawable.ic_nav_folders_outline),
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(24.dp)
@@ -1001,6 +1023,18 @@ fun FolderBrowseItemRow(
     var showContextMenu by remember { mutableStateOf(false) }
     var showMoveDialog by remember { mutableStateOf(false) }
 
+    val typeColor = when (item.type) {
+        SavedItemType.LINK -> CategoryLink
+        SavedItemType.IMAGE -> CategoryImage
+        SavedItemType.VIDEO -> CategoryVideo
+        SavedItemType.CODE -> CategoryCode
+        SavedItemType.TEXT -> CategoryText
+        SavedItemType.AUDIO -> CategoryAudio
+        SavedItemType.MEDIA -> CategoryMedia
+    }
+    val displayImage = item.getBestImagePath()
+    val hasImage = !displayImage.isNullOrBlank() && item.type != SavedItemType.AUDIO
+
     val iconResId = when (item.type) {
         SavedItemType.LINK -> R.drawable.ic_custom_link
         SavedItemType.IMAGE -> R.drawable.ic_custom_image
@@ -1040,46 +1074,86 @@ fun FolderBrowseItemRow(
                     .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = iconResId),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
+                if (hasImage) {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                    ) {
+                        AsyncImage(
+                            model = displayImage,
+                            contentDescription = item.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        if (item.type == SavedItemType.VIDEO) {
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                    .align(Alignment.Center),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_play),
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(10.dp)
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(typeColor.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(id = iconResId),
+                            contentDescription = null,
+                            tint = typeColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = item.title.ifBlank { "Untitled Cobalt Item" },
+                        text = item.title.ifBlank { "Untitled Item" },
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Text(
-                        text = item.content.take(60).ifBlank { "No content preview available" },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.secondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    val cDesc = if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO) {
+                        item.extractedText?.trim() ?: ""
+                    } else {
+                        item.linkDescription?.trim() ?: item.content.trim()
+                    }
+                    if (cDesc.isNotBlank() && cDesc.lowercase() != item.title.trim().lowercase()) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = cDesc,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
 
                 Icon(
                     painter = painterResource(id = R.drawable.ic_custom_chevron_right),
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(20.dp)
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
@@ -1276,16 +1350,7 @@ fun FolderBrowseItemRow(
                     text = { Text("Share", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
                     onClick = {
                         showContextMenu = false
-                        try {
-                            val shareIntent = android.content.Intent().apply {
-                                action = android.content.Intent.ACTION_SEND
-                                type = "text/plain"
-                                putExtra(android.content.Intent.EXTRA_TEXT, item.content)
-                            }
-                            context.startActivity(android.content.Intent.createChooser(shareIntent, "Share preserve"))
-                        } catch (e: Exception) {
-                            android.widget.Toast.makeText(context, "Cannot share", android.widget.Toast.LENGTH_SHORT).show()
-                        }
+                        viewModel.shareItem(item, context)
                     },
                     colors = MenuDefaults.itemColors(
                         textColor = MaterialTheme.colorScheme.onSurface,

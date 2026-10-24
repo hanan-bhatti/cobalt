@@ -27,6 +27,9 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
@@ -72,16 +75,25 @@ fun parseMarkdown(text: String, primaryColor: Color = LinkBlue): AnnotatedString
                                 append(match.groups[3]!!.value) 
                             }
                         } else if (match.groups[4] != null && match.groups[5] != null) {
-                            withStyle(SpanStyle(color = primaryColor, textDecoration = TextDecoration.Underline)) {
-                                append(match.groups[4]!!.value)
+                            val linkText = match.groups[4]!!.value
+                            val url = match.groups[5]!!.value
+                            val linkStyles = TextLinkStyles(
+                                style = SpanStyle(color = primaryColor, textDecoration = TextDecoration.Underline, fontWeight = FontWeight.SemiBold)
+                            )
+                            withLink(LinkAnnotation.Url(url = url, styles = linkStyles)) {
+                                append(linkText)
                             }
                         } else if (match.groups[6] != null) {
                             val itemText = match.groups[6]!!.value
                             val formattedItemText = itemText.replaceFirst(Regex("\\s*[\\-\\*]\\s+"), "• ")
                             append(formattedItemText)
                         } else if (match.groups[7] != null) {
-                            withStyle(SpanStyle(color = primaryColor, textDecoration = TextDecoration.Underline)) {
-                                append(match.groups[7]!!.value)
+                            val url = match.groups[7]!!.value
+                            val linkStyles = TextLinkStyles(
+                                style = SpanStyle(color = primaryColor, textDecoration = TextDecoration.Underline, fontWeight = FontWeight.SemiBold)
+                            )
+                            withLink(LinkAnnotation.Url(url = url, styles = linkStyles)) {
+                                append(url)
                             }
                         }
                         currentIndex = match.range.last + 1

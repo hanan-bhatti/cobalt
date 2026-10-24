@@ -26,9 +26,11 @@ import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -63,6 +65,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.outlined.Warning
+import androidx.compose.material.icons.outlined.Info
+import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -104,6 +109,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.R
+import com.example.data.repository.SettingsRepository
 import com.example.ui.components.CollapsibleCommonTopBar
 import com.example.ui.components.ExpressiveSearchableModelSelectorItem
 import com.example.ui.components.ExpressiveSegmentedChoiceItem
@@ -132,27 +138,27 @@ enum class SettingsCategory(
     APPEARANCE(
         title = "Appearance & Display",
         subtitle = "Themes, dynamic wallpaper palette, and frosted blur",
-        iconRes = R.drawable.ic_custom_image
+        iconRes = R.drawable.ic_settings_appearance
     ),
     INTELLIGENCE(
         title = "Intelligence & Gemini AI",
         subtitle = "API key, vision OCR models, and detection sensitivity",
-        iconRes = R.drawable.ic_custom_code
+        iconRes = R.drawable.ic_settings_intelligence
     ),
     FLOATING_DOCK(
         title = "Floating Dock & Capture",
         subtitle = "Screen-edge handle, instant OCR trigger, and physics",
-        iconRes = R.drawable.ic_custom_edit
+        iconRes = R.drawable.ic_settings_floating_dock
     ),
     WIDGETS(
         title = "Home Screen Widgets",
         subtitle = "Launcher shortcuts, quick capture action, and recent notes",
-        iconRes = R.drawable.ic_custom_grid
+        iconRes = R.drawable.ic_settings_widgets
     ),
     SYSTEM_HEALTH(
         title = "System & Background Health",
         subtitle = "Battery optimization, background persistence, and sync",
-        iconRes = R.drawable.ic_custom_sync
+        iconRes = R.drawable.ic_settings_system_health
     )
 }
 
@@ -499,7 +505,7 @@ fun SettingsCategoryDetailScreen(
                                 tooltipText = "Frosted glass blur requires hardware acceleration. You can adjust the radius and opacity to balance readability and aesthetics."
                             )
 
-                            val totalBlurItems = if (!forceDisableBlur) 3 else 1
+                            val totalBlurItems = if (!forceDisableBlur) 4 else 1
                             var blurIdx = 0
 
                             ExpressiveSettingsGroup {
@@ -531,6 +537,52 @@ fun SettingsCategoryDetailScreen(
                                         valueRange = 0.05f..0.80f,
                                         shape = connectedPillShape(blurIdx++, totalBlurItems)
                                     )
+
+                                    // Dynamic 10x10 (100 combinations) debounced single-line guidance
+                                    val currentGuidance = remember(blurRadius, blurOpacity) {
+                                        val rBucket = ((blurRadius - 5) / 45f * 9f).roundToInt().coerceIn(0, 9)
+                                        val oBucket = ((blurOpacity - 0.05f) / 0.75f * 9f).roundToInt().coerceIn(0, 9)
+                                        blurGuidanceMatrix[rBucket][oBucket]
+                                    }
+                                    var debouncedGuidance by remember { mutableStateOf(currentGuidance) }
+                                    LaunchedEffect(currentGuidance) {
+                                        delay(200) // 200ms debounce prevents CPU strain during fast sliding
+                                        debouncedGuidance = currentGuidance
+                                    }
+
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = connectedPillShape(blurIdx++, totalBlurItems),
+                                        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f)
+                                    ) {
+                                        AnimatedContent(
+                                            targetState = debouncedGuidance,
+                                            transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(180)) },
+                                            label = "blur_slider_guidance"
+                                        ) { guidanceText ->
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Info,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Text(
+                                                    text = guidanceText,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -612,7 +664,7 @@ fun SettingsCategoryDetailScreen(
                                         placeholder = { Text("Enter your Gemini API key") },
                                         leadingIcon = {
                                             Icon(
-                                                painter = painterResource(id = R.drawable.ic_custom_lock),
+                                                painter = painterResource(id = R.drawable.ic_custom_key),
                                                 contentDescription = null,
                                                 tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(18.dp)
@@ -722,6 +774,124 @@ fun SettingsCategoryDetailScreen(
 
                     item {
                         SettingsSubsectionHeader(
+                            title = "Custom OCR System Prompt",
+                            description = "Customize the prompt used by Gemini when extracting text and formatting captured screenshots.",
+                            tooltipText = "Leave empty to use the system default extraction rules (which include markdown formatting, RTL script preservation, and exact URL extraction). Custom prompts let you inject specialized instructions or tailored outputs."
+                        )
+
+                        val customPrompt by viewModel.settingsRepository.customOcrPrompt.collectAsState()
+                        var promptTextState by remember { mutableStateOf("") }
+                        LaunchedEffect(customPrompt) {
+                            promptTextState = customPrompt
+                        }
+
+                        ExpressiveSettingsGroup {
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                shape = RoundedCornerShape(24.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Text(
+                                                text = "System Prompt",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Surface(
+                                                color = if (customPrompt.isNotBlank()) {
+                                                    MaterialTheme.colorScheme.primaryContainer
+                                                } else {
+                                                    MaterialTheme.colorScheme.surfaceContainerHigh
+                                                },
+                                                shape = RoundedCornerShape(8.dp)
+                                            ) {
+                                                Text(
+                                                    text = if (customPrompt.isNotBlank()) "Custom Active" else "Default Active",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = if (customPrompt.isNotBlank()) {
+                                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                                    } else {
+                                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                                    },
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                )
+                                            }
+                                        }
+
+                                        if (customPrompt.isNotBlank()) {
+                                            OutlinedButton(
+                                                onClick = {
+                                                    viewModel.settingsRepository.resetCustomOcrPrompt()
+                                                    promptTextState = ""
+                                                },
+                                                shape = RoundedCornerShape(12.dp),
+                                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                                modifier = Modifier.height(32.dp)
+                                            ) {
+                                                Text(
+                                                    text = "Reset Default",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = if (customPrompt.isNotBlank()) {
+                                            "Using your custom system prompt for image and document text recognition."
+                                        } else {
+                                            "Using default prompt with markdown rules, RTL preservation, and URL extraction."
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    OutlinedTextField(
+                                        value = promptTextState,
+                                        onValueChange = {
+                                            promptTextState = it
+                                            viewModel.settingsRepository.setCustomOcrPrompt(it)
+                                        },
+                                        placeholder = {
+                                            Text(
+                                                text = SettingsRepository.DEFAULT_OCR_PROMPT,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                            )
+                                        },
+                                        minLines = 4,
+                                        maxLines = 10,
+                                        textStyle = MaterialTheme.typography.bodyMedium,
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+                                        ),
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    item {
+                        SettingsSubsectionHeader(
                             title = "Detection Sensitivity",
                             description = "Threshold for text recognition in low-contrast screenshots.",
                             tooltipText = "High sensitivity captures small or faint text but may pick up background noise. Medium is balanced for everyday captures."
@@ -736,6 +906,29 @@ fun SettingsCategoryDetailScreen(
                                 options = listOf("Low", "Medium", "High"),
                                 selectedOption = sensitivity,
                                 onOptionSelected = { viewModel.settingsRepository.setOcrSensitivity(it) },
+                                shape = RoundedCornerShape(24.dp)
+                            )
+                        }
+                    }
+
+                    item {
+                        SettingsSubsectionHeader(
+                            title = "Audio Speech-to-Text Model",
+                            description = "Select the dedicated Gemini model used to transcribe voice memos and spoken audio.",
+                            tooltipText = "Dedicated transcription models convert speech to structured text directly with high accuracy and speed without needing complex prompts."
+                        )
+
+                        val audioModels by viewModel.availableAudioModels.collectAsState()
+                        val selectedAudioModel by viewModel.settingsRepository.selectedAudioModel.collectAsState()
+
+                        ExpressiveSettingsGroup {
+                            ExpressiveSearchableModelSelectorItem(
+                                title = "Speech-to-Text Model",
+                                description = "Model for audio memo transcription",
+                                models = audioModels,
+                                selectedModel = selectedAudioModel,
+                                onModelSelected = { viewModel.settingsRepository.setSelectedAudioModel(it) },
+                                onRefreshModels = { viewModel.fetchAvailableModels(isUserTriggered = true) },
                                 shape = RoundedCornerShape(24.dp)
                             )
                         }
@@ -1155,3 +1348,141 @@ fun EdgePanelSettingsScreen(viewModel: CobaltViewModel, onNavigateBack: () -> Un
         )
     }
 }
+
+/**
+ * 10x10 (100 combinations) guidance matrix providing a concise, user-friendly
+ * 1-line explanation of the trade-offs (GPU speed, blur aesthetics, legibility, and contrast)
+ * for each blur radius (0..9) and tint opacity (0..9) combination.
+ */
+private val blurGuidanceMatrix: Array<Array<String>> = arrayOf(
+    // Radius 0: 5-9dp (Ultra Crisp / Minimal Diffusion)
+    arrayOf(
+        "⚡ Ultra-crisp & zero GPU lag; minimal glass frost effect.",
+        "⚡ Sharp underlying text with light tint; near-instant rendering.",
+        "⚡ Crisp details with faint tint; good for rapid glanceability.",
+        "⚡ Sharp edges with clear separation; very low battery impact.",
+        "⚡ Crisp background with balanced tint; text is easily readable.",
+        "⚡ Crisp background with medium-dark tint; high contrast.",
+        "⚡ Near-solid surface with razor-sharp edges; high legibility.",
+        "⚡ Solid card feel with crisp backdrop; minimal frosted sheen.",
+        "⚡ Deep dark tint with sharp underlying shadows; ultra-fast.",
+        "⚡ Near-opaque solid card with zero blur; maximum readability."
+    ),
+    // Radius 1: 10-14dp (Very Light Diffusion)
+    arrayOf(
+        "✨ Subtle frost with faint tint; underlying shapes clearly visible.",
+        "✨ Delicate frosted shimmer; smooth speed with light glass feel.",
+        "✨ Light frosted texture; good balance of clarity and glass tone.",
+        "✨ Clean light frost; text stands out softly over wallpaper.",
+        "✨ Moderate tint over light blur; comfortable everyday contrast.",
+        "✨ Noticeable card presence; softly dims background elements.",
+        "✨ Strong card contrast with light frosted edges; clean reading.",
+        "✨ Deep tint with light frost; focused content, high speed.",
+        "✨ Dark solid tint with subtle frosted borders; high contrast.",
+        "✨ Heavy protective tint with faint frost; maximum text priority."
+    ),
+    // Radius 2: 15-19dp (Gentle Diffusion)
+    arrayOf(
+        "✨ Silky light frost; bright background colors shine through.",
+        "✨ Gentle frosted glass; elegant look with fast frame rates.",
+        "✨ Soft glass layer; wallpaper details gently smoothed out.",
+        "✨ Well-defined frosted card; comfortable daily balance.",
+        "✨ Balanced glass feel; background clutter gently reduced.",
+        "✨ Cozy frosted depth; good separation from vibrant wallpapers.",
+        "✨ Deep glass tint; prevents wallpaper patterns from bleeding.",
+        "✨ High-contrast glass card; crisp typography, subtle frost.",
+        "✨ Rich dark glass; heavy contrast with smooth peripheral blur.",
+        "✨ Near-solid frosted container; high readability on any screen."
+    ),
+    // Radius 3: 20-24dp (Soft Diffusion)
+    arrayOf(
+        "💎 Smooth glass diffusion; wallpaper shines through softly.",
+        "💎 Graceful frosted sheen; soft background with nimble UI.",
+        "💎 Modern frosted acrylic; pleasant aesthetic with clear text.",
+        "💎 Balanced everyday glass: gentle blur with comfortable tint.",
+        "💎 Harmonious glass tone; clean legibility on bright wallpapers.",
+        "💎 Deep frosted panel; background noise comfortably faded.",
+        "💎 Bold frosted presence; strong contrast against busy apps.",
+        "💎 High-legibility frosted shield; sharp icons, low distraction.",
+        "💎 Deep tinted glass; smooth background masking, clear focus.",
+        "💎 Very dark frosted card; excellent daytime outdoor clarity."
+    ),
+    // Radius 4: 25-29dp (Balanced Mid-Diffusion)
+    arrayOf(
+        "💎 Silky authentic glass; background softened into glowing shapes.",
+        "💎 Natural frosted glass; refined blur with light glass shine.",
+        "💎 Classic frosted acrylic: balanced blur, light tint, fluid motion.",
+        "💎 Optimal sweet spot: authentic glass look and crisp typography.",
+        "💎 Rich frosted glass: great depth, smooth contrast, fluid FPS.",
+        "💎 Solid frosted glass: background softened, zero eye strain.",
+        "💎 Pronounced card surface: excellent contrast on bright photos.",
+        "💎 Strong frosted shield: dark tint prevents wallpaper glare.",
+        "💎 Deep velvet frost: heavy tint with smooth Gaussian blur.",
+        "💎 Bold velvet card: strong contrast with deep frosted backdrop."
+    ),
+    // Radius 5: 30-34dp (Medium-Heavy Diffusion)
+    arrayOf(
+        "🌟 Dreamy glass diffusion; background colors glow softly.",
+        "🌟 Velvety frosted glass; smooth bokeh with bright backdrop.",
+        "🌟 Luxurious glass feel; deep background softening, clear text.",
+        "🌟 Premium frosted acrylic: soft background bokeh, crisp labels.",
+        "🌟 Elegant depth of field: smooth blur with balanced contrast.",
+        "🌟 Substantial frosted depth: completely diffuses background.",
+        "🌟 High-contrast acrylic: deep tint ensures effortless reading.",
+        "🌟 Heavy tinted frost: masks complex wallpapers completely.",
+        "🌟 Deep studio frost: bold contrast with velvety smooth blur.",
+        "🌟 Near-opaque frosted card: zero background distraction."
+    ),
+    // Radius 6: 35-39dp (Heavy Diffusion)
+    arrayOf(
+        "🌟 Atmospheric glass glow; background icons turn into soft color.",
+        "🌟 Rich frosted depth; smooth bokeh feel with bright tint.",
+        "🌟 Silky studio glass: heavy background softening with clarity.",
+        "🌟 Plush frosted glass: deep blur hides launcher icon clutter.",
+        "🌟 Refined frosted acrylic: deep depth of field, balanced tint.",
+        "🌟 High-depth frosted card: background noise completely gone.",
+        "🌟 Strong contrast acrylic: high legibility with heavy bokeh.",
+        "🌟 Dense frosted tint: strong protection against busy backgrounds.",
+        "🌟 Deep luxury frost: rich dark backdrop with velvet blur.",
+        "🌟 Heavy dark acrylic: maximum contrast with profound blur."
+    ),
+    // Radius 7: 40-44dp (Profound Diffusion)
+    arrayOf(
+        "🔮 Ethereal glass diffusion; background becomes abstract art.",
+        "🔮 Deep bokeh glass; smooth atmospheric blur with light tint.",
+        "🔮 Velvety atmospheric glass: dreamy background, sharp text.",
+        "🔮 Heavy frosted glass: background elements completely merged.",
+        "🔮 Lush frosted acrylic: deep diffusion with balanced tint.",
+        "🔮 Substantial dark frost: heavy background concealment.",
+        "🔮 Strong frosted contrast: excellent reading comfort.",
+        "🔮 Dense protective glass: strong tint prevents any visual clash.",
+        "🔮 Deep velvet shield: rich dark blur with studio-grade depth.",
+        "🔮 Maximal dark frost: heavy diffusion with dark solid feel."
+    ),
+    // Radius 8: 45-49dp (Very Heavy Diffusion)
+    arrayOf(
+        "🔮 Extreme blur diffusion; background details completely erased.",
+        "🔮 Ultra-soft frosted glass; profound bokeh with light tint.",
+        "🔮 Dreamy luxury glass: rich blur diffusion, clear foreground.",
+        "🔮 Deep atmospheric acrylic: high blur hides background noise.",
+        "🔮 Balanced heavy frost: full background blur with smooth tint.",
+        "🔮 Dense frosted surface: high legibility, velvet background.",
+        "🔮 Strong dark acrylic: deep tint with profound background blur.",
+        "🔮 Heavy dark frosted card: zero background interference.",
+        "🔮 Deep studio velvet: ultra-heavy blur with rich dark tint.",
+        "🔮 Maximum dark studio frost: deep blur, maximum contrast."
+    ),
+    // Radius 9: 50dp (Maximum Diffusion)
+    arrayOf(
+        "🔮 Maximum blur: background is pure abstract gradient light.",
+        "🔮 Ultra-deep bokeh: maximum diffusion with bright transparency.",
+        "🔮 Velvet atmospheric frost: total background smoothing.",
+        "🔮 High-end frosted glass: maximum blur with light clean tint.",
+        "🔮 Supreme frosted balance: ultra-deep blur with optimal tint.",
+        "🔮 Luxurious dark frost: complete background concealment.",
+        "🔮 Heavy dark acrylic: supreme contrast with maximal blur.",
+        "🔮 Maximum frosted shield: complete background distraction shield.",
+        "🔮 Deep velvet acrylic: ultra-heavy blur with deep dark tint.",
+        "🔮 Studio-grade frosted glass: maximum opacity and maximum blur."
+    )
+)

@@ -33,18 +33,26 @@ import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.commonmark.node.*
 import org.commonmark.parser.Parser
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
-import com.example.utils.getLayoutDirectionForText
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.withLink
+import com.example.utils.isRtlText
 
 /**
  * A beautiful, fast, and robust Markdown renderer built on top of CommonMark.
- * It translates Markdown strings into native Jetpack Compose Material 3 components.
+ * Fully supports bi-directional mixed script rendering (e.g. Urdu, Arabic, and English).
+ * Each paragraph and heading automatically detects its content directionality, aligning
+ * and formatting naturally without breaking bidirectional sentences.
  */
 @Composable
 fun MarkdownText(
@@ -58,15 +66,12 @@ fun MarkdownText(
     val parser = remember { Parser.builder().build() }
     val document = remember(markdown) { parser.parse(markdown) }
     val primaryColor = MaterialTheme.colorScheme.primary
-    val layoutDirection = remember(markdown) { getLayoutDirectionForText(markdown) }
 
-    CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
-        Column(
-            modifier = modifier,
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            RenderNode(document, color, primaryColor, maxLines)
-        }
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        RenderNode(document, color, primaryColor, maxLines)
     }
 }
 
@@ -77,132 +82,161 @@ private fun ColumnScope.RenderNode(node: Node, color: Color, primaryColor: Color
     val isOrderedList = node is OrderedList
 
     while (child != null) {
-        when (child) {
+        val currentChild = child
+        when (currentChild) {
             is org.commonmark.node.Paragraph -> {
                 val annotatedString = buildAnnotatedString {
-                    AppendInlineNodes(child, color, primaryColor)
+                    AppendInlineNodes(currentChild, color, primaryColor)
                 }
-                Text(
-                    text = annotatedString,
-                    color = color,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = maxLines
-                )
+                val isRtl = isRtlText(annotatedString.text)
+                val blockDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
+                CompositionLocalProvider(LocalLayoutDirection provides blockDirection) {
+                    Text(
+                        text = annotatedString,
+                        color = color,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            textDirection = TextDirection.Content,
+                            lineHeight = 22.sp
+                        ),
+                        textAlign = if (isRtl) TextAlign.End else TextAlign.Start,
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = maxLines
+                    )
+                }
             }
             is Heading -> {
                 val annotatedString = buildAnnotatedString {
-                    AppendInlineNodes(child, color, primaryColor)
+                    AppendInlineNodes(currentChild, color, primaryColor)
                 }
-                val style = when (child.level) {
-                    1 -> MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
-                    2 -> MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
-                    3 -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-                    else -> MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                val isRtl = isRtlText(annotatedString.text)
+                val blockDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
+                val style = when (currentChild.level) {
+                    1 -> MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold, textDirection = TextDirection.Content)
+                    2 -> MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, textDirection = TextDirection.Content)
+                    3 -> MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, textDirection = TextDirection.Content)
+                    else -> MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, textDirection = TextDirection.Content)
                 }
-                Text(
-                    text = annotatedString,
-                    color = color,
-                    style = style,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
-                    maxLines = maxLines
-                )
+                CompositionLocalProvider(LocalLayoutDirection provides blockDirection) {
+                    Text(
+                        text = annotatedString,
+                        color = color,
+                        style = style,
+                        textAlign = if (isRtl) TextAlign.End else TextAlign.Start,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp, bottom = 2.dp),
+                        maxLines = maxLines
+                    )
+                }
             }
             is BulletList -> {
                 Column(
-                    modifier = Modifier.padding(start = 12.dp, top = 2.dp, bottom = 2.dp),
+                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 2.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    RenderNode(child, color, primaryColor, maxLines)
+                    RenderNode(currentChild, color, primaryColor, maxLines)
                 }
             }
             is OrderedList -> {
                 Column(
-                    modifier = Modifier.padding(start = 12.dp, top = 2.dp, bottom = 2.dp),
+                    modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 2.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    RenderNode(child, color, primaryColor, maxLines)
+                    RenderNode(currentChild, color, primaryColor, maxLines)
                 }
             }
             is ListItem -> {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    if (isOrderedList) {
+                val itemText = extractPlainText(currentChild)
+                val isRtl = isRtlText(itemText)
+                val blockDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
+                CompositionLocalProvider(LocalLayoutDirection provides blockDirection) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Text(
-                            text = "$bulletIndex.",
+                            text = if (isOrderedList) "$bulletIndex." else "•",
                             color = color,
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
                         )
-                        bulletIndex++
-                    } else {
-                        Text(
-                            text = "•",
-                            color = color,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
-                        )
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        RenderNode(child, color, primaryColor, maxLines)
+                        if (isOrderedList) bulletIndex++
+                        Column(modifier = Modifier.weight(1f)) {
+                            RenderNode(currentChild, color, primaryColor, maxLines)
+                        }
                     }
                 }
             }
             is BlockQuote -> {
+                val quoteText = extractPlainText(currentChild)
+                val isRtl = isRtlText(quoteText)
+                val blockDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
                 val borderColor = primaryColor.copy(alpha = 0.6f)
-                Column(
-                    modifier = Modifier
-                        .padding(vertical = 4.dp)
-                        .drawBehind {
-                            drawLine(
-                                color = borderColor,
-                                start = Offset(0f, 0f),
-                                end = Offset(0f, size.height),
-                                strokeWidth = 3.dp.toPx()
-                            )
-                        }
-                        .padding(start = 12.dp)
-                ) {
-                    RenderNode(child, color.copy(alpha = 0.8f), primaryColor, maxLines)
+                CompositionLocalProvider(LocalLayoutDirection provides blockDirection) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .drawBehind {
+                                val lineX = if (isRtl) size.width - 1.5.dp.toPx() else 1.5.dp.toPx()
+                                drawLine(
+                                    color = borderColor,
+                                    start = Offset(lineX, 0f),
+                                    end = Offset(lineX, size.height),
+                                    strokeWidth = 3.dp.toPx()
+                                )
+                            }
+                            .padding(start = if (isRtl) 0.dp else 12.dp, end = if (isRtl) 12.dp else 0.dp)
+                    ) {
+                        RenderNode(currentChild, color.copy(alpha = 0.85f), primaryColor, maxLines)
+                    }
                 }
             }
             is FencedCodeBlock -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .background(
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            shape = RoundedCornerShape(6.dp)
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .background(
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(10.dp)
+                    ) {
+                        Text(
+                            text = currentChild.literal.trim(),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 13.sp,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                textDirection = TextDirection.Ltr
+                            )
                         )
-                        .padding(8.dp)
-                ) {
-                    Text(
-                        text = child.literal.trim(),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp,
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    }
                 }
             }
             is IndentedCodeBlock -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .background(
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            shape = RoundedCornerShape(6.dp)
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .background(
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(10.dp)
+                    ) {
+                        Text(
+                            text = currentChild.literal.trim(),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 13.sp,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                textDirection = TextDirection.Ltr
+                            )
                         )
-                        .padding(8.dp)
-                ) {
-                    Text(
-                        text = child.literal.trim(),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp,
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    }
                 }
             }
             is ThematicBreak -> {
@@ -215,25 +249,63 @@ private fun ColumnScope.RenderNode(node: Node, color: Color, primaryColor: Color
                 )
             }
         }
+        child = currentChild.next
+    }
+}
+
+private fun extractPlainText(node: Node): String {
+    val sb = StringBuilder()
+    var child = node.firstChild
+    while (child != null) {
+        when (child) {
+            is org.commonmark.node.Text -> sb.append(child.literal)
+            is Code -> sb.append(child.literal)
+            else -> sb.append(extractPlainText(child))
+        }
         child = child.next
     }
+    return sb.toString()
 }
 
 private fun AnnotatedString.Builder.AppendInlineNodes(node: Node, color: Color, primaryColor: Color) {
     var child = node.firstChild
     while (child != null) {
-        when (child) {
+        val currentChild = child
+        when (currentChild) {
             is org.commonmark.node.Text -> {
-                append(child.literal)
+                val literal = currentChild.literal
+                val urlRegex = Regex("""https?://[^\s<>"{}|\\^`\[\]]+""")
+                var lastIndex = 0
+                val matches = urlRegex.findAll(literal)
+                val linkStyles = TextLinkStyles(
+                    style = SpanStyle(
+                        color = primaryColor,
+                        textDecoration = TextDecoration.Underline,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                )
+                for (match in matches) {
+                    if (match.range.first > lastIndex) {
+                        append(literal.substring(lastIndex, match.range.first))
+                    }
+                    val url = match.value
+                    withLink(LinkAnnotation.Url(url = url, styles = linkStyles)) {
+                        append(url)
+                    }
+                    lastIndex = match.range.last + 1
+                }
+                if (lastIndex < literal.length) {
+                    append(literal.substring(lastIndex))
+                }
             }
             is StrongEmphasis -> {
                 withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                    AppendInlineNodes(child, color, primaryColor)
+                    AppendInlineNodes(currentChild, color, primaryColor)
                 }
             }
             is Emphasis -> {
                 withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
-                    AppendInlineNodes(child, color, primaryColor)
+                    AppendInlineNodes(currentChild, color, primaryColor)
                 }
             }
             is Code -> {
@@ -245,18 +317,19 @@ private fun AnnotatedString.Builder.AppendInlineNodes(node: Node, color: Color, 
                         fontSize = 13.sp
                     )
                 ) {
-                    append(child.literal)
+                    append(currentChild.literal)
                 }
             }
             is Link -> {
-                withStyle(
-                    SpanStyle(
+                val linkStyles = TextLinkStyles(
+                    style = SpanStyle(
                         color = primaryColor,
                         textDecoration = TextDecoration.Underline,
                         fontWeight = FontWeight.SemiBold
                     )
-                ) {
-                    AppendInlineNodes(child, color, primaryColor)
+                )
+                withLink(LinkAnnotation.Url(url = currentChild.destination, styles = linkStyles)) {
+                    AppendInlineNodes(currentChild, color, primaryColor)
                 }
             }
             is HardLineBreak -> {
@@ -266,9 +339,9 @@ private fun AnnotatedString.Builder.AppendInlineNodes(node: Node, color: Color, 
                 append("\n") // Use clean single line break instead of double space
             }
             else -> {
-                AppendInlineNodes(child, color, primaryColor)
+                AppendInlineNodes(currentChild, color, primaryColor)
             }
         }
-        child = child.next
+        child = currentChild.next
     }
 }

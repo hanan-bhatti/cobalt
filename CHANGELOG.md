@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-10-24
+
+### Added
+- **Material 3 Expressive Settings Hub:** Redesigned Settings into 5 dedicated group categories (Appearance, Intelligence, Floating Dock, Widgets, Help & Support) featuring connected pill shapes, searchable model selectors, and smooth collapsible headers (`CollapsibleCommonTopBar`).
+- **Side Dock Physics Studio & In-Dock Reader:** Introduced fluid elastic side dock morph curves with custom stiffness/damping physics controls and a real-time Canvas preview studio. Users can now view, read, and copy item details directly within the floating dock without opening the main application.
+- **AI Model Segregation & Custom OCR Prompts:** Independent selection for Gemini Vision vs Audio transcription models with support for Gemini 2.5/2.0/1.5, accompanied by a customizable OCR system prompt and human-friendly error mapping (`GoogleApiErrorMapper`).
+- **Humorous OCR Loading States:** Added playful, rotating loading messages (`OcrLoadingMessages`) that entertain users during image text extraction.
+- **Dual Bold/Outline Navigation & Motion:** Redesigned bottom navigation bar with custom paired bold/outline vector icons, tab state persistence, and directional AOSP Shared Axis horizontal slide transitions.
+- **Inline Folder Creator (`InlineNewFolderCreator`):** Lightweight inline component with built-in preset icon picker for instant folder creation inside Capture, OCR, and Home screen folder assignment dialogs.
+- **Full Text Selection in Detail View:** Wrapped Detail Screen content in `SelectionContainer` enabling seamless text highlighting and copying.
+- **Bi-Directional Mixed Script Markdown:** Upgraded Markdown renderer with per-paragraph RTL auto-detection (Urdu, Arabic, Hebrew) and modern Compose `LinkAnnotation` clickable links.
+- **Cobalt Contributor Recognition:** Awarded a verified "Cobalt Contributor" profile badge upon submitting in-app surveys or bug reports.
+
+### Changed
+- Replaced raw file URIs on Folder screen cards with clean titles, descriptions, and media preview thumbnails matching Home cards.
+- Unified Folder screen item sharing with `FileProvider` and visual download progress feedback.
+- Migrated clipboard operations across the app from deprecated `LocalClipboardManager` to modern Compose `LocalClipboard`.
+- Restricted screen blur strictly to the floating dock panel, keeping background screens sharp with a subtle dismiss scrim.
+- Replaced duration-based edge panel animation with authentic spring stiffness and damping physics.
+
+### Removed
+- Removed simulated in-app diagnostics radar and fake latency benchmarks, replacing them with a fully honest Help Center & FAQ knowledge base.
+
+### Fixed
+- **ProGuard R8 Reflection Rules:** Added missing `-keep` rules for Firebase Auth methods used during environment diagnostics in Play builds.
+- **Detail Screen Dismiss Flicker:** Cached `displayedItem` during back-press pop animations to prevent blank card flashes on exit.
+- **Landscape Dock Bounds:** Coerced handle height dynamically on landscape screens to prevent off-screen overflow.
+
 ## [2.1.2] - 2026-10-13
 
 ### Added

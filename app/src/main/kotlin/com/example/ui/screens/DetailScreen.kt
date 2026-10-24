@@ -18,6 +18,11 @@
 
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.activity.compose.BackHandler
 import android.content.Intent
 import android.net.Uri
@@ -87,17 +92,23 @@ import com.example.ui.theme.CategoryMedia
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.example.ui.theme.toThemeColor
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun DetailScreen(
     viewModel: CobaltViewModel,
     onClose: () -> Unit,
     onEdit: (SavedItem) -> Unit,
     hazeState: HazeState,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     val activeItem by viewModel.activeDetailItem.collectAsState()
-    val item = activeItem ?: return
+    var displayedItem by remember { mutableStateOf(activeItem) }
+    if (activeItem != null) {
+        displayedItem = activeItem
+    }
+    val item = displayedItem ?: return
 
     val localHazeState = remember { HazeState() }
 
@@ -278,7 +289,14 @@ fun DetailScreen(
             }
         },
         containerColor = MaterialTheme.colorScheme.background,
-        modifier = modifier.fillMaxSize()
+        modifier = modifier
+            .maybeSharedBounds(
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+                key = "card_${item.id}",
+                clipShape = RoundedCornerShape(0.dp)
+            )
+            .fillMaxSize()
     ) { innerPadding ->
         var showFullscreenImage by remember { mutableStateOf(false) }
         var isLoading by remember(item.id) { mutableStateOf(false) }
@@ -290,17 +308,18 @@ fun DetailScreen(
                     .padding(top = innerPadding.calculateTopPadding())
             )
         } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .hazeSource(state = localHazeState)
-                    .verticalScroll(scrollState)
-                    .padding(
-                        top = innerPadding.calculateTopPadding()
-                    )
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(28.dp)
-            ) {
+            SelectionContainer {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .hazeSource(state = localHazeState)
+                        .verticalScroll(scrollState)
+                        .padding(
+                            top = innerPadding.calculateTopPadding()
+                        )
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(28.dp)
+                ) {
             // HEADER SECTION (Only for non-MEDIA types; MEDIA items use redesigned MediaDetailSection hero header)
             if (item.type != SavedItemType.MEDIA) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -308,7 +327,9 @@ fun DetailScreen(
                     val displayTitle = item.title.ifBlank { item.linkTitle ?: "Untitled Item" }
                     Text(
                         text = displayTitle,
-                        style = MaterialTheme.typography.displayMedium,
+                        style = MaterialTheme.typography.displayMedium.copy(
+                            textDirection = androidx.compose.ui.text.style.TextDirection.Content
+                        ),
                         color = MaterialTheme.colorScheme.onBackground
                     )
 
@@ -412,6 +433,11 @@ fun DetailScreen(
                             .clip(RoundedCornerShape(20.dp))
                             .background(Color.Black.copy(alpha = 0.05f))
                             .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                            .maybeSharedElement(
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope,
+                                key = "image_${item.id}"
+                            )
                             .clickable { showFullscreenImage = true }
                     )
                 }
@@ -426,6 +452,11 @@ fun DetailScreen(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                        .maybeSharedElement(
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            key = "image_${item.id}"
+                        )
                 )
             }
 
@@ -447,11 +478,15 @@ fun DetailScreen(
             }
 
             // DESCRIPTION / LINK META
-            val descriptionToShow = if (item.type == SavedItemType.LINK) {
-                item.linkDescription
-            } else if (item.type != SavedItemType.CODE && item.content.isNotBlank() && item.type != SavedItemType.IMAGE && item.type != SavedItemType.VIDEO && item.type != SavedItemType.MEDIA) {
-                item.content
-            } else null
+            val descriptionToShow = when (item.type) {
+                SavedItemType.LINK -> item.linkDescription
+                SavedItemType.IMAGE, SavedItemType.VIDEO -> {
+                    item.extractedText?.takeIf { it.isNotBlank() }
+                        ?: item.linkDescription?.takeIf { it.isNotBlank() }
+                }
+                SavedItemType.CODE, SavedItemType.MEDIA -> null
+                else -> item.content.takeIf { it.isNotBlank() }
+            }
 
             if (!descriptionToShow.isNullOrBlank()) {
                 Column(
@@ -472,6 +507,8 @@ fun DetailScreen(
                                 SavedItemType.TEXT -> R.drawable.ic_custom_text
                                 SavedItemType.AUDIO -> R.drawable.ic_custom_voice
                                 SavedItemType.LINK -> R.drawable.ic_custom_link
+                                SavedItemType.IMAGE -> R.drawable.ic_custom_image
+                                SavedItemType.VIDEO -> R.drawable.ic_custom_video
                                 else -> R.drawable.ic_custom_text
                             }
                             Icon(
@@ -485,6 +522,7 @@ fun DetailScreen(
                                     SavedItemType.TEXT -> "NOTE CONTENT"
                                     SavedItemType.AUDIO -> "TRANSCRIPTION"
                                     SavedItemType.LINK -> "DESCRIPTION"
+                                    SavedItemType.IMAGE, SavedItemType.VIDEO -> "DESCRIPTION"
                                     else -> "CONTENT"
                                 },
                                 fontSize = 11.sp,
@@ -495,48 +533,41 @@ fun DetailScreen(
                         }
 
                         // Copy Button
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable {
-                                    coroutineScope.launch {
-                                        clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Cobalt Content", descriptionToShow)))
+                        DisableSelection {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        coroutineScope.launch {
+                                            clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Cobalt Content", descriptionToShow)))
+                                        }
+                                        Toast.makeText(context, "Copied to clipboard!", Toast.LENGTH_SHORT).show()
                                     }
-                                    Toast.makeText(context, "Copied to clipboard!", Toast.LENGTH_SHORT).show()
-                                }
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_copy),
-                                contentDescription = "Copy",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = "Copy",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_copy),
+                                    contentDescription = "Copy",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "Copy",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
 
-                    // Rendered Markdown/Text
-                    if (item.type == SavedItemType.TEXT || item.type == SavedItemType.AUDIO) {
-                        MarkdownText(
-                            markdown = descriptionToShow,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
-                        )
-                    } else {
-                        Text(
-                            text = parseMarkdown(descriptionToShow, MaterialTheme.colorScheme.primary),
-                            fontSize = 17.sp,
-                            lineHeight = 26.sp,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
-                        )
-                    }
+                    // Rendered Markdown/Text with full bidirectional support
+                    MarkdownText(
+                        markdown = descriptionToShow,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
+                    )
                 }
             }
 
@@ -564,38 +595,40 @@ fun DetailScreen(
                                 letterSpacing = 1.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                if (item.type == SavedItemType.LINK) {
+                            DisableSelection {
+                                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    if (item.type == SavedItemType.LINK) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_custom_link_external),
+                                            contentDescription = "Open Link",
+                                            modifier = Modifier
+                                                .size(20.dp)
+                                                .clickable {
+                                                    com.example.util.CobaltCustomTabsLauncher.launch(
+                                                        context = context,
+                                                        url = item.content,
+                                                        isDarkTheme = isDark,
+                                                        itemId = item.id,
+                                                        itemTitle = item.title
+                                                    )
+                                                },
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
                                     Icon(
-                                        painter = painterResource(id = R.drawable.ic_custom_link_external),
-                                        contentDescription = "Open Link",
+                                        painter = painterResource(id = R.drawable.ic_custom_copy),
+                                        contentDescription = "Copy",
                                         modifier = Modifier
                                             .size(20.dp)
                                             .clickable {
-                                                com.example.util.CobaltCustomTabsLauncher.launch(
-                                                    context = context,
-                                                    url = item.content,
-                                                    isDarkTheme = isDark,
-                                                    itemId = item.id,
-                                                    itemTitle = item.title
-                                                )
+                                                coroutineScope.launch {
+                                                    clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Cobalt Content", item.content)))
+                                                }
+                                                Toast.makeText(context, "Copied!", Toast.LENGTH_SHORT).show()
                                             },
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_copy),
-                                    contentDescription = "Copy",
-                                    modifier = Modifier
-                                        .size(20.dp)
-                                        .clickable {
-                                            coroutineScope.launch {
-                                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Cobalt Content", item.content)))
-                                            }
-                                            Toast.makeText(context, "Copied!", Toast.LENGTH_SHORT).show()
-                                        },
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
                             }
                         }
                         
@@ -714,6 +747,7 @@ fun DetailScreen(
                 }
             }
             Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding() + 16.dp))
+        }
         }
     }
 }

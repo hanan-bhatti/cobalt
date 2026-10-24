@@ -427,7 +427,9 @@ class MainActivity : ComponentActivity() {
                                             com.example.ui.screens.LegalScreen(
                                                 title = "Privacy Policy",
                                                 markdownContent = com.example.ui.screens.LegalDocs.privacyPolicy,
-                                                onBack = { navController.popBackStack() }
+                                                onBack = { navController.popBackStack() },
+                                                iconRes = com.example.R.drawable.ic_custom_lock,
+                                                subtitle = "DATA PROTECTION & PRIVACY"
                                             )
                                         }
                                     }
@@ -436,7 +438,9 @@ class MainActivity : ComponentActivity() {
                                             com.example.ui.screens.LegalScreen(
                                                 title = "Terms & Conditions",
                                                 markdownContent = com.example.ui.screens.LegalDocs.termsOfConditions,
-                                                onBack = { navController.popBackStack() }
+                                                onBack = { navController.popBackStack() },
+                                                iconRes = com.example.R.drawable.ic_custom_terms,
+                                                subtitle = "GNU AGPL V3 LICENSE"
                                             )
                                         }
                                     }
@@ -466,8 +470,9 @@ class MainActivity : ComponentActivity() {
                                     composable("support") {
                                         ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
                                             com.example.ui.screens.SupportScreen(
+                                                viewModel = viewModel,
                                                 onNavigateBack = { navController.popBackStack() },
-                                                onNavigateToFeedback = { tabIndex -> navController.navigate("feedback") }
+                                                onNavigateToFeedback = { tabIndex -> navController.navigate("feedback?tab=$tabIndex") }
                                             )
                                         }
                                     }
@@ -479,12 +484,32 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
                                     }
+                                    composable(
+                                        route = "feedback?tab={tab}",
+                                        arguments = listOf(
+                                            androidx.navigation.navArgument("tab") {
+                                                defaultValue = 0
+                                                type = androidx.navigation.NavType.IntType
+                                            }
+                                        )
+                                    ) { backStackEntry ->
+                                        val tab = backStackEntry.arguments?.getInt("tab") ?: 0
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.FeedbackScreen(
+                                                viewModel = viewModel,
+                                                initialTab = tab,
+                                                onNavigateBack = { navController.popBackStack() }
+                                            )
+                                        }
+                                    }
                                     composable("about") {
                                         ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
                                             com.example.ui.screens.LegalScreen(
                                                 title = "About",
                                                 markdownContent = com.example.ui.screens.LegalDocs.about,
-                                                onBack = { navController.popBackStack() }
+                                                onBack = { navController.popBackStack() },
+                                                iconRes = com.example.R.drawable.ic_custom_info,
+                                                subtitle = "UNIVERSAL CAPTURE & ARCHIVE"
                                             )
                                         }
                                     }
@@ -523,26 +548,20 @@ class MainActivity : ComponentActivity() {
                                      CaptureScreen(viewModel = viewModel)
                                  }
 
-                                 // Sliding overlay for the memory detail view screen
+                                 // Transition overlay for the memory detail view screen using spring physics
                                  AnimatedVisibility(
                                      visible = activeDetailItem != null,
-                                     enter = slideInVertically(
-                                         initialOffsetY = { it },
-                                         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
-                                     ) + scaleIn(
-                                         initialScale = 0.9f,
-                                         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
-                                     ) + fadeIn(
-                                         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                                     enter = fadeIn(
+                                         animationSpec = spring(
+                                             dampingRatio = Spring.DampingRatioLowBouncy,
+                                             stiffness = Spring.StiffnessMediumLow
+                                         )
                                      ),
-                                     exit = slideOutVertically(
-                                         targetOffsetY = { it },
-                                         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
-                                     ) + scaleOut(
-                                         targetScale = 0.9f,
-                                         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
-                                     ) + fadeOut(
-                                         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+                                     exit = fadeOut(
+                                         animationSpec = spring(
+                                             dampingRatio = Spring.DampingRatioNoBouncy,
+                                             stiffness = Spring.StiffnessMediumLow
+                                         )
                                      )
                                  ) {
                                      DetailScreen(
@@ -552,25 +571,28 @@ class MainActivity : ComponentActivity() {
                                              viewModel.closeDetailItem()
                                              viewModel.startEditItem(item)
                                          },
-                                         hazeState = hazeState
+                                         hazeState = hazeState,
+                                         sharedTransitionScope = this@SharedTransitionLayout,
+                                         animatedVisibilityScope = this
                                      )
-                                }
+                                 }
                             }
                         }
 
                         // Floating CustomBottomBar Overlay
                         val routesWithBottomBar = listOf("home", "search", "folders", "profile", "media_hub")
                         if (currentRoute in routesWithBottomBar && activeCaptureItem == null && activeDetailItem == null) {
+                            val isFoss = BuildConfig.FLAVOR == "foss"
                             val items = listOf(
-                                BottomBarItem("home", R.drawable.ic_custom_home, "Home"),
-                                BottomBarItem("search", R.drawable.ic_custom_search, "Search"),
-                                BottomBarItem("media_hub", R.drawable.ic_custom_movie, "Media"),
-                                BottomBarItem("folders", R.drawable.ic_custom_folder, "Folders"),
-                                BottomBarItem(
-                                    "profile",
-                                    if (com.example.BuildConfig.FLAVOR == "foss") R.drawable.ic_custom_settings else R.drawable.ic_custom_profile,
-                                    if (com.example.BuildConfig.FLAVOR == "foss") "Settings" else "Profile"
-                                )
+                                BottomBarItem("home", R.drawable.ic_nav_home_outline, "Home", selectedIconResId = R.drawable.ic_nav_home_bold),
+                                BottomBarItem("search", R.drawable.ic_nav_search_outline, "Search", selectedIconResId = R.drawable.ic_nav_search_bold),
+                                BottomBarItem("media_hub", R.drawable.ic_nav_media_outline, "Media", selectedIconResId = R.drawable.ic_nav_media_bold),
+                                BottomBarItem("folders", R.drawable.ic_nav_folders_outline, "Folders", selectedIconResId = R.drawable.ic_nav_folders_bold),
+                                if (isFoss) {
+                                    BottomBarItem("profile", R.drawable.ic_nav_settings_outline, "Settings", selectedIconResId = R.drawable.ic_nav_settings_bold)
+                                } else {
+                                    BottomBarItem("profile", R.drawable.ic_nav_profile_outline, "Profile", selectedIconResId = R.drawable.ic_nav_profile_bold)
+                                }
                             )
                             val navInsets = androidx.compose.foundation.layout.WindowInsets.navigationBars
                             val bottomPadding = navInsets.asPaddingValues().calculateBottomPadding()
@@ -588,10 +610,10 @@ class MainActivity : ComponentActivity() {
                                     onNavigate = { route ->
                                         navController.navigate(route) {
                                             popUpTo("home") {
-                                                if (route == "home") {
-                                                    inclusive = true
-                                                }
+                                                saveState = true
                                             }
+                                            launchSingleTop = true
+                                            restoreState = true
                                         }
                                     }
                                 )

@@ -35,14 +35,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.RateReview
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -63,8 +57,10 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -120,7 +116,10 @@ fun SurveyBottomSheet(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
-    val envReport = remember(context) { collectEnvironmentReport(context) }
+    val userEmailState by viewModel.userEmail.collectAsState()
+    val envReport = remember(context, userEmailState) {
+        collectEnvironmentReport(context, userEmail = userEmailState)
+    }
 
     var currentStep by remember { mutableIntStateOf(1) } // 1 or 2
     var selectedReaction by remember { mutableStateOf<SurveyReaction?>(null) }
@@ -224,7 +223,7 @@ fun SurveyBottomSheet(
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                imageVector = Icons.Default.RateReview,
+                                painter = painterResource(id = R.drawable.ic_custom_survey),
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(22.dp)
@@ -249,7 +248,11 @@ fun SurveyBottomSheet(
                 }
 
                 IconButton(onClick = onDismissRequest) {
-                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close")
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_custom_close),
+                        contentDescription = "Close",
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
 
@@ -317,11 +320,72 @@ fun SurveyBottomSheet(
                             )
 
                             Text(
-                                text = "You unlocked the 'Cobalt Contributor' Badge! Your feedback directly shapes our v1.0 roadmap.",
+                                text = "You unlocked the 'Cobalt Contributor' Badge! Your feedback directly shapes our future updates and roadmap.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
                             )
+
+                            if (com.example.BuildConfig.FLAVOR == "foss") {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            val markdown = com.example.util.FeedbackSubmissionManager.formatSurveyMarkdown(
+                                                reaction = selectedReaction?.label ?: "Loving It",
+                                                favoriteFeatures = favoriteFeatures.toList(),
+                                                desiredImprovements = desiredImprovements.toList(),
+                                                npsScore = npsScore,
+                                                customFeedback = customFeedback,
+                                                userEmail = envReport.userEmail,
+                                                deviceModel = envReport.deviceModel,
+                                                osVersion = envReport.osVersion,
+                                                appVersion = envReport.appVersion
+                                            )
+                                            com.example.util.FeedbackSubmissionManager.launchGitHubDiscussion(
+                                                context = context,
+                                                title = "App Experience Survey: ${selectedReaction?.label ?: "Feedback"}",
+                                                body = markdown
+                                            )
+                                        },
+                                        shape = RoundedCornerShape(14.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(painter = painterResource(id = R.drawable.ic_custom_code), contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("GitHub", fontSize = 12.sp)
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = {
+                                            val markdown = com.example.util.FeedbackSubmissionManager.formatSurveyMarkdown(
+                                                reaction = selectedReaction?.label ?: "Loving It",
+                                                favoriteFeatures = favoriteFeatures.toList(),
+                                                desiredImprovements = desiredImprovements.toList(),
+                                                npsScore = npsScore,
+                                                customFeedback = customFeedback,
+                                                userEmail = envReport.userEmail,
+                                                deviceModel = envReport.deviceModel,
+                                                osVersion = envReport.osVersion,
+                                                appVersion = envReport.appVersion
+                                            )
+                                            com.example.util.FeedbackSubmissionManager.launchEmailClient(
+                                                context = context,
+                                                subject = "[Cobalt Survey] Feedback from ${envReport.userEmail}",
+                                                body = markdown
+                                            )
+                                        },
+                                        shape = RoundedCornerShape(14.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(painter = painterResource(id = R.drawable.ic_custom_mail), contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Email", fontSize = 12.sp)
+                                    }
+                                }
+                            }
 
                             Button(
                                 onClick = onDismissRequest,
@@ -437,7 +501,7 @@ fun SurveyBottomSheet(
                                 },
                                 leadingIcon = {
                                     if (isSelected) {
-                                        Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Icon(painter = painterResource(id = R.drawable.ic_custom_check), contentDescription = null, modifier = Modifier.size(16.dp))
                                     }
                                 },
                                 label = { Text(feature, fontSize = 12.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
@@ -461,7 +525,7 @@ fun SurveyBottomSheet(
                     ) {
                         Text("Continue to Final Step", fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(painter = painterResource(id = R.drawable.ic_custom_chevron_right), contentDescription = null, modifier = Modifier.size(18.dp))
                     }
                 }
             } else {
@@ -524,7 +588,7 @@ fun SurveyBottomSheet(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(13.dp))
+                                    Icon(painter = painterResource(id = R.drawable.ic_custom_star), contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(13.dp))
                                     Text(
                                         text = "$npsScore/10 • ${if (npsScore >= 9) "Highly Recommended" else if (npsScore >= 7) "Passive" else "Needs Improvement"}",
                                         fontSize = 11.sp,
@@ -631,49 +695,198 @@ fun SurveyBottomSheet(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Submit Action Button
-                    Button(
-                        onClick = {
-                            isSubmitting = true
-                            coroutineScope.launch {
-                                try {
-                                    viewModel.submitSurvey(
-                                        context = context,
-                                        reaction = selectedReaction?.label ?: "Loving It",
-                                        favoriteFeatures = favoriteFeatures.toList(),
-                                        desiredImprovements = desiredImprovements.toList(),
-                                        npsScore = npsScore,
-                                        customFeedback = customFeedback,
-                                        userEmail = envReport.userEmail,
-                                        userId = envReport.userId,
-                                        deviceModel = envReport.deviceModel,
-                                        osVersion = envReport.osVersion,
-                                        appVersion = envReport.appVersion
-                                    )
-                                    submitSuccess = true
-                                    prefs.edit().putBoolean("survey_submitted", true).apply()
-                                    com.example.util.HapticManager.performSuccess(context)
-                                } catch (e: Exception) {
-                                    android.util.Log.e("SurveyBottomSheet", "Survey submission failed: ${e.message}", e)
-                                    submitSuccess = true
-                                } finally {
-                                    isSubmitting = false
-                                }
+                    // Submit Action Area
+                    if (com.example.BuildConfig.FLAVOR == "foss") {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Button(
+                                onClick = {
+                                    isSubmitting = true
+                                    coroutineScope.launch {
+                                        try {
+                                            val markdown = com.example.util.FeedbackSubmissionManager.formatSurveyMarkdown(
+                                                reaction = selectedReaction?.label ?: "Loving It",
+                                                favoriteFeatures = favoriteFeatures.toList(),
+                                                desiredImprovements = desiredImprovements.toList(),
+                                                npsScore = npsScore,
+                                                customFeedback = customFeedback,
+                                                userEmail = envReport.userEmail,
+                                                deviceModel = envReport.deviceModel,
+                                                osVersion = envReport.osVersion,
+                                                appVersion = envReport.appVersion
+                                            )
+                                            viewModel.submitSurvey(
+                                                context = context,
+                                                reaction = selectedReaction?.label ?: "Loving It",
+                                                favoriteFeatures = favoriteFeatures.toList(),
+                                                desiredImprovements = desiredImprovements.toList(),
+                                                npsScore = npsScore,
+                                                customFeedback = customFeedback,
+                                                userEmail = envReport.userEmail,
+                                                userId = envReport.userId,
+                                                deviceModel = envReport.deviceModel,
+                                                osVersion = envReport.osVersion,
+                                                appVersion = envReport.appVersion
+                                            )
+                                            com.example.util.FeedbackSubmissionManager.launchGitHubDiscussion(
+                                                context = context,
+                                                title = "App Experience Survey: ${selectedReaction?.label ?: "Feedback"}",
+                                                body = markdown
+                                            )
+                                            submitSuccess = true
+                                            prefs.edit().putBoolean("survey_submitted", true).apply()
+                                            com.example.util.HapticManager.performSuccess(context)
+                                        } catch (e: Exception) {
+                                            android.util.Log.e("SurveyBottomSheet", "Survey error: ${e.message}", e)
+                                            submitSuccess = true
+                                        } finally {
+                                            isSubmitting = false
+                                        }
+                                    }
+                                },
+                                shape = RoundedCornerShape(16.dp),
+                                enabled = !isSubmitting,
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                modifier = Modifier.fillMaxWidth().bounceClick().testTag("submit_survey_github_button")
+                            ) {
+                                Icon(painter = painterResource(id = R.drawable.ic_custom_code), contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Submit via GitHub Discussions", fontWeight = FontWeight.Bold)
                             }
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                        enabled = !isSubmitting,
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                        modifier = Modifier.fillMaxWidth().bounceClick().testTag("submit_survey_button")
-                    ) {
-                        if (isSubmitting) {
-                            CircularWavyProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Submitting Survey...")
-                        } else {
-                            Icon(imageVector = Icons.Default.Send, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Submit Survey & Unlock Badge", fontWeight = FontWeight.Bold)
+
+                            OutlinedButton(
+                                onClick = {
+                                    isSubmitting = true
+                                    coroutineScope.launch {
+                                        try {
+                                            val markdown = com.example.util.FeedbackSubmissionManager.formatSurveyMarkdown(
+                                                reaction = selectedReaction?.label ?: "Loving It",
+                                                favoriteFeatures = favoriteFeatures.toList(),
+                                                desiredImprovements = desiredImprovements.toList(),
+                                                npsScore = npsScore,
+                                                customFeedback = customFeedback,
+                                                userEmail = envReport.userEmail,
+                                                deviceModel = envReport.deviceModel,
+                                                osVersion = envReport.osVersion,
+                                                appVersion = envReport.appVersion
+                                            )
+                                            viewModel.submitSurvey(
+                                                context = context,
+                                                reaction = selectedReaction?.label ?: "Loving It",
+                                                favoriteFeatures = favoriteFeatures.toList(),
+                                                desiredImprovements = desiredImprovements.toList(),
+                                                npsScore = npsScore,
+                                                customFeedback = customFeedback,
+                                                userEmail = envReport.userEmail,
+                                                userId = envReport.userId,
+                                                deviceModel = envReport.deviceModel,
+                                                osVersion = envReport.osVersion,
+                                                appVersion = envReport.appVersion
+                                            )
+                                            com.example.util.FeedbackSubmissionManager.launchEmailClient(
+                                                context = context,
+                                                subject = "[Cobalt Survey] Feedback from ${envReport.userEmail}",
+                                                body = markdown
+                                            )
+                                            submitSuccess = true
+                                            prefs.edit().putBoolean("survey_submitted", true).apply()
+                                            com.example.util.HapticManager.performSuccess(context)
+                                        } catch (e: Exception) {
+                                            android.util.Log.e("SurveyBottomSheet", "Survey error: ${e.message}", e)
+                                            submitSuccess = true
+                                        } finally {
+                                            isSubmitting = false
+                                        }
+                                    }
+                                },
+                                shape = RoundedCornerShape(16.dp),
+                                enabled = !isSubmitting,
+                                modifier = Modifier.fillMaxWidth().bounceClick().testTag("submit_survey_email_button")
+                            ) {
+                                Icon(painter = painterResource(id = R.drawable.ic_custom_mail), contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Send Survey via Email", fontWeight = FontWeight.SemiBold)
+                            }
+
+                            TextButton(
+                                onClick = {
+                                    isSubmitting = true
+                                    coroutineScope.launch {
+                                        try {
+                                            viewModel.submitSurvey(
+                                                context = context,
+                                                reaction = selectedReaction?.label ?: "Loving It",
+                                                favoriteFeatures = favoriteFeatures.toList(),
+                                                desiredImprovements = desiredImprovements.toList(),
+                                                npsScore = npsScore,
+                                                customFeedback = customFeedback,
+                                                userEmail = envReport.userEmail,
+                                                userId = envReport.userId,
+                                                deviceModel = envReport.deviceModel,
+                                                osVersion = envReport.osVersion,
+                                                appVersion = envReport.appVersion
+                                            )
+                                            submitSuccess = true
+                                            prefs.edit().putBoolean("survey_submitted", true).apply()
+                                            com.example.util.HapticManager.performSuccess(context)
+                                        } catch (e: Exception) {
+                                            submitSuccess = true
+                                        } finally {
+                                            isSubmitting = false
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Save Locally & Unlock Badge Only", fontSize = 12.sp)
+                            }
+                        }
+                    } else {
+                        Button(
+                            onClick = {
+                                isSubmitting = true
+                                coroutineScope.launch {
+                                    try {
+                                        viewModel.submitSurvey(
+                                            context = context,
+                                            reaction = selectedReaction?.label ?: "Loving It",
+                                            favoriteFeatures = favoriteFeatures.toList(),
+                                            desiredImprovements = desiredImprovements.toList(),
+                                            npsScore = npsScore,
+                                            customFeedback = customFeedback,
+                                            userEmail = envReport.userEmail,
+                                            userId = envReport.userId,
+                                            deviceModel = envReport.deviceModel,
+                                            osVersion = envReport.osVersion,
+                                            appVersion = envReport.appVersion
+                                        )
+                                        submitSuccess = true
+                                        prefs.edit().putBoolean("survey_submitted", true).apply()
+                                        com.example.util.HapticManager.performSuccess(context)
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("SurveyBottomSheet", "Survey submission failed: ${e.message}", e)
+                                        submitSuccess = true
+                                    } finally {
+                                        isSubmitting = false
+                                    }
+                                }
+                            },
+                            shape = RoundedCornerShape(16.dp),
+                            enabled = !isSubmitting,
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            modifier = Modifier.fillMaxWidth().bounceClick().testTag("submit_survey_button")
+                        ) {
+                            if (isSubmitting) {
+                                CircularWavyProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Submitting Survey...")
+                            } else {
+                                Icon(painter = painterResource(id = R.drawable.ic_custom_send), contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Submit Survey & Unlock Badge", fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }

@@ -130,6 +130,12 @@ fun ArchiveItemCard(
             elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 8.dp else 0.dp),
             modifier = Modifier
                 .fillMaxWidth()
+                .maybeSharedBounds(
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    key = "card_${item.id}",
+                    clipShape = RoundedCornerShape(20.dp)
+                )
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -280,7 +286,13 @@ fun ArchiveItemCard(
                                 model = displayImage,
                                 contentDescription = item.title,
                                 contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .maybeSharedElement(
+                                        sharedTransitionScope = sharedTransitionScope,
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        key = "image_${item.id}"
+                                    )
                             )
                             if (item.type == SavedItemType.VIDEO) {
                                 Box(
@@ -576,6 +588,12 @@ fun ArchiveItemRow(
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             modifier = Modifier
                 .fillMaxWidth()
+                .maybeSharedBounds(
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    key = "card_${item.id}",
+                    clipShape = RoundedCornerShape(16.dp)
+                )
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -611,7 +629,13 @@ fun ArchiveItemRow(
                             model = displayImage,
                             contentDescription = item.title,
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .maybeSharedElement(
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                    key = "image_${item.id}"
+                                )
                         )
                         if (item.type == SavedItemType.VIDEO) {
                             Box(

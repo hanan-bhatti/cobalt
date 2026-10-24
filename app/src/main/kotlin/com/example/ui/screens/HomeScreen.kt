@@ -70,6 +70,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.focusRequester
 import com.example.ui.components.bounceClick
+import com.example.ui.components.InlineNewFolderCreator
 import androidx.compose.ui.res.painterResource
 import com.example.R
 import androidx.compose.ui.draw.clip
@@ -919,8 +920,6 @@ fun HomeScreen(
                 }
             },
             text = {
-                var newFolderInDialog by remember { mutableStateOf("") }
-
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -994,43 +993,13 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = newFolderInDialog,
-                            onValueChange = { newFolderInDialog = it },
-                            placeholder = { Text("e.g. Work, Ideas") },
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("dialog_new_folder_input"),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                            )
-                        )
-                        Button(
-                            onClick = {
-                                if (newFolderInDialog.isNotBlank()) {
-                                    viewModel.createAndAssignFolder(liveItem, newFolderInDialog)
-                                    newFolderInDialog = ""
-                                }
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp),
-                            modifier = Modifier.testTag("dialog_create_folder_button")
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_plus),
-                                contentDescription = "Create and assign folder",
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
+                    InlineNewFolderCreator(
+                        onAddFolder = { name, iconName ->
+                            viewModel.createFolder(name = name, iconName = iconName)
+                            viewModel.toggleFolderAssignment(liveItem, name)
+                        },
+                        onCancel = { itemToManageFolders = null }
+                    )
                 }
             },
             confirmButton = {
@@ -1067,8 +1036,6 @@ fun HomeScreen(
                 }
             },
             text = {
-                var newFolderInDialog by remember { mutableStateOf("") }
-
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -1135,44 +1102,14 @@ fun HomeScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = newFolderInDialog,
-                            onValueChange = { newFolderInDialog = it },
-                            placeholder = { Text("e.g. Work, Ideas") },
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("bulk_tag_new_folder_input"),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                            )
-                        )
-                        Button(
-                            onClick = {
-                                if (newFolderInDialog.isNotBlank()) {
-                                    viewModel.tagSelectedItems(newFolderInDialog)
-                                    showBulkTagDialog = false
-                                    newFolderInDialog = ""
-                                }
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp),
-                            modifier = Modifier.testTag("bulk_tag_create_folder_button")
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_plus),
-                                contentDescription = "Create and assign folder",
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
+                    InlineNewFolderCreator(
+                        onAddFolder = { name, iconName ->
+                            viewModel.createFolder(name = name, iconName = iconName)
+                            viewModel.tagSelectedItems(name)
+                            showBulkTagDialog = false
+                        },
+                        onCancel = { showBulkTagDialog = false }
+                    )
                 }
             },
             confirmButton = {

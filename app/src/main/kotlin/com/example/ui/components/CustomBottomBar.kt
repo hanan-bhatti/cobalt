@@ -65,7 +65,8 @@ import androidx.compose.runtime.getValue
 data class BottomBarItem(
     val route: String,
     val iconResId: Int,
-    val label: String
+    val label: String,
+    val selectedIconResId: Int? = null
 )
 
 @Composable
@@ -170,8 +171,9 @@ fun CustomBottomBar(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
+                    val currentIconRes = if (isSelected && item.selectedIconResId != null) item.selectedIconResId else item.iconResId
                     Icon(
-                        painter = painterResource(id = item.iconResId),
+                        painter = painterResource(id = currentIconRes),
                         contentDescription = item.label,
                         tint = iconColor,
                         modifier = Modifier.size(22.dp)

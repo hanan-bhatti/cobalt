@@ -19,6 +19,7 @@
 package com.example
 import com.example.R
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.testTag
 
 import android.app.Activity
 import android.content.Context
@@ -58,9 +59,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.ClipboardManager
+import android.content.ClipData
+import com.example.ui.components.bounceClick
+import com.example.ui.components.InlineNewFolderCreator
+import com.example.ui.components.MarkdownText
 import com.example.data.model.SavedItemType
 import com.example.ui.screens.ImageMarkingCanvas
 import com.example.ui.theme.MyApplicationTheme
@@ -527,57 +535,164 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
 
                                     // Content rendering based on selected Tab
                                     if (activeTab == "Links" && extractedLinks.isNotEmpty()) {
-                                        // Editable link listing
+                                        // Beautifully styled, compact extracted link listing
                                         Column(
                                             verticalArrangement = Arrangement.spacedBy(10.dp),
                                             modifier = Modifier.fillMaxWidth()
                                         ) {
                                             extractedLinks.forEach { reviewItem ->
-                                                Card(
-                                                    colors = CardDefaults.cardColors(
-                                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                                                    ),
+                                                val host = remember(reviewItem.url) {
+                                                    try {
+                                                        val cleanUrl = if (!reviewItem.url.startsWith("http://") && !reviewItem.url.startsWith("https://")) {
+                                                            "https://${reviewItem.url}"
+                                                        } else reviewItem.url
+                                                        java.net.URI(cleanUrl).host?.removePrefix("www.") ?: "link"
+                                                    } catch (_: Exception) {
+                                                        "link"
+                                                    }
+                                                }
+
+                                                Surface(
+                                                    onClick = {
+                                                        viewModel.toggleExtractedLinkSelection(reviewItem.id, !reviewItem.isSelected)
+                                                    },
                                                     shape = RoundedCornerShape(16.dp),
-                                                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                                                    modifier = Modifier.fillMaxWidth()
+                                                    color = if (reviewItem.isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.22f)
+                                                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                                    border = BorderStroke(
+                                                        1.dp,
+                                                        if (reviewItem.isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                                                        else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                                                    ),
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .bounceClick()
+                                                        .testTag("extracted_link_card_${reviewItem.id}")
                                                 ) {
-                                                    Row(
-                                                        modifier = Modifier.padding(12.dp),
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                                    Column(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(14.dp),
+                                                        verticalArrangement = Arrangement.spacedBy(8.dp)
                                                     ) {
-                                                        Checkbox(
-                                                            checked = reviewItem.isSelected,
-                                                            onCheckedChange = { checked ->
-                                                                viewModel.toggleExtractedLinkSelection(reviewItem.id, checked)
+                                                        // Top Row: Selection Check Pill + Domain Badge + Copy
+                                                        Row(
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.SpaceBetween
+                                                        ) {
+                                                            Row(
+                                                                verticalAlignment = Alignment.CenterVertically,
+                                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                                            ) {
+                                                                Surface(
+                                                                    shape = CircleShape,
+                                                                    color = if (reviewItem.isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                                                    border = BorderStroke(
+                                                                        1.5.dp,
+                                                                        if (reviewItem.isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                                                                    ),
+                                                                    modifier = Modifier.size(20.dp)
+                                                                ) {
+                                                                    if (reviewItem.isSelected) {
+                                                                        Box(contentAlignment = Alignment.Center) {
+                                                                            Icon(
+                                                                                painter = painterResource(id = R.drawable.ic_custom_check),
+                                                                                contentDescription = null,
+                                                                                tint = MaterialTheme.colorScheme.onPrimary,
+                                                                                modifier = Modifier.size(12.dp)
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                }
+
+                                                                Surface(
+                                                                    shape = RoundedCornerShape(8.dp),
+                                                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                                                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                                                                ) {
+                                                                    Row(
+                                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                                        verticalAlignment = Alignment.CenterVertically,
+                                                                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                                                    ) {
+                                                                        Icon(
+                                                                            painter = painterResource(id = R.drawable.ic_custom_link),
+                                                                            contentDescription = null,
+                                                                            tint = MaterialTheme.colorScheme.primary,
+                                                                            modifier = Modifier.size(12.dp)
+                                                                        )
+                                                                        Text(
+                                                                            text = host,
+                                                                            style = MaterialTheme.typography.labelSmall,
+                                                                            fontWeight = FontWeight.Bold,
+                                                                            color = MaterialTheme.colorScheme.primary
+                                                                        )
+                                                                    }
+                                                                }
                                                             }
-                                                        )
-                                                        Column(modifier = Modifier.weight(1f)) {
-                                                            OutlinedTextField(
-                                                                value = reviewItem.url,
-                                                                onValueChange = { viewModel.updateExtractedLink(reviewItem.id, it) },
-                                                                label = { Text("Hyperlink URL", fontSize = 10.sp) },
-                                                                singleLine = true,
-                                                                textStyle = MaterialTheme.typography.bodySmall,
-                                                                shape = RoundedCornerShape(12.dp),
-                                                                modifier = Modifier.fillMaxWidth()
-                                                            )
-                                                            if (reviewItem.description.isNotBlank()) {
-                                                                Spacer(modifier = Modifier.height(4.dp))
-                                                                Text(
-                                                                    text = reviewItem.description,
-                                                                    fontSize = 11.sp,
-                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                                    modifier = Modifier.padding(horizontal = 4.dp)
+
+                                                            IconButton(
+                                                                onClick = {
+                                                                    val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                                                    clipboardManager.setPrimaryClip(ClipData.newPlainText("URL", reviewItem.url))
+                                                                    Toast.makeText(context, "URL copied", Toast.LENGTH_SHORT).show()
+                                                                },
+                                                                modifier = Modifier.size(28.dp).bounceClick()
+                                                            ) {
+                                                                Icon(
+                                                                    painter = painterResource(id = R.drawable.ic_custom_copy),
+                                                                    contentDescription = "Copy URL",
+                                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                    modifier = Modifier.size(15.dp)
                                                                 )
                                                             }
                                                         }
+
+                                                        // Clean Description Text
+                                                        if (reviewItem.description.isNotBlank()) {
+                                                            Text(
+                                                                text = reviewItem.description,
+                                                                style = MaterialTheme.typography.bodyMedium.copy(
+                                                                    fontWeight = FontWeight.SemiBold,
+                                                                    textDirection = TextDirection.Content
+                                                                ),
+                                                                color = MaterialTheme.colorScheme.onSurface
+                                                            )
+                                                        }
+
+                                                        // Clean Monospace Editable URL Box
+                                                        BasicTextField(
+                                                            value = reviewItem.url,
+                                                            onValueChange = { viewModel.updateExtractedLink(reviewItem.id, it) },
+                                                            singleLine = true,
+                                                            textStyle = MaterialTheme.typography.bodySmall.copy(
+                                                                color = MaterialTheme.colorScheme.primary,
+                                                                fontFamily = FontFamily.Monospace,
+                                                                fontSize = 12.sp
+                                                            ),
+                                                            modifier = Modifier
+                                                                .fillMaxWidth()
+                                                                .clip(RoundedCornerShape(10.dp))
+                                                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.7f))
+                                                                .border(
+                                                                    0.5.dp,
+                                                                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                                                    RoundedCornerShape(10.dp)
+                                                                )
+                                                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                                                            decorationBox = { inner ->
+                                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                    inner()
+                                                                }
+                                                            }
+                                                        )
                                                     }
                                                 }
                                             }
                                         }
                                     } else if (activeTab == "Note" && activeItem?.extractedText != null) {
-                                        // Beautifully styled note view with optional raw markdown editing and rich text formatting toggle
+                                        // Beautifully styled note view with markdown editing, styled preview, and Urdu/English bidirectional support
                                         Column(
                                             verticalArrangement = Arrangement.spacedBy(12.dp),
                                             modifier = Modifier.fillMaxWidth()
@@ -588,7 +703,10 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                 onValueChange = { noteTitle = it },
                                                 label = { Text("Note Title") },
                                                 singleLine = true,
-                                                shape = RoundedCornerShape(12.dp),
+                                                textStyle = MaterialTheme.typography.titleMedium.copy(
+                                                    textDirection = TextDirection.Content
+                                                ),
+                                                shape = RoundedCornerShape(14.dp),
                                                 modifier = Modifier.fillMaxWidth()
                                             )
 
@@ -600,10 +718,11 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                             ) {
                                                 Row(
                                                     modifier = Modifier
-                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .clip(RoundedCornerShape(10.dp))
                                                         .clickable { isPreviewMode = !isPreviewMode }
                                                         .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f))
-                                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                                        .bounceClick(),
                                                     verticalAlignment = Alignment.CenterVertically,
                                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                                 ) {
@@ -623,37 +742,43 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                             }
 
                                             if (isPreviewMode) {
-                                                // Styled formatted preview card with rounded edges, beautiful spacing and colors
+                                                // Styled formatted preview card with scrollable MarkdownText matching card background
                                                 Card(
                                                     colors = CardDefaults.cardColors(
-                                                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
+                                                        containerColor = Color.Transparent
                                                     ),
                                                     shape = RoundedCornerShape(16.dp),
-                                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
+                                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
                                                     modifier = Modifier
                                                         .fillMaxWidth()
+                                                        .heightIn(max = 280.dp)
                                                         .padding(vertical = 4.dp)
                                                 ) {
-                                                    Column(modifier = Modifier.padding(16.dp)) {
-                                                        Text(
-                                                            text = com.example.ui.screens.parseMarkdown(
-                                                                activeItem?.extractedText ?: "",
-                                                                MaterialTheme.colorScheme.primary
-                                                            ),
-                                                            style = MaterialTheme.typography.bodyMedium,
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(14.dp)
+                                                            .verticalScroll(rememberScrollState())
+                                                    ) {
+                                                        MarkdownText(
+                                                            markdown = activeItem?.extractedText ?: "",
                                                             color = MaterialTheme.colorScheme.onSurface
                                                         )
                                                     }
                                                 }
                                             } else {
-                                                // Raw markdown editing field
+                                                // Raw markdown editing field with bidirectional Urdu + English support
                                                 OutlinedTextField(
                                                     value = activeItem?.extractedText ?: "",
                                                     onValueChange = { newValue ->
                                                         viewModel.updateActiveCaptureItem { it.copy(extractedText = newValue) }
                                                     },
-                                                    minLines = 3,
+                                                    minLines = 4,
                                                     maxLines = 8,
+                                                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                                        textDirection = TextDirection.Content,
+                                                        lineHeight = 22.sp
+                                                    ),
                                                     shape = RoundedCornerShape(16.dp),
                                                     modifier = Modifier.fillMaxWidth()
                                                 )
@@ -709,61 +834,14 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                         }
 
                                         if (showNewFolderDialog) {
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .background(
-                                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                                        RoundedCornerShape(12.dp)
-                                                    )
-                                                    .padding(6.dp),
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                BasicTextField(
-                                                    value = newFolderName,
-                                                    onValueChange = { newFolderName = it },
-                                                    singleLine = true,
-                                                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
-                                                    modifier = Modifier
-                                                        .weight(1f)
-                                                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
-                                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
-                                                        .padding(horizontal = 10.dp, vertical = 8.dp),
-                                                    decorationBox = { innerTextField ->
-                                                        if (newFolderName.isEmpty()) {
-                                                            Text(
-                                                                text = "Folder name...",
-                                                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                                            )
-                                                        }
-                                                        innerTextField()
-                                                    }
-                                                )
-                                                Button(
-                                                    onClick = {
-                                                        if (newFolderName.isNotBlank()) {
-                                                            viewModel.createFolder(newFolderName.trim())
-                                                            selectedFolders = selectedFolders + newFolderName.trim()
-                                                            newFolderName = ""
-                                                            showNewFolderDialog = false
-                                                        }
-                                                    },
-                                                    shape = RoundedCornerShape(8.dp),
-                                                    contentPadding = PaddingValues(horizontal = 12.dp),
-                                                    modifier = Modifier.height(34.dp)
-                                                ) {
-                                                    Text("Add", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold))
-                                                }
-                                                TextButton(
-                                                    onClick = { showNewFolderDialog = false },
-                                                    contentPadding = PaddingValues(horizontal = 10.dp),
-                                                    modifier = Modifier.height(34.dp)
-                                                ) {
-                                                    Text("Cancel", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
-                                                }
-                                            }
+                                            InlineNewFolderCreator(
+                                                onAddFolder = { name, icon ->
+                                                    viewModel.createFolder(name, iconName = icon)
+                                                    selectedFolders = selectedFolders + name
+                                                    showNewFolderDialog = false
+                                                },
+                                                onCancel = { showNewFolderDialog = false }
+                                            )
                                         }
 
                                         // Horizontal scroll list of visual folder choice pills

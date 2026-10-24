@@ -32,19 +32,13 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Feedback
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -69,6 +63,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -110,23 +105,36 @@ data class FeedbackEnvironmentReport(
     val timezone: String
 )
 
-fun collectEnvironmentReport(context: Context): FeedbackEnvironmentReport {
-    var finalUserEmail = "Guest User"
-    var finalUserId = "guest_session"
+fun collectEnvironmentReport(
+    context: Context,
+    userEmail: String? = null,
+    userId: String? = null
+): FeedbackEnvironmentReport {
+    var finalUserEmail = userEmail?.takeIf { it.isNotBlank() } ?: "Guest User"
+    var finalUserId = userId?.takeIf { it.isNotBlank() } ?: "guest_session"
     
-    try {
-        val clazz = Class.forName("com.google.firebase.auth.FirebaseAuth")
-        val instance = clazz.getMethod("getInstance").invoke(null)
-        val user = clazz.getMethod("getCurrentUser").invoke(instance)
-        if (user != null) {
-            val email = user.javaClass.getMethod("getEmail").invoke(user) as? String
-            val isAnon = user.javaClass.getMethod("isAnonymous").invoke(user) as? Boolean == true
-            val uid = user.javaClass.getMethod("getUid").invoke(user) as? String ?: "guest_session"
-            finalUserEmail = email ?: if (isAnon) "Anonymous User" else "Guest User"
-            finalUserId = uid
+    if (finalUserEmail == "Guest User") {
+        try {
+            val authClass = Class.forName("com.google.firebase.auth.FirebaseAuth")
+            val userClass = Class.forName("com.google.firebase.auth.FirebaseUser")
+            val instance = authClass.getMethod("getInstance").invoke(null)
+            val user = authClass.getMethod("getCurrentUser").invoke(instance)
+            if (user != null) {
+                val getEmailMethod = userClass.getMethod("getEmail")
+                val isAnonMethod = userClass.getMethod("isAnonymous")
+                val getUidMethod = userClass.getMethod("getUid")
+                getEmailMethod.isAccessible = true
+                isAnonMethod.isAccessible = true
+                getUidMethod.isAccessible = true
+                val email = getEmailMethod.invoke(user) as? String
+                val isAnon = isAnonMethod.invoke(user) as? Boolean == true
+                val uid = getUidMethod.invoke(user) as? String ?: "guest_session"
+                finalUserEmail = email ?: if (isAnon) "Anonymous User" else "Guest User"
+                finalUserId = uid
+            }
+        } catch (e: Throwable) {
+            // Fallback below
         }
-    } catch (e: Throwable) {
-        // Fallback below
     }
 
     if (finalUserEmail == "Guest User") {
@@ -167,7 +175,11 @@ fun FeedbackScreen(
     initialTab: Int = 0,
     modifier: Modifier = Modifier
 ) {
-    var selectedTab by remember { mutableIntStateOf(initialTab) }
+    val pagerState = androidx.compose.foundation.pager.rememberPagerState(
+        initialPage = initialTab.coerceIn(0, 1),
+        pageCount = { 2 }
+    )
+    val coroutineScope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
 
     Scaffold(
@@ -182,7 +194,7 @@ fun FeedbackScreen(
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
-                                    imageVector = Icons.Default.Feedback,
+                                    painter = painterResource(id = R.drawable.ic_custom_feedback),
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
@@ -213,8 +225,9 @@ fun FeedbackScreen(
                         modifier = Modifier.testTag("back_button_feedback")
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            painter = painterResource(id = R.drawable.ic_custom_back),
+                            contentDescription = "Back",
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 },
@@ -247,7 +260,7 @@ fun FeedbackScreen(
                 ) {
                     val tabs = listOf("Report a Bug", "Feature Request")
                     tabs.forEachIndexed { index, title ->
-                        val isSelected = selectedTab == index
+                        val isSelected = pagerState.currentPage == index
                         val bgAnimColor by animateColorAsState(
                             targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
                             animationSpec = androidx.compose.animation.core.tween(durationMillis = 200),
@@ -267,7 +280,9 @@ fun FeedbackScreen(
                                 .background(bgAnimColor)
                                 .clickable {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    selectedTab = index
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(index)
+                                    }
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -285,20 +300,17 @@ fun FeedbackScreen(
                 }
             }
 
-            AnimatedVisibility(
-                visible = selectedTab == 0,
-                enter = fadeIn() + slideInVertically(),
-                exit = fadeOut() + slideOutVertically()
-            ) {
-                ExpressiveBugReportContent(viewModel = viewModel, onSuccess = onNavigateBack)
-            }
-
-            AnimatedVisibility(
-                visible = selectedTab == 1,
-                enter = fadeIn() + slideInVertically(),
-                exit = fadeOut() + slideOutVertically()
-            ) {
-                ExpressiveFeatureRequestContent(viewModel = viewModel, onSuccess = onNavigateBack)
+            androidx.compose.foundation.pager.HorizontalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                verticalAlignment = Alignment.Top
+            ) { page ->
+                when (page) {
+                    0 -> ExpressiveBugReportContent(viewModel = viewModel, onSuccess = onNavigateBack)
+                    1 -> ExpressiveFeatureRequestContent(viewModel = viewModel, onSuccess = onNavigateBack)
+                }
             }
         }
     }
@@ -311,7 +323,10 @@ private fun ExpressiveBugReportContent(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val envReport = remember(context) { collectEnvironmentReport(context) }
+    val userEmailState by viewModel.userEmail.collectAsState()
+    val envReport = remember(context, userEmailState) {
+        collectEnvironmentReport(context, userEmail = userEmailState)
+    }
 
     var bugTitle by remember { mutableStateOf("") }
     var bugDescription by remember { mutableStateOf("") }
@@ -367,7 +382,7 @@ private fun ExpressiveBugReportContent(
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
-                                    imageVector = Icons.Default.BugReport,
+                                    painter = painterResource(id = R.drawable.ic_custom_feedback),
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.size(22.dp)
@@ -577,7 +592,7 @@ private fun ExpressiveBugReportContent(
                                     modifier = Modifier.size(40.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
-                                        Icon(imageVector = Icons.Default.Image, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                        Icon(painter = painterResource(id = R.drawable.ic_custom_image), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                                     }
                                 }
                                 Column {
@@ -586,7 +601,7 @@ private fun ExpressiveBugReportContent(
                                 }
                             }
                             IconButton(onClick = { attachmentUri = null }) {
-                                Icon(imageVector = Icons.Default.Close, contentDescription = "Remove", tint = MaterialTheme.colorScheme.error)
+                                Icon(painter = painterResource(id = R.drawable.ic_custom_close), contentDescription = "Remove", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                             }
                         }
                     }
@@ -639,6 +654,129 @@ private fun ExpressiveBugReportContent(
                         )
                     }
                 }
+            } else if (com.example.BuildConfig.FLAVOR == "foss") {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Button(
+                        onClick = {
+                            if (bugTitle.isBlank() || bugDescription.isBlank()) {
+                                errorMessage = "Please enter both a summary title and detailed description."
+                                return@Button
+                            }
+
+                            isSubmitting = true
+                            coroutineScope.launch {
+                                try {
+                                    val markdown = com.example.util.FeedbackSubmissionManager.formatBugReportMarkdown(
+                                        title = bugTitle,
+                                        description = bugDescription,
+                                        steps = stepsToReproduce.toList(),
+                                        userEmail = envReport.userEmail,
+                                        deviceModel = envReport.deviceModel,
+                                        osVersion = envReport.osVersion,
+                                        appVersion = envReport.appVersion
+                                    )
+                                    viewModel.submitBugReport(
+                                        context = context,
+                                        title = bugTitle,
+                                        description = bugDescription,
+                                        steps = stepsToReproduce.toList(),
+                                        attachmentUriStr = attachmentUri?.toString(),
+                                        userEmail = envReport.userEmail,
+                                        userId = envReport.userId,
+                                        deviceModel = envReport.deviceModel,
+                                        osVersion = envReport.osVersion,
+                                        appVersion = envReport.appVersion
+                                    )
+                                    com.example.util.FeedbackSubmissionManager.launchGitHubIssue(
+                                        context = context,
+                                        title = "[Bug]: $bugTitle",
+                                        body = markdown,
+                                        labels = "bug"
+                                    )
+                                    submitSuccess = true
+                                    com.example.util.HapticManager.performSuccess(context)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("FeedbackScreen", "Bug report error: ${e.message}", e)
+                                    submitSuccess = true
+                                } finally {
+                                    isSubmitting = false
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(18.dp),
+                        enabled = !isSubmitting,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        modifier = Modifier.fillMaxWidth().bounceClick().testTag("submit_bug_report_github_button")
+                    ) {
+                        if (isSubmitting) {
+                            CircularWavyProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Preparing GitHub Issue...")
+                        } else {
+                            Icon(painter = painterResource(id = R.drawable.ic_custom_code), contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Open Pre-filled GitHub Issue", fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            if (bugTitle.isBlank() || bugDescription.isBlank()) {
+                                errorMessage = "Please enter both a summary title and detailed description."
+                                return@OutlinedButton
+                            }
+
+                            isSubmitting = true
+                            coroutineScope.launch {
+                                try {
+                                    val markdown = com.example.util.FeedbackSubmissionManager.formatBugReportMarkdown(
+                                        title = bugTitle,
+                                        description = bugDescription,
+                                        steps = stepsToReproduce.toList(),
+                                        userEmail = envReport.userEmail,
+                                        deviceModel = envReport.deviceModel,
+                                        osVersion = envReport.osVersion,
+                                        appVersion = envReport.appVersion
+                                    )
+                                    viewModel.submitBugReport(
+                                        context = context,
+                                        title = bugTitle,
+                                        description = bugDescription,
+                                        steps = stepsToReproduce.toList(),
+                                        attachmentUriStr = attachmentUri?.toString(),
+                                        userEmail = envReport.userEmail,
+                                        userId = envReport.userId,
+                                        deviceModel = envReport.deviceModel,
+                                        osVersion = envReport.osVersion,
+                                        appVersion = envReport.appVersion
+                                    )
+                                    com.example.util.FeedbackSubmissionManager.launchEmailClient(
+                                        context = context,
+                                        subject = "[Cobalt Bug Report] $bugTitle",
+                                        body = markdown
+                                    )
+                                    submitSuccess = true
+                                    com.example.util.HapticManager.performSuccess(context)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("FeedbackScreen", "Bug report error: ${e.message}", e)
+                                    submitSuccess = true
+                                } finally {
+                                    isSubmitting = false
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(18.dp),
+                        enabled = !isSubmitting,
+                        modifier = Modifier.fillMaxWidth().bounceClick().testTag("submit_bug_report_email_button")
+                    ) {
+                        Icon(painter = painterResource(id = R.drawable.ic_custom_mail), contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Send via Email Client", fontWeight = FontWeight.SemiBold)
+                    }
+                }
             } else {
                 Button(
                     onClick = {
@@ -686,7 +824,7 @@ private fun ExpressiveBugReportContent(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Submitting Bug Report...")
                     } else {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(painter = painterResource(id = R.drawable.ic_custom_send), contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Submit Bug Report", fontWeight = FontWeight.Bold)
                     }
@@ -703,7 +841,10 @@ private fun ExpressiveFeatureRequestContent(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val envReport = remember(context) { collectEnvironmentReport(context) }
+    val userEmailState by viewModel.userEmail.collectAsState()
+    val envReport = remember(context, userEmailState) {
+        collectEnvironmentReport(context, userEmail = userEmailState)
+    }
 
     var featureTitle by remember { mutableStateOf("") }
     var problemStatement by remember { mutableStateOf("") }
@@ -757,7 +898,7 @@ private fun ExpressiveFeatureRequestContent(
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
-                                    imageVector = Icons.Default.Lightbulb,
+                                    painter = painterResource(id = R.drawable.ic_custom_star),
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(22.dp)
@@ -979,6 +1120,133 @@ private fun ExpressiveFeatureRequestContent(
                         )
                     }
                 }
+            } else if (com.example.BuildConfig.FLAVOR == "foss") {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Button(
+                        onClick = {
+                            if (featureTitle.isBlank() || problemStatement.isBlank() || proposedSolution.isBlank()) {
+                                errorMessage = "Please fill in the title, problem statement, and proposed solution."
+                                return@Button
+                            }
+
+                            isSubmitting = true
+                            coroutineScope.launch {
+                                try {
+                                    val markdown = com.example.util.FeedbackSubmissionManager.formatFeatureRequestMarkdown(
+                                        title = featureTitle,
+                                        problemStatement = problemStatement,
+                                        proposedSolution = proposedSolution,
+                                        priority = selectedPriority,
+                                        userEmail = envReport.userEmail,
+                                        deviceModel = envReport.deviceModel,
+                                        osVersion = envReport.osVersion,
+                                        appVersion = envReport.appVersion
+                                    )
+                                    viewModel.submitFeatureRequest(
+                                        context = context,
+                                        title = featureTitle,
+                                        problemStatement = problemStatement,
+                                        proposedSolution = proposedSolution,
+                                        priority = selectedPriority,
+                                        userConsent = userConsent,
+                                        userEmail = envReport.userEmail,
+                                        userId = envReport.userId,
+                                        deviceModel = envReport.deviceModel,
+                                        osVersion = envReport.osVersion,
+                                        appVersion = envReport.appVersion
+                                    )
+                                    com.example.util.FeedbackSubmissionManager.launchGitHubIssue(
+                                        context = context,
+                                        title = "[Feature]: $featureTitle",
+                                        body = markdown,
+                                        labels = "enhancement"
+                                    )
+                                    submitSuccess = true
+                                    com.example.util.HapticManager.performSuccess(context)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("FeedbackScreen", "Feature request error: ${e.message}", e)
+                                    submitSuccess = true
+                                } finally {
+                                    isSubmitting = false
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(18.dp),
+                        enabled = !isSubmitting,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        modifier = Modifier.fillMaxWidth().bounceClick().testTag("submit_feature_request_github_button")
+                    ) {
+                        if (isSubmitting) {
+                            CircularWavyProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Preparing GitHub Request...")
+                        } else {
+                            Icon(painter = painterResource(id = R.drawable.ic_custom_code), contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Open Pre-filled GitHub Request", fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            if (featureTitle.isBlank() || problemStatement.isBlank() || proposedSolution.isBlank()) {
+                                errorMessage = "Please fill in the title, problem statement, and proposed solution."
+                                return@OutlinedButton
+                            }
+
+                            isSubmitting = true
+                            coroutineScope.launch {
+                                try {
+                                    val markdown = com.example.util.FeedbackSubmissionManager.formatFeatureRequestMarkdown(
+                                        title = featureTitle,
+                                        problemStatement = problemStatement,
+                                        proposedSolution = proposedSolution,
+                                        priority = selectedPriority,
+                                        userEmail = envReport.userEmail,
+                                        deviceModel = envReport.deviceModel,
+                                        osVersion = envReport.osVersion,
+                                        appVersion = envReport.appVersion
+                                    )
+                                    viewModel.submitFeatureRequest(
+                                        context = context,
+                                        title = featureTitle,
+                                        problemStatement = problemStatement,
+                                        proposedSolution = proposedSolution,
+                                        priority = selectedPriority,
+                                        userConsent = userConsent,
+                                        userEmail = envReport.userEmail,
+                                        userId = envReport.userId,
+                                        deviceModel = envReport.deviceModel,
+                                        osVersion = envReport.osVersion,
+                                        appVersion = envReport.appVersion
+                                    )
+                                    com.example.util.FeedbackSubmissionManager.launchEmailClient(
+                                        context = context,
+                                        subject = "[Cobalt Feature Request] $featureTitle",
+                                        body = markdown
+                                    )
+                                    submitSuccess = true
+                                    com.example.util.HapticManager.performSuccess(context)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("FeedbackScreen", "Feature request error: ${e.message}", e)
+                                    submitSuccess = true
+                                } finally {
+                                    isSubmitting = false
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(18.dp),
+                        enabled = !isSubmitting,
+                        modifier = Modifier.fillMaxWidth().bounceClick().testTag("submit_feature_request_email_button")
+                    ) {
+                        Icon(painter = painterResource(id = R.drawable.ic_custom_mail), contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Send via Email Client", fontWeight = FontWeight.SemiBold)
+                    }
+                }
             } else {
                 Button(
                     onClick = {
@@ -1027,7 +1295,7 @@ private fun ExpressiveFeatureRequestContent(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Submitting Feature Request...")
                     } else {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(painter = painterResource(id = R.drawable.ic_custom_send), contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Submit Feature Request", fontWeight = FontWeight.Bold)
                     }

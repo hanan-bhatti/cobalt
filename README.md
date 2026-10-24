@@ -6,7 +6,7 @@
 
   <p align="center">
     <a href="https://github.com/hanan-bhatti/cobalt/releases/latest"><img src="https://img.shields.io/github/v/release/hanan-bhatti/cobalt?style=flat-square&color=00796B&label=Release" alt="Latest Release" /></a>
-    <a href="https://f-droid.org/en/packages/com.hanan_bhatti.cobalt/"><img src="https://img.shields.io/badge/F--Droid-v2.1.2-1976D2?style=flat-square&logo=f-droid&logoColor=white" alt="F-Droid" /></a>
+    <a href="https://f-droid.org/en/packages/com.hanan_bhatti.cobalt/"><img src="https://img.shields.io/badge/F--Droid-v2.2.0-1976D2?style=flat-square&logo=f-droid&logoColor=white" alt="F-Droid" /></a>
     <a href="https://github.com/hanan-bhatti/cobalt"><img src="https://img.shields.io/badge/Android-7.0%2B-3DDC84?style=flat-square&logo=android&logoColor=white" alt="Platform" /></a>
     <a href="https://github.com/hanan-bhatti/cobalt"><img src="https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" /></a>
     <a href="https://github.com/hanan-bhatti/cobalt"><img src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white" alt="Compose" /></a>
@@ -17,7 +17,7 @@
 
   <p align="center">
     <b>A minimalist, offline-first personal knowledge base and universal capture suite for Android.</b><br/>
-    Featuring the 60/120fps <b>Cobalt SideDock</b>, on-device Gemini AI OCR region marking, in-app Chrome Custom Tabs, and zero-telemetry local privacy.
+    Featuring the 60/120fps <b>Cobalt SideDock</b>, Gemini AI Vision OCR region marking, in-app Chrome Custom Tabs, and zero-telemetry local privacy.
   </p>
 
   <p align="center">
@@ -135,7 +135,7 @@ Cobalt is intentionally engineered into **two distinct distribution flavors** to
 ### 🎨 Material 3 Expressive Design
 * **Glassmorphic Haze Effects**: Subtle background blurs and frosted glass backdrops using modern hardware-accelerated Haze shaders.
 * **Dynamic Material You Accents**: Automatically harmonizes with your system wallpaper palette on Android 12+.
-* **Sticker-Themed Folders & Drag-to-Reorder**: Reorder memory cards and organize categories with custom curated color pills.
+* **Custom Themed Folders**: Organize and pin custom color-coded categories with curated icons and multi-folder tagging.
 
 ---
 
