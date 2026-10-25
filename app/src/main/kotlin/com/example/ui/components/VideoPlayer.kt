@@ -89,6 +89,17 @@ fun VideoPlayer(
         return
     }
 
+    val isYouTube = remember(videoUri) {
+        com.example.ui.screens.extractYouTubeVideoId(videoUri) != null
+    }
+    if (isYouTube) {
+        com.example.ui.screens.YouTubeTrailerPlayer(
+            trailerUrl = videoUri,
+            modifier = modifier
+        )
+        return
+    }
+
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
