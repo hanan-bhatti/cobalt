@@ -86,6 +86,8 @@ object GoogleApiErrorMapper {
         // 2. Google Canonical / gRPC status reason names
         val upper = text.uppercase()
         return when {
+            upper.contains("NO SPEECH DETECTED") ->
+                "No speech detected in the audio recording. Please speak clearly into the microphone."
             upper.contains("API KEY MISSING") || upper.contains("PLEASE SAVE A VALID GEMINI API KEY") ->
                 "Gemini API key is missing. Please configure your key in Settings."
             upper.contains("FAILED_PRECONDITION") ->

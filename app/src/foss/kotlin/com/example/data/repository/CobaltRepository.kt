@@ -72,16 +72,17 @@ class CobaltRepository(private val context: Context) {
 
         val cleanModel = model.removePrefix("models/").ifBlank { "gemini-2.0-flash" }
 
-        // Dedicated transcribe models do not need or expect prompt wrappers
+        val promptText = "You are an expert audio transcription assistant. Carefully transcribe all spoken words in this audio recording into its spoken language (such as English, Urdu, Hindi, etc.). Format your output in clear Markdown with an H1 title summarizing the recording, followed by organized notes and bullet points. If there is no human speech in the recording, reply with exactly: No speech detected."
+
+        // Place audio inlineData first, then text prompt
         val parts = if (cleanModel.contains("transcribe", ignoreCase = true)) {
             listOf(
                 Part(inlineData = InlineData(mimeType = "audio/mp4", data = base64Audio))
             )
         } else {
-            val promptText = "Transcribe this audio memo and format it as clear markdown notes. Give it a nice title as an H1, and format the rest appropriately."
             listOf(
-                Part(text = promptText),
-                Part(inlineData = InlineData(mimeType = "audio/mp4", data = base64Audio))
+                Part(inlineData = InlineData(mimeType = "audio/mp4", data = base64Audio)),
+                Part(text = promptText)
             )
         }
         val request = GenerateContentRequest(
@@ -90,21 +91,36 @@ class CobaltRepository(private val context: Context) {
             )
         )
 
+        Log.d("CobaltRepo", "Sending audio transcription request to models/$cleanModel (base64 size: ${base64Audio.length / 1024} KB)")
+
         try {
             val response = RetrofitClient.geminiService.generateContent("models/$cleanModel", apiKey, request)
-            val candidateText = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
+            val candidate = response.candidates?.firstOrNull()
+            val candidateText = candidate?.content?.parts
+                ?.mapNotNull { it.text }
+                ?.joinToString("")
+                ?.trim()
+
+            val finishReason = candidate?.finishReason
+            val blockReason = response.promptFeedback?.blockReason
+            Log.d("CobaltRepo", "Gemini Audio call completed: candidatesCount=${response.candidates?.size}, finishReason=$finishReason, blockReason=$blockReason, textLength=${candidateText?.length ?: 0}")
+
             if (!candidateText.isNullOrBlank()) {
-                candidateText
+                if (candidateText.equals("No speech detected", ignoreCase = true) ||
+                    candidateText.equals("No speech detected.", ignoreCase = true)) {
+                    "Error: No speech detected in the audio recording. Please speak clearly into the microphone."
+                } else {
+                    candidateText
+                }
             } else {
-                val finishReason = response.candidates?.firstOrNull()?.finishReason
-                val blockReason = response.promptFeedback?.blockReason
                 Log.w("CobaltRepo", "Gemini Audio call produced no text. finishReason=$finishReason, blockReason=$blockReason")
                 when {
                     blockReason != null -> "Error: Audio transcription was blocked ($blockReason)."
                     finishReason == "SAFETY" -> "Error: Transcription was blocked by safety filters."
                     finishReason == "RECITATION" -> "Error: Transcription was blocked by recitation filters."
-                    finishReason != null -> "Error: Audio transcription stopped ($finishReason)."
-                    else -> "Error: No speech detected in the audio recording."
+                    finishReason == "MAX_TOKENS" -> "Error: Audio recording exceeded token limits."
+                    finishReason != null && finishReason != "STOP" -> "Error: Audio transcription stopped ($finishReason)."
+                    else -> "Error: No speech detected in the audio recording. Please speak clearly into the microphone."
                 }
             }
         } catch (e: Exception) {
