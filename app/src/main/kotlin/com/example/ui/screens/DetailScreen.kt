@@ -18,6 +18,9 @@
 
 package com.example.ui.screens
 
+import androidx.compose.animation.EnterExitState
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -197,59 +200,96 @@ fun DetailScreen(
         )
     }
 
+    val isScreenVisible = animatedVisibilityScope?.transition?.targetState == EnterExitState.Visible || animatedVisibilityScope == null
+    val barsAlpha by animateFloatAsState(
+        targetValue = if (isScreenVisible) 1f else 0f,
+        animationSpec = tween(durationMillis = 240, delayMillis = 80, easing = FastOutSlowInEasing),
+        label = "detailBarsAlpha"
+    )
+    val barsOffsetY by animateDpAsState(
+        targetValue = if (isScreenVisible) 0.dp else 24.dp,
+        animationSpec = spring(dampingRatio = 0.82f, stiffness = 380f),
+        label = "detailBarsOffsetY"
+    )
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { },
-                navigationIcon = {
-                    IconButton(onClick = onClose, modifier = Modifier.bounceClick().testTag("detail_back_button")) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_close),
-                            contentDescription = "Close",
-                            tint = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.size(24.dp)
-                        )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        alpha = barsAlpha
+                        translationY = -barsOffsetY.toPx()
                     }
-                },
-                actions = {
-                    IconButton(
-                        onClick = {
-                            viewModel.shareItem(item, context)
-                        },
-                        modifier = Modifier.bounceClick().testTag("detail_share_button")
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_share),
-                            contentDescription = "Share item",
-                            modifier = Modifier.size(24.dp)
-                        )
+                    .onGloballyPositioned { coordinates ->
+                        val pos = coordinates.positionInRoot()
+                        android.util.Log.d("CobaltAnim", "Detail TopBar: alpha=$barsAlpha, pos=(${pos.x}, ${pos.y}), size=${coordinates.size}")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+            ) {
+                TopAppBar(
+                    title = { },
+                    navigationIcon = {
+                        IconButton(onClick = onClose, modifier = Modifier.bounceClick().testTag("detail_back_button")) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_close),
+                                contentDescription = "Close",
+                                tint = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(
+                            onClick = {
+                                viewModel.shareItem(item, context)
+                            },
+                            modifier = Modifier.bounceClick().testTag("detail_share_button")
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_share),
+                                contentDescription = "Share item",
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background
+                    )
                 )
-            )
+            }
         },
         bottomBar = {
-            val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
-            val barModifier = if (useBlur) {
-                Modifier
+            Box(
+                modifier = Modifier
                     .fillMaxWidth()
-                    .hazeEffect(state = localHazeState, style = HazeStyle(
-                        backgroundColor = MaterialTheme.colorScheme.background,
-                        tint = HazeTint(MaterialTheme.colorScheme.background.copy(alpha = blurOpacity)),
-                        blurRadius = blurRadius.dp,
-                        noiseFactor = 0.02f
-                    ))
-            } else {
-                Modifier.fillMaxWidth()
-            }
-            Surface(
-                modifier = barModifier,
-                tonalElevation = 0.dp,
-                color = if (useBlur) Color.Transparent else MaterialTheme.colorScheme.background.copy(alpha = 0.92f),
-                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                    .graphicsLayer {
+                        alpha = barsAlpha
+                        translationY = barsOffsetY.toPx()
+                    }
+                    .onGloballyPositioned { coordinates ->
+                        val pos = coordinates.positionInRoot()
+                        android.util.Log.d("CobaltAnim", "Detail BottomBar (Edit Item): alpha=$barsAlpha, pos=(${pos.x}, ${pos.y}), size=${coordinates.size}")
+                    }
             ) {
+                val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
+                val barModifier = if (useBlur) {
+                    Modifier
+                        .fillMaxWidth()
+                        .hazeEffect(state = localHazeState, style = HazeStyle(
+                            backgroundColor = MaterialTheme.colorScheme.background,
+                            tint = HazeTint(MaterialTheme.colorScheme.background.copy(alpha = blurOpacity)),
+                            blurRadius = blurRadius.dp,
+                            noiseFactor = 0.02f
+                        ))
+                } else {
+                    Modifier.fillMaxWidth()
+                }
+                Surface(
+                    modifier = barModifier,
+                    tonalElevation = 0.dp,
+                    color = if (useBlur) Color.Transparent else MaterialTheme.colorScheme.background.copy(alpha = 0.92f),
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -295,6 +335,7 @@ fun DetailScreen(
                             Text("Edit Item", fontWeight = FontWeight.Bold)
                         }
                     }
+                }
             }
         },
         containerColor = MaterialTheme.colorScheme.background,
@@ -308,20 +349,15 @@ fun DetailScreen(
                     animatedVisibilityScope = animatedVisibilityScope,
                     key = "card_${item.id}",
                     clipShape = RoundedCornerShape(0.dp)
-                ),
+                )
+                .onGloballyPositioned { coordinates ->
+                    val pos = coordinates.positionInRoot()
+                    android.util.Log.d("CobaltAnim", "Detail Card Morph: pos=(${pos.x}, ${pos.y}), size=${coordinates.size}, itemId=${item.id}")
+                },
             color = MaterialTheme.colorScheme.background
         ) {
             var showFullscreenImage by remember { mutableStateOf(false) }
-            var isLoading by remember(item.id) { mutableStateOf(false) }
-            if (isLoading) {
-                DetailScreenSkeleton(
-                    itemType = item.type,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = innerPadding.calculateTopPadding(), bottom = innerPadding.calculateBottomPadding())
-                )
-            } else {
-                SelectionContainer {
+            SelectionContainer {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -786,129 +822,5 @@ fun DetailScreen(
         }
         }
     }
-    }
-}
-}
-
-@Composable
-fun ShimmerPlaceholder(
-    modifier: Modifier = Modifier,
-    shape: RoundedCornerShape = RoundedCornerShape(4.dp)
-) {
-    val transition = rememberInfiniteTransition(label = "shimmer")
-    val alpha by transition.animateFloat(
-        initialValue = 0.2f,
-        targetValue = 0.6f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 800, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "shimmerAlpha"
-    )
-    Box(
-        modifier = modifier
-            .clip(shape)
-            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = alpha))
-    )
-}
-
-@Composable
-fun DetailScreenSkeleton(
-    itemType: SavedItemType,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(28.dp)
-    ) {
-        // Title Skeleton
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ShimmerPlaceholder(
-                modifier = Modifier
-                    .fillMaxWidth(0.8f)
-                    .height(28.dp),
-                shape = RoundedCornerShape(8.dp)
-            )
-            // Meta Row Skeleton
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                ShimmerPlaceholder(
-                    modifier = Modifier
-                        .width(100.dp)
-                        .height(16.dp)
-                )
-                Text("•", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
-                ShimmerPlaceholder(
-                    modifier = Modifier
-                        .width(80.dp)
-                        .height(16.dp)
-                )
-            }
-        }
-
-        // Media / Content Specific Skeleton
-        when (itemType) {
-            SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.MEDIA -> {
-                ShimmerPlaceholder(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(260.dp),
-                    shape = RoundedCornerShape(20.dp)
-                )
-            }
-            SavedItemType.LINK -> {
-                ShimmerPlaceholder(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp),
-                    shape = RoundedCornerShape(20.dp)
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ShimmerPlaceholder(modifier = Modifier.fillMaxWidth().height(16.dp))
-                    ShimmerPlaceholder(modifier = Modifier.fillMaxWidth().height(16.dp))
-                    ShimmerPlaceholder(modifier = Modifier.fillMaxWidth(0.6f).height(16.dp))
-                }
-                ShimmerPlaceholder(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(80.dp),
-                    shape = RoundedCornerShape(20.dp)
-                )
-            }
-            SavedItemType.AUDIO -> {
-                ShimmerPlaceholder(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(80.dp),
-                    shape = RoundedCornerShape(20.dp)
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ShimmerPlaceholder(modifier = Modifier.fillMaxWidth().height(16.dp))
-                    ShimmerPlaceholder(modifier = Modifier.fillMaxWidth().height(16.dp))
-                    ShimmerPlaceholder(modifier = Modifier.fillMaxWidth(0.7f).height(16.dp))
-                }
-            }
-            SavedItemType.CODE -> {
-                ShimmerPlaceholder(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(220.dp),
-                    shape = RoundedCornerShape(20.dp)
-                )
-            }
-            SavedItemType.TEXT -> {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ShimmerPlaceholder(modifier = Modifier.fillMaxWidth().height(16.dp))
-                    ShimmerPlaceholder(modifier = Modifier.fillMaxWidth().height(16.dp))
-                    ShimmerPlaceholder(modifier = Modifier.fillMaxWidth(0.9f).height(16.dp))
-                    ShimmerPlaceholder(modifier = Modifier.fillMaxWidth().height(16.dp))
-                    ShimmerPlaceholder(modifier = Modifier.fillMaxWidth(0.4f).height(16.dp))
-                }
-            }
-        }
     }
 }

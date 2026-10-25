@@ -334,10 +334,7 @@ class MainActivity : ComponentActivity() {
                                      startDestination = "home",
                                      enterTransition = {
                                          if (targetState.destination.route?.startsWith("detail") == true) {
-                                             scaleIn(
-                                                 initialScale = 0.92f,
-                                                 animationSpec = tween(durationMillis = 300, easing = M3EmphasizedEasing)
-                                             ) + fadeIn(
+                                             fadeIn(
                                                  animationSpec = tween(durationMillis = 280, easing = LinearEasing)
                                              )
                                          } else {
@@ -376,11 +373,8 @@ class MainActivity : ComponentActivity() {
                                      },
                                      popExitTransition = {
                                          if (initialState.destination.route?.startsWith("detail") == true) {
-                                             scaleOut(
-                                                 targetScale = 0.92f,
-                                                 animationSpec = tween(durationMillis = 250, easing = M3EmphasizedEasing)
-                                             ) + fadeOut(
-                                                 animationSpec = tween(durationMillis = 200, easing = LinearEasing)
+                                             fadeOut(
+                                                 animationSpec = tween(durationMillis = 220, easing = LinearEasing)
                                              )
                                          } else {
                                              mainRootExitTransition(
