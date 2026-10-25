@@ -121,12 +121,38 @@ object AppVersionManager {
      */
     val releaseHistory: List<ReleaseNote> = listOf(
         ReleaseNote(
+            versionName = "2.2.1",
+            versionCode = 17,
+            releaseDate = "October 26, 2026",
+            tag = AppVersionTag.STABLE,
+            isCurrent = true,
+            isLatest = true,
+            highlights = listOf(
+                "Video Playback & YouTube URLs",
+                "Gemini Audio Transcription Fix",
+                "Enhanced Page Transitions",
+                "Bug Fixes & Performance"
+            ),
+            features = listOf(
+                "Added direct YouTube video URL playback support in the built-in video player"
+            ),
+            improvements = listOf(
+                "Enhanced page transitions and card morph animations for a smoother experience",
+                "Updated Gemini transcription API integration and response schema parsing"
+            ),
+            bugFixes = listOf(
+                "Resolved YouTube trailer playback configuration error",
+                "Fixed audio transcription parsing on speech completion",
+                "General bug fixes and performance improvements"
+            )
+        ),
+        ReleaseNote(
             versionName = "2.2.0",
             versionCode = 16,
             releaseDate = "October 24, 2026",
             tag = AppVersionTag.STABLE,
-            isCurrent = true,
-            isLatest = true,
+            isCurrent = false,
+            isLatest = false,
             highlights = listOf(
                 "Material 3 Expressive Settings Hub",
                 "Side Dock Physics Studio & In-Dock Details",

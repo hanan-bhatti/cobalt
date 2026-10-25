@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.1] - 2026-10-26
+
+### Fixed & Improved
+- **Video Playback:** Resolved YouTube trailer playback configuration errors and added support for playing direct YouTube video URLs in the video player.
+- **AI Audio Transcription:** Updated Gemini transcribe API endpoint handling and response schema parsing for seamless voice memos.
+- **Page Transitions & Motion:** Enhanced page transitions, card morph animations, and choreographed detail entry for a smoother UI experience.
+- **Stability & Fixes:** Minor bug fixes and performance improvements.
+
 ## [2.2.0] - 2026-10-24
 
 ### Added

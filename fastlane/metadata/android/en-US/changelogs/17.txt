@@ -1,0 +1,4 @@
+- Video Playback: Resolved YouTube trailer playback configuration errors and added support for direct YouTube video URLs.
+- AI Audio Transcription: Updated Gemini transcribe API endpoint handling and response schema parsing for voice memos.
+- Page Transitions: Enhanced page transitions, card morph animations, and choreographed detail entry.
+- Stability: Minor bug fixes and performance improvements.
