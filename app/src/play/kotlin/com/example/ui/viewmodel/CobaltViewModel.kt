@@ -1425,6 +1425,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             try {
                 if (!file.exists() || file.length() < 1024) {
+                    Log.w("CobaltVM", "transcribeAudioMemo: File too small or missing (${file.length()} bytes)")
                     _ocrError.value = "Recording was too short or empty. Please record for at least 1-2 seconds."
                     _isOcrLoading.value = false
                     return@launch
@@ -1433,10 +1434,20 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 val bytes = file.readBytes()
                 pendingMediaBytes = bytes
                 val localPath = repository.saveToLocalCache("audio_${java.util.UUID.randomUUID()}.mp4", bytes)
+                Log.d("CobaltVM", "Audio cached at $localPath (${bytes.size} bytes)")
+
+                // Attach thumbnailPath immediately so the recording can be played/saved regardless of API result
+                val timeStamp = java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
+                _activeCaptureItem.value = _activeCaptureItem.value?.copy(
+                    thumbnailPath = localPath,
+                    title = _activeCaptureItem.value?.title?.takeIf { it.isNotBlank() && it != "New Item" } ?: "Voice Memo ($timeStamp)"
+                )
+                _activeCaptureItem.value?.let { captureDrafts[SavedItemType.AUDIO] = it }
 
                 val base64Data = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
                 val apiKey = resolveValidApiKeyOrNull()
                 if (apiKey == null) {
+                    Log.w("CobaltVM", "No Gemini API key configured for audio transcription.")
                     _ocrError.value = "Please save a valid Gemini API Key first."
                     _isOcrLoading.value = false
                     return@launch
@@ -1445,6 +1456,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 val audioModel = settingsRepository.selectedAudioModel.value.takeIf { it.isNotBlank() }
                     ?: settingsRepository.selectedModel.value.takeIf { it.isNotBlank() }
                     ?: "gemini-2.0-flash"
+                Log.d("CobaltVM", "Requesting transcription with model: $audioModel")
+
                 val result = repository.extractTextFromAudio(
                     base64Audio = base64Data,
                     apiKey = apiKey,
@@ -1455,11 +1468,13 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     val extractedTitle = extractTitleFromMarkdown(result)
                     _activeCaptureItem.value = _activeCaptureItem.value?.copy(
                         content = result,
-                        title = extractedTitle ?: _activeCaptureItem.value?.title ?: "Voice Memo Transcription",
+                        title = extractedTitle ?: _activeCaptureItem.value?.title ?: "Voice Memo ($timeStamp)",
                         thumbnailPath = localPath
                     )
                     _activeCaptureItem.value?.let { captureDrafts[SavedItemType.AUDIO] = it }
+                    Log.d("CobaltVM", "Audio transcription successful: title=${_activeCaptureItem.value?.title}")
                 } else {
+                    Log.w("CobaltVM", "Audio transcription returned error/no-speech: $result")
                     _ocrError.value = result ?: "Failed to transcribe audio."
                 }
             } catch (e: Exception) {

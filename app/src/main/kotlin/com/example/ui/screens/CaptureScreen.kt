@@ -1320,6 +1320,13 @@ fun CaptureScreen(
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
 
+                    if (!item.thumbnailPath.isNullOrBlank()) {
+                        com.example.ui.components.AudioPlayerComponent(
+                            audioUri = item.thumbnailPath,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                    }
+
                     if (isOcrLoading) {
                         Box(
                             modifier = Modifier
@@ -1346,14 +1353,14 @@ fun CaptureScreen(
                             }
                         }
                         Spacer(modifier = Modifier.height(16.dp))
-                    } else if (item.content.isNotBlank()) {
-                        Text("Transcription:", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    } else {
+                        Text("Transcription / Notes:", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(4.dp))
                         RichTextEditor(
                             value = item.content,
                             onValueChange = { newContent -> viewModel.updateActiveCaptureItem { it.copy(content = newContent) } },
-                            placeholder = { Text("Audio transcription will appear here...") },
-                            minLines = 5,
+                            placeholder = { Text("Audio transcription will appear here, or you can type your notes...") },
+                            minLines = 4,
                             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
                         )
                     }

@@ -22,7 +22,12 @@ import com.example.R
 
 import android.media.MediaRecorder
 import android.Manifest
+import android.app.Activity
+import android.content.ContextWrapper
 import android.content.pm.PackageManager
+import android.util.Log
+import android.view.WindowManager
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -55,6 +60,46 @@ fun AudioRecorderComponent(
     var outputFile by remember { mutableStateOf<File?>(null) }
     val context = LocalContext.current
 
+    val activity = remember(context) {
+        var ctx = context
+        while (ctx is ContextWrapper) {
+            if (ctx is Activity) break
+            ctx = ctx.baseContext
+        }
+        ctx as? Activity
+    }
+
+    // Keep the screen on while recording so the device does not sleep or shut the screen off
+    DisposableEffect(isRecording) {
+        if (isRecording) {
+            activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            Log.d("AudioRecorder", "FLAG_KEEP_SCREEN_ON added")
+        }
+        onDispose {
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            Log.d("AudioRecorder", "FLAG_KEEP_SCREEN_ON cleared")
+        }
+    }
+
+    // Safety cleanup when leaving screen
+    DisposableEffect(Unit) {
+        onDispose {
+            if (isRecording) {
+                try {
+                    mediaRecorder?.stop()
+                } catch (e: Exception) {
+                    Log.w("AudioRecorder", "Error stopping recorder in onDispose: ${e.message}")
+                }
+                try {
+                    mediaRecorder?.release()
+                } catch (_: Exception) {}
+                mediaRecorder = null
+                isRecording = false
+                activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+        }
+    }
+
     val amplitudes = remember { mutableStateListOf<Float>() }
     var recordingDurationSeconds by remember { mutableStateOf(0) }
 
@@ -72,16 +117,22 @@ fun AudioRecorderComponent(
                 setAudioSource(MediaRecorder.AudioSource.MIC)
                 setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
                 setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                setAudioEncodingBitRate(128000)
+                setAudioSamplingRate(44100)
+                setAudioChannels(1)
                 setOutputFile(file.absolutePath)
                 prepare()
                 start()
             }
             mediaRecorder = recorder
             isRecording = true
+            Log.d("AudioRecorder", "Audio recording started: ${file.absolutePath}")
         } catch (e: Exception) {
-            e.printStackTrace()
-            recorder.release()
+            Log.e("AudioRecorder", "Failed to start MediaRecorder: ${e.message}", e)
+            try { recorder.release() } catch (_: Exception) {}
             mediaRecorder = null
+            isRecording = false
+            Toast.makeText(context, "Failed to start microphone recording.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -215,15 +266,33 @@ fun AudioRecorderComponent(
         IconButton(
             onClick = {
                 if (isRecording) {
+                    var stopSuccess = false
                     try {
                         mediaRecorder?.stop()
+                        stopSuccess = true
+                        Log.d("AudioRecorder", "MediaRecorder stopped cleanly. Duration: $recordingDurationSeconds s")
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        Log.e("AudioRecorder", "MediaRecorder.stop() failed: ${e.message}", e)
                     }
-                    mediaRecorder?.release()
+                    try {
+                        mediaRecorder?.release()
+                    } catch (e: Exception) {
+                        Log.e("AudioRecorder", "MediaRecorder.release() failed: ${e.message}", e)
+                    }
                     mediaRecorder = null
                     isRecording = false
-                    outputFile?.let { onRecordComplete(it) }
+
+                    val file = outputFile
+                    if (stopSuccess && file != null && file.exists() && file.length() >= 1024) {
+                        Log.d("AudioRecorder", "Recording complete: ${file.absolutePath}, size: ${file.length()} bytes")
+                        onRecordComplete(file)
+                    } else {
+                        Log.w("AudioRecorder", "Recording too short or invalid. File size: ${file?.length() ?: 0} bytes")
+                        if (file?.exists() == true) {
+                            file.delete()
+                        }
+                        Toast.makeText(context, "Recording was too short or empty. Please speak for at least 1-2 seconds.", Toast.LENGTH_SHORT).show()
+                    }
                 } else {
                     if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
                         startRecording()
