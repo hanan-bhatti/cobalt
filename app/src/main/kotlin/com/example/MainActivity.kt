@@ -90,6 +90,21 @@ import com.example.ui.navigation.aospSharedAxisPopEnter
 import com.example.ui.navigation.aospSharedAxisPopExit
 import com.example.ui.navigation.mainRootEnterTransition
 import com.example.ui.navigation.mainRootExitTransition
+import com.example.ui.navigation.BlurEffectCache
+import com.example.ui.navigation.M3EmphasizedEasing
+import com.example.ui.navigation.EmphasizedDecelerateEasing
+import com.example.ui.navigation.EmphasizedAccelerateEasing
+import com.example.utils.DevicePerformance
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+import kotlin.math.roundToInt
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import androidx.compose.material.icons.filled.Home
@@ -186,11 +201,8 @@ class MainActivity : ComponentActivity() {
                     val availableUpdate by viewModel.availableUpdate.collectAsState()
                     var pendingCrashReport by remember { mutableStateOf(com.example.util.FossCrashReporter.getPendingCrashReport(context)) }
 
-                BackHandler(enabled = activeDetailItem != null || navController.currentDestination?.route?.startsWith("detail") == true) {
-                    if (navController.currentDestination?.route?.startsWith("detail") == true) {
-                        navController.popBackStack()
-                    }
-                    viewModel.closeDetailItem()
+                BackHandler(enabled = activeCaptureItem != null) {
+                    viewModel.cancelCapture()
                 }
 
                 val navDest by pendingNavDestination
@@ -278,6 +290,17 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                val blurEffectCache = remember { BlurEffectCache() }
+                val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
+                val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
+                val density = LocalDensity.current.density
+
+                val captureBlurFraction by animateFloatAsState(
+                    targetValue = if (activeCaptureItem != null) 1f else 0f,
+                    animationSpec = tween(durationMillis = 350, easing = M3EmphasizedEasing),
+                    label = "captureBlurFraction"
+                )
+
                 Scaffold(
                     contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
                     modifier = Modifier.fillMaxSize()
@@ -285,14 +308,38 @@ class MainActivity : ComponentActivity() {
                     Box(modifier = Modifier.fillMaxSize()) {
                         @OptIn(ExperimentalSharedTransitionApi::class)
                         SharedTransitionLayout {
-                            Surface(modifier = Modifier.fillMaxSize().hazeSource(hazeState)) {
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer {
+                                        if (captureBlurFraction > 0.001f) {
+                                            val scale = 1f - (captureBlurFraction * 0.05f)
+                                            scaleX = scale
+                                            scaleY = scale
+                                            clip = true
+                                            shape = RoundedCornerShape((captureBlurFraction * 28f).dp)
+                                            if (useBlur) {
+                                                val radiusPx = captureBlurFraction * 24f * density
+                                                if (radiusPx > 0.5f) {
+                                                    renderEffect = blurEffectCache.get(radiusPx)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .hazeSource(hazeState)
+                            ) {
                                  // Standard Home and Authentication navigation flow
                                  NavHost(
                                      navController = navController,
                                      startDestination = "home",
                                      enterTransition = {
                                          if (targetState.destination.route?.startsWith("detail") == true) {
-                                             fadeIn(animationSpec = tween(durationMillis = 350, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)))
+                                             scaleIn(
+                                                 initialScale = 0.92f,
+                                                 animationSpec = tween(durationMillis = 300, easing = M3EmphasizedEasing)
+                                             ) + fadeIn(
+                                                 animationSpec = tween(durationMillis = 280, easing = LinearEasing)
+                                             )
                                          } else {
                                              mainRootEnterTransition(
                                                  fromRoute = initialState.destination.route,
@@ -303,7 +350,9 @@ class MainActivity : ComponentActivity() {
                                      },
                                      exitTransition = {
                                          if (targetState.destination.route?.startsWith("detail") == true) {
-                                             fadeOut(animationSpec = tween(durationMillis = 300, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)))
+                                             fadeOut(
+                                                 animationSpec = tween(durationMillis = 200, easing = LinearEasing)
+                                             )
                                          } else {
                                              mainRootExitTransition(
                                                  fromRoute = initialState.destination.route,
@@ -314,7 +363,9 @@ class MainActivity : ComponentActivity() {
                                      },
                                      popEnterTransition = {
                                          if (initialState.destination.route?.startsWith("detail") == true) {
-                                             fadeIn(animationSpec = tween(durationMillis = 320, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)))
+                                             fadeIn(
+                                                 animationSpec = tween(durationMillis = 280, easing = LinearEasing)
+                                             )
                                          } else {
                                              mainRootEnterTransition(
                                                  fromRoute = initialState.destination.route,
@@ -325,7 +376,12 @@ class MainActivity : ComponentActivity() {
                                      },
                                      popExitTransition = {
                                          if (initialState.destination.route?.startsWith("detail") == true) {
-                                             fadeOut(animationSpec = tween(durationMillis = 280, easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)))
+                                             scaleOut(
+                                                 targetScale = 0.92f,
+                                                 animationSpec = tween(durationMillis = 250, easing = M3EmphasizedEasing)
+                                             ) + fadeOut(
+                                                 animationSpec = tween(durationMillis = 200, easing = LinearEasing)
+                                             )
                                          } else {
                                              mainRootExitTransition(
                                                  fromRoute = initialState.destination.route,
@@ -368,10 +424,35 @@ class MainActivity : ComponentActivity() {
                                             FoldersScreen(
                                                 viewModel = viewModel,
                                                 hazeState = hazeState,
+                                                sharedTransitionScope = this@SharedTransitionLayout,
+                                                animatedVisibilityScope = this@composable,
+                                                onOpenFolder = { folderName ->
+                                                    navController.navigate("folder/${android.net.Uri.encode(folderName)}")
+                                                },
                                                 onItemClick = { item ->
                                                     viewModel.showDetailItem(item)
                                                     navController.navigate("detail/${item.id}")
                                                 }
+                                            )
+                                        }
+                                    }
+                                    composable(
+                                        route = "folder/{folderName}",
+                                        arguments = listOf(navArgument("folderName") { type = NavType.StringType })
+                                    ) { backStackEntry ->
+                                        val folderName = backStackEntry.arguments?.getString("folderName")?.let { android.net.Uri.decode(it) } ?: ""
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.FolderContentsBrowser(
+                                                folderName = folderName,
+                                                viewModel = viewModel,
+                                                onBack = { navController.popBackStack() },
+                                                hazeState = hazeState,
+                                                onItemClick = { item ->
+                                                    viewModel.showDetailItem(item)
+                                                    navController.navigate("detail/${item.id}")
+                                                },
+                                                sharedTransitionScope = this@SharedTransitionLayout,
+                                                animatedVisibilityScope = this@composable
                                             )
                                         }
                                     }
@@ -586,56 +667,67 @@ class MainActivity : ComponentActivity() {
                                         arguments = listOf(navArgument("itemId") { type = NavType.StringType })
                                     ) { backStackEntry ->
                                         val itemId = backStackEntry.arguments?.getString("itemId") ?: ""
-                                        DetailScreen(
-                                            viewModel = viewModel,
-                                            itemId = itemId,
-                                            onClose = {
-                                                if (navController.currentDestination?.route?.startsWith("detail") == true) {
-                                                    navController.popBackStack()
-                                                }
-                                                viewModel.closeDetailItem()
-                                            },
-                                            onEdit = { item ->
-                                                if (navController.currentDestination?.route?.startsWith("detail") == true) {
-                                                    navController.popBackStack()
-                                                }
-                                                viewModel.closeDetailItem()
-                                                viewModel.startEditItem(item)
-                                            },
-                                            hazeState = hazeState,
-                                            sharedTransitionScope = this@SharedTransitionLayout,
-                                            animatedVisibilityScope = this@composable
-                                        )
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            DetailScreen(
+                                                viewModel = viewModel,
+                                                itemId = itemId,
+                                                onClose = {
+                                                    if (navController.currentDestination?.route?.startsWith("detail") == true) {
+                                                        navController.popBackStack()
+                                                    }
+                                                    viewModel.closeDetailItem()
+                                                },
+                                                onEdit = { item ->
+                                                    viewModel.startEditItem(item)
+                                                },
+                                                hazeState = hazeState,
+                                                sharedTransitionScope = this@SharedTransitionLayout,
+                                                animatedVisibilityScope = this@composable
+                                            )
+                                        }
                                     }
                                  }
-
-                                 // Sliding overlay for the capture screen - mimics Apple's native share action sheet
-                                 AnimatedVisibility(
-                                     visible = activeCaptureItem != null,
-                                     enter = slideInVertically(
-                                         initialOffsetY = { it },
-                                         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
-                                     ) + scaleIn(
-                                         initialScale = 0.9f,
-                                         animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
-                                     ) + fadeIn(
-                                         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
-                                     ),
-                                     exit = slideOutVertically(
-                                         targetOffsetY = { it },
-                                         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
-                                     ) + scaleOut(
-                                         targetScale = 0.9f,
-                                         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
-                                     ) + fadeOut(
-                                         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
-                                     )
-                                 ) {
-                                     CaptureScreen(viewModel = viewModel)
-                                 }
-
-
                             }
+                        }
+
+                        if (captureBlurFraction > 0.001f) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer { alpha = captureBlurFraction * 0.45f }
+                                    .background(Color.Black)
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) {
+                                        viewModel.cancelCapture()
+                                    }
+                            )
+                        }
+
+                        // Sliding overlay for the capture screen - smooth M3 deceleration and fade
+                        AnimatedVisibility(
+                            visible = activeCaptureItem != null,
+                            enter = slideInVertically(
+                                initialOffsetY = { (it * 0.35f).toInt() },
+                                animationSpec = tween(durationMillis = 350, easing = EmphasizedDecelerateEasing)
+                            ) + scaleIn(
+                                initialScale = 0.94f,
+                                animationSpec = tween(durationMillis = 350, easing = EmphasizedDecelerateEasing)
+                            ) + fadeIn(
+                                animationSpec = tween(durationMillis = 250, easing = LinearEasing)
+                            ),
+                            exit = slideOutVertically(
+                                targetOffsetY = { (it * 0.35f).toInt() },
+                                animationSpec = tween(durationMillis = 280, easing = EmphasizedAccelerateEasing)
+                            ) + scaleOut(
+                                targetScale = 0.94f,
+                                animationSpec = tween(durationMillis = 280, easing = EmphasizedAccelerateEasing)
+                            ) + fadeOut(
+                                animationSpec = tween(durationMillis = 200, easing = LinearEasing)
+                            )
+                        ) {
+                            CaptureScreen(viewModel = viewModel)
                         }
 
                         // Floating CustomBottomBar Overlay

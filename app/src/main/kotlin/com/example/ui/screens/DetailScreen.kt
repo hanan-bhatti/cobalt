@@ -18,9 +18,16 @@
 
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.activity.compose.BackHandler
@@ -157,10 +164,6 @@ fun DetailScreen(
     val userEmail by viewModel.userEmail.collectAsState()
     val isUserSignedIn = !userEmail.isNullOrBlank()
 
-    BackHandler {
-        onClose()
-    }
-
     var showLeaveAppDialog by remember { mutableStateOf(false) }
     var urlToOpen by remember { mutableStateOf("") }
 
@@ -247,85 +250,90 @@ fun DetailScreen(
                 color = if (useBlur) Color.Transparent else MaterialTheme.colorScheme.background.copy(alpha = 0.92f),
                 border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 24.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = {
-                            viewModel.shareItem(item, context)
-                        },
-                        modifier = Modifier.bounceClick().testTag("detail_bottom_share_button")
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_share),
-                            contentDescription = "Share",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-
-                    Button(
-                        onClick = { onEdit(item) },
+                    Row(
                         modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 24.dp)
-                            .height(48.dp)
-                            .bounceClick()
-                            .testTag("detail_bottom_edit_button"),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = folderColor,
-                            contentColor = Color.White
-                        )
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 24.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_edit),
-                            contentDescription = "Edit",
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Edit Item", fontWeight = FontWeight.Bold)
+                        IconButton(
+                            onClick = {
+                                viewModel.shareItem(item, context)
+                            },
+                            modifier = Modifier.bounceClick().testTag("detail_bottom_share_button")
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_share),
+                                contentDescription = "Share",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        Button(
+                            onClick = { onEdit(item) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(start = 24.dp)
+                                .height(48.dp)
+                                .bounceClick()
+                                .testTag("detail_bottom_edit_button"),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = folderColor,
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_edit),
+                                contentDescription = "Edit",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Edit Item", fontWeight = FontWeight.Bold)
+                        }
                     }
-                }
             }
         },
         containerColor = MaterialTheme.colorScheme.background,
-        modifier = modifier
-            .maybeSharedBounds(
-                sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = animatedVisibilityScope,
-                key = "card_${item.id}",
-                clipShape = RoundedCornerShape(0.dp)
-            )
-            .fillMaxSize()
+        modifier = modifier.fillMaxSize()
     ) { innerPadding ->
-        var showFullscreenImage by remember { mutableStateOf(false) }
-        var isLoading by remember(item.id) { mutableStateOf(false) }
-        if (isLoading) {
-            DetailScreenSkeleton(
-                itemType = item.type,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = innerPadding.calculateTopPadding())
-            )
-        } else {
-            SelectionContainer {
-                Column(
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .maybeSharedBounds(
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    key = "card_${item.id}",
+                    clipShape = RoundedCornerShape(0.dp)
+                ),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            var showFullscreenImage by remember { mutableStateOf(false) }
+            var isLoading by remember(item.id) { mutableStateOf(false) }
+            if (isLoading) {
+                DetailScreenSkeleton(
+                    itemType = item.type,
                     modifier = Modifier
                         .fillMaxSize()
-                        .hazeSource(state = localHazeState)
-                        .verticalScroll(scrollState)
-                        .padding(
-                            top = innerPadding.calculateTopPadding()
-                        )
-                        .padding(horizontal = 24.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(28.dp)
-                ) {
+                        .padding(top = innerPadding.calculateTopPadding(), bottom = innerPadding.calculateBottomPadding())
+                )
+            } else {
+                SelectionContainer {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .hazeSource(state = localHazeState)
+                            .verticalScroll(scrollState)
+                            .padding(
+                                top = innerPadding.calculateTopPadding(),
+                                bottom = innerPadding.calculateBottomPadding()
+                            )
+                            .padding(horizontal = 24.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(28.dp)
+                    ) {
             // HEADER SECTION (Only for non-MEDIA types; MEDIA items use redesigned MediaDetailSection hero header)
             if (item.type != SavedItemType.MEDIA) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -777,6 +785,7 @@ fun DetailScreen(
             Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding() + 16.dp))
         }
         }
+    }
     }
 }
 }

@@ -22,26 +22,32 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.BoundsTransform
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Shape
 
 @OptIn(ExperimentalSharedTransitionApi::class)
-val PhysicsSpringBoundsTransform = BoundsTransform { _, _ ->
-    tween(
-        durationMillis = 350,
-        easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
+val AppleSpringBoundsTransform = BoundsTransform { _, _ ->
+    spring(
+        dampingRatio = 0.85f,
+        stiffness = 380f
     )
 }
+
+val PhysicsSpringBoundsTransform = AppleSpringBoundsTransform
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 fun Modifier.maybeSharedElement(
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
     key: Any,
-    boundsTransform: BoundsTransform = PhysicsSpringBoundsTransform,
+    boundsTransform: BoundsTransform = AppleSpringBoundsTransform,
     clipShape: Shape? = null
 ): Modifier = composed {
     if (sharedTransitionScope != null && animatedVisibilityScope != null) {
@@ -52,13 +58,15 @@ fun Modifier.maybeSharedElement(
                     sharedContentState = rememberSharedContentState(key = key),
                     animatedVisibilityScope = animatedVisibilityScope,
                     boundsTransform = boundsTransform,
-                    clipInOverlayDuringTransition = clip
+                    clipInOverlayDuringTransition = clip,
+                    zIndexInOverlay = 2f
                 )
             } else {
                 this@composed.sharedElement(
                     sharedContentState = rememberSharedContentState(key = key),
                     animatedVisibilityScope = animatedVisibilityScope,
-                    boundsTransform = boundsTransform
+                    boundsTransform = boundsTransform,
+                    zIndexInOverlay = 2f
                 )
             }
         }
@@ -72,22 +80,23 @@ fun Modifier.maybeSharedBounds(
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
     key: Any,
-    boundsTransform: BoundsTransform = PhysicsSpringBoundsTransform,
+    boundsTransform: BoundsTransform = AppleSpringBoundsTransform,
     clipShape: Shape? = null
 ): Modifier = composed {
     if (sharedTransitionScope != null && animatedVisibilityScope != null) {
         with(sharedTransitionScope) {
             val clip = if (clipShape != null) OverlayClip(clipShape) else null
-            val enterSpec = androidx.compose.animation.fadeIn(
-                animationSpec = androidx.compose.animation.core.tween(
-                    durationMillis = 350,
-                    easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+            val enterSpec = fadeIn(
+                animationSpec = tween(
+                    durationMillis = 200,
+                    delayMillis = 40,
+                    easing = FastOutSlowInEasing
                 )
             )
-            val exitSpec = androidx.compose.animation.fadeOut(
-                animationSpec = androidx.compose.animation.core.tween(
-                    durationMillis = 280,
-                    easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+            val exitSpec = fadeOut(
+                animationSpec = tween(
+                    durationMillis = 110,
+                    easing = LinearEasing
                 )
             )
             if (clip != null) {
@@ -97,7 +106,9 @@ fun Modifier.maybeSharedBounds(
                     boundsTransform = boundsTransform,
                     clipInOverlayDuringTransition = clip,
                     enter = enterSpec,
-                    exit = exitSpec
+                    exit = exitSpec,
+                    resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                    zIndexInOverlay = 2f
                 )
             } else {
                 this@composed.sharedBounds(
@@ -105,7 +116,9 @@ fun Modifier.maybeSharedBounds(
                     animatedVisibilityScope = animatedVisibilityScope,
                     boundsTransform = boundsTransform,
                     enter = enterSpec,
-                    exit = exitSpec
+                    exit = exitSpec,
+                    resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+                    zIndexInOverlay = 2f
                 )
             }
         }

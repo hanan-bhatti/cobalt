@@ -148,6 +148,10 @@ object CobaltCustomTabsLauncher {
                 builder.addMenuItem("Star / Favorite Item", starPendingIntent)
             }
 
+            // Match Settings page shared axis slide transitions
+            builder.setStartAnimations(context, R.anim.sud_slide_next_in, R.anim.sud_slide_next_out)
+            builder.setExitAnimations(context, R.anim.sud_slide_back_in, R.anim.sud_slide_back_out)
+
             val customTabsIntent = builder.build()
 
             // Resolve CCT package if available
@@ -156,7 +160,9 @@ object CobaltCustomTabsLauncher {
                 customTabsIntent.intent.setPackage(cctPackage)
             }
 
-            customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (context !is android.app.Activity) {
+                customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
             customTabsIntent.launchUrl(context, uri)
 
         } catch (e: Exception) {

@@ -164,7 +164,10 @@ fun FoldersScreen(
     viewModel: CobaltViewModel,
     hazeState: HazeState,
     modifier: Modifier = Modifier,
-    onItemClick: ((SavedItem) -> Unit)? = null
+    onItemClick: ((SavedItem) -> Unit)? = null,
+    onOpenFolder: ((String) -> Unit)? = null,
+    sharedTransitionScope: androidx.compose.animation.SharedTransitionScope? = null,
+    animatedVisibilityScope: androidx.compose.animation.AnimatedVisibilityScope? = null
 ) {
     val allItems by viewModel.allItems.collectAsState()
     val customFolderEntities by viewModel.customFolderEntities.collectAsState()
@@ -242,7 +245,9 @@ fun FoldersScreen(
                 viewModel = viewModel,
                 onBack = { activeBrowseFolder = null },
                 hazeState = hazeState,
-                onItemClick = onItemClick
+                onItemClick = onItemClick,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope
             )
         } else {
             // MAIN FOLDERS DIRECTORY LIST VIEW
@@ -378,7 +383,7 @@ fun FoldersScreen(
                                 name = type.displayName,
                                 count = count,
                                 iconResId = iconResId,
-                                onClick = { activeBrowseFolder = type.displayName },
+                                onClick = { onOpenFolder?.invoke(type.displayName) ?: run { activeBrowseFolder = type.displayName } },
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -404,7 +409,7 @@ fun FoldersScreen(
                                 PinnedFolderCard(
                                     folder = folder,
                                     count = count,
-                                    onClick = { activeBrowseFolder = folder.name },
+                                    onClick = { onOpenFolder?.invoke(folder.name) ?: run { activeBrowseFolder = folder.name } },
                                     onCustomize = { folderToCustomize = folder },
                                     modifier = Modifier.fillMaxWidth()
                                 )
@@ -459,7 +464,7 @@ fun FoldersScreen(
                                 FolderDirectoryItem(
                                     folder = folder,
                                     count = count,
-                                    onClick = { activeBrowseFolder = folder.name },
+                                    onClick = { onOpenFolder?.invoke(folder.name) ?: run { activeBrowseFolder = folder.name } },
                                     onCustomize = { folderToCustomize = folder },
                                     modifier = Modifier.fillMaxWidth()
                                 )
@@ -478,7 +483,7 @@ fun FoldersScreen(
                                 name = "Archive",
                                 count = archiveCount,
                                 iconResId = com.example.R.drawable.ic_custom_archive,
-                                onClick = { activeBrowseFolder = "Archive" },
+                                onClick = { onOpenFolder?.invoke("Archive") ?: run { activeBrowseFolder = "Archive" } },
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -809,7 +814,9 @@ fun FolderContentsBrowser(
     viewModel: CobaltViewModel,
     onBack: () -> Unit,
     hazeState: HazeState,
-    onItemClick: ((SavedItem) -> Unit)? = null
+    onItemClick: ((SavedItem) -> Unit)? = null,
+    sharedTransitionScope: androidx.compose.animation.SharedTransitionScope? = null,
+    animatedVisibilityScope: androidx.compose.animation.AnimatedVisibilityScope? = null
 ) {
     val items by viewModel.allItems.collectAsState()
     val isSyncing by viewModel.isSyncing.collectAsState()
@@ -1003,7 +1010,9 @@ fun FolderContentsBrowser(
                             item = item,
                             viewModel = viewModel,
                             onClick = { onItemClick?.invoke(item) ?: viewModel.showDetailItem(item) },
-                            modifier = Modifier.animateItem()
+                            modifier = Modifier.animateItem(),
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope
                         )
                     }
                 }
@@ -1018,7 +1027,9 @@ fun FolderBrowseItemRow(
     item: SavedItem,
     viewModel: CobaltViewModel,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    sharedTransitionScope: androidx.compose.animation.SharedTransitionScope? = null,
+    animatedVisibilityScope: androidx.compose.animation.AnimatedVisibilityScope? = null
 ) {
     val context = LocalContext.current
     val isDark = isSystemInDarkTheme()
@@ -1063,6 +1074,12 @@ fun FolderBrowseItemRow(
             border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
             modifier = Modifier
                 .fillMaxWidth()
+                .maybeSharedBounds(
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    key = "card_${item.id}",
+                    clipShape = RoundedCornerShape(16.dp)
+                )
                 .bounceClick(interactionSource)
                 .combinedClickable(
                     interactionSource = interactionSource,

@@ -24,12 +24,18 @@ import androidx.compose.animation.SharedTransitionScope
 import android.content.Intent
 import android.net.Uri
 import android.view.View
+import android.webkit.CookieManager
+import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.compose.foundation.shape.CircleShape
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -753,6 +759,21 @@ fun MediaDetailSection(
     }
 }
 
+class YouTubePlayerBridge(
+    private val onReady: () -> Unit,
+    private val onError: (String) -> Unit
+) {
+    @JavascriptInterface
+    fun onReady() {
+        onReady()
+    }
+
+    @JavascriptInterface
+    fun onError(errorCode: String) {
+        onError(errorCode)
+    }
+}
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun YouTubeTrailerPlayer(
@@ -760,17 +781,24 @@ fun YouTubeTrailerPlayer(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val videoId = remember(trailerUrl) { extractYouTubeVideoId(trailerUrl) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (videoId != null) {
             var isLoading by remember { mutableStateOf(true) }
-            val embedHtml = remember(videoId) {
+            var hasPlaybackError by remember { mutableStateOf(false) }
+            var webViewRef by remember { mutableStateOf<WebView?>(null) }
+
+            val appOrigin = remember(context) { "https://${context.packageName}" }
+
+            val embedHtml = remember(videoId, appOrigin) {
                 """
                 <!DOCTYPE html>
                 <html>
                 <head>
                     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+                    <meta name="referrer" content="strict-origin-when-cross-origin">
                     <style>
                         * { margin: 0; padding: 0; box-sizing: border-box; background-color: #000000; }
                         html, body { width: 100%; height: 100%; overflow: hidden; background-color: #000000; }
@@ -781,85 +809,215 @@ fun YouTubeTrailerPlayer(
                 <body>
                     <div class="container">
                         <iframe 
-                            src="https://www.youtube-nocookie.com/embed/$videoId?enablejsapi=1&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&origin=https://www.youtube.com" 
+                            id="player"
+                            src="https://www.youtube.com/embed/$videoId?enablejsapi=1&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&origin=$appOrigin" 
                             frameborder="0" 
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                             allowfullscreen 
                             referrerpolicy="strict-origin-when-cross-origin">
                         </iframe>
                     </div>
+                    <script>
+                        window.addEventListener('message', function(event) {
+                            try {
+                                var data = (typeof event.data === 'string') ? JSON.parse(event.data) : event.data;
+                                if (data && data.event === 'onError') {
+                                    if (window.AndroidBridge) {
+                                        window.AndroidBridge.onError('' + data.info);
+                                    }
+                                } else if (data && data.event === 'onReady') {
+                                    if (window.AndroidBridge) {
+                                        window.AndroidBridge.onReady();
+                                    }
+                                }
+                            } catch (e) {}
+                        });
+                    </script>
                 </body>
                 </html>
                 """.trimIndent()
             }
 
-            Box(
-                modifier = modifier
-                    .fillMaxWidth()
-                    .aspectRatio(16f / 9f)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color.Black),
-                contentAlignment = Alignment.Center
-            ) {
-                AndroidView(
-                    factory = { ctx ->
-                        WebView(ctx).apply {
-                            setLayerType(View.LAYER_TYPE_HARDWARE, null)
-                            settings.apply {
-                                javaScriptEnabled = true
-                                domStorageEnabled = true
-                                mediaPlaybackRequiresUserGesture = false
-                                allowFileAccess = false
-                                loadsImagesAutomatically = true
-                                useWideViewPort = true
-                                loadWithOverviewMode = true
-                                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                            }
-                            webChromeClient = WebChromeClient()
-                            webViewClient = object : WebViewClient() {
-                                override fun onPageFinished(view: WebView?, url: String?) {
-                                    super.onPageFinished(view, url)
-                                    isLoading = false
-                                }
+            DisposableEffect(lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, event ->
+                    when (event) {
+                        Lifecycle.Event.ON_PAUSE -> {
+                            webViewRef?.onPause()
+                            webViewRef?.pauseTimers()
+                        }
+                        Lifecycle.Event.ON_RESUME -> {
+                            webViewRef?.onResume()
+                            webViewRef?.resumeTimers()
+                        }
+                        else -> {}
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose {
+                    lifecycleOwner.lifecycle.removeObserver(observer)
+                    try {
+                        webViewRef?.stopLoading()
+                        webViewRef?.loadUrl("about:blank")
+                        webViewRef?.destroy()
+                    } catch (_: Exception) {}
+                    webViewRef = null
+                }
+            }
 
-                                override fun onReceivedError(
-                                    view: WebView?,
-                                    request: WebResourceRequest?,
-                                    error: WebResourceError?
-                                ) {
-                                    super.onReceivedError(view, request, error)
-                                    if (request?.isForMainFrame == true) {
-                                        isLoading = false
+            if (hasPlaybackError) {
+                Box(
+                    modifier = modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.Black)
+                        .clickable {
+                            com.example.util.CobaltCustomTabsLauncher.launch(
+                                context = context,
+                                url = trailerUrl,
+                                isDarkTheme = true
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = "https://img.youtube.com/vi/$videoId/hqdefault.jpg",
+                        contentDescription = "Trailer Preview",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.55f))
+                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(52.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = "Play Trailer",
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
+                        Text(
+                            text = "Watch Trailer on YouTube",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Tap to open external player",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            } else {
+                Box(
+                    modifier = modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.Black),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AndroidView(
+                        factory = { ctx ->
+                            WebView(ctx).apply {
+                                webViewRef = this
+                                setLayerType(View.LAYER_TYPE_HARDWARE, null)
+
+                                val cookieManager = CookieManager.getInstance()
+                                cookieManager.setAcceptCookie(true)
+                                cookieManager.setAcceptThirdPartyCookies(this, true)
+
+                                settings.apply {
+                                    javaScriptEnabled = true
+                                    domStorageEnabled = true
+                                    mediaPlaybackRequiresUserGesture = false
+                                    allowFileAccess = false
+                                    allowContentAccess = false
+                                    loadsImagesAutomatically = true
+                                    useWideViewPort = true
+                                    loadWithOverviewMode = true
+                                    mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+
+                                    val defaultUa = userAgentString ?: ""
+                                    if (defaultUa.contains("; wv")) {
+                                        userAgentString = defaultUa.replace("; wv", "")
                                     }
                                 }
-                            }
-                            loadDataWithBaseURL("https://www.youtube.com", embedHtml, "text/html", "UTF-8", null)
-                        }
-                    },
-                    update = { webView ->
-                        if (webView.tag != videoId) {
-                            webView.tag = videoId
-                            webView.loadDataWithBaseURL("https://www.youtube.com", embedHtml, "text/html", "UTF-8", null)
-                        }
-                    },
-                    onRelease = { webView ->
-                        try {
-                            webView.stopLoading()
-                            webView.loadUrl("about:blank")
-                            webView.destroy()
-                        } catch (e: Exception) {
-                            // Ignored during cleanup
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
 
-                if (isLoading) {
-                    CircularWavyProgressIndicator(
-                        modifier = Modifier.size(48.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
+                                addJavascriptInterface(
+                                    YouTubePlayerBridge(
+                                        onReady = { isLoading = false },
+                                        onError = { errorCode ->
+                                            android.util.Log.w("YouTubeTrailerPlayer", "YouTube embed error: $errorCode")
+                                            hasPlaybackError = true
+                                            isLoading = false
+                                        }
+                                    ),
+                                    "AndroidBridge"
+                                )
+
+                                webChromeClient = WebChromeClient()
+                                webViewClient = object : WebViewClient() {
+                                    override fun onPageFinished(view: WebView?, url: String?) {
+                                        super.onPageFinished(view, url)
+                                        isLoading = false
+                                    }
+
+                                    override fun onReceivedError(
+                                        view: WebView?,
+                                        request: WebResourceRequest?,
+                                        error: WebResourceError?
+                                    ) {
+                                        super.onReceivedError(view, request, error)
+                                        if (request?.isForMainFrame == true) {
+                                            isLoading = false
+                                            hasPlaybackError = true
+                                        }
+                                    }
+                                }
+                                loadDataWithBaseURL(appOrigin, embedHtml, "text/html", "UTF-8", null)
+                            }
+                        },
+                        update = { webView ->
+                            webViewRef = webView
+                            if (webView.tag != videoId) {
+                                webView.tag = videoId
+                                hasPlaybackError = false
+                                isLoading = true
+                                webView.loadDataWithBaseURL(appOrigin, embedHtml, "text/html", "UTF-8", null)
+                            }
+                        },
+                        onRelease = { webView ->
+                            try {
+                                webView.stopLoading()
+                                webView.loadUrl("about:blank")
+                                webView.destroy()
+                            } catch (_: Exception) {}
+                        },
+                        modifier = Modifier.fillMaxSize()
                     )
+
+                    if (isLoading) {
+                        CircularWavyProgressIndicator(
+                            modifier = Modifier.size(48.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    }
                 }
             }
         } else {
