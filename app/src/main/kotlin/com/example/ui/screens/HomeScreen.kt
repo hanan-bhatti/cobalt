@@ -577,42 +577,8 @@ fun HomeScreen(
                     }
                 }
             } else {
-                if (isInitialLoading) {
-                    AnimatedContent(
-                        targetState = isListView,
-                        transitionSpec = {
-                            fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
-                        },
-                        label = "skeleton_view_toggle",
-                        modifier = Modifier.weight(1f).fillMaxWidth()
-                    ) { targetIsList ->
-                        if (targetIsList) {
-                            LazyColumn(
-                                contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 100.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp),
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                items(6) {
-                                    SkeletonItemCard(isListView = true)
-                                }
-                            }
-                        } else {
-                            LazyVerticalStaggeredGrid(
-                                columns = StaggeredGridCells.Fixed(2),
-                                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 100.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalItemSpacing = 12.dp,
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                items(6) {
-                                    SkeletonItemCard(isListView = false)
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    AnimatedContent(
-                        targetState = isListView,
+                AnimatedContent(
+                    targetState = isListView,
                         transitionSpec = {
                             (fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing)) +
                                     scaleIn(initialScale = 0.92f, animationSpec = tween(350, easing = FastOutSlowInEasing)))
@@ -780,7 +746,6 @@ fun HomeScreen(
                             }
                         }
                     }
-                }
             }
         }
         // Beautiful interactive Undo Toast UI overlay
@@ -1988,113 +1953,6 @@ private fun removeQueryFromHistory(prefs: android.content.SharedPreferences, que
 
 fun clearSearchHistory(prefs: android.content.SharedPreferences) {
     prefs.edit().remove("search_history").apply()
-}
-
-@Composable
-fun SkeletonItemCard(isListView: Boolean) {
-    val transition = rememberInfiniteTransition(label = "shimmer")
-    val translateAnim = transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1000f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmerTranslate"
-    )
-
-    val shimmerColors = listOf(
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
-        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-    )
-
-    val brush = Brush.linearGradient(
-        colors = shimmerColors,
-        start = Offset(10f, 10f),
-        end = Offset(translateAnim.value, translateAnim.value)
-    )
-
-    if (isListView) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-        ) {
-            Row(
-                modifier = Modifier
-                    .padding(12.dp)
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(brush)
-                )
-                Spacer(modifier = Modifier.width(14.dp))
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.6f)
-                            .height(18.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(brush)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.85f)
-                            .height(14.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(brush)
-                    )
-                }
-            }
-        }
-    } else {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1.2f),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-        ) {
-            Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(brush)
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.7f)
-                        .height(16.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(brush)
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.5f)
-                        .height(12.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(brush)
-                )
-            }
-        }
-    }
 }
 
 @Composable
