@@ -575,7 +575,9 @@ class MainActivity : ComponentActivity() {
                                                 onMediaClick = { item ->
                                                     viewModel.showDetailItem(item)
                                                     navController.navigate("detail/${item.id}")
-                                                }
+                                                },
+                                                sharedTransitionScope = this@SharedTransitionLayout,
+                                                animatedVisibilityScope = this@composable
                                             )
                                         }
                                     }

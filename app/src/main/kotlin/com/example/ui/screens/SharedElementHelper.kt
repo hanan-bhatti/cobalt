@@ -41,15 +41,26 @@ fun Modifier.maybeSharedElement(
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
     key: Any,
-    boundsTransform: BoundsTransform = PhysicsSpringBoundsTransform
+    boundsTransform: BoundsTransform = PhysicsSpringBoundsTransform,
+    clipShape: Shape? = null
 ): Modifier = composed {
     if (sharedTransitionScope != null && animatedVisibilityScope != null) {
         with(sharedTransitionScope) {
-            this@composed.sharedElement(
-                sharedContentState = rememberSharedContentState(key = key),
-                animatedVisibilityScope = animatedVisibilityScope,
-                boundsTransform = boundsTransform
-            )
+            val clip = if (clipShape != null) OverlayClip(clipShape) else null
+            if (clip != null) {
+                this@composed.sharedElement(
+                    sharedContentState = rememberSharedContentState(key = key),
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    boundsTransform = boundsTransform,
+                    clipInOverlayDuringTransition = clip
+                )
+            } else {
+                this@composed.sharedElement(
+                    sharedContentState = rememberSharedContentState(key = key),
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    boundsTransform = boundsTransform
+                )
+            }
         }
     } else {
         this

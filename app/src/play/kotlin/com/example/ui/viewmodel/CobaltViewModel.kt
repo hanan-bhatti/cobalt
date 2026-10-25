@@ -632,7 +632,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     !modelName.contains("transcribe", ignoreCase = true) &&
                     !modelName.contains("imagen", ignoreCase = true)
                 }.sortedWith(
-                    compareByDescending<String> { it.contains("2.5") }
+                    compareByDescending<String> { it.contains("flash-lite") }
+                        .thenByDescending { it.contains("2.5") }
                         .thenByDescending { it.contains("2.0") }
                         .thenByDescending { it.contains("1.5") }
                         .thenByDescending { it.contains("flash") }
@@ -642,7 +643,10 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 if (visionModels.isNotEmpty()) {
                     val currentSelected = settingsRepository.selectedModel.value
                     if (currentSelected.isBlank() || !visionModels.contains(currentSelected)) {
-                        val defaultModel = visionModels.firstOrNull { it.contains("2.5-flash") }
+                        val defaultModel = visionModels.firstOrNull { it.contains("2.5-flash-lite") }
+                            ?: visionModels.firstOrNull { it.contains("2.0-flash-lite") }
+                            ?: visionModels.firstOrNull { it.contains("flash-lite") }
+                            ?: visionModels.firstOrNull { it.contains("2.5-flash") }
                             ?: visionModels.firstOrNull { it.contains("2.0-flash") }
                             ?: visionModels.firstOrNull { it.contains("1.5-flash") }
                             ?: visionModels.firstOrNull { it.contains("flash") }
@@ -1824,7 +1828,11 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         _isMetadataExtracting.value = false
         _metadataError.value = null
         editOriginalId = item.id
-        _activeCaptureItem.value = item
+        _activeCaptureItem.value = if (item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE) {
+            item.copy(extractedText = null)
+        } else {
+            item
+        }
 
         if (item.type == SavedItemType.IMAGE && item.content.isNotBlank()) {
             _isOcrLoading.value = true

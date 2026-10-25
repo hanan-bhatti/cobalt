@@ -18,6 +18,9 @@
 
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -65,11 +68,13 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun MediaHubScreen(
     viewModel: CobaltViewModel,
     onMediaClick: (SavedItem) -> Unit,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
     modifier: Modifier = Modifier
 ) {
     val isSyncing by viewModel.isSyncing.collectAsState()
@@ -179,16 +184,21 @@ fun MediaHubScreen(
         ) {
             MediaHubContent(
                 viewModel = viewModel,
-                onMediaClick = onMediaClick
+                onMediaClick = onMediaClick,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope
             )
         }
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun MediaHubContent(
     viewModel: CobaltViewModel,
     onMediaClick: (SavedItem) -> Unit,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
     modifier: Modifier = Modifier
 ) {
     val allItems by viewModel.allItems.collectAsState()
@@ -393,7 +403,9 @@ fun MediaHubContent(
                 items(mediaItems, key = { it.id }) { item ->
                     MediaItemCard(
                         item = item,
-                        onClick = { onMediaClick(item) }
+                        onClick = { onMediaClick(item) },
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = animatedVisibilityScope
                     )
                 }
             }
@@ -440,10 +452,13 @@ fun FilterChipItem(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun MediaItemCard(
     item: SavedItem,
     onClick: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null,
     modifier: Modifier = Modifier
 ) {
     val imagePath = item.getBestImagePath()
@@ -462,6 +477,12 @@ fun MediaItemCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .maybeSharedBounds(
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+                key = "card_${item.id}",
+                clipShape = RoundedCornerShape(16.dp)
+            )
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
@@ -487,7 +508,15 @@ fun MediaItemCard(
                         model = imagePath,
                         contentDescription = item.title,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(16.dp))
+                            .maybeSharedElement(
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope,
+                                key = "image_${item.id}",
+                                clipShape = RoundedCornerShape(16.dp)
+                            )
                     )
                 } else {
                     Box(
