@@ -779,51 +779,47 @@ fun CaptureScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(220.dp)
                             .clip(RoundedCornerShape(20.dp))
                             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(20.dp))
                             .background(Color.Black),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_video),
-                            contentDescription = "Video Loaded",
-                            tint = Color.White,
-                            modifier = Modifier.size(48.dp)
+                        VideoPlayer(
+                            videoUri = mediaUrl,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
-            }
 
-            // EXTRACTED TEXT FIELD / NOTES FIELD
-            if (isOcrLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
-                        .background(MaterialTheme.colorScheme.surface)
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        @OptIn(ExperimentalMaterial3ExpressiveApi::class)
-                        CircularWavyProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Gemini AI OCR extracting text...",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                // EXTRACTED TEXT FIELD / NOTES FIELD (Only for IMAGE / VIDEO)
+                if (isOcrLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(100.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(20.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+                            CircularWavyProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "Gemini AI OCR extracting text...",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-            } else if (item.extractedText != null || pageType == SavedItemType.IMAGE || pageType == SavedItemType.VIDEO) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                } else {
                 Text(
                     text = if (item.extractedText != null && capturedBitmap != null) "Extracted OCR Result" else "Notes / Description",
                     fontSize = 12.sp,
@@ -1031,6 +1027,7 @@ fun CaptureScreen(
                     }
                 }
             }
+        }
 
             if (pageType == SavedItemType.MEDIA) {
                 // Media capture view

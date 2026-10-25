@@ -944,6 +944,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                     item.copy(
                                                         title = noteTitle.ifBlank { "Extracted Note" },
                                                         content = item.extractedText ?: "",
+                                                        extractedText = null,
                                                         type = SavedItemType.TEXT,
                                                         folders = selectedFolders.toList()
                                                     )

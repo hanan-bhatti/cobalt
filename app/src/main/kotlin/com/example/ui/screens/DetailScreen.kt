@@ -433,9 +433,17 @@ fun DetailScreen(
                 } else if (item.type == SavedItemType.VIDEO) {
                     com.example.ui.components.VideoPlayer(
                         videoUri = item.content,
+                        itemId = item.id,
+                        thumbnailUrl = item.thumbnailPath,
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
                             .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                            .maybeSharedElement(
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = animatedVisibilityScope,
+                                key = "image_${item.id}",
+                                clipShape = RoundedCornerShape(20.dp)
+                            )
                     )
                 } else {
                     AsyncImage(
@@ -449,7 +457,8 @@ fun DetailScreen(
                             .maybeSharedElement(
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope,
-                                key = "image_${item.id}"
+                                key = "image_${item.id}",
+                                clipShape = RoundedCornerShape(20.dp)
                             )
                             .clickable { showFullscreenImage = true }
                     )
@@ -468,7 +477,8 @@ fun DetailScreen(
                         .maybeSharedElement(
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
-                            key = "image_${item.id}"
+                            key = "image_${item.id}",
+                            clipShape = RoundedCornerShape(20.dp)
                         )
                 )
             }
@@ -682,7 +692,12 @@ fun DetailScreen(
             }
 
             if (item.type == SavedItemType.MEDIA) {
-                MediaDetailSection(item = item, viewModel = viewModel)
+                MediaDetailSection(
+                    item = item,
+                    viewModel = viewModel,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
             }
 
 

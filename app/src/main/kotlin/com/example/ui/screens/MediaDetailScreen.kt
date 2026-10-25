@@ -18,6 +18,9 @@
 
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import android.content.Intent
 import android.net.Uri
 import android.view.View
@@ -79,13 +82,15 @@ import com.example.ui.theme.*
 import com.example.ui.viewmodel.CobaltViewModel
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun MediaDetailSection(
     item: SavedItem,
     viewModel: CobaltViewModel,
     modifier: Modifier = Modifier,
-    onWatchStatusChanged: ((String) -> Unit)? = null
+    onWatchStatusChanged: ((String) -> Unit)? = null,
+    sharedTransitionScope: SharedTransitionScope? = null,
+    animatedVisibilityScope: AnimatedVisibilityScope? = null
 ) {
     var showPosterZoom by remember { mutableStateOf(false) }
     var showMoreInfoSheet by remember { mutableStateOf(false) }
@@ -129,7 +134,15 @@ fun MediaDetailSection(
                     model = backdropImage,
                     contentDescription = item.title,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(24.dp))
+                        .maybeSharedElement(
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            key = "image_${item.id}",
+                            clipShape = RoundedCornerShape(24.dp)
+                        )
                 )
             } else {
                 Box(

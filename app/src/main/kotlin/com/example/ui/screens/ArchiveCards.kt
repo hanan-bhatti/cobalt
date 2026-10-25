@@ -288,10 +288,12 @@ fun ArchiveItemCard(
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier
                                     .fillMaxSize()
+                                    .clip(RoundedCornerShape(12.dp))
                                     .maybeSharedElement(
                                         sharedTransitionScope = sharedTransitionScope,
                                         animatedVisibilityScope = animatedVisibilityScope,
-                                        key = "image_${item.id}"
+                                        key = "image_${item.id}",
+                                        clipShape = RoundedCornerShape(12.dp)
                                     )
                             )
                             if (item.type == SavedItemType.VIDEO) {
@@ -631,10 +633,12 @@ fun ArchiveItemRow(
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .fillMaxSize()
+                                .clip(RoundedCornerShape(12.dp))
                                 .maybeSharedElement(
                                     sharedTransitionScope = sharedTransitionScope,
                                     animatedVisibilityScope = animatedVisibilityScope,
-                                    key = "image_${item.id}"
+                                    key = "image_${item.id}",
+                                    clipShape = RoundedCornerShape(12.dp)
                                 )
                         )
                         if (item.type == SavedItemType.VIDEO) {

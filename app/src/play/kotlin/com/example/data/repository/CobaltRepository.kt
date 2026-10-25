@@ -19,6 +19,7 @@
 package com.example.data.repository
 
 import android.content.Context
+import android.net.Uri
 import android.provider.Settings
 import com.example.data.model.DeviceSession
 import android.graphics.Bitmap
@@ -42,6 +43,7 @@ import com.example.data.remote.MediaSearchResultItem
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageMetadata
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -699,17 +701,45 @@ class CobaltRepository(private val context: Context) {
                 ) {
                     val localPath = when (domainItem.type) {
                         SavedItemType.AUDIO -> domainItem.thumbnailPath ?: ""
+                        SavedItemType.VIDEO -> domainItem.content
                         else -> domainItem.thumbnailPath ?: domainItem.content
                     }
-                    val bytes = readFileBytes(localPath)
-                    if (bytes != null && storage != null) {
+                    val localFile = File(localPath)
+                    val bytes = if (localFile.exists()) null else readFileBytes(localPath)
+                    if ((localFile.exists() || bytes != null) && storage != null) {
                         val fileExtension = when (domainItem.type) {
                             SavedItemType.VIDEO -> "mp4"
                             SavedItemType.AUDIO -> "m4a"
                             else -> "jpg"
                         }
+                        val mimeType = when (domainItem.type) {
+                            SavedItemType.VIDEO -> "video/mp4"
+                            SavedItemType.AUDIO -> "audio/mp4"
+                            else -> "image/jpeg"
+                        }
+                        val metadata = StorageMetadata.Builder()
+                            .setContentType(mimeType)
+                            .build()
+
+                        // Create permanent local copy on device if file exists
+                        if (localFile.exists() && localFile.length() > 0) {
+                            try {
+                                val permDir = getPermanentMediaDir(domainItem.type)
+                                val permFile = File(permDir, "${domainItem.id}.$fileExtension")
+                                if (!permFile.exists() || permFile.absolutePath != localFile.absolutePath) {
+                                    localFile.copyTo(permFile, overwrite = true)
+                                }
+                            } catch (e: Exception) {
+                                Log.w("CobaltRepo", "Could not copy permanent media: ${e.message}")
+                            }
+                        }
+
                         val storageRef = storage.reference.child("users/${currentUser.uid}/media/${domainItem.id}.$fileExtension")
-                        val uploadTask = storageRef.putBytes(bytes)
+                        val uploadTask = if (localFile.exists() && localFile.length() > 0) {
+                            storageRef.putFile(Uri.fromFile(localFile), metadata)
+                        } else {
+                            storageRef.putBytes(bytes!!, metadata)
+                        }
                         uploadTask.addOnProgressListener { taskSnapshot ->
                             onProgress?.invoke(com.example.sync.BackupSyncManager.SyncProgress(
                                 isSyncing = true,
@@ -722,16 +752,19 @@ class CobaltRepository(private val context: Context) {
                         }
                         val snapshot = uploadTask.await()
                         val downloadUrl = (snapshot.metadata?.reference?.downloadUrl ?: throw Exception("No reference URL")).await()
+                        val fileSize = if (localFile.exists()) localFile.length() else (bytes?.size?.toLong() ?: 0L)
                         finalItem = if (domainItem.type == SavedItemType.AUDIO) {
                             finalItem.copy(
                                 thumbnailPath = downloadUrl.toString(),
-                                sizeBytes = bytes.size.toLong()
+                                sizeBytes = fileSize,
+                                isBackedUp = true
                             )
                         } else {
                             finalItem.copy(
                                 content = downloadUrl.toString(),
                                 thumbnailPath = downloadUrl.toString(),
-                                sizeBytes = bytes.size.toLong()
+                                sizeBytes = fileSize,
+                                isBackedUp = true
                             )
                         }
                         savedItemDao.insertItem(finalItem.toEntity())
@@ -956,40 +989,69 @@ class CobaltRepository(private val context: Context) {
                     ) {
                         val localPath = when (domainItem.type) {
                             SavedItemType.AUDIO -> domainItem.thumbnailPath ?: ""
+                            SavedItemType.VIDEO -> domainItem.content
                             else -> domainItem.thumbnailPath ?: domainItem.content
                         }
-                        val bytes = readFileBytes(localPath)
-                        if (bytes != null && storage != null) {
+                        val localFile = File(localPath)
+                        val bytes = if (localFile.exists()) null else readFileBytes(localPath)
+                        if ((localFile.exists() || bytes != null) && storage != null) {
                             val fileExtension = when (domainItem.type) {
                                 SavedItemType.VIDEO -> "mp4"
                                 SavedItemType.AUDIO -> "m4a"
                                 else -> "jpg"
                             }
+                            val mimeType = when (domainItem.type) {
+                                SavedItemType.VIDEO -> "video/mp4"
+                                SavedItemType.AUDIO -> "audio/mp4"
+                                else -> "image/jpeg"
+                            }
+                            val metadata = StorageMetadata.Builder()
+                                .setContentType(mimeType)
+                                .build()
+
+                            // Create permanent local copy on device if file exists
+                            if (localFile.exists() && localFile.length() > 0) {
+                                try {
+                                    val permDir = getPermanentMediaDir(domainItem.type)
+                                    val permFile = File(permDir, "${domainItem.id}.$fileExtension")
+                                    if (!permFile.exists() || permFile.absolutePath != localFile.absolutePath) {
+                                        localFile.copyTo(permFile, overwrite = true)
+                                    }
+                                } catch (e: Exception) {
+                                    Log.w("CobaltRepo", "Could not copy permanent media: ${e.message}")
+                                }
+                            }
+
                             val storageRef = storage.reference.child("users/${currentUser.uid}/media/${domainItem.id}.$fileExtension")
-                            val uploadTask = storageRef.putBytes(bytes)
+                            val uploadTask = if (localFile.exists() && localFile.length() > 0) {
+                                storageRef.putFile(Uri.fromFile(localFile), metadata)
+                            } else {
+                                storageRef.putBytes(bytes!!, metadata)
+                            }
                             uploadTask.addOnProgressListener { taskSnapshot ->
                                 onProgress?.invoke(com.example.sync.BackupSyncManager.SyncProgress(
-                                isSyncing = true,
-                                progressBytes = taskSnapshot.bytesTransferred,
-                                totalBytes = taskSnapshot.totalByteCount,
-                                currentItem = currentIndex,
-                                totalItems = unsynced.size,
-                                currentCategory = domainItem.type
-                            ))
+                                    isSyncing = true,
+                                    progressBytes = taskSnapshot.bytesTransferred,
+                                    totalBytes = taskSnapshot.totalByteCount,
+                                    currentItem = currentIndex,
+                                    totalItems = unsynced.size,
+                                    currentCategory = domainItem.type
+                                ))
                             }
                             val snapshot = uploadTask.await()
                             val downloadUrl = (snapshot.metadata?.reference?.downloadUrl ?: throw Exception("No reference URL")).await()
+                            val fileSize = if (localFile.exists()) localFile.length() else (bytes?.size?.toLong() ?: 0L)
                             finalItem = if (domainItem.type == SavedItemType.AUDIO) {
                                 finalItem.copy(
                                     thumbnailPath = downloadUrl.toString(),
-                                    sizeBytes = bytes.size.toLong(),
+                                    sizeBytes = fileSize,
                                     isBackedUp = true
                                 )
                             } else {
                                 finalItem.copy(
                                     content = downloadUrl.toString(),
                                     thumbnailPath = downloadUrl.toString(),
-                                    sizeBytes = bytes.size.toLong(),
+                                    sizeBytes = fileSize,
                                     isBackedUp = true
                                 )
                             }

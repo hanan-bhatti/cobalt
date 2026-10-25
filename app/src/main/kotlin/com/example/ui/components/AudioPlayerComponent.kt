@@ -19,6 +19,8 @@
 package com.example.ui.components
 
 import android.media.MediaPlayer
+import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -27,6 +29,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -39,42 +42,77 @@ fun AudioPlayerComponent(
     modifier: Modifier = Modifier,
     isUnavailable: Boolean = false
 ) {
-    if (isUnavailable) {
+    if (isUnavailable || audioUri.isBlank()) {
         UnavailableMediaPlaceholder(modifier = modifier)
         return
     }
 
+    val context = LocalContext.current
     var isPlaying by remember { mutableStateOf(false) }
     var isPrepared by remember { mutableStateOf(false) }
     var durationMs by remember { mutableStateOf(0) }
     var positionMs by remember { mutableStateOf(0) }
-    val mediaPlayer = remember { MediaPlayer() }
+    var mediaPlayerRef by remember { mutableStateOf<MediaPlayer?>(null) }
 
     DisposableEffect(audioUri) {
+        val player = MediaPlayer()
+        mediaPlayerRef = player
+        isPrepared = false
+        isPlaying = false
+        durationMs = 0
+        positionMs = 0
+
         try {
-            mediaPlayer.setDataSource(audioUri)
-            mediaPlayer.setOnPreparedListener { mp ->
+            if (audioUri.startsWith("content://")) {
+                player.setDataSource(context, Uri.parse(audioUri))
+            } else {
+                player.setDataSource(audioUri)
+            }
+            player.setOnPreparedListener { mp ->
                 isPrepared = true
                 durationMs = mp.duration
             }
-            mediaPlayer.prepareAsync()
+            player.setOnCompletionListener {
+                isPlaying = false
+                positionMs = 0
+            }
+            player.setOnErrorListener { _, what, extra ->
+                Log.e("AudioPlayer", "MediaPlayer error: what=$what, extra=$extra")
+                isPlaying = false
+                isPrepared = false
+                true
+            }
+            player.prepareAsync()
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("AudioPlayer", "Failed to setDataSource for $audioUri: ${e.message}", e)
         }
-        mediaPlayer.setOnCompletionListener {
-            isPlaying = false
-            positionMs = 0
-        }
+
         onDispose {
-            mediaPlayer.release()
+            mediaPlayerRef = null
+            try {
+                if (player.isPlaying) {
+                    player.stop()
+                }
+                player.reset()
+                player.release()
+            } catch (e: Exception) {
+                // Ignore cleanup errors
+            }
+            isPrepared = false
+            isPlaying = false
         }
     }
 
-    LaunchedEffect(isPlaying) {
-        while (isPlaying) {
-            delay(30)
-            if (isPrepared) {
-                positionMs = mediaPlayer.currentPosition
+    LaunchedEffect(isPlaying, isPrepared) {
+        while (isPlaying && isPrepared) {
+            delay(50)
+            mediaPlayerRef?.let { player ->
+                try {
+                    if (isPrepared) {
+                        positionMs = player.currentPosition
+                    }
+                } catch (_: Exception) {
+                }
             }
         }
     }
@@ -107,11 +145,15 @@ fun AudioPlayerComponent(
             )
             if (durationMs > 0) {
                 Slider(
-                    value = positionMs.toFloat(),
+                    value = positionMs.toFloat().coerceIn(0f, durationMs.toFloat()),
                     onValueChange = { newPos ->
                         if (isPrepared) {
                             positionMs = newPos.toInt()
-                            mediaPlayer.seekTo(newPos.toInt())
+                            try {
+                                mediaPlayerRef?.seekTo(newPos.toInt())
+                            } catch (e: Exception) {
+                                Log.e("AudioPlayer", "Seek error: ${e.message}")
+                            }
                         }
                     },
                     valueRange = 0f..durationMs.toFloat(),
@@ -124,20 +166,25 @@ fun AudioPlayerComponent(
 
         IconButton(
             onClick = {
+                val player = mediaPlayerRef ?: return@IconButton
                 if (!isPrepared) return@IconButton
                 if (isPlaying) {
-                    mediaPlayer.pause()
+                    try {
+                        player.pause()
+                    } catch (e: Exception) {
+                        Log.e("AudioPlayer", "Pause error: ${e.message}")
+                    }
                     isPlaying = false
                 } else {
                     try {
                         if (positionMs >= durationMs && durationMs > 0) {
-                            mediaPlayer.seekTo(0)
+                            player.seekTo(0)
                             positionMs = 0
                         }
-                        mediaPlayer.start()
+                        player.start()
                         isPlaying = true
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        Log.e("AudioPlayer", "Start error: ${e.message}")
                     }
                 }
             },
