@@ -137,12 +137,6 @@ fun MediaDetailSection(
                     modifier = Modifier
                         .fillMaxSize()
                         .clip(RoundedCornerShape(24.dp))
-                        .maybeSharedElement(
-                            sharedTransitionScope = sharedTransitionScope,
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            key = "image_${item.id}",
-                            clipShape = RoundedCornerShape(24.dp)
-                        )
                 )
             } else {
                 Box(

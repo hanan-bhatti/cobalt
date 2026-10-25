@@ -126,7 +126,7 @@ class CobaltRepository(private val context: Context) {
             val response = com.example.data.remote.RetrofitClient.geminiService.generateContent("models/$cleanModel", apiKey, request)
             val candidate = response.candidates?.firstOrNull()
             val candidateText = candidate?.content?.parts
-                ?.mapNotNull { it.text }
+                ?.mapNotNull { it.text ?: it.audioTranscription?.text }
                 ?.joinToString("")
                 ?.trim()
 

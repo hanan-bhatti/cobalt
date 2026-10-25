@@ -511,12 +511,6 @@ fun MediaItemCard(
                         modifier = Modifier
                             .fillMaxSize()
                             .clip(RoundedCornerShape(16.dp))
-                            .maybeSharedElement(
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = animatedVisibilityScope,
-                                key = "image_${item.id}",
-                                clipShape = RoundedCornerShape(16.dp)
-                            )
                     )
                 } else {
                     Box(

@@ -438,12 +438,6 @@ fun DetailScreen(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
                             .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
-                            .maybeSharedElement(
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = animatedVisibilityScope,
-                                key = "image_${item.id}",
-                                clipShape = RoundedCornerShape(20.dp)
-                            )
                     )
                 } else {
                     AsyncImage(
@@ -454,12 +448,6 @@ fun DetailScreen(
                             .clip(RoundedCornerShape(20.dp))
                             .background(Color.Black.copy(alpha = 0.05f))
                             .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
-                            .maybeSharedElement(
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = animatedVisibilityScope,
-                                key = "image_${item.id}",
-                                clipShape = RoundedCornerShape(20.dp)
-                            )
                             .clickable { showFullscreenImage = true }
                     )
                 }
@@ -474,12 +462,6 @@ fun DetailScreen(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
-                        .maybeSharedElement(
-                            sharedTransitionScope = sharedTransitionScope,
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            key = "image_${item.id}",
-                            clipShape = RoundedCornerShape(20.dp)
-                        )
                 )
             }
 
