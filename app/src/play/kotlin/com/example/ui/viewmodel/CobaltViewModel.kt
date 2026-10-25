@@ -21,6 +21,7 @@ package com.example.ui.viewmodel
 import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.util.Log
 import androidx.credentials.CredentialManager
@@ -42,6 +43,8 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.tasks.await
+import java.io.File
+import java.io.FileOutputStream
 import java.io.InputStream
 import java.util.UUID
 import com.example.utils.AnalyticsHelper
@@ -1860,18 +1863,63 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     fun handleMediaSelected(uri: android.net.Uri, type: SavedItemType) {
         viewModelScope.launch {
             try {
-                val bytes = readUriBytes(uri)
-                if (bytes != null) {
-                    pendingMediaBytes = bytes
-                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    _capturedBitmap.value = bitmap
+                if (type == SavedItemType.VIDEO) {
+                    val cacheFile = File(context.cacheDir, "media_${UUID.randomUUID()}.mp4")
+                    withContext(Dispatchers.IO) {
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            FileOutputStream(cacheFile).use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                    }
 
-                    val extension = if (type == SavedItemType.IMAGE) "jpg" else "mp4"
-                    val localPath = repository.saveToLocalCache("media_${UUID.randomUUID()}.$extension", bytes)
-                    updateActiveCaptureItem { it.copy(content = localPath, thumbnailPath = localPath, type = type) }
+                    // Extract thumbnail frame safely on IO dispatcher
+                    val retriever = MediaMetadataRetriever()
+                    val frameBitmap = withContext(Dispatchers.IO) {
+                        try {
+                            retriever.setDataSource(context, uri)
+                            retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                        } catch (e: Exception) {
+                            Log.e("CobaltVM", "Could not extract video thumbnail: ${e.message}")
+                            null
+                        } finally {
+                            try { retriever.release() } catch (_: Exception) {}
+                        }
+                    }
+                    _capturedBitmap.value = frameBitmap
+
+                    // Save extracted thumbnail bitmap to cache file for instant thumbnail display
+                    val thumbPath = if (frameBitmap != null) {
+                        withContext(Dispatchers.IO) {
+                            try {
+                                val thumbFile = File(context.cacheDir, "thumb_${UUID.randomUUID()}.jpg")
+                                FileOutputStream(thumbFile).use { fos ->
+                                    frameBitmap.compress(Bitmap.CompressFormat.JPEG, 85, fos)
+                                }
+                                thumbFile.absolutePath
+                            } catch (_: Exception) {
+                                cacheFile.absolutePath
+                            }
+                        }
+                    } else {
+                        cacheFile.absolutePath
+                    }
+
+                    pendingMediaBytes = null
+                    val finalPath = if (cacheFile.exists() && cacheFile.length() > 0) cacheFile.absolutePath else uri.toString()
+                    updateActiveCaptureItem { it.copy(content = finalPath, thumbnailPath = thumbPath, type = type) }
                 } else {
-                    // Fallback to Uri string if bytes can't be read directly
-                    updateActiveCaptureItem { it.copy(content = uri.toString(), thumbnailPath = uri.toString(), type = type) }
+                    val bytes = readUriBytes(uri)
+                    if (bytes != null) {
+                        pendingMediaBytes = bytes
+                        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        _capturedBitmap.value = bitmap
+
+                        val localPath = repository.saveToLocalCache("media_${UUID.randomUUID()}.jpg", bytes)
+                        updateActiveCaptureItem { it.copy(content = localPath, thumbnailPath = localPath, type = type) }
+                    } else {
+                        updateActiveCaptureItem { it.copy(content = uri.toString(), thumbnailPath = uri.toString(), type = type) }
+                    }
                 }
             } catch (e: Exception) {
                 Log.e("CobaltVM", "Error in handleMediaSelected: ${e.message}")

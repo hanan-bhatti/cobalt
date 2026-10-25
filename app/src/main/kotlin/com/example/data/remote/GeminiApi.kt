@@ -45,9 +45,15 @@ data class Content(
 )
 
 @JsonClass(generateAdapter = true)
+data class AudioTranscription(
+    @param:Json(name = "text") val text: String? = null
+)
+
+@JsonClass(generateAdapter = true)
 data class Part(
     @param:Json(name = "text") val text: String? = null,
-    @param:Json(name = "inlineData") val inlineData: InlineData? = null
+    @param:Json(name = "inlineData") val inlineData: InlineData? = null,
+    @param:Json(name = "audioTranscription") val audioTranscription: AudioTranscription? = null
 )
 
 @JsonClass(generateAdapter = true)

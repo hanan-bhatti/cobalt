@@ -22,17 +22,17 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.BoundsTransform
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Shape
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 val PhysicsSpringBoundsTransform = BoundsTransform { _, _ ->
-    spring(
-        dampingRatio = Spring.DampingRatioNoBouncy,
-        stiffness = Spring.StiffnessMediumLow
+    tween(
+        durationMillis = 350,
+        easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
     )
 }
 
@@ -80,7 +80,7 @@ fun Modifier.maybeSharedBounds(
             val clip = if (clipShape != null) OverlayClip(clipShape) else null
             val enterSpec = androidx.compose.animation.fadeIn(
                 animationSpec = androidx.compose.animation.core.tween(
-                    durationMillis = 320,
+                    durationMillis = 350,
                     easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
                 )
             )

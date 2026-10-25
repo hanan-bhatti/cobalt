@@ -58,10 +58,10 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -139,15 +139,12 @@ fun VideoPlayer(
             .setReadTimeoutMs(25_000)
             .setUserAgent("Cobalt-Android-Media/1.0")
 
-        val mediaSourceFactory = DefaultMediaSourceFactory(context)
-            .setDataSourceFactory(httpDataSourceFactory)
+        // DefaultDataSource delegates content://, file://, and asset:// locally,
+        // and routes remote http/https streams through httpDataSourceFactory.
+        val universalDataSourceFactory = DefaultDataSource.Factory(context, httpDataSourceFactory)
+        val mediaSourceFactory = DefaultMediaSourceFactory(universalDataSourceFactory)
 
-        // Explicitly set MimeTypes.VIDEO_MP4 to avoid 'UnrecognizedInputFormatException'
-        // on Firebase Storage download URLs returning application/octet-stream
-        val mediaItem = MediaItem.Builder()
-            .setUri(parsedUri)
-            .setMimeType(MimeTypes.VIDEO_MP4)
-            .build()
+        val mediaItem = MediaItem.fromUri(parsedUri)
 
         ExoPlayer.Builder(context)
             .setMediaSourceFactory(mediaSourceFactory)
@@ -241,10 +238,11 @@ fun VideoPlayer(
     }
 
     // 6. UI Structure with exact adaptive aspect ratio
+    val safeAspect = exactAspectRatio.coerceIn(0.5625f, 2.4f)
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(exactAspectRatio)
+            .aspectRatio(safeAspect)
             .background(Color.Black)
             .clickable(
                 indication = null,
@@ -327,8 +325,10 @@ fun VideoPlayer(
                             "Network connection failed. Please verify your internet connection."
                         PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ->
                             "Access denied or cloud link expired. Re-authentication may be required."
+                        PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND ->
+                            "Video file could not be found locally."
                         else ->
-                            "Media container or stream error. Tap below to retry."
+                            "Unable to play video (${playbackError?.errorCodeName ?: "format error"}). Tap below to retry."
                     }
                     Text(
                         text = errorMessage,
@@ -339,6 +339,8 @@ fun VideoPlayer(
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
                         onClick = {
+                            playbackError = null
+                            isBuffering = true
                             retryTrigger++
                         },
                         colors = ButtonDefaults.buttonColors(
@@ -533,8 +535,14 @@ private fun resolveLocalOrRemotePath(context: Context, videoUri: String, itemId:
 
 /**
  * Extracts exact video aspect ratio via MediaMetadataRetriever before video playback starts.
+ * Only extracts synchronously for local files or content URIs to prevent NetworkOnMainThreadException.
  */
 private fun extractExactAspectRatio(context: Context, uriString: String): Float? {
+    val isLocal = uriString.startsWith("/") || 
+                  uriString.startsWith("file://") || 
+                  uriString.startsWith("content://")
+    if (!isLocal) return null
+
     val retriever = MediaMetadataRetriever()
     return try {
         if (uriString.startsWith("/")) {
