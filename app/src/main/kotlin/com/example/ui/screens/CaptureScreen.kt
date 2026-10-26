@@ -1578,6 +1578,8 @@ fun CaptureScreen(
         }
     }
     var isPreviewMode by remember { mutableStateOf(false) }
+    val isEditingItem by viewModel.isEditingItem.collectAsState()
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -1832,9 +1834,28 @@ fun CaptureScreen(
                             .fillMaxWidth()
                             .navigationBarsPadding()
                             .padding(horizontal = 16.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        if (isEditingItem) {
+                            IconButton(
+                                onClick = { showDeleteConfirm = true },
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .bounceClick()
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f))
+                                    .testTag("delete_capture_button")
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_delete),
+                                    contentDescription = "Delete item",
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+
                         // Cancel Button: right under the left thumb!
                         OutlinedButton(
                             onClick = { viewModel.cancelCapture() },
@@ -1909,7 +1930,7 @@ fun CaptureScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (isSavingActive) "Saving..." else "Save Archive",
+                                text = if (isSavingActive) "Saving..." else if (isEditingItem) "Update Archive" else "Save Archive",
                                 fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.labelLarge
                             )
@@ -3187,6 +3208,21 @@ fun ImageMarkingCanvas(
                 )
             }
         }
+    }
+
+    if (showDeleteConfirm) {
+        com.example.ui.components.ExpressiveConfirmationDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = "Delete Archive",
+            message = "Are you sure you want to delete this item? This action cannot be undone.",
+            confirmButtonText = "Delete",
+            onConfirm = {
+                showDeleteConfirm = false
+                viewModel.deleteEditingItem()
+            },
+            dismissButtonText = "Cancel",
+            isDestructive = true
+        )
     }
 }
 
