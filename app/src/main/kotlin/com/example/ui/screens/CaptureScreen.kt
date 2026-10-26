@@ -3106,6 +3106,21 @@ fun CaptureScreen(
             }
         }
     }
+
+    if (showDeleteConfirm) {
+        com.example.ui.components.ExpressiveConfirmationDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = "Delete Archive",
+            message = "Are you sure you want to delete this item? This action cannot be undone.",
+            confirmButtonText = "Delete",
+            onConfirm = {
+                showDeleteConfirm = false
+                viewModel.deleteEditingItem()
+            },
+            dismissButtonText = "Cancel",
+            isDestructive = true
+        )
+    }
 }
 }
 
@@ -3208,21 +3223,6 @@ fun ImageMarkingCanvas(
                 )
             }
         }
-    }
-
-    if (showDeleteConfirm) {
-        com.example.ui.components.ExpressiveConfirmationDialog(
-            onDismissRequest = { showDeleteConfirm = false },
-            title = "Delete Archive",
-            message = "Are you sure you want to delete this item? This action cannot be undone.",
-            confirmButtonText = "Delete",
-            onConfirm = {
-                showDeleteConfirm = false
-                viewModel.deleteEditingItem()
-            },
-            dismissButtonText = "Cancel",
-            isDestructive = true
-        )
     }
 }
 
