@@ -267,6 +267,8 @@ class MainActivity : ComponentActivity() {
                         if (!route.startsWith("detail") && viewModel.activeDetailItem.value != null) {
                             viewModel.closeDetailItem()
                         }
+                        com.example.ui.screens.TransitionCoordinator.previousNavRoute = com.example.ui.screens.TransitionCoordinator.currentNavRoute
+                        com.example.ui.screens.TransitionCoordinator.currentNavRoute = route
                     }
                     navController.addOnDestinationChangedListener(listener)
                     onDispose {
@@ -753,6 +755,9 @@ class MainActivity : ComponentActivity() {
                                     hazeState = hazeState,
                                     viewModel = viewModel,
                                     onNavigate = { route ->
+                                        if (currentRoute == "home" && route == "media_hub") {
+                                            com.example.ui.screens.TransitionCoordinator.requestScrollHalfVisibleHomeItem?.invoke()
+                                        }
                                         navController.navigate(route) {
                                             popUpTo("home") {
                                                 saveState = true

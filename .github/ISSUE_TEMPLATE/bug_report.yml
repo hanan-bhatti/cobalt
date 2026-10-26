@@ -16,10 +16,44 @@ body:
       label: App Version
       description: What version of Cobalt are you running? (Refer to SECURITY.md for supported versions)
       options:
+        - v2.2.1 (Latest Release)
+        - v2.2.0
+        - v2.1.2
+        - v2.1.1
+        - v2.1.0-beta
+        - v2.0.0
+        - v1.1.0-beta02
+        - v1.1.0-beta01
+        - v1.0.0
+        - v1.0.0-rc02
+        - v1.0.0-rc01
+        - v1.0.0-nightly01
+        - v1.0.0-build20
+        - v0.9.3-beta01
+        - v0.9.2-beta01
+        - v0.9.1-beta02
+        - v0.9.1-beta01
+        - v0.9.0-beta02
+        - v0.9.0-beta01-build51
+        - v0.9.0-beta01-build30
+        - v0.9.0-beta01-build29
+        - v0.9.0-beta01-build28
+        - v0.9.0-beta01-build27
+        - v0.9.0-beta01-build26
+        - v0.9.0-beta01-build23
         - v0.9.0-beta01
-        - Custom Build / Development Branch
+        - Custom Build / Development Branch (main)
     validations:
       required: true
+
+  - type: checkboxes
+    id: version-confirmation
+    attributes:
+      label: Version Confirmation
+      description: Please verify that you are running the latest release of Cobalt.
+      options:
+        - label: I confirm that I am using the latest version of Cobalt (or have verified this issue persists on the latest release).
+          required: true
 
   - type: input
     id: device-info

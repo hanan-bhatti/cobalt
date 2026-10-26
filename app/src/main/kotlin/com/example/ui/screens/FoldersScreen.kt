@@ -106,19 +106,28 @@ val folderPresetColors = listOf(
     "#BCAAA4" to "Desert Sand"
 )
 
-// Preset Palette of standard premium Icons
+// Preset Palette of standard premium Icons (Curated 20-icon set)
 val folderPresetIcons = listOf(
     "folder",
     "star",
-    "book",
-    "code",
+    "bookmark",
+    "idea",
+    "checklist",
+    "vault",
+    "tools",
     "heart",
     "work",
     "school",
+    "code",
+    "book",
     "home",
     "shopping",
+    "globe",
     "music",
-    "tools"
+    "movie",
+    "image",
+    "archive",
+    "lock"
 )
 
 fun parseHexColor(hex: String?, defaultColor: Color = DefaultFolderColor, isDark: Boolean = false): Color {
@@ -130,28 +139,47 @@ fun parseHexColor(hex: String?, defaultColor: Color = DefaultFolderColor, isDark
     }
 }
 
+fun getFolderIconRes(iconName: String?): Int {
+    return when (iconName) {
+        "folder" -> R.drawable.ic_custom_folder
+        "star" -> R.drawable.ic_custom_star
+        "bookmark" -> R.drawable.ic_custom_bookmark
+        "idea" -> R.drawable.ic_custom_idea
+        "checklist", "check", "project" -> R.drawable.ic_custom_checklist
+        "vault" -> R.drawable.ic_custom_vault
+        "tools" -> R.drawable.ic_custom_tools
+        "heart" -> R.drawable.ic_custom_heart
+        "work" -> R.drawable.ic_custom_work
+        "school", "study" -> R.drawable.ic_custom_school
+        "code" -> R.drawable.ic_custom_code
+        "book", "text", "document" -> R.drawable.ic_custom_text
+        "home" -> R.drawable.ic_custom_home
+        "shopping" -> R.drawable.ic_custom_shopping
+        "globe", "travel" -> R.drawable.ic_custom_globe
+        "music" -> R.drawable.ic_custom_music
+        "movie" -> R.drawable.ic_custom_movie
+        "image", "gallery" -> R.drawable.ic_custom_image
+        "archive" -> R.drawable.ic_custom_archive
+        "lock" -> R.drawable.ic_custom_lock
+        "pin" -> R.drawable.ic_custom_pin
+        "link" -> R.drawable.ic_custom_link
+        "key" -> R.drawable.ic_custom_key
+        "mail" -> R.drawable.ic_custom_mail
+        "video" -> R.drawable.ic_custom_video
+        "voice", "audio" -> R.drawable.ic_custom_voice
+        "ai", "ocr" -> R.drawable.ic_custom_ocr
+        else -> R.drawable.ic_custom_folder
+    }
+}
+
 @Composable
 fun FolderIcon(
     iconName: String?,
     modifier: Modifier = Modifier,
     tint: Color = MaterialTheme.colorScheme.primary
 ) {
-    val resId = when (iconName) {
-        "folder" -> R.drawable.ic_custom_folder
-        "star" -> R.drawable.ic_custom_star
-        "book" -> R.drawable.ic_custom_text
-        "code" -> R.drawable.ic_custom_code
-        "heart" -> R.drawable.ic_custom_heart
-        "work" -> R.drawable.ic_custom_work
-        "school" -> R.drawable.ic_custom_school
-        "home" -> R.drawable.ic_custom_home
-        "shopping" -> R.drawable.ic_custom_shopping
-        "music" -> R.drawable.ic_custom_music
-        "tools" -> R.drawable.ic_custom_tools
-        else -> R.drawable.ic_custom_folder
-    }
     Icon(
-        painter = painterResource(id = resId),
+        painter = painterResource(id = getFolderIconRes(iconName)),
         contentDescription = null,
         tint = tint,
         modifier = modifier
@@ -1078,7 +1106,8 @@ fun FolderBrowseItemRow(
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
                     key = "card_${item.id}",
-                    clipShape = RoundedCornerShape(16.dp)
+                    clipShape = RoundedCornerShape(16.dp),
+                    enabled = TransitionCoordinator.isDetailTransition()
                 )
                 .bounceClick(interactionSource)
                 .combinedClickable(

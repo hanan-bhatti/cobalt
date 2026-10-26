@@ -18,6 +18,8 @@
 
 package com.example
 import com.example.R
+import com.example.ui.screens.getFolderIconRes
+import com.example.ui.screens.parseHexColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.testTag
 
@@ -364,6 +366,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                     var noteTitle by remember { mutableStateOf("Extracted Note") }
                     var isPreviewMode by remember { mutableStateOf(true) }
                     val customFolders by viewModel.customFolders.collectAsState()
+                    val customFolderEntities by viewModel.customFolderEntities.collectAsState()
                     var selectedFolders by remember { mutableStateOf(setOf("AI Extracted")) }
                     var showNewFolderDialog by remember { mutableStateOf(false) }
                     var newFolderName by remember { mutableStateOf("") }
@@ -868,9 +871,22 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
+                                            val isDark = isSystemInDarkTheme()
                                             val allFolders = listOf("AI Extracted") + customFolders.filter { it != "All" && it != "Archive" }
                                             allFolders.distinct().forEach { folder ->
                                                 val isFolderSelected = selectedFolders.contains(folder)
+                                                val folderEntity = customFolderEntities.find { it.name.equals(folder, ignoreCase = true) }
+                                                val resolvedColor = parseHexColor(
+                                                    folderEntity?.colorHex,
+                                                    defaultColor = MaterialTheme.colorScheme.primary,
+                                                    isDark = isDark
+                                                )
+                                                val folderIconRes = if (folder == "AI Extracted") {
+                                                    R.drawable.ic_custom_ocr
+                                                } else {
+                                                    getFolderIconRes(folderEntity?.iconName)
+                                                }
+
                                                 Surface(
                                                     onClick = {
                                                         selectedFolders = if (isFolderSelected) {
@@ -880,10 +896,18 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                         }
                                                     },
                                                     shape = RoundedCornerShape(50),
-                                                    color = if (isFolderSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                                    color = if (isFolderSelected) {
+                                                        resolvedColor.copy(alpha = 0.16f)
+                                                    } else {
+                                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                                                    },
                                                     border = BorderStroke(
                                                         width = 1.dp,
-                                                        color = if (isFolderSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                                                        color = if (isFolderSelected) {
+                                                            resolvedColor
+                                                        } else {
+                                                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                                                        }
                                                     ),
                                                     modifier = Modifier.padding(vertical = 4.dp)
                                                 ) {
@@ -893,17 +917,25 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                                                     ) {
                                                         Icon(
-                                                            painter = painterResource(id = if (isFolderSelected) R.drawable.ic_custom_check else R.drawable.ic_custom_folder),
+                                                            painter = painterResource(id = folderIconRes),
                                                             contentDescription = null,
-                                                            tint = if (isFolderSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            tint = if (isFolderSelected) resolvedColor else MaterialTheme.colorScheme.onSurfaceVariant,
                                                             modifier = Modifier.size(14.dp)
                                                         )
                                                         Text(
                                                             text = folder,
                                                             style = MaterialTheme.typography.bodySmall,
                                                             fontWeight = if (isFolderSelected) FontWeight.Bold else FontWeight.Normal,
-                                                            color = if (isFolderSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                                            color = if (isFolderSelected) resolvedColor else MaterialTheme.colorScheme.onSurfaceVariant
                                                         )
+                                                        if (isFolderSelected) {
+                                                            Icon(
+                                                                painter = painterResource(id = R.drawable.ic_custom_check),
+                                                                contentDescription = null,
+                                                                tint = resolvedColor,
+                                                                modifier = Modifier.size(12.dp)
+                                                            )
+                                                        }
                                                     }
                                                 }
                                             }

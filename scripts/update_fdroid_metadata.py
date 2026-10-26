@@ -156,5 +156,13 @@ def main():
     sync_fastlane_changelog(version_code, changelog)
     sync_fdroid_yml(version_code, version_name)
 
+    # Sync issue templates and security policy
+    try:
+        sync_script = os.path.join(PROJECT_ROOT, "scripts", "sync_issue_versions.py")
+        if os.path.exists(sync_script):
+            subprocess.run([sys.executable, sync_script], cwd=PROJECT_ROOT, check=False)
+    except Exception as e:
+        print(f"⚠️ Could not sync issue versions: {e}")
+
 if __name__ == "__main__":
     main()

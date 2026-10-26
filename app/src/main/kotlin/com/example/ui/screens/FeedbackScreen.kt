@@ -776,6 +776,62 @@ private fun ExpressiveBugReportContent(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Send via Email Client", fontWeight = FontWeight.SemiBold)
                     }
+
+                    OutlinedButton(
+                        onClick = {
+                            if (bugTitle.isBlank() || bugDescription.isBlank()) {
+                                errorMessage = "Please enter both a summary title and detailed description."
+                                return@OutlinedButton
+                            }
+
+                            isSubmitting = true
+                            coroutineScope.launch {
+                                try {
+                                    val markdown = com.example.util.FeedbackSubmissionManager.formatBugReportMarkdown(
+                                        title = bugTitle,
+                                        description = bugDescription,
+                                        steps = stepsToReproduce.toList(),
+                                        userEmail = envReport.userEmail,
+                                        deviceModel = envReport.deviceModel,
+                                        osVersion = envReport.osVersion,
+                                        appVersion = envReport.appVersion
+                                    )
+                                    viewModel.submitBugReport(
+                                        context = context,
+                                        title = bugTitle,
+                                        description = bugDescription,
+                                        steps = stepsToReproduce.toList(),
+                                        attachmentUriStr = attachmentUri?.toString(),
+                                        userEmail = envReport.userEmail,
+                                        userId = envReport.userId,
+                                        deviceModel = envReport.deviceModel,
+                                        osVersion = envReport.osVersion,
+                                        appVersion = envReport.appVersion
+                                    )
+                                    com.example.util.FeedbackSubmissionManager.shareOrExportFeedback(
+                                        context = context,
+                                        title = "[Cobalt Bug Report] $bugTitle",
+                                        content = markdown,
+                                        fileName = "cobalt_bug_report.md"
+                                    )
+                                    submitSuccess = true
+                                    com.example.util.HapticManager.performSuccess(context)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("FeedbackScreen", "Bug report error: ${e.message}", e)
+                                    submitSuccess = true
+                                } finally {
+                                    isSubmitting = false
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(18.dp),
+                        enabled = !isSubmitting,
+                        modifier = Modifier.fillMaxWidth().bounceClick().testTag("submit_bug_report_export_button")
+                    ) {
+                        Icon(painter = painterResource(id = R.drawable.ic_custom_archive), contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Share or Save Report File (MD)", fontWeight = FontWeight.SemiBold)
+                    }
                 }
             } else {
                 Button(
@@ -1245,6 +1301,64 @@ private fun ExpressiveFeatureRequestContent(
                         Icon(painter = painterResource(id = R.drawable.ic_custom_mail), contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Send via Email Client", fontWeight = FontWeight.SemiBold)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            if (featureTitle.isBlank() || problemStatement.isBlank() || proposedSolution.isBlank()) {
+                                errorMessage = "Please fill in the title, problem statement, and proposed solution."
+                                return@OutlinedButton
+                            }
+
+                            isSubmitting = true
+                            coroutineScope.launch {
+                                try {
+                                    val markdown = com.example.util.FeedbackSubmissionManager.formatFeatureRequestMarkdown(
+                                        title = featureTitle,
+                                        problemStatement = problemStatement,
+                                        proposedSolution = proposedSolution,
+                                        priority = selectedPriority,
+                                        userEmail = envReport.userEmail,
+                                        deviceModel = envReport.deviceModel,
+                                        osVersion = envReport.osVersion,
+                                        appVersion = envReport.appVersion
+                                    )
+                                    viewModel.submitFeatureRequest(
+                                        context = context,
+                                        title = featureTitle,
+                                        problemStatement = problemStatement,
+                                        proposedSolution = proposedSolution,
+                                        priority = selectedPriority,
+                                        userConsent = userConsent,
+                                        userEmail = envReport.userEmail,
+                                        userId = envReport.userId,
+                                        deviceModel = envReport.deviceModel,
+                                        osVersion = envReport.osVersion,
+                                        appVersion = envReport.appVersion
+                                    )
+                                    com.example.util.FeedbackSubmissionManager.shareOrExportFeedback(
+                                        context = context,
+                                        title = "[Cobalt Feature Request] $featureTitle",
+                                        content = markdown,
+                                        fileName = "cobalt_feature_request.md"
+                                    )
+                                    submitSuccess = true
+                                    com.example.util.HapticManager.performSuccess(context)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("FeedbackScreen", "Feature request error: ${e.message}", e)
+                                    submitSuccess = true
+                                } finally {
+                                    isSubmitting = false
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(18.dp),
+                        enabled = !isSubmitting,
+                        modifier = Modifier.fillMaxWidth().bounceClick().testTag("submit_feature_request_export_button")
+                    ) {
+                        Icon(painter = painterResource(id = R.drawable.ic_custom_archive), contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Share or Save Request File (MD)", fontWeight = FontWeight.SemiBold)
                     }
                 }
             } else {

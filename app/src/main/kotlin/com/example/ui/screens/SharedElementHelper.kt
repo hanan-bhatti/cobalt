@@ -28,9 +28,35 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Shape
+
+object TransitionCoordinator {
+    var currentNavRoute by mutableStateOf<String?>("home")
+    var previousNavRoute by mutableStateOf<String?>("home")
+
+    // The set of item IDs that are fully visible in the Home viewport
+    var homeVisibleItemIds by mutableStateOf<Set<String>>(emptySet())
+
+    // Callback to scroll a half-visible item on Home into full view
+    var requestScrollHalfVisibleHomeItem: (() -> Unit)? = null
+
+    fun isHomeHubTransition(): Boolean {
+        val from = previousNavRoute
+        val to = currentNavRoute
+        return (from == "home" && to == "media_hub") || (from == "media_hub" && to == "home")
+    }
+
+    fun isDetailTransition(): Boolean {
+        val from = previousNavRoute
+        val to = currentNavRoute
+        return to?.startsWith("detail") == true || from?.startsWith("detail") == true
+    }
+}
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 val AppleSpringBoundsTransform = BoundsTransform { _, _ ->
@@ -48,9 +74,10 @@ fun Modifier.maybeSharedElement(
     animatedVisibilityScope: AnimatedVisibilityScope?,
     key: Any,
     boundsTransform: BoundsTransform = AppleSpringBoundsTransform,
-    clipShape: Shape? = null
+    clipShape: Shape? = null,
+    enabled: Boolean = true
 ): Modifier = composed {
-    if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+    if (enabled && sharedTransitionScope != null && animatedVisibilityScope != null) {
         with(sharedTransitionScope) {
             val clip = if (clipShape != null) OverlayClip(clipShape) else null
             if (clip != null) {
@@ -81,9 +108,10 @@ fun Modifier.maybeSharedBounds(
     animatedVisibilityScope: AnimatedVisibilityScope?,
     key: Any,
     boundsTransform: BoundsTransform = AppleSpringBoundsTransform,
-    clipShape: Shape? = null
+    clipShape: Shape? = null,
+    enabled: Boolean = true
 ): Modifier = composed {
-    if (sharedTransitionScope != null && animatedVisibilityScope != null) {
+    if (enabled && sharedTransitionScope != null && animatedVisibilityScope != null) {
         with(sharedTransitionScope) {
             val clip = if (clipShape != null) OverlayClip(clipShape) else null
             val enterSpec = fadeIn(
