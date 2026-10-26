@@ -474,6 +474,11 @@ fun MediaItemCard(
         formattedType
     }
 
+    val isHomeHub = TransitionCoordinator.isHomeHubTransition()
+    val isDetail = TransitionCoordinator.isDetailTransition()
+    val isVisibleOnHome = item.id in TransitionCoordinator.homeVisibleItemIds
+    val enableSharedBounds = isDetail || (isHomeHub && isVisibleOnHome)
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -481,7 +486,8 @@ fun MediaItemCard(
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
                 key = "card_${item.id}",
-                clipShape = RoundedCornerShape(16.dp)
+                clipShape = RoundedCornerShape(16.dp),
+                enabled = enableSharedBounds
             )
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),

@@ -127,14 +127,14 @@ fun SurveyBottomSheet(
     // Pre-selected favorite features (Hick's Law + Default Effect)
     val favoriteFeatures = remember {
         mutableStateListOf(
-            "Quick Link Archiving",
-            "Instant OCR Scan",
-            "Voice Memos"
+            "Markdown Editor & Checklists",
+            "Smart Link Archiving",
+            "Instant OCR Scan"
         )
     }
 
-    val desiredImprovements = remember { mutableStateListOf("Faster Cloud Sync") }
-    var npsScore by remember { mutableIntStateOf(9) }
+    val desiredImprovements = remember { mutableStateListOf("Automated Backup & Restore") }
+    var npsScore by remember { mutableIntStateOf(10) }
     var customFeedback by remember { mutableStateOf("") }
 
     val prefs = remember { context.getSharedPreferences("cobalt_prefs", android.content.Context.MODE_PRIVATE) }
@@ -153,34 +153,38 @@ fun SurveyBottomSheet(
 
     val featureOptions = remember {
         listOf(
-            "Quick Link Archiving",
+            "Markdown Editor & Checklists",
+            "Smart Link Archiving",
+            "AI Voice Memos & Transcription",
             "Instant OCR Scan",
-            "Voice Memos",
-            "Folder Archive",
-            "AI Search",
+            "Floating Side Dock & Reader",
+            "Custom Folders & Themed Icons",
+            "Media Hub & Video Player",
+            "Private Vault & Biometrics",
             "Home Screen Widgets",
-            "Media Hub",
-            "Dark Theme"
+            "Fluid Expressive Blur & Theme"
         )
     }
 
     val improvementOptions = remember {
         listOf(
-            "Faster Cloud Sync",
-            "Desktop App",
-            "More Export Options",
-            "Notion Integration",
-            "Tagging System",
-            "Offline First Mode"
+            "Delete button in edit mode",
+            "Automated Backup & Restore",
+            "Web / Desktop Companion App",
+            "Obsidian / Markdown Vault Export",
+            "Direct PDF / Doc Export",
+            "Batch Multi-Select Operations",
+            "Offline Vector / Semantic Search",
+            "More Preset Folder Icons & Colors"
         )
     }
 
     val quickCommentPrompts = remember {
         listOf(
-            QuickPromptItem("Blazing fast app!", iconResId = R.drawable.ic_custom_code),
-            QuickPromptItem("Love the OCR feature!", iconResId = R.drawable.ic_custom_image),
-            QuickPromptItem("Add Obsidian sync", iconResId = R.drawable.ic_custom_link),
-            QuickPromptItem("Best knowledge archive app", iconResId = R.drawable.ic_custom_folder)
+            QuickPromptItem("Love the Markdown checklists!", iconResId = R.drawable.ic_custom_checklist),
+            QuickPromptItem("Floating Side Dock is a game changer!", iconResId = R.drawable.ic_custom_sidedock),
+            QuickPromptItem("Add automated backup & export", iconResId = R.drawable.ic_custom_archive),
+            QuickPromptItem("Best offline-first knowledge archive!", iconResId = R.drawable.ic_custom_vault)
         )
     }
 
@@ -351,11 +355,26 @@ fun SurveyBottomSheet(
                                             )
                                         },
                                         shape = RoundedCornerShape(14.dp),
-                                        modifier = Modifier.weight(1f)
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                                            contentColor = MaterialTheme.colorScheme.onSurface
+                                        ),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                                        modifier = Modifier.weight(1f).bounceClick()
                                     ) {
-                                        Icon(painter = painterResource(id = R.drawable.ic_custom_code), contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_custom_code),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.size(16.dp)
+                                        )
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("GitHub", fontSize = 12.sp)
+                                        Text(
+                                            text = "GitHub",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
                                     }
 
                                     OutlinedButton(
@@ -378,11 +397,69 @@ fun SurveyBottomSheet(
                                             )
                                         },
                                         shape = RoundedCornerShape(14.dp),
-                                        modifier = Modifier.weight(1f)
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                                            contentColor = MaterialTheme.colorScheme.onSurface
+                                        ),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                                        modifier = Modifier.weight(1f).bounceClick()
                                     ) {
-                                        Icon(painter = painterResource(id = R.drawable.ic_custom_mail), contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_custom_mail),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.size(16.dp)
+                                        )
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Email", fontSize = 12.sp)
+                                        Text(
+                                            text = "Email",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = {
+                                            val markdown = com.example.util.FeedbackSubmissionManager.formatSurveyMarkdown(
+                                                reaction = selectedReaction?.label ?: "Loving It",
+                                                favoriteFeatures = favoriteFeatures.toList(),
+                                                desiredImprovements = desiredImprovements.toList(),
+                                                npsScore = npsScore,
+                                                customFeedback = customFeedback,
+                                                userEmail = envReport.userEmail,
+                                                deviceModel = envReport.deviceModel,
+                                                osVersion = envReport.osVersion,
+                                                appVersion = envReport.appVersion
+                                            )
+                                            com.example.util.FeedbackSubmissionManager.shareOrExportFeedback(
+                                                context = context,
+                                                title = "Cobalt Experience Survey",
+                                                content = markdown,
+                                                fileName = "cobalt_survey_response.md"
+                                            )
+                                        },
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                                            contentColor = MaterialTheme.colorScheme.onSurface
+                                        ),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                                        modifier = Modifier.weight(1f).bounceClick()
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_custom_archive),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = "Share",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
                                     }
                                 }
                             }
@@ -390,10 +467,17 @@ fun SurveyBottomSheet(
                             Button(
                                 onClick = onDismissRequest,
                                 shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                ),
                                 modifier = Modifier.fillMaxWidth().bounceClick()
                             ) {
-                                Text("Done", fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = "Done",
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
                             }
                         }
                     }
@@ -748,12 +832,24 @@ fun SurveyBottomSheet(
                                 },
                                 shape = RoundedCornerShape(16.dp),
                                 enabled = !isSubmitting,
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                ),
                                 modifier = Modifier.fillMaxWidth().bounceClick().testTag("submit_survey_github_button")
                             ) {
-                                Icon(painter = painterResource(id = R.drawable.ic_custom_code), contentDescription = null, modifier = Modifier.size(18.dp))
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_code),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(18.dp)
+                                )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Submit via GitHub Discussions", fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = "Submit via GitHub Discussions",
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
                             }
 
                             OutlinedButton(
@@ -803,11 +899,94 @@ fun SurveyBottomSheet(
                                 },
                                 shape = RoundedCornerShape(16.dp),
                                 enabled = !isSubmitting,
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
                                 modifier = Modifier.fillMaxWidth().bounceClick().testTag("submit_survey_email_button")
                             ) {
-                                Icon(painter = painterResource(id = R.drawable.ic_custom_mail), contentDescription = null, modifier = Modifier.size(18.dp))
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_mail),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(18.dp)
+                                )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Send Survey via Email", fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    text = "Send Survey via Email",
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    isSubmitting = true
+                                    coroutineScope.launch {
+                                        try {
+                                            val markdown = com.example.util.FeedbackSubmissionManager.formatSurveyMarkdown(
+                                                reaction = selectedReaction?.label ?: "Loving It",
+                                                favoriteFeatures = favoriteFeatures.toList(),
+                                                desiredImprovements = desiredImprovements.toList(),
+                                                npsScore = npsScore,
+                                                customFeedback = customFeedback,
+                                                userEmail = envReport.userEmail,
+                                                deviceModel = envReport.deviceModel,
+                                                osVersion = envReport.osVersion,
+                                                appVersion = envReport.appVersion
+                                            )
+                                            viewModel.submitSurvey(
+                                                context = context,
+                                                reaction = selectedReaction?.label ?: "Loving It",
+                                                favoriteFeatures = favoriteFeatures.toList(),
+                                                desiredImprovements = desiredImprovements.toList(),
+                                                npsScore = npsScore,
+                                                customFeedback = customFeedback,
+                                                userEmail = envReport.userEmail,
+                                                userId = envReport.userId,
+                                                deviceModel = envReport.deviceModel,
+                                                osVersion = envReport.osVersion,
+                                                appVersion = envReport.appVersion
+                                            )
+                                            com.example.util.FeedbackSubmissionManager.shareOrExportFeedback(
+                                                context = context,
+                                                title = "Cobalt Experience Survey",
+                                                content = markdown,
+                                                fileName = "cobalt_survey_response.md"
+                                            )
+                                            submitSuccess = true
+                                            prefs.edit().putBoolean("survey_submitted", true).apply()
+                                            com.example.util.HapticManager.performSuccess(context)
+                                        } catch (e: Exception) {
+                                            android.util.Log.e("SurveyBottomSheet", "Survey export error: ${e.message}", e)
+                                            submitSuccess = true
+                                        } finally {
+                                            isSubmitting = false
+                                        }
+                                    }
+                                },
+                                shape = RoundedCornerShape(16.dp),
+                                enabled = !isSubmitting,
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                ),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                                modifier = Modifier.fillMaxWidth().bounceClick().testTag("submit_survey_export_button")
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_archive),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Share or Save Survey File (MD)",
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
                             }
 
                             TextButton(
@@ -831,6 +1010,7 @@ fun SurveyBottomSheet(
                                             submitSuccess = true
                                             prefs.edit().putBoolean("survey_submitted", true).apply()
                                             com.example.util.HapticManager.performSuccess(context)
+                                            android.widget.Toast.makeText(context, "Survey saved locally to app archive!", android.widget.Toast.LENGTH_SHORT).show()
                                         } catch (e: Exception) {
                                             submitSuccess = true
                                         } finally {

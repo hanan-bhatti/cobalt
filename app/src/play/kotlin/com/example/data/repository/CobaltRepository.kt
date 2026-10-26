@@ -1165,16 +1165,8 @@ class CobaltRepository(private val context: Context) {
             }
         }
 
-        // Delete from Storage if it's a cloud storage URL
-        val mediaUrl = if (item.type == SavedItemType.AUDIO) item.thumbnailPath ?: "" else item.content
-        if (currentUser != null && storage != null && mediaUrl.startsWith("https://firebasestorage")) {
-            try {
-                val storageRef = storage.getReferenceFromUrl(mediaUrl)
-                storageRef.delete().await()
-            } catch (e: Exception) {
-                Log.e("CobaltRepo", "Failed to delete media from Storage: ${e.message}")
-            }
-        }
+        // Note: We intentionally preserve Cloud Storage media during soft delete (isDeleted = true)
+        // so that if the user clicks "UNDO" or restores the note, the cloud media remains intact.
 
         com.example.widget.WidgetUpdater.update(context)
     }

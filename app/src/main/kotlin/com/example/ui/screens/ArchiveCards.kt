@@ -118,6 +118,11 @@ fun ArchiveItemCard(
                 scaleY = scale
             }
     ) {
+        val isHomeHub = TransitionCoordinator.isHomeHubTransition()
+        val isDetail = TransitionCoordinator.isDetailTransition()
+        val isVisible = item.id in TransitionCoordinator.homeVisibleItemIds
+        val enableSharedBounds = isDetail || (isHomeHub && isVisible)
+
         Card(
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(
@@ -134,7 +139,8 @@ fun ArchiveItemCard(
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
                     key = "card_${item.id}",
-                    clipShape = RoundedCornerShape(20.dp)
+                    clipShape = RoundedCornerShape(20.dp),
+                    enabled = enableSharedBounds
                 )
                 .combinedClickable(
                     interactionSource = interactionSource,
@@ -572,6 +578,11 @@ fun ArchiveItemRow(
             .padding(horizontal = 4.dp, vertical = 2.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
     ) {
+        val isHomeHub = TransitionCoordinator.isHomeHubTransition()
+        val isDetail = TransitionCoordinator.isDetailTransition()
+        val isVisible = item.id in TransitionCoordinator.homeVisibleItemIds
+        val enableSharedBounds = isDetail || (isHomeHub && isVisible)
+
         Card(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
@@ -588,7 +599,8 @@ fun ArchiveItemRow(
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
                     key = "card_${item.id}",
-                    clipShape = RoundedCornerShape(16.dp)
+                    clipShape = RoundedCornerShape(16.dp),
+                    enabled = enableSharedBounds
                 )
                 .combinedClickable(
                     interactionSource = interactionSource,

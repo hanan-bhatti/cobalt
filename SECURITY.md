@@ -6,8 +6,8 @@ Since this project is in an early public beta, only the latest published release
 
 | Version | Supported |
 |---|---|
-| 0.9.0-beta01 | :white_check_mark: |
-| < 0.9.0-beta01 | :x: |
+| >= 2.2.0 | :white_check_mark: |
+| < 2.2.0 | :x: |
 
 ---
 
@@ -16,10 +16,10 @@ Since this project is in an early public beta, only the latest published release
 If you discover a security vulnerability in Cobalt, please report it immediately using one of the following channels to keep the report confidential until a fix is ready:
 
 *   **GitHub Security Advisories (Preferred):** Go to the "Security" tab of this repository on GitHub and select "Report a vulnerability" to open a private draft advisory.
-*   **Direct Email:** Alternatively, you can contact the maintainer directly at hananbhatti2006@gmail.com.
+*   **Direct Email:** Alternatively, you can contact the maintainer directly at hannanbhatti2006@gmail.com.
 
 When reporting a vulnerability, please include the following details to help us triage the issue:
-*   **Affected Version:** The version of the app where you observed the issue (e.g., `v0.9.0-beta01`).
+*   **Affected Version:** The version of the app where you observed the issue (e.g., `v2.2.1`).
 *   **Description:** A detailed explanation of the vulnerability and its potential impact.
 *   **Steps to Reproduce:** Clear, step-by-step instructions (and proof-of-concept code, if applicable) showing how to trigger the vulnerability.
 *   **Potential Impact:** Who is affected and what an attacker could achieve by exploiting the vulnerability.

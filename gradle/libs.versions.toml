@@ -56,6 +56,8 @@ commonmark = "0.21.0"
 [libraries]
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 commonmark = { group = "org.commonmark", name = "commonmark", version.ref = "commonmark" }
+commonmark-strikethrough = { group = "org.commonmark", name = "commonmark-ext-gfm-strikethrough", version.ref = "commonmark" }
+commonmark-tables = { group = "org.commonmark", name = "commonmark-ext-gfm-tables", version.ref = "commonmark" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-browser = { group = "androidx.browser", name = "browser", version.ref = "browser" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }

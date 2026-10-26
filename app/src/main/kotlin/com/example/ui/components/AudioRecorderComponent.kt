@@ -17,6 +17,7 @@
  */
 
 package com.example.ui.components
+
 import androidx.compose.ui.res.painterResource
 import com.example.R
 
@@ -31,9 +32,11 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.io.File
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
@@ -53,7 +57,8 @@ import androidx.compose.animation.core.*
 @Composable
 fun AudioRecorderComponent(
     onRecordComplete: (File) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    accentColor: Color = MaterialTheme.colorScheme.primary
 ) {
     var isRecording by remember { mutableStateOf(false) }
     var mediaRecorder by remember { mutableStateOf<MediaRecorder?>(null) }
@@ -119,20 +124,48 @@ fun AudioRecorderComponent(
                 setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
                 setAudioEncodingBitRate(128000)
                 setAudioSamplingRate(44100)
-                setAudioChannels(1)
                 setOutputFile(file.absolutePath)
                 prepare()
                 start()
             }
             mediaRecorder = recorder
             isRecording = true
-            Log.d("AudioRecorder", "Audio recording started: ${file.absolutePath}")
+            recordingDurationSeconds = 0
+            amplitudes.clear()
+            Log.d("AudioRecorder", "Recording started successfully to ${file.absolutePath}")
         } catch (e: Exception) {
-            Log.e("AudioRecorder", "Failed to start MediaRecorder: ${e.message}", e)
-            try { recorder.release() } catch (_: Exception) {}
+            Log.e("AudioRecorder", "startRecording failed: ${e.message}", e)
+            Toast.makeText(context, "Microphone initialization failed. Please check app permissions.", Toast.LENGTH_LONG).show()
+            try {
+                recorder.release()
+            } catch (_: Exception) {}
             mediaRecorder = null
             isRecording = false
-            Toast.makeText(context, "Failed to start microphone recording.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Amplitudes and Timer loop
+    LaunchedEffect(isRecording) {
+        if (isRecording) {
+            var ticks = 0
+            while (isRecording) {
+                kotlinx.coroutines.delay(100)
+                ticks++
+                if (ticks % 10 == 0) {
+                    recordingDurationSeconds++
+                }
+                val maxAmp = try {
+                    mediaRecorder?.maxAmplitude ?: 0
+                } catch (_: Exception) {
+                    0
+                }
+                // Normalize 0..32767
+                val normalized = (maxAmp / 32767f).coerceIn(0.08f, 1f)
+                amplitudes.add(normalized)
+                if (amplitudes.size > 80) {
+                    amplitudes.removeAt(0)
+                }
+            }
         }
     }
 
@@ -141,174 +174,156 @@ fun AudioRecorderComponent(
     ) { isGranted ->
         if (isGranted) {
             startRecording()
-        }
-    }
-
-    // Polling maxAmplitude and duration loop
-    LaunchedEffect(isRecording) {
-        if (isRecording) {
-            amplitudes.clear()
-            repeat(40) { amplitudes.add(0.05f) }
-            recordingDurationSeconds = 0
-            var ticker = 0
-            while (isRecording) {
-                kotlinx.coroutines.delay(100)
-                ticker++
-                if (ticker % 10 == 0) {
-                    recordingDurationSeconds++
-                }
-                val amp = try {
-                    mediaRecorder?.maxAmplitude ?: 0
-                } catch (e: Exception) {
-                    0
-                }
-                // Normalize to a pleasant range (0.05f to 1.0f)
-                val rawNormalized = (amp.toFloat() / 32767f)
-                // Boost normal/low voices so the wave is nice and active
-                val normalized = (rawNormalized * 2.5f).coerceIn(0.05f, 1.0f)
-                
-                amplitudes.removeAt(0)
-                amplitudes.add(normalized)
-            }
         } else {
-            amplitudes.clear()
+            Toast.makeText(context, "Audio recording permission is required to record voice notes", Toast.LENGTH_SHORT).show()
         }
     }
 
-    // Pulsing indicator dot animation
-    val pulseAlpha by rememberInfiniteTransition(label = "pulse").animateFloat(
-        initialValue = 0.3f,
-        targetValue = 1.0f,
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(600, easing = LinearEasing),
+            animation = tween(800, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "alpha"
     )
 
-    // Hoist theme colors: MaterialTheme.colorScheme.* are @Composable getters and
-    // cannot be called inside the Canvas DrawScope lambda, which is not @Composable.
-    val waveformBarColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+    val waveformBarColor = accentColor.copy(alpha = 0.85f)
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), MaterialTheme.shapes.medium)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f),
+        border = BorderStroke(
+            0.75.dp,
+            if (isRecording) accentColor.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+        )
     ) {
         Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Box(
-                modifier = Modifier
-                    .size(10.dp)
-                    .clip(CircleShape)
-                    .background(if (isRecording) MaterialTheme.colorScheme.primary.copy(alpha = pulseAlpha) else Color.Gray)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            
-            if (isRecording) {
-                // Timer
-                val mins = recordingDurationSeconds / 60
-                val secs = recordingDurationSeconds % 60
-                val timeStr = "${mins}:${if (secs < 10) "0" else ""}$secs"
-                Text(
-                    text = timeStr,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.width(42.dp)
-                )
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // Real-time Waveform Canvas
-                Canvas(
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
                     modifier = Modifier
-                        .weight(1f)
-                        .height(32.dp)
-                ) {
-                    val barWidth = 3.dp.toPx()
-                    val gap = 3.dp.toPx()
-                    val count = amplitudes.size
-                    
-                    for (i in 0 until count) {
-                        val amp = amplitudes[count - 1 - i]
-                        val x = size.width - (i * (barWidth + gap)) - barWidth
-                        if (x < 0) break
-                        
-                        val barHeight = (size.height * amp).coerceAtLeast(3.dp.toPx())
-                        val y = (size.height - barHeight) / 2f
-                        
-                        drawRoundRect(
-                            color = waveformBarColor,
-                            topLeft = Offset(x, y),
-                            size = Size(barWidth, barHeight),
-                            cornerRadius = CornerRadius(barWidth / 2f, barWidth / 2f)
-                        )
-                    }
-                }
-            } else {
-                Text(
-                    text = "Tap mic to record memo",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(if (isRecording) accentColor.copy(alpha = pulseAlpha) else Color.Gray.copy(alpha = 0.7f))
                 )
-            }
-        }
+                Spacer(modifier = Modifier.width(10.dp))
 
-        Spacer(modifier = Modifier.width(16.dp))
-
-        IconButton(
-            onClick = {
                 if (isRecording) {
-                    var stopSuccess = false
-                    try {
-                        mediaRecorder?.stop()
-                        stopSuccess = true
-                        Log.d("AudioRecorder", "MediaRecorder stopped cleanly. Duration: $recordingDurationSeconds s")
-                    } catch (e: Exception) {
-                        Log.e("AudioRecorder", "MediaRecorder.stop() failed: ${e.message}", e)
-                    }
-                    try {
-                        mediaRecorder?.release()
-                    } catch (e: Exception) {
-                        Log.e("AudioRecorder", "MediaRecorder.release() failed: ${e.message}", e)
-                    }
-                    mediaRecorder = null
-                    isRecording = false
+                    val mins = recordingDurationSeconds / 60
+                    val secs = recordingDurationSeconds % 60
+                    val timeStr = "${mins}:${if (secs < 10) "0" else ""}$secs"
+                    Text(
+                        text = timeStr,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = accentColor,
+                        modifier = Modifier.width(38.dp)
+                    )
 
-                    val file = outputFile
-                    if (stopSuccess && file != null && file.exists() && file.length() >= 1024) {
-                        Log.d("AudioRecorder", "Recording complete: ${file.absolutePath}, size: ${file.length()} bytes")
-                        onRecordComplete(file)
-                    } else {
-                        Log.w("AudioRecorder", "Recording too short or invalid. File size: ${file?.length() ?: 0} bytes")
-                        if (file?.exists() == true) {
-                            file.delete()
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Canvas(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(24.dp)
+                    ) {
+                        val barWidth = 2.5.dp.toPx()
+                        val gap = 2.5.dp.toPx()
+                        val count = amplitudes.size
+
+                        for (i in 0 until count) {
+                            val amp = amplitudes[count - 1 - i]
+                            val x = size.width - (i * (barWidth + gap)) - barWidth
+                            if (x < 0) break
+
+                            val barHeight = (size.height * amp).coerceAtLeast(2.5.dp.toPx())
+                            val y = (size.height - barHeight) / 2f
+
+                            drawRoundRect(
+                                color = waveformBarColor,
+                                topLeft = Offset(x, y),
+                                size = Size(barWidth, barHeight),
+                                cornerRadius = CornerRadius(barWidth / 2f, barWidth / 2f)
+                            )
                         }
-                        Toast.makeText(context, "Recording was too short or empty. Please speak for at least 1-2 seconds.", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                        startRecording()
-                    } else {
-                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                    }
+                    Text(
+                        text = "Tap to record voice memo",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp),
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-            },
-            modifier = Modifier
-                .background(if (isRecording) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else MaterialTheme.colorScheme.primaryContainer, CircleShape)
-        ) {
-            Icon(
-                painter = painterResource(id = if (isRecording) R.drawable.ic_custom_stop else R.drawable.ic_custom_voice),
-                contentDescription = "Record",
-                tint = if (isRecording) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            IconButton(
+                onClick = {
+                    if (isRecording) {
+                        var stopSuccess = false
+                        try {
+                            mediaRecorder?.stop()
+                            stopSuccess = true
+                            Log.d("AudioRecorder", "MediaRecorder stopped cleanly. Duration: $recordingDurationSeconds s")
+                        } catch (e: Exception) {
+                            Log.e("AudioRecorder", "MediaRecorder.stop() failed: ${e.message}", e)
+                        }
+                        try {
+                            mediaRecorder?.release()
+                        } catch (e: Exception) {
+                            Log.e("AudioRecorder", "MediaRecorder.release() failed: ${e.message}", e)
+                        }
+                        mediaRecorder = null
+                        isRecording = false
+
+                        val file = outputFile
+                        if (stopSuccess && file != null && file.exists() && file.length() >= 1024) {
+                            Log.d("AudioRecorder", "Recording complete: ${file.absolutePath}, size: ${file.length()} bytes")
+                            onRecordComplete(file)
+                        } else {
+                            Log.w("AudioRecorder", "Recording too short or invalid. File size: ${file?.length() ?: 0} bytes")
+                            if (file?.exists() == true) {
+                                file.delete()
+                            }
+                            Toast.makeText(context, "Recording was too short or empty. Please speak for at least 1-2 seconds.", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                            startRecording()
+                        } else {
+                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(
+                        if (isRecording) MaterialTheme.colorScheme.error.copy(alpha = 0.15f) else accentColor.copy(alpha = 0.18f),
+                        CircleShape
+                    )
+                    .bounceClick()
+            ) {
+                Icon(
+                    painter = painterResource(id = if (isRecording) R.drawable.ic_custom_stop else R.drawable.ic_custom_voice),
+                    contentDescription = if (isRecording) "Stop" else "Record",
+                    tint = if (isRecording) MaterialTheme.colorScheme.error else accentColor,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
 }

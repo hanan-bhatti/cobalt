@@ -1,8 +1,13 @@
 package com.example.util
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
+import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -213,8 +218,17 @@ object FeedbackSubmissionManager {
         }
     }
 
+    private fun copyToClipboard(context: Context, label: String, text: String) {
+        try {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+            clipboard?.setPrimaryClip(ClipData.newPlainText(label, text))
+        } catch (e: Exception) {
+            Log.w("FeedbackSubmissionManager", "Failed to copy to clipboard: ${e.message}")
+        }
+    }
+
     /**
-     * Formats a bug report into clean GitHub / Email markdown.
+     * Formats a bug report into clean, highly readable GitHub / Email markdown.
      */
     fun formatBugReportMarkdown(
         title: String,
@@ -233,25 +247,30 @@ object FeedbackSubmissionManager {
         }
 
         return """
-            ### Bug Summary
-            $title
-
-            ### Description
+            ## 🐛 Cobalt Bug Report: $title
+            
+            ### 📝 Description
             $description
-
-            ### Steps to Reproduce
+            
+            ### 🔄 Steps to Reproduce
             $stepsText
-
-            ### Device & Environment Details
-            - **App Version:** v$appVersion (FOSS)
-            - **Device:** $deviceModel
-            - **Android OS:** $osVersion
-            - **Reporter:** $userEmail
+            
+            ### 📱 Environment & Device Info
+            | Parameter | Value |
+            | :--- | :--- |
+            | **App Version** | v$appVersion |
+            | **Device Model** | $deviceModel |
+            | **Android OS** | $osVersion |
+            | **Reporter Email** | ${if (userEmail.isNotBlank()) userEmail else "_Not specified_"} |
+            | **Submission Time** | ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())} |
+            
+            ---
+            _Generated automatically by Cobalt Knowledge Archive_
         """.trimIndent()
     }
 
     /**
-     * Formats a feature request into clean GitHub / Email markdown.
+     * Formats a feature request into clean, highly readable GitHub / Email markdown.
      */
     fun formatFeatureRequestMarkdown(
         title: String,
@@ -264,28 +283,33 @@ object FeedbackSubmissionManager {
         appVersion: String
     ): String {
         return """
-            ### Feature Summary
-            $title
-
-            ### Problem Statement
+            ## 💡 Cobalt Feature Request: $title
+            
+            ### 🎯 Motivation & Problem Statement
             $problemStatement
-
-            ### Proposed Solution
+            
+            ### 🚀 Proposed Solution
             $proposedSolution
-
-            ### Priority
-            $priority
-
-            ### Device & Environment Details
-            - **App Version:** v$appVersion (FOSS)
-            - **Device:** $deviceModel
-            - **Android OS:** $osVersion
-            - **Requester:** $userEmail
+            
+            ### ⚡ Priority Level
+            **$priority**
+            
+            ### 📱 Environment & Submitter Info
+            | Parameter | Value |
+            | :--- | :--- |
+            | **App Version** | v$appVersion |
+            | **Device Model** | $deviceModel |
+            | **Android OS** | $osVersion |
+            | **Requester Email** | ${if (userEmail.isNotBlank()) userEmail else "_Not specified_"} |
+            | **Submission Time** | ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())} |
+            
+            ---
+            _Generated automatically by Cobalt Knowledge Archive_
         """.trimIndent()
     }
 
     /**
-     * Formats a survey into clean GitHub / Email markdown.
+     * Formats a survey into clean, highly readable GitHub / Email markdown.
      */
     fun formatSurveyMarkdown(
         reaction: String,
@@ -298,30 +322,43 @@ object FeedbackSubmissionManager {
         osVersion: String,
         appVersion: String
     ): String {
-        val favs = if (favoriteFeatures.isNotEmpty()) favoriteFeatures.joinToString(", ") else "None specified"
-        val imps = if (desiredImprovements.isNotEmpty()) desiredImprovements.joinToString(", ") else "None specified"
+        val favs = if (favoriteFeatures.isNotEmpty()) favoriteFeatures.map { "- $it" }.joinToString("\n") else "- _None specified_"
+        val imps = if (desiredImprovements.isNotEmpty()) desiredImprovements.map { "- $it" }.joinToString("\n") else "- _None specified_"
         val comments = if (customFeedback.isNotBlank()) customFeedback else "_No additional feedback entered_"
 
         return """
-            ### Cobalt In-App Survey Response
-            - **Experience Sentiment:** $reaction
-            - **Net Promoter Score (NPS):** $npsScore / 10
-            - **Favorite Features:** $favs
-            - **Desired Improvements:** $imps
-
-            ### User Feedback & Ideas
-            $comments
-
-            ### Device & Version
-            - **App Version:** v$appVersion (FOSS)
-            - **Device:** $deviceModel
-            - **Android OS:** $osVersion
-            - **Respondent:** $userEmail
+            ## 🌟 Cobalt v2.x Experience Survey Response
+            
+            ### 📊 Overall Sentiment & Recommendation
+            - **Sentiment Rating:** $reaction
+            - **Recommendation Score (NPS):** **$npsScore / 10**
+            
+            ### ❤️ Favorite Features Used Most
+            $favs
+            
+            ### 🛠️ Most Desired Improvements / Wishlist
+            $imps
+            
+            ### 💬 User Feedback & Ideas
+            > $comments
+            
+            ### 📱 Device & Version Telemetry
+            | Parameter | Value |
+            | :--- | :--- |
+            | **App Version** | v$appVersion |
+            | **Device Model** | $deviceModel |
+            | **Android OS** | $osVersion |
+            | **Respondent** | ${if (userEmail.isNotBlank()) userEmail else "Anonymous User"} |
+            | **Date** | ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())} |
+            
+            ---
+            _Thank you for contributing to Cobalt Knowledge Archive!_
         """.trimIndent()
     }
 
     /**
      * Launches the user's browser with a pre-filled GitHub issue URL.
+     * Also copies the report to the clipboard to guarantee zero data loss.
      */
     fun launchGitHubIssue(
         context: Context,
@@ -329,6 +366,8 @@ object FeedbackSubmissionManager {
         body: String,
         labels: String = "bug"
     ) {
+        copyToClipboard(context, "Cobalt Issue", body)
+        Toast.makeText(context, "Issue details copied to clipboard!", Toast.LENGTH_SHORT).show()
         try {
             val encodedTitle = java.net.URLEncoder.encode(title, "UTF-8")
             val encodedBody = java.net.URLEncoder.encode(body, "UTF-8")
@@ -342,12 +381,15 @@ object FeedbackSubmissionManager {
 
     /**
      * Launches the user's browser with a pre-filled GitHub discussion URL.
+     * Also copies the report to the clipboard to guarantee zero data loss.
      */
     fun launchGitHubDiscussion(
         context: Context,
         title: String,
         body: String
     ) {
+        copyToClipboard(context, "Cobalt Survey", body)
+        Toast.makeText(context, "Survey details copied to clipboard!", Toast.LENGTH_SHORT).show()
         try {
             val encodedTitle = java.net.URLEncoder.encode(title, "UTF-8")
             val encodedBody = java.net.URLEncoder.encode(body, "UTF-8")
@@ -360,34 +402,82 @@ object FeedbackSubmissionManager {
 
     /**
      * Launches the user's email client with pre-filled subject, body, and recipient.
+     * Guaranteed to pre-fill both URI parameters and Intent extras, with clipboard fallback.
      */
     fun launchEmailClient(
         context: Context,
         subject: String,
         body: String,
-        recipient: String = "hananbhatti.dev@gmail.com"
+        recipient: String = "hannanbhatti2006@gmail.com"
     ) {
+        copyToClipboard(context, "Cobalt Feedback", body)
         try {
-            val mailtoUri = Uri.parse("mailto:$recipient")
-            val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO, mailtoUri).apply {
-                putExtra(android.content.Intent.EXTRA_SUBJECT, subject)
-                putExtra(android.content.Intent.EXTRA_TEXT, body)
-                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            val encodedSubject = Uri.encode(subject)
+            val encodedBody = Uri.encode(body)
+            val mailtoUri = Uri.parse("mailto:$recipient?subject=$encodedSubject&body=$encodedBody")
+            val intent = Intent(Intent.ACTION_SENDTO, mailtoUri).apply {
+                putExtra(Intent.EXTRA_EMAIL, arrayOf(recipient))
+                putExtra(Intent.EXTRA_SUBJECT, subject)
+                putExtra(Intent.EXTRA_TEXT, body)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
+            Toast.makeText(context, "Feedback details copied to clipboard!", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             try {
-                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "message/rfc822"
-                    putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf(recipient))
-                    putExtra(android.content.Intent.EXTRA_SUBJECT, subject)
-                    putExtra(android.content.Intent.EXTRA_TEXT, body)
-                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    putExtra(Intent.EXTRA_EMAIL, arrayOf(recipient))
+                    putExtra(Intent.EXTRA_SUBJECT, subject)
+                    putExtra(Intent.EXTRA_TEXT, body)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-                context.startActivity(android.content.Intent.createChooser(shareIntent, "Send Feedback via Email"))
+                context.startActivity(Intent.createChooser(shareIntent, "Send Feedback via Email"))
+                Toast.makeText(context, "Feedback details copied to clipboard!", Toast.LENGTH_SHORT).show()
             } catch (e2: Exception) {
                 Log.e("FeedbackSubmissionManager", "Failed to launch email client: ${e2.message}", e2)
+                Toast.makeText(context, "Feedback copied to clipboard. Please email $recipient", Toast.LENGTH_LONG).show()
             }
+        }
+    }
+
+    /**
+     * Exports or shares feedback/survey as a Markdown file via the Android share sheet.
+     * Enables FOSS users to save to Downloads, Google Drive, or share via Telegram/Messaging apps.
+     */
+    fun shareOrExportFeedback(
+        context: Context,
+        title: String,
+        content: String,
+        fileName: String = "cobalt_feedback.md"
+    ) {
+        copyToClipboard(context, title, content)
+        try {
+            val exportDir = File(context.cacheDir, "feedback_export")
+            if (!exportDir.exists()) exportDir.mkdirs()
+            val file = File(exportDir, fileName)
+            file.writeText(content)
+
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/markdown"
+                putExtra(Intent.EXTRA_SUBJECT, title)
+                putExtra(Intent.EXTRA_TEXT, content)
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            val chooser = Intent.createChooser(shareIntent, "Share or Save Feedback File...")
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(chooser)
+            Toast.makeText(context, "Feedback copied to clipboard and ready to share!", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Log.e("FeedbackSubmissionManager", "Failed to share feedback file: ${e.message}", e)
+            Toast.makeText(context, "Feedback copied to clipboard!", Toast.LENGTH_SHORT).show()
         }
     }
 }

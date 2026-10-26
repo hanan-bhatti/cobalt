@@ -43,6 +43,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -99,6 +100,7 @@ import com.example.ui.theme.CategoryText
 import com.example.ui.theme.CategoryCode
 import com.example.ui.theme.CategoryAudio
 import com.example.ui.theme.CategoryMedia
+import com.example.ui.theme.DefaultFolderColor
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.example.ui.theme.toThemeColor
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -124,7 +126,15 @@ fun DetailScreen(
         activeItem?.takeIf { itemId.isNullOrBlank() || it.id == itemId }
             ?: (if (!itemId.isNullOrBlank()) allItems.find { it.id == itemId } else null)
             ?: activeItem
-    } ?: return
+    }
+    if (item == null) {
+        LaunchedEffect(Unit) {
+            onClose()
+        }
+        return
+    }
+
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
     val localHazeState = remember { HazeState() }
 
@@ -239,6 +249,17 @@ fun DetailScreen(
                         }
                     },
                     actions = {
+                        IconButton(
+                            onClick = { showDeleteConfirm = true },
+                            modifier = Modifier.bounceClick().testTag("detail_delete_button")
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_delete),
+                                contentDescription = "Delete item",
+                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                         IconButton(
                             onClick = {
                                 viewModel.shareItem(item, context)
@@ -441,22 +462,69 @@ fun DetailScreen(
                     // Folders
                     if (item.folders.isNotEmpty()) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             item.folders.forEach { folder ->
+                                val folderEntity = customFolders.find { it.name.equals(folder, ignoreCase = true) }
+                                val resolvedColor = if (folderEntity != null && !folderEntity.colorHex.isNullOrBlank()) {
+                                    parseHexColor(folderEntity.colorHex, defaultColor = MaterialTheme.colorScheme.primary, isDark = isDark)
+                                } else {
+                                    when (folder) {
+                                        "Links" -> CategoryLink.toThemeColor(isDark)
+                                        "Images" -> CategoryImage.toThemeColor(isDark)
+                                        "Videos" -> CategoryVideo.toThemeColor(isDark)
+                                        "Code" -> CategoryCode.toThemeColor(isDark)
+                                        "Text" -> CategoryText.toThemeColor(isDark)
+                                        "Audio" -> CategoryAudio.toThemeColor(isDark)
+                                        "Movies & Anime" -> CategoryMedia.toThemeColor(isDark)
+                                        "Archive" -> MaterialTheme.colorScheme.outline
+                                        else -> DefaultFolderColor.toThemeColor(isDark)
+                                    }
+                                }
+                                val folderIconRes = if (folderEntity != null) {
+                                    getFolderIconRes(folderEntity.iconName)
+                                } else {
+                                    when (folder) {
+                                        "Links" -> R.drawable.ic_custom_link
+                                        "Images" -> R.drawable.ic_custom_image
+                                        "Videos" -> R.drawable.ic_custom_video
+                                        "Code" -> R.drawable.ic_custom_code
+                                        "Text" -> R.drawable.ic_custom_text
+                                        "Audio" -> R.drawable.ic_custom_voice
+                                        "Movies & Anime" -> R.drawable.ic_custom_movie
+                                        "Archive" -> R.drawable.ic_custom_archive
+                                        else -> R.drawable.ic_custom_folder
+                                    }
+                                }
                                 Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = resolvedColor.copy(alpha = if (isDark) 0.15f else 0.08f),
+                                    border = BorderStroke(1.dp, resolvedColor),
+                                    modifier = Modifier.testTag("detail_folder_chip_$folder")
                                 ) {
-                                    Text(
-                                        text = folder,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = folderIconRes),
+                                            contentDescription = null,
+                                            tint = resolvedColor,
+                                            modifier = Modifier.size(13.dp)
+                                        )
+                                        Text(
+                                            text = folder,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = resolvedColor,
+                                            maxLines = 1
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -620,7 +688,10 @@ fun DetailScreen(
                     MarkdownText(
                         markdown = descriptionToShow,
                         modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f)
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f),
+                        onMarkdownChange = { updated ->
+                            viewModel.updateSavedItem(item.copy(content = updated))
+                        }
                     )
                 }
             }
@@ -822,5 +893,21 @@ fun DetailScreen(
         }
         }
     }
+    }
+
+    if (showDeleteConfirm) {
+        com.example.ui.components.ExpressiveConfirmationDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = "Delete Archive",
+            message = "Are you sure you want to delete this item? This action cannot be undone.",
+            confirmButtonText = "Delete",
+            onConfirm = {
+                showDeleteConfirm = false
+                viewModel.deleteSavedItem(item)
+                onClose()
+            },
+            dismissButtonText = "Cancel",
+            isDestructive = true
+        )
     }
 }

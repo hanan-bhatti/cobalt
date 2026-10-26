@@ -1293,6 +1293,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         _extractedLinksToReview.value = emptyList()
         _isMetadataExtracting.value = false
         _metadataError.value = null
+        editOriginalId = null
+        _isEditingItem.value = false
         captureDrafts.clear()
         _activeCaptureItem.value = SavedItem(
             type = type,
@@ -1311,6 +1313,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         _isMetadataExtracting.value = false
         _metadataError.value = null
         editOriginalId = null
+        _isEditingItem.value = false
         captureDrafts.clear()
     }
 
@@ -1319,6 +1322,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
      */
     fun handleSharedIntent(mimeType: String?, textContent: String?, mediaUri: Uri?, subject: String? = null) {
         viewModelScope.launch {
+            editOriginalId = null
+            _isEditingItem.value = false
             captureDrafts.clear()
             _capturedBitmap.value = null
             pendingMediaBytes = null
@@ -1823,6 +1828,28 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private var editOriginalId: String? = null
+    private val _isEditingItem = MutableStateFlow(false)
+    val isEditingItem: StateFlow<Boolean> = _isEditingItem.asStateFlow()
+
+    private val _lastDeletedItemForUndo = MutableStateFlow<SavedItem?>(null)
+    val lastDeletedItemForUndo: StateFlow<SavedItem?> = _lastDeletedItemForUndo.asStateFlow()
+
+    fun clearUndoToast() {
+        _lastDeletedItemForUndo.value = null
+    }
+
+    fun triggerUndoToast(item: SavedItem) {
+        _lastDeletedItemForUndo.value = item
+    }
+
+    fun deleteEditingItem() {
+        val targetId = editOriginalId
+        val itemToDelete = targetId?.let { id -> allItems.value.find { it.id == id } } ?: _activeCaptureItem.value
+        if (itemToDelete != null) {
+            deleteSavedItem(itemToDelete)
+        }
+        cancelCapture()
+    }
 
     fun startEditItem(item: SavedItem) {
         _capturedBitmap.value = null
@@ -1831,6 +1858,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         _isMetadataExtracting.value = false
         _metadataError.value = null
         editOriginalId = item.id
+        _isEditingItem.value = true
         _activeCaptureItem.value = if (item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE) {
             item.copy(extractedText = null)
         } else {
@@ -2042,6 +2070,16 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 if (finalItem.type == SavedItemType.LINK && finalItem.linkTitle.isNullOrBlank()) {
                     finalItem = buildItemWithFetchedMetadata(finalItem)
                 }
+                if (finalItem.title.isBlank()) {
+                    val fallback = finalItem.content.lineSequence()
+                        .map { it.trim() }
+                        .firstOrNull { it.isNotBlank() }
+                        ?.removePrefix("#")?.trim()
+                        ?.take(60)
+                    if (!fallback.isNullOrBlank()) {
+                        finalItem = finalItem.copy(title = fallback)
+                    }
+                }
                 val isEdit = allItems.value.any { it.id == finalItem.id } || editOriginalId != null
                 repository.saveItem(finalItem, pendingMediaBytes) { progress ->
                     _saveProgress.value = progress
@@ -2087,11 +2125,13 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     fun deleteSavedItem(item: SavedItem) {
         viewModelScope.launch {
             repository.deleteItem(item)
+            _lastDeletedItemForUndo.value = item
             AnalyticsHelper.logNoteDeleted(context, item.id, item.type.name)
         }
     }
 
     fun restoreDeletedItem(item: SavedItem) {
+        _lastDeletedItemForUndo.value = null
         viewModelScope.launch {
             repository.saveItem(item)
             // Sync to Firebase in the background if configured

@@ -22,6 +22,14 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.MutableTransitionState
+import com.example.ui.screens.MarkdownAccessoryToolbar
+import com.example.ui.screens.MarkdownVisualTransformation
 
 
 import androidx.compose.animation.*
@@ -652,181 +660,284 @@ fun QuickNoteBottomSheet(
     val focusManager = LocalFocusManager.current
     val titleFocusRequester = remember { FocusRequester() }
 
-    // Auto-focus title when opened
+    var contentValue by remember {
+        mutableStateOf(TextFieldValue(text = captureContent, selection = TextRange(captureContent.length)))
+    }
+    LaunchedEffect(captureContent) {
+        if (contentValue.text != captureContent) {
+            contentValue = contentValue.copy(text = captureContent, selection = TextRange(captureContent.length))
+        }
+    }
+    var isPreviewMode by remember { mutableStateOf(false) }
+
+    val transitionState = remember { MutableTransitionState(isVisible) }
+    transitionState.targetState = isVisible
+
+    // Request title focus immediately when sheet becomes visible
     LaunchedEffect(isVisible) {
         if (isVisible) {
-            kotlinx.coroutines.delay(100) // Wait for bottom sheet animation
             try {
                 titleFocusRequester.requestFocus()
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Ignore focus error
             }
         }
     }
 
-    androidx.compose.animation.AnimatedVisibility(
-        visible = isVisible,
-        enter = fadeIn(),
-        exit = fadeOut(),
-        modifier = Modifier
-            .fillMaxSize()
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            val scrimModifier = if (useBlur) {
-                Modifier
-                    .fillMaxSize()
-                    .hazeEffect(state = hazeState, style = HazeStyle(
-                        backgroundColor = Color.Black,
-                        tint = HazeTint(Color.Black.copy(alpha = 0.3f)),
-                        blurRadius = 12.dp,
-                        noiseFactor = 0.03f
-                    ))
-            } else {
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.55f))
-            }
-
-            // Blurred Scrim
-            Box(
-                modifier = scrimModifier
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {
-                        onDismiss()
-                        focusManager.clearFocus()
-                    }
+    if (transitionState.currentState || transitionState.targetState || !transitionState.isIdle) {
+        Dialog(
+            onDismissRequest = { onDismiss() },
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false
             )
-
-            // Bottom Sheet Canvas
-            androidx.compose.animation.AnimatedVisibility(
-                visible = isVisible,
-                enter = slideInVertically(initialOffsetY = { it }),
-                exit = slideOutVertically(targetOffsetY = { it }),
-                modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            AnimatedVisibility(
+                visibleState = transitionState,
+                enter = fadeIn(tween(150)),
+                exit = fadeOut(tween(100)),
+                modifier = Modifier.fillMaxSize()
             ) {
-                Surface(
-                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 6.dp,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .imePadding()
-                        .navigationBarsPadding()
-                        // Make sure it doesn't take maximum height when empty, wrapping content nicely
-                        .wrapContentHeight()
-                        .heightIn(max = LocalConfiguration.current.screenHeightDp.dp * 0.85f)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp)
-                            // Allow scroll if content gets too long
-                            .verticalScroll(rememberScrollState())
-                    ) {
-                        // Drag handle pill
-                        Box(
-                            modifier = Modifier
-                                .width(32.dp)
-                                .height(4.dp)
-                                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f), CircleShape)
-                                .align(Alignment.CenterHorizontally)
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
+                val imePadding = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+                val navPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                val bottomInsetPadding = maxOf(imePadding, navPadding)
 
-                        // Title Input (Borderless)
-                        BasicTextField(
-                            value = captureTitle,
-                            onValueChange = onTitleChange,
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.headlineSmall.copy(
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                            keyboardActions = KeyboardActions(
-                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                            ),
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            decorationBox = { innerTextField ->
-                                if (captureTitle.isEmpty()) {
-                                    Text(
-                                        text = "Title",
-                                        style = MaterialTheme.typography.headlineSmall.copy(
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    )
-                                }
-                                innerTextField()
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .focusRequester(titleFocusRequester)
-                        )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    val scrimModifier = if (useBlur) {
+                        Modifier
+                            .fillMaxSize()
+                            .hazeEffect(
+                                state = hazeState,
+                                style = HazeStyle(
+                                    backgroundColor = Color.Black,
+                                    tint = HazeTint(Color.Black.copy(alpha = 0.35f)),
+                                    blurRadius = 14.dp,
+                                    noiseFactor = 0.03f
+                                )
+                            )
+                    } else {
+                        Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.55f))
+                    }
 
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Body Input (Borderless, Auto-expanding)
-                        BasicTextField(
-                            value = captureContent,
-                            onValueChange = onContentChange,
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                color = MaterialTheme.colorScheme.onSurface,
-                                lineHeight = 24.sp
-                            ),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            decorationBox = { innerTextField ->
-                                if (captureContent.isEmpty()) {
-                                    Text(
-                                        text = "Start typing...",
-                                        style = MaterialTheme.typography.bodyLarge.copy(
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                                        )
-                                    )
-                                }
-                                innerTextField()
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 120.dp) // Removed weight(1f) to fix layout gap, set minHeight instead
-                        )
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        // Actions
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            TextButton(
-                                onClick = {
-                                    onDismiss()
-                                    focusManager.clearFocus()
-                                }
-                            ) {
-                                Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // Scrim
+                    Box(
+                        modifier = scrimModifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {
+                                onDismiss()
+                                focusManager.clearFocus()
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Button(
-                                onClick = {
-                                    onSave()
-                                    focusManager.clearFocus()
-                                },
-                                enabled = !isSaving && captureContent.isNotBlank(),
-                                shape = CircleShape
+                        )
+                    )
+
+                    // Stable Bottom Sheet Surface - completely free of jittery slide animations
+                    Surface(
+                        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 6.dp,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .padding(bottom = bottomInsetPadding)
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            // Header: Action row (Cancel & Save)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                if (isSaving) {
-                                    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
-                                    CircularWavyProgressIndicator(
-                                        modifier = Modifier.size(16.dp),
-                                        color = MaterialTheme.colorScheme.onPrimary
+                                TextButton(
+                                    onClick = {
+                                        onDismiss()
+                                        focusManager.clearFocus()
+                                    }
+                                ) {
+                                    Text(
+                                        "Cancel",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 14.sp
+                                    )
+                                }
+
+                                Text(
+                                    text = "Quick Note",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+
+                                Button(
+                                    onClick = {
+                                        onSave()
+                                        focusManager.clearFocus()
+                                    },
+                                    enabled = !isSaving && captureContent.isNotBlank(),
+                                    shape = RoundedCornerShape(16.dp),
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                                    modifier = Modifier.height(34.dp)
+                                ) {
+                                    if (isSaving) {
+                                        @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+                                        CircularWavyProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            color = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                    } else {
+                                        Text("Save", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+
+                            HorizontalDivider(
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            // Content area: Title, Divider, and Markdown Body (Adaptive height, no void gaps)
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 240.dp)
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                            ) {
+                                // 1. Clean Title Input (Borderless)
+                                BasicTextField(
+                                    value = captureTitle,
+                                    onValueChange = onTitleChange,
+                                    singleLine = true,
+                                    textStyle = MaterialTheme.typography.headlineSmall.copy(
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                                    keyboardActions = KeyboardActions(
+                                        onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                                    ),
+                                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                    decorationBox = { innerTextField ->
+                                        if (captureTitle.isEmpty()) {
+                                            Text(
+                                                text = "Title",
+                                                style = MaterialTheme.typography.headlineSmall.copy(
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                                    fontSize = 20.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            )
+                                        }
+                                        innerTextField()
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .focusRequester(titleFocusRequester)
+                                )
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // 2. Clean Horizontal Line
+                                HorizontalDivider(
+                                    thickness = 0.75.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                // 3. Body Input (Borderless or Markdown Preview)
+                                if (!isPreviewMode) {
+                                    BasicTextField(
+                                        value = contentValue,
+                                        onValueChange = { updated ->
+                                            contentValue = updated
+                                            onContentChange(updated.text)
+                                        },
+                                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            fontSize = 15.sp,
+                                            lineHeight = 22.sp
+                                        ),
+                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
+                                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                        visualTransformation = MarkdownVisualTransformation(),
+                                        decorationBox = { innerTextField ->
+                                            if (contentValue.text.isEmpty()) {
+                                                Text(
+                                                    text = "Start typing thoughts in markdown...",
+                                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                                        fontSize = 15.sp,
+                                                        lineHeight = 22.sp
+                                                    )
+                                                )
+                                            }
+                                            innerTextField()
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .defaultMinSize(minHeight = 70.dp)
                                     )
                                 } else {
-                                    Text("Save Note")
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .defaultMinSize(minHeight = 70.dp)
+                                            .padding(vertical = 4.dp)
+                                    ) {
+                                        if (contentValue.text.isBlank()) {
+                                            Text(
+                                                text = "Nothing to preview yet. Start typing in Edit mode!",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                            )
+                                        } else {
+                                            MarkdownText(
+                                                markdown = contentValue.text,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                onMarkdownChange = { updated ->
+                                                    contentValue = TextFieldValue(text = updated, selection = TextRange(updated.length))
+                                                    onContentChange(updated)
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 4. Markdown Accessory Toolbar Pinned Above Keyboard
+                            if (imePadding > 0.dp || isPreviewMode) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                ) {
+                                    Column(modifier = Modifier.fillMaxWidth()) {
+                                        HorizontalDivider(
+                                            thickness = 0.5.dp,
+                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                        MarkdownAccessoryToolbar(
+                                            textFieldValue = contentValue,
+                                            onApplyFormat = { updated ->
+                                                contentValue = updated
+                                                onContentChange(updated.text)
+                                            },
+                                            isPreviewMode = isPreviewMode,
+                                            onTogglePreview = { isPreviewMode = !isPreviewMode },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
                                 }
                             }
                         }

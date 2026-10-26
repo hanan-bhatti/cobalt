@@ -124,6 +124,8 @@ tasks.matching {
 dependencies {
   implementation(libs.jsoup)
   implementation(libs.commonmark)
+  implementation(libs.commonmark.strikethrough)
+  implementation(libs.commonmark.tables)
   implementation(libs.androidx.browser)
   implementation(platform(libs.androidx.compose.bom))
   "playImplementation"(platform(libs.firebase.bom))
@@ -204,5 +206,15 @@ tasks.register<Exec>("syncFdroidMetadata") {
   description = "Auto-syncs F-Droid Fastlane metadata & changelog from version code and CHANGELOG.md"
   group = "fdroid"
   commandLine("python3", "${rootDir}/scripts/update_fdroid_metadata.py")
+}
+
+tasks.register<Exec>("syncIssueVersions") {
+  description = "Auto-syncs GitHub issue templates & security policy versions from build.gradle.kts and CHANGELOG.md"
+  group = "documentation"
+  commandLine("python3", "${rootDir}/scripts/sync_issue_versions.py")
+}
+
+tasks.matching { it.name == "preBuild" }.configureEach {
+  dependsOn("syncIssueVersions")
 }
 

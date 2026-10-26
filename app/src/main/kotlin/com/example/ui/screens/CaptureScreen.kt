@@ -57,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import com.example.ui.components.bounceClick
 import com.example.ui.components.AudioRecorderComponent
+import com.example.ui.components.AudioPlayerComponent
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Fill
@@ -80,10 +81,36 @@ import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.ui.components.VideoPlayer
 import com.example.ui.components.InlineNewFolderCreator
+import com.example.ui.components.MarkdownText
+import com.example.ui.components.horizontalFadingEdges
 import com.example.ui.viewmodel.CobaltViewModel
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.ScrollState
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.isSystemInDarkTheme
 import com.example.R
 import com.example.ui.theme.CategoryAudio
 import com.example.ui.theme.CategoryCode
@@ -108,6 +135,1271 @@ private fun getCategoryMeta(type: SavedItemType): Pair<Int, Color> {
         SavedItemType.CODE -> Pair(R.drawable.ic_custom_code, CategoryCode)
         SavedItemType.AUDIO -> Pair(R.drawable.ic_custom_voice, CategoryAudio)
         SavedItemType.MEDIA -> Pair(R.drawable.ic_custom_movie, CategoryMedia)
+    }
+}
+
+fun Modifier.dashedBorder(
+    strokeWidth: androidx.compose.ui.unit.Dp,
+    color: Color,
+    cornerRadius: androidx.compose.ui.unit.Dp,
+    dashLength: androidx.compose.ui.unit.Dp = 4.dp,
+    gapLength: androidx.compose.ui.unit.Dp = 3.dp
+): Modifier = this.drawBehind {
+    val stroke = Stroke(
+        width = strokeWidth.toPx(),
+        pathEffect = PathEffect.dashPathEffect(
+            floatArrayOf(dashLength.toPx(), gapLength.toPx()),
+            0f
+        )
+    )
+    drawRoundRect(
+        color = color,
+        size = size,
+        cornerRadius = CornerRadius(cornerRadius.toPx()),
+        style = stroke
+    )
+}
+
+@Composable
+fun MarkdownAccessoryToolbar(
+    textFieldValue: TextFieldValue,
+    onApplyFormat: (TextFieldValue) -> Unit,
+    isPreviewMode: Boolean,
+    onTogglePreview: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val toolsScrollState = rememberScrollState()
+
+    val toolbarActions = remember {
+        listOf(
+            MarkdownToolbarAction("H1", "Heading 1", FormatType.Heading1),
+            MarkdownToolbarAction("H2", "Heading 2", FormatType.Heading2),
+            MarkdownToolbarAction("B", "Bold", FormatType.Bold, isBoldLabel = true),
+            MarkdownToolbarAction("I", "Italic", FormatType.Italic, isItalicLabel = true),
+            MarkdownToolbarAction("S", "Strikethrough", FormatType.Strikethrough),
+            MarkdownToolbarAction("[ ]", "Task list", FormatType.Checklist),
+            MarkdownToolbarAction("”", "Quote", FormatType.Quote),
+            MarkdownToolbarAction("•", "Bullet List", FormatType.BulletList),
+            MarkdownToolbarAction("1.", "Numbered List", FormatType.NumberedList),
+            MarkdownToolbarAction("<>", "Code Inline", FormatType.CodeInline),
+            MarkdownToolbarAction("```", "Code Block", FormatType.CodeBlock),
+            MarkdownToolbarAction("🔗", "Link", FormatType.Link)
+        )
+    }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Horizontal scrolling tools with left & right fading edge
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .horizontalFadingEdges(toolsScrollState, fadeWidth = 14.dp)
+                .horizontalScroll(toolsScrollState),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            toolbarActions.forEach { action ->
+                Surface(
+                    onClick = {
+                        applyMarkdownFormat(textFieldValue, action.type) { updated ->
+                            onApplyFormat(updated)
+                        }
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                    modifier = Modifier
+                        .size(32.dp)
+                        .bounceClick()
+                        .testTag("markdown_action_${action.label}")
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Text(
+                            text = action.label,
+                            fontSize = 11.5.sp,
+                            fontWeight = if (action.isBoldLabel) FontWeight.ExtraBold else FontWeight.SemiBold,
+                            fontStyle = if (action.isItalicLabel) androidx.compose.ui.text.font.FontStyle.Italic else androidx.compose.ui.text.font.FontStyle.Normal,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.width(4.dp))
+
+        // Thin vertical divider pinning Preview to the right
+        Box(
+            modifier = Modifier
+                .width(1.dp)
+                .height(18.dp)
+                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+        )
+
+        Spacer(modifier = Modifier.width(4.dp))
+
+        // Pinned Preview Toggle Pill
+        Surface(
+            onClick = onTogglePreview,
+            shape = RoundedCornerShape(8.dp),
+            color = if (isPreviewMode) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+            border = BorderStroke(
+                0.5.dp,
+                if (isPreviewMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+            ),
+            modifier = Modifier
+                .height(32.dp)
+                .bounceClick()
+                .testTag(if (isPreviewMode) "markdown_edit_tab" else "markdown_preview_tab")
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = if (isPreviewMode) R.drawable.ic_custom_edit else R.drawable.ic_custom_eye),
+                    contentDescription = if (isPreviewMode) "Edit Mode" else "Preview Mode",
+                    tint = if (isPreviewMode) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(13.dp)
+                )
+                Text(
+                    text = if (isPreviewMode) "Edit" else "Preview",
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isPreviewMode) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun CleanFolderRow(
+    customFolders: List<String>,
+    folderMap: Map<String, com.example.data.local.CustomFolderEntity>,
+    assignedFolders: List<String>,
+    onToggleFolder: (String) -> Unit,
+    showNewFolderCreator: Boolean,
+    onToggleNewFolder: () -> Unit,
+    accentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    val foldersScrollState = rememberScrollState()
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Sticky + New Button with Dashed Border
+        Box(
+            modifier = Modifier
+                .dashedBorder(
+                    strokeWidth = 1.dp,
+                    color = if (showNewFolderCreator) accentColor else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
+                    cornerRadius = 12.dp,
+                    dashLength = 4.dp,
+                    gapLength = 3.dp
+                )
+                .clip(RoundedCornerShape(12.dp))
+                .clickable { onToggleNewFolder() }
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+                .bounceClick()
+                .testTag("capture_new_folder_button"),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_custom_plus),
+                    contentDescription = "New Folder",
+                    tint = if (showNewFolderCreator) accentColor else MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(12.dp)
+                )
+                Text(
+                    text = "New",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (showNewFolderCreator) accentColor else MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // Horizontally scrolling folder chips with left & right fading edges
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .horizontalFadingEdges(foldersScrollState, fadeWidth = 16.dp)
+                .horizontalScroll(foldersScrollState),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (customFolders.isEmpty()) {
+                Text(
+                    text = "No custom folders yet",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            } else {
+                val isDark = isSystemInDarkTheme()
+                customFolders.forEach { folderName ->
+                    val isAssigned = assignedFolders.contains(folderName)
+                    val entity = folderMap[folderName]
+                    val folderColor = parseHexColor(entity?.colorHex, isDark = isDark)
+
+                    Surface(
+                        onClick = { onToggleFolder(folderName) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isAssigned) folderColor.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                        border = BorderStroke(
+                            1.dp,
+                            if (isAssigned) folderColor else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                        ),
+                        modifier = Modifier
+                            .bounceClick()
+                            .testTag("tag_chip_$folderName")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            FolderIcon(
+                                iconName = entity?.iconName,
+                                tint = if (isAssigned) folderColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Text(
+                                text = folderName,
+                                fontSize = 11.sp,
+                                fontWeight = if (isAssigned) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isAssigned) folderColor else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ClipboardPasteChip(
+    label: String,
+    accentColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(10.dp),
+        color = accentColor.copy(alpha = 0.14f),
+        border = BorderStroke(0.75.dp, accentColor.copy(alpha = 0.35f)),
+        modifier = modifier
+            .bounceClick()
+            .testTag("clipboard_paste_chip")
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_custom_paste),
+                contentDescription = "Paste",
+                tint = accentColor,
+                modifier = Modifier.size(13.dp)
+            )
+            Text(
+                text = label,
+                color = accentColor,
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+fun TextCapturePage(
+    item: SavedItem,
+    viewModel: CobaltViewModel,
+    customFolders: List<String>,
+    folderMap: Map<String, com.example.data.local.CustomFolderEntity>,
+    pageCategoryColor: Color,
+    textContent: TextFieldValue,
+    onTextContentChange: (TextFieldValue) -> Unit,
+    isPreviewMode: Boolean,
+    onTogglePreview: () -> Unit,
+    clipboardRawText: String = "",
+    clipboardUrl: String? = null,
+    clipboardDomain: String = "",
+    isKeyboardOpen: Boolean,
+    bottomPadding: androidx.compose.ui.unit.Dp,
+    modifier: Modifier = Modifier
+) {
+    var showNewFolderCreator by remember { mutableStateOf(false) }
+
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val minContentHeight = maxHeight
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = minContentHeight)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 10.dp)
+                .padding(bottom = bottomPadding + 24.dp)
+        ) {
+            // 1. Clean borderless Title input
+            BasicTextField(
+                value = item.title,
+                onValueChange = { viewModel.updateActiveCaptureItem { cur -> cur.copy(title = it) } },
+                textStyle = MaterialTheme.typography.headlineSmall.copy(
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                ),
+                cursorBrush = SolidColor(pageCategoryColor),
+                decorationBox = { innerTextField ->
+                    if (item.title.isEmpty()) {
+                        Text(
+                            text = "Title",
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                            )
+                        )
+                    }
+                    innerTextField()
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("capture_title_input")
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 2. Subtle Divider
+            HorizontalDivider(
+                thickness = 0.75.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Optional Clipboard Paste Chip
+            if (!isPreviewMode && textContent.text.isEmpty() && clipboardRawText.isNotBlank()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                val pasteLabel = if (clipboardUrl != null) "Paste link: $clipboardDomain" else "Paste from clipboard"
+                ClipboardPasteChip(
+                    label = pasteLabel,
+                    accentColor = pageCategoryColor,
+                    onClick = {
+                        val newText = clipboardRawText
+                        onTextContentChange(TextFieldValue(text = newText, selection = TextRange(newText.length)))
+                        viewModel.updateActiveCaptureItem { it.copy(content = newText) }
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 3. Content Field or Preview
+            if (!isPreviewMode) {
+                BasicTextField(
+                    value = textContent,
+                    onValueChange = onTextContentChange,
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = 16.sp,
+                        lineHeight = 24.sp,
+                        color = MaterialTheme.colorScheme.onBackground
+                    ),
+                    cursorBrush = SolidColor(pageCategoryColor),
+                    decorationBox = { innerTextField ->
+                        if (textContent.text.isEmpty()) {
+                            Text(
+                                text = "Capture your thoughts or paste clipboard contents...",
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontSize = 16.sp,
+                                    lineHeight = 24.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                                )
+                            )
+                        }
+                        innerTextField()
+                    },
+                    visualTransformation = MarkdownVisualTransformation(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 180.dp)
+                        .testTag("capture_content_input")
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 180.dp)
+                        .padding(vertical = 4.dp)
+                ) {
+                    if (item.content.isBlank()) {
+                        Text(
+                            text = "Nothing to preview yet. Start typing in Edit mode!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    } else {
+                        MarkdownText(
+                            markdown = item.content,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            onMarkdownChange = { updated ->
+                                onTextContentChange(TextFieldValue(text = updated, selection = TextRange(updated.length)))
+                                viewModel.updateActiveCaptureItem { it.copy(content = updated) }
+                            }
+                        )
+                    }
+                }
+            }
+
+            // Only show folders and info line when keyboard is not open
+            if (!isKeyboardOpen) {
+                // Push footer down if content is short
+                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Inline Folder Creator if opened
+                AnimatedVisibility(
+                    visible = showNewFolderCreator,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    InlineNewFolderCreator(
+                        onAddFolder = { name, icon ->
+                            viewModel.createFolder(name, iconName = icon)
+                            viewModel.updateActiveCaptureItem { it.copy(folders = it.folders + name) }
+                            showNewFolderCreator = false
+                        },
+                        onCancel = { showNewFolderCreator = false },
+                        modifier = Modifier.padding(bottom = 10.dp)
+                    )
+                }
+
+                // 5. Clean Folders Row
+                CleanFolderRow(
+                    customFolders = customFolders,
+                    folderMap = folderMap,
+                    assignedFolders = item.folders,
+                    onToggleFolder = { folderName ->
+                        viewModel.updateActiveCaptureItem { cur ->
+                            val updated = if (cur.folders.contains(folderName)) cur.folders - folderName else cur.folders + folderName
+                            cur.copy(folders = updated)
+                        }
+                    },
+                    showNewFolderCreator = showNewFolderCreator,
+                    onToggleNewFolder = { showNewFolderCreator = !showNewFolderCreator },
+                    accentColor = pageCategoryColor
+                )
+
+                // 6. Minimal Info Caption
+                Text(
+                    text = "Saves to ${SavedItemType.TEXT.displayName}",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                    modifier = Modifier.padding(top = 8.dp, start = 4.dp, bottom = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AudioCapturePage(
+    item: SavedItem,
+    viewModel: CobaltViewModel,
+    customFolders: List<String>,
+    folderMap: Map<String, com.example.data.local.CustomFolderEntity>,
+    pageCategoryColor: Color,
+    textContent: TextFieldValue,
+    onTextContentChange: (TextFieldValue) -> Unit,
+    isPreviewMode: Boolean,
+    onTogglePreview: () -> Unit,
+    isOcrLoading: Boolean,
+    isKeyboardOpen: Boolean,
+    bottomPadding: androidx.compose.ui.unit.Dp,
+    modifier: Modifier = Modifier
+) {
+    var showNewFolderCreator by remember { mutableStateOf(false) }
+
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val minContentHeight = maxHeight
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = minContentHeight)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 10.dp)
+                .padding(bottom = bottomPadding + 24.dp)
+        ) {
+            // 1. Clean borderless Title input
+            BasicTextField(
+                value = item.title,
+                onValueChange = { viewModel.updateActiveCaptureItem { cur -> cur.copy(title = it) } },
+                textStyle = MaterialTheme.typography.headlineSmall.copy(
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                ),
+                cursorBrush = SolidColor(pageCategoryColor),
+                decorationBox = { innerTextField ->
+                    if (item.title.isEmpty()) {
+                        Text(
+                            text = "Title",
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                            )
+                        )
+                    }
+                    innerTextField()
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("capture_title_input")
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 2. Subtle Divider
+            HorizontalDivider(
+                thickness = 0.75.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // AI transcribing banner
+            if (isOcrLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .border(1.dp, pageCategoryColor.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
+                        .background(pageCategoryColor.copy(alpha = 0.08f))
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+                        CircularWavyProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = pageCategoryColor
+                        )
+                        Text(
+                            "Gemini AI transcribing audio...",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = pageCategoryColor
+                        )
+                    }
+                }
+            }
+
+            // 3. Transcription Notes / Markdown Preview
+            if (!isPreviewMode) {
+                BasicTextField(
+                    value = textContent,
+                    onValueChange = onTextContentChange,
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = 16.sp,
+                        lineHeight = 24.sp,
+                        color = MaterialTheme.colorScheme.onBackground
+                    ),
+                    cursorBrush = SolidColor(pageCategoryColor),
+                    decorationBox = { innerTextField ->
+                        if (textContent.text.isEmpty() && !isOcrLoading) {
+                            Text(
+                                text = "Audio transcription will appear here, or you can type your notes...",
+                                style = MaterialTheme.typography.bodyLarge.copy(
+                                    fontSize = 16.sp,
+                                    lineHeight = 24.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                                )
+                            )
+                        }
+                        innerTextField()
+                    },
+                    visualTransformation = MarkdownVisualTransformation(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 140.dp)
+                        .testTag("capture_content_input")
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 140.dp)
+                        .padding(vertical = 4.dp)
+                ) {
+                    if (item.content.isBlank()) {
+                        Text(
+                            text = "Nothing to preview yet. Record audio or type notes in Edit mode!",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    } else {
+                        MarkdownText(
+                            markdown = item.content,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            onMarkdownChange = { updated ->
+                                onTextContentChange(TextFieldValue(text = updated, selection = TextRange(updated.length)))
+                                viewModel.updateActiveCaptureItem { it.copy(content = updated) }
+                            }
+                        )
+                    }
+                }
+            }
+
+            // 4. Bottom section: Audio recording card + folders (hidden when keyboard is open to maximize typing space)
+            if (!isKeyboardOpen) {
+                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Single Card for Audio at the bottom (compact & frosted)
+                val hasAudio = !item.thumbnailPath.isNullOrBlank()
+                if (!hasAudio) {
+                    AudioRecorderComponent(
+                        onRecordComplete = { file: java.io.File ->
+                            viewModel.transcribeAudioMemo(file)
+                        },
+                        accentColor = pageCategoryColor,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    AudioPlayerComponent(
+                        audioUri = item.thumbnailPath!!,
+                        accentColor = pageCategoryColor,
+                        onRetryTranscript = {
+                            val file = java.io.File(item.thumbnailPath)
+                            if (file.exists()) {
+                                viewModel.transcribeAudioMemo(file)
+                            }
+                        },
+                        onReRecord = {
+                            viewModel.updateActiveCaptureItem { it.copy(thumbnailPath = null) }
+                        },
+                        isOcrLoading = isOcrLoading,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Inline Folder Creator if opened
+                AnimatedVisibility(
+                    visible = showNewFolderCreator,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    InlineNewFolderCreator(
+                        onAddFolder = { name, icon ->
+                            viewModel.createFolder(name, iconName = icon)
+                            viewModel.updateActiveCaptureItem { it.copy(folders = it.folders + name) }
+                            showNewFolderCreator = false
+                        },
+                        onCancel = { showNewFolderCreator = false },
+                        modifier = Modifier.padding(bottom = 10.dp)
+                    )
+                }
+
+                // Clean Folders Row
+                CleanFolderRow(
+                    customFolders = customFolders,
+                    folderMap = folderMap,
+                    assignedFolders = item.folders,
+                    onToggleFolder = { folderName ->
+                        viewModel.updateActiveCaptureItem { cur ->
+                            val updated = if (cur.folders.contains(folderName)) cur.folders - folderName else cur.folders + folderName
+                            cur.copy(folders = updated)
+                        }
+                    },
+                    showNewFolderCreator = showNewFolderCreator,
+                    onToggleNewFolder = { showNewFolderCreator = !showNewFolderCreator },
+                    accentColor = pageCategoryColor
+                )
+
+                // Minimal Info Caption
+                Text(
+                    text = "Saves to ${SavedItemType.AUDIO.displayName}",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                    modifier = Modifier.padding(top = 8.dp, start = 4.dp, bottom = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun LinkCapturePage(
+    item: SavedItem,
+    viewModel: CobaltViewModel,
+    customFolders: List<String>,
+    folderMap: Map<String, com.example.data.local.CustomFolderEntity>,
+    pageCategoryColor: Color,
+    clipboardUrl: String?,
+    clipboardDomain: String,
+    isKeyboardOpen: Boolean,
+    bottomPadding: androidx.compose.ui.unit.Dp,
+    modifier: Modifier = Modifier
+) {
+    var showNewFolderCreator by remember { mutableStateOf(false) }
+    val isExtracting by viewModel.isMetadataExtracting.collectAsState()
+    val metadataError by viewModel.metadataError.collectAsState()
+
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val minContentHeight = maxHeight
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = minContentHeight)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 10.dp)
+                .padding(bottom = bottomPadding + 24.dp)
+        ) {
+            // 1. Clean borderless Title input
+            BasicTextField(
+                value = item.title,
+                onValueChange = { viewModel.updateActiveCaptureItem { cur -> cur.copy(title = it) } },
+                textStyle = MaterialTheme.typography.headlineSmall.copy(
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                ),
+                cursorBrush = SolidColor(pageCategoryColor),
+                decorationBox = { innerTextField ->
+                    if (item.title.isEmpty()) {
+                        Text(
+                            text = "Title",
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                            )
+                        )
+                    }
+                    innerTextField()
+                },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("capture_title_input")
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 2. Subtle Divider
+            HorizontalDivider(
+                thickness = 0.75.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // 3. Optional Clipboard Paste Chip
+            if (item.content.isBlank() && clipboardUrl != null) {
+                Spacer(modifier = Modifier.height(10.dp))
+                ClipboardPasteChip(
+                    label = "Paste link: $clipboardDomain",
+                    accentColor = pageCategoryColor,
+                    onClick = {
+                        viewModel.updateActiveCaptureItem { it.copy(content = clipboardUrl) }
+                        viewModel.fetchLinkPreviewForActiveItem(clipboardUrl)
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            val context = LocalContext.current
+
+            // 4. Single Clean URL Input Box with inline Paste button
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f),
+                border = BorderStroke(1.dp, pageCategoryColor.copy(alpha = 0.35f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_custom_link),
+                        contentDescription = "Link",
+                        tint = pageCategoryColor,
+                        modifier = Modifier.size(18.dp)
+                    )
+
+                    BasicTextField(
+                        value = item.content,
+                        onValueChange = { newUrl ->
+                            viewModel.updateActiveCaptureItem { it.copy(content = newUrl) }
+                            if (newUrl.isNotBlank() && (newUrl.startsWith("http://") || newUrl.startsWith("https://") || newUrl.contains("."))) {
+                                val normalized = if (!newUrl.startsWith("http://") && !newUrl.startsWith("https://")) "https://$newUrl" else newUrl
+                                viewModel.fetchLinkPreviewForActiveItem(normalized)
+                            }
+                        },
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        cursorBrush = SolidColor(pageCategoryColor),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Uri,
+                            imeAction = ImeAction.Done
+                        ),
+                        decorationBox = { innerTextField ->
+                            if (item.content.isEmpty()) {
+                                val placeholderText = if (clipboardUrl != null) "https://$clipboardDomain..." else "https://example.com/..."
+                                Text(
+                                    text = placeholderText,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontSize = 14.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            innerTextField()
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("capture_content_input")
+                    )
+
+                    if (item.content.isNotBlank()) {
+                        IconButton(
+                            onClick = {
+                                viewModel.updateActiveCaptureItem {
+                                    it.copy(
+                                        content = "",
+                                        linkTitle = null,
+                                        linkDescription = null,
+                                        linkImage = null
+                                    )
+                                }
+                            },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_close),
+                                contentDescription = "Clear URL",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    } else if (clipboardUrl != null) {
+                        Surface(
+                            onClick = {
+                                viewModel.updateActiveCaptureItem { it.copy(content = clipboardUrl) }
+                                viewModel.fetchLinkPreviewForActiveItem(clipboardUrl)
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            color = pageCategoryColor.copy(alpha = 0.15f),
+                            border = BorderStroke(0.5.dp, pageCategoryColor.copy(alpha = 0.35f)),
+                            modifier = Modifier
+                                .height(28.dp)
+                                .bounceClick()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_paste),
+                                    contentDescription = "Paste",
+                                    tint = pageCategoryColor,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = "Paste",
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = pageCategoryColor
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 5. Rich Detail-Screen Preview & Editable Description
+            if (item.content.isNotBlank()) {
+                if (isExtracting) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+                        border = BorderStroke(0.75.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+                            CircularWavyProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = pageCategoryColor
+                            )
+                            Text(
+                                text = "Extracting real-time link preview...",
+                                fontSize = 13.sp,
+                                color = pageCategoryColor,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                } else if (metadataError != null) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+                        border = BorderStroke(0.75.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = "Error",
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = "Extraction Failed",
+                                        fontSize = 12.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+
+                                TextButton(
+                                    onClick = {
+                                        viewModel.updateActiveCaptureItem {
+                                            it.copy(linkTitle = null, linkDescription = null, linkImage = null)
+                                        }
+                                        viewModel.fetchLinkPreviewForActiveItem(item.content)
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                    modifier = Modifier.height(28.dp).bounceClick()
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_sync),
+                                        contentDescription = "Retry",
+                                        tint = pageCategoryColor,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Retry",
+                                        fontSize = 11.5.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = pageCategoryColor
+                                    )
+                                }
+                            }
+                            Text(
+                                text = metadataError!!,
+                                fontSize = 11.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else {
+                    // Rich Detail-Style Extracted Preview (matching DetailScreen)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // 1. Big 16:9 Banner Image (or Globe Placeholder if no image)
+                        if (!item.linkImage.isNullOrBlank()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(18.dp))
+                                    .background(Color.Black.copy(alpha = 0.2f))
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f), RoundedCornerShape(18.dp))
+                            ) {
+                                AsyncImage(
+                                    model = item.linkImage,
+                                    contentDescription = item.linkTitle ?: item.title,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(16f / 9f)
+                                )
+                            }
+                        }
+
+                        // 2. Domain & Refresh Row
+                        val uri = try { android.net.Uri.parse(item.content) } catch (_: Exception) { null }
+                        val domain = uri?.host ?: item.content
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_globe),
+                                    contentDescription = null,
+                                    tint = pageCategoryColor,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = domain,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = pageCategoryColor
+                                )
+                            }
+
+                            TextButton(
+                                onClick = {
+                                    viewModel.updateActiveCaptureItem {
+                                        it.copy(linkTitle = null, linkDescription = null, linkImage = null)
+                                    }
+                                    viewModel.fetchLinkPreviewForActiveItem(item.content)
+                                },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                modifier = Modifier.height(28.dp).bounceClick()
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_sync),
+                                    contentDescription = "Refresh",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Refresh",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+
+                        // 3. Section Header: DESCRIPTION
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_link),
+                                contentDescription = null,
+                                tint = pageCategoryColor,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = "DESCRIPTION",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                color = pageCategoryColor
+                            )
+                        }
+
+                        // 4. Clean Editable Description Box (matching the clean input box styling)
+                        OutlinedTextField(
+                            value = item.linkDescription ?: "",
+                            onValueChange = { newDesc ->
+                                viewModel.updateActiveCaptureItem { it.copy(linkDescription = newDesc) }
+                            },
+                            placeholder = {
+                                Text(
+                                    text = "Add or edit link description...",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontSize = 13.5.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                                    )
+                                )
+                            },
+                            shape = RoundedCornerShape(16.dp),
+                            minLines = 3,
+                            maxLines = 8,
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = 13.5.sp,
+                                lineHeight = 20.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            ),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = pageCategoryColor,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f)
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        // 5. Source Link Card (matching DetailScreen)
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.35f),
+                            border = BorderStroke(0.75.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "SOURCE LINK",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 1.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = item.content,
+                                        fontSize = 12.sp,
+                                        color = pageCategoryColor,
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+
+                                IconButton(
+                                    onClick = {
+                                        com.example.util.CobaltCustomTabsLauncher.launch(
+                                            context = context,
+                                            url = item.content,
+                                            isDarkTheme = true
+                                        )
+                                    },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_link_external),
+                                        contentDescription = "Open Link",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 6. Bottom section: folders & saves caption (hidden when keyboard is open)
+            if (!isKeyboardOpen) {
+                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(16.dp))
+
+                AnimatedVisibility(
+                    visible = showNewFolderCreator,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    InlineNewFolderCreator(
+                        onAddFolder = { name, icon ->
+                            viewModel.createFolder(name, iconName = icon)
+                            viewModel.updateActiveCaptureItem { it.copy(folders = it.folders + name) }
+                            showNewFolderCreator = false
+                        },
+                        onCancel = { showNewFolderCreator = false },
+                        modifier = Modifier.padding(bottom = 10.dp)
+                    )
+                }
+
+                CleanFolderRow(
+                    customFolders = customFolders,
+                    folderMap = folderMap,
+                    assignedFolders = item.folders,
+                    onToggleFolder = { folderName ->
+                        viewModel.updateActiveCaptureItem { cur ->
+                            val updated = if (cur.folders.contains(folderName)) cur.folders - folderName else cur.folders + folderName
+                            cur.copy(folders = updated)
+                        }
+                    },
+                    showNewFolderCreator = showNewFolderCreator,
+                    onToggleNewFolder = { showNewFolderCreator = !showNewFolderCreator },
+                    accentColor = pageCategoryColor
+                )
+
+                Text(
+                    text = "Saves to ${SavedItemType.LINK.displayName}",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                    modifier = Modifier.padding(top = 8.dp, start = 4.dp, bottom = 4.dp)
+                )
+            }
+        }
     }
 }
 
@@ -225,19 +1517,25 @@ fun CaptureScreen(
 
     val item = activeItem ?: return
 
-    var clipboardUrl by remember { mutableStateOf("") }
-    LaunchedEffect(item.type, clipboard) {
-        if (item.type == SavedItemType.LINK) {
+    var clipboardRawText by remember { mutableStateOf("") }
+    // Read clipboard when sheet/screen mounts
+    LaunchedEffect(Unit) {
+        try {
             val entry = clipboard.getClipEntry()
             val text = entry?.clipData?.let { data ->
                 if (data.itemCount > 0) data.getItemAt(0).text?.toString()?.trim().orEmpty() else ""
             } ?: ""
-            if (text.isNotBlank() && (text.startsWith("http://") || text.startsWith("https://") || text.contains("."))) {
-                clipboardUrl = text
-            } else {
-                clipboardUrl = ""
-            }
+            clipboardRawText = text
+        } catch (_: Exception) {
+            clipboardRawText = ""
         }
+    }
+
+    val clipboardUrl = remember(clipboardRawText) {
+        com.example.utils.ClipboardUrlHelper.parseUrl(clipboardRawText)
+    }
+    val clipboardDomain = remember(clipboardUrl) {
+        clipboardUrl?.let { com.example.utils.ClipboardUrlHelper.extractDomain(it) } ?: ""
     }
 
     val saveProgress by viewModel.saveProgress.collectAsState()
@@ -263,6 +1561,71 @@ fun CaptureScreen(
     val primaryColor = MaterialTheme.colorScheme.primary
     val onPrimaryColor = MaterialTheme.colorScheme.onPrimary
 
+    val customFolderEntities by viewModel.customFolderEntities.collectAsState()
+    val folderMap = remember(customFolderEntities) { customFolderEntities.associateBy { it.name } }
+
+    val imeInsets = WindowInsets.ime
+    val density = LocalDensity.current
+    val imeBottom = imeInsets.getBottom(density)
+    val isKeyboardOpen = imeBottom > 0
+
+    var textContent by remember(item.id) {
+        mutableStateOf(TextFieldValue(text = item.content, selection = TextRange(item.content.length)))
+    }
+    LaunchedEffect(item.content) {
+        if (textContent.text != item.content) {
+            textContent = textContent.copy(text = item.content)
+        }
+    }
+    var isPreviewMode by remember { mutableStateOf(false) }
+
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    val pagerState = androidx.compose.foundation.pager.rememberPagerState(
+        initialPage = SavedItemType.entries.indexOf(item.type).coerceAtLeast(0),
+        pageCount = { SavedItemType.entries.size }
+    )
+
+    // Keep category tab bar scrolled to active item
+    LaunchedEffect(item.type) {
+        val index = SavedItemType.entries.indexOf(item.type)
+        if (index >= 0) {
+            listState.animateScrollToItem(index)
+        }
+    }
+
+    // Sync pager swipe to viewModel only when settled (prevents gesture jank/conflicts)
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.settledPage }.collect { settledPage ->
+            val pageType = SavedItemType.entries.getOrNull(settledPage) ?: return@collect
+            if (pageType != item.type) {
+                viewModel.switchActiveCaptureType(pageType)
+            }
+        }
+    }
+
+    // Refresh clipboard on tab page change
+    LaunchedEffect(pagerState.currentPage) {
+        try {
+            val entry = clipboard.getClipEntry()
+            val text = entry?.clipData?.let { data ->
+                if (data.itemCount > 0) data.getItemAt(0).text?.toString()?.trim().orEmpty() else ""
+            } ?: ""
+            if (text.isNotBlank() && text != clipboardRawText) {
+                clipboardRawText = text
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    // Sync external item.type change to pager when not actively dragging
+    LaunchedEffect(item.type) {
+        val index = SavedItemType.entries.indexOf(item.type)
+        if (index >= 0 && index != pagerState.currentPage && !pagerState.isScrollInProgress) {
+            pagerState.animateScrollToPage(index)
+        }
+    }
+
     Scaffold(
         topBar = {
             val topBarModifier = if (useBlur) {
@@ -286,183 +1649,271 @@ fun CaptureScreen(
             Surface(
                 modifier = topBarModifier,
                 color = if (useBlur) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh,
-                tonalElevation = if (useBlur) 0.dp else 2.dp,
-                border = if (useBlur) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)) else null
+                tonalElevation = 0.dp,
+                border = if (useBlur) BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)) else null
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .statusBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .padding(top = 4.dp, bottom = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Pull indicator pill indicating bottom sheet behavior
-                    Box(
+                    // Category Chips Row with horizontal fading edges
+                    LazyRow(
+                        state = listState,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 8.dp),
-                        contentAlignment = Alignment.Center
+                            .horizontalFadingEdges(listState, fadeWidth = 20.dp)
+                            .padding(horizontal = 16.dp, vertical = 2.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .width(38.dp)
-                                .height(4.5.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f))
-                        )
-                    }
+                        items(SavedItemType.entries.size) { index ->
+                            val t = SavedItemType.entries[index]
+                            val isSelected = item.type == t
+                            val (iconRes, catColor) = getCategoryMeta(t)
 
-                    // Expressive Header Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val (currentIconRes, currentCategoryColor) = getCategoryMeta(item.type)
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = currentCategoryColor.copy(alpha = 0.16f),
-                            border = BorderStroke(1.dp, currentCategoryColor.copy(alpha = 0.35f))
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (isSelected) catColor.copy(alpha = 0.18f)
+                                else if (useBlur) MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.65f)
+                                else MaterialTheme.colorScheme.surfaceContainerLow,
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isSelected) catColor else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                ),
+                                modifier = Modifier
+                                    .bounceClick()
+                                    .clickable {
+                                        coroutineScope.launch {
+                                            pagerState.animateScrollToPage(index)
+                                        }
+                                        viewModel.switchActiveCaptureType(t)
+                                    }
                             ) {
-                                Icon(
-                                    painter = painterResource(id = currentIconRes),
-                                    contentDescription = null,
-                                    tint = currentCategoryColor,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = "Capturing ${item.type.displayName}",
-                                    color = currentCategoryColor,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = iconRes),
+                                        contentDescription = null,
+                                        tint = if (isSelected) catColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = t.displayName,
+                                        color = if (isSelected) catColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                }
                             }
                         }
+                    }
 
-                        Text(
-                            text = "Swipe down to close",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        )
+                    // Category Indicator Dots adapting color to current category
+                    Row(
+                        modifier = Modifier
+                            .padding(top = 8.dp, bottom = 4.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val (_, activeCatColor) = getCategoryMeta(item.type)
+                        SavedItemType.entries.forEachIndexed { index, categoryType ->
+                            val isSelected = item.type == categoryType
+                            val dotWidth by animateDpAsState(
+                                targetValue = if (isSelected) 20.dp else 5.dp,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                ),
+                                label = "dotWidth"
+                            )
+                            val dotColor by animateColorAsState(
+                                targetValue = if (isSelected) activeCatColor else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.28f),
+                                label = "dotColor"
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 3.dp)
+                                    .height(5.dp)
+                                    .width(dotWidth)
+                                    .clip(RoundedCornerShape(2.5.dp))
+                                    .background(dotColor)
+                                    .clickable {
+                                        coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                                        viewModel.switchActiveCaptureType(categoryType)
+                                    }
+                            )
+                        }
                     }
                 }
             }
         },
         bottomBar = {
-            val bottomBarModifier = if (useBlur) {
-                Modifier
-                    .fillMaxWidth()
-                    .hazeEffect(
-                        state = localHazeState,
-                        style = HazeStyle(
-                            backgroundColor = MaterialTheme.colorScheme.background,
-                            tint = HazeTint(MaterialTheme.colorScheme.background.copy(alpha = blurOpacity)),
-                            blurRadius = blurRadius.dp,
-                            noiseFactor = 0.02f
-                        )
-                    )
-            } else {
-                Modifier
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            }
-
-            Surface(
-                modifier = bottomBarModifier,
-                color = if (useBlur) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh,
-                tonalElevation = if (useBlur) 0.dp else 4.dp,
-                border = if (useBlur) BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)) else null
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Cancel Button: right under the left thumb!
-                    OutlinedButton(
-                        onClick = { viewModel.cancelCapture() },
-                        shape = RoundedCornerShape(20.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        ),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                        modifier = Modifier
-                            .weight(1f)
-                            .bounceClick()
-                            .testTag("cancel_capture_button")
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_close),
-                            contentDescription = "Cancel",
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Cancel",
-                            fontWeight = FontWeight.SemiBold,
-                            style = MaterialTheme.typography.labelLarge
-                        )
+            if (isKeyboardOpen) {
+                if (item.type == SavedItemType.TEXT || item.type == SavedItemType.AUDIO) {
+                    val toolbarModifier = if (useBlur) {
+                        Modifier
+                            .fillMaxWidth()
+                            .imePadding()
+                            .hazeEffect(
+                                state = localHazeState,
+                                style = HazeStyle(
+                                    backgroundColor = MaterialTheme.colorScheme.background,
+                                    tint = HazeTint(MaterialTheme.colorScheme.background.copy(alpha = blurOpacity)),
+                                    blurRadius = blurRadius.dp,
+                                    noiseFactor = 0.02f
+                                )
+                            )
+                    } else {
+                        Modifier
+                            .fillMaxWidth()
+                            .imePadding()
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                     }
 
-                    // Save Button: right under the right thumb!
-                    Button(
-                        onClick = handleSaveClick,
-                        enabled = !isSavingActive,
-                        shape = RoundedCornerShape(20.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isSavingActive) primaryColor.copy(alpha = 0.35f) else primaryColor,
-                            contentColor = onPrimaryColor
-                        ),
-                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-                        modifier = Modifier
-                            .weight(1.5f)
-                            .bounceClick()
-                            .testTag("save_capture_button")
-                            .clip(RoundedCornerShape(20.dp))
-                            .drawWithContent {
-                                if (isSavingActive) {
-                                    drawRoundRect(
-                                        color = primaryColor,
-                                        size = size.copy(width = size.width * animatedProgress),
-                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(20.dp.toPx())
-                                    )
-                                    val shimmerBrush = androidx.compose.ui.graphics.Brush.linearGradient(
-                                        colors = listOf(
-                                            androidx.compose.ui.graphics.Color.Transparent,
-                                            androidx.compose.ui.graphics.Color.White.copy(alpha = 0.3f),
-                                            androidx.compose.ui.graphics.Color.Transparent
-                                        ),
-                                        start = androidx.compose.ui.geometry.Offset(shimmerTranslate, 0f),
-                                        end = androidx.compose.ui.geometry.Offset(shimmerTranslate + 300f, size.height)
-                                    )
-                                    drawRoundRect(
-                                        brush = shimmerBrush,
-                                        size = size.copy(width = size.width * animatedProgress),
-                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(20.dp.toPx())
-                                    )
-                                }
-                                drawContent()
-                            }
+                    Surface(
+                        modifier = toolbarModifier,
+                        color = if (useBlur) Color.Transparent else MaterialTheme.colorScheme.surfaceContainerHigh,
+                        tonalElevation = 0.dp
                     ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_archive),
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            // Hairline top border
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(0.5.dp)
+                                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                            )
+                            MarkdownAccessoryToolbar(
+                                textFieldValue = textContent,
+                                onApplyFormat = { updated ->
+                                    textContent = updated
+                                    viewModel.updateActiveCaptureItem { it.copy(content = updated.text) }
+                                },
+                                isPreviewMode = isPreviewMode,
+                                onTogglePreview = { isPreviewMode = !isPreviewMode },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                }
+            } else {
+                val bottomBarModifier = if (useBlur) {
+                    Modifier
+                        .fillMaxWidth()
+                        .hazeEffect(
+                            state = localHazeState,
+                            style = HazeStyle(
+                                backgroundColor = MaterialTheme.colorScheme.background,
+                                tint = HazeTint(MaterialTheme.colorScheme.background.copy(alpha = blurOpacity)),
+                                blurRadius = blurRadius.dp,
+                                noiseFactor = 0.02f
+                            )
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (isSavingActive) "Saving..." else "Save Archive",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.labelLarge
-                        )
+                } else {
+                    Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                }
+
+                Surface(
+                    modifier = bottomBarModifier,
+                    color = if (useBlur) Color.Transparent else MaterialTheme.colorScheme.background.copy(alpha = 0.92f),
+                    tonalElevation = 0.dp,
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Cancel Button: right under the left thumb!
+                        OutlinedButton(
+                            onClick = { viewModel.cancelCapture() },
+                            shape = RoundedCornerShape(20.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .bounceClick()
+                                .testTag("cancel_capture_button")
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_close),
+                                contentDescription = "Cancel",
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Cancel",
+                                fontWeight = FontWeight.SemiBold,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+
+                        // Save Button: right under the right thumb!
+                        Button(
+                            onClick = handleSaveClick,
+                            enabled = !isSavingActive,
+                            shape = RoundedCornerShape(20.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isSavingActive) primaryColor.copy(alpha = 0.35f) else primaryColor,
+                                contentColor = onPrimaryColor
+                            ),
+                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                            modifier = Modifier
+                                .weight(1.5f)
+                                .bounceClick()
+                                .testTag("save_capture_button")
+                                .clip(RoundedCornerShape(20.dp))
+                                .drawWithContent {
+                                    if (isSavingActive) {
+                                        drawRoundRect(
+                                            color = primaryColor,
+                                            size = size.copy(width = size.width * animatedProgress),
+                                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(20.dp.toPx())
+                                        )
+                                        val shimmerBrush = androidx.compose.ui.graphics.Brush.linearGradient(
+                                            colors = listOf(
+                                                androidx.compose.ui.graphics.Color.Transparent,
+                                                androidx.compose.ui.graphics.Color.White.copy(alpha = 0.3f),
+                                                androidx.compose.ui.graphics.Color.Transparent
+                                            ),
+                                            start = androidx.compose.ui.geometry.Offset(shimmerTranslate, 0f),
+                                            end = androidx.compose.ui.geometry.Offset(shimmerTranslate + 300f, size.height)
+                                        )
+                                        drawRoundRect(
+                                            brush = shimmerBrush,
+                                            size = size.copy(width = size.width * animatedProgress),
+                                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(20.dp.toPx())
+                                        )
+                                    }
+                                    drawContent()
+                                }
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_archive),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (isSavingActive) "Saving..." else "Save Archive",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
                     }
                 }
             }
@@ -470,104 +1921,17 @@ fun CaptureScreen(
         containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier.fillMaxSize()
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
-                .padding(innerPadding)
                 .fillMaxSize()
                 .hazeSource(state = localHazeState)
         ) {
-            val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-            val coroutineScope = rememberCoroutineScope()
-            val pagerState = androidx.compose.foundation.pager.rememberPagerState(
-                initialPage = SavedItemType.entries.indexOf(item.type).coerceAtLeast(0),
-                pageCount = { SavedItemType.entries.size }
-            )
-
-            // Keep category tab bar scrolled to active item
-            androidx.compose.runtime.LaunchedEffect(item.type) {
-                val index = SavedItemType.entries.indexOf(item.type)
-                if (index >= 0) {
-                    listState.animateScrollToItem(index)
-                }
-            }
-
-            // Sync pager swipe to viewModel only when settled (prevents gesture jank/conflicts)
-            androidx.compose.runtime.LaunchedEffect(pagerState) {
-                snapshotFlow { pagerState.settledPage }.collect { settledPage ->
-                    val pageType = SavedItemType.entries.getOrNull(settledPage) ?: return@collect
-                    if (pageType != item.type) {
-                        viewModel.switchActiveCaptureType(pageType)
-                    }
-                }
-            }
-
-            // Sync external item.type change to pager when not actively dragging
-            androidx.compose.runtime.LaunchedEffect(item.type) {
-                val index = SavedItemType.entries.indexOf(item.type)
-                if (index >= 0 && index != pagerState.currentPage && !pagerState.isScrollInProgress) {
-                    pagerState.animateScrollToPage(index)
-                }
-            }
-
-            // ITEM TYPE SELECTOR (Horizontal chip bar at top)
-            androidx.compose.foundation.lazy.LazyRow(
-                state = listState,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                items(SavedItemType.entries.size) { index ->
-                    val t = SavedItemType.entries[index]
-                    val isSelected = item.type == t
-                    val (iconRes, catColor) = getCategoryMeta(t)
-                    
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = if (isSelected) catColor.copy(alpha = 0.18f) 
-                                else if (useBlur) MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.65f)
-                                else MaterialTheme.colorScheme.surfaceContainerLow,
-                        border = BorderStroke(
-                            1.dp,
-                            if (isSelected) catColor else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                        ),
-                        modifier = Modifier
-                            .bounceClick()
-                            .clickable {
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(index)
-                                }
-                                viewModel.switchActiveCaptureType(t)
-                            }
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(id = iconRes),
-                                contentDescription = null,
-                                tint = if (isSelected) catColor else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = t.displayName,
-                                color = if (isSelected) catColor else MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-            }
-
             // HORIZONTAL PAGER (Fill available height with independent scrollable pages)
             androidx.compose.foundation.pager.HorizontalPager(
                 state = pagerState,
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxSize()
+                    .padding(top = innerPadding.calculateTopPadding()),
                 userScrollEnabled = true,
                 verticalAlignment = Alignment.Top
             ) { pageIndex ->
@@ -575,74 +1939,103 @@ fun CaptureScreen(
                 val (pageIconRes, pageCategoryColor) = getCategoryMeta(pageType)
                 var showNewFolderCreator by remember { mutableStateOf(false) }
 
-                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                    val minContentHeight = maxHeight
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = minContentHeight)
+                if (pageType == SavedItemType.TEXT) {
+                    TextCapturePage(
+                        item = item,
+                        viewModel = viewModel,
+                        customFolders = customFolders,
+                        folderMap = folderMap,
+                        pageCategoryColor = pageCategoryColor,
+                        textContent = textContent,
+                        onTextContentChange = { updated ->
+                            textContent = updated
+                            viewModel.updateActiveCaptureItem { it.copy(content = updated.text) }
+                        },
+                        isPreviewMode = isPreviewMode,
+                        onTogglePreview = { isPreviewMode = !isPreviewMode },
+                        clipboardRawText = clipboardRawText,
+                        clipboardUrl = clipboardUrl,
+                        clipboardDomain = clipboardDomain,
+                        isKeyboardOpen = isKeyboardOpen,
+                        bottomPadding = innerPadding.calculateBottomPadding()
+                    )
+                } else if (pageType == SavedItemType.AUDIO) {
+                    AudioCapturePage(
+                        item = item,
+                        viewModel = viewModel,
+                        customFolders = customFolders,
+                        folderMap = folderMap,
+                        pageCategoryColor = pageCategoryColor,
+                        textContent = textContent,
+                        onTextContentChange = { updated ->
+                            textContent = updated
+                            viewModel.updateActiveCaptureItem { it.copy(content = updated.text) }
+                        },
+                        isPreviewMode = isPreviewMode,
+                        onTogglePreview = { isPreviewMode = !isPreviewMode },
+                        isOcrLoading = isOcrLoading,
+                        isKeyboardOpen = isKeyboardOpen,
+                        bottomPadding = innerPadding.calculateBottomPadding()
+                    )
+                } else if (pageType == SavedItemType.LINK) {
+                    LinkCapturePage(
+                        item = item,
+                        viewModel = viewModel,
+                        customFolders = customFolders,
+                        folderMap = folderMap,
+                        pageCategoryColor = pageCategoryColor,
+                        clipboardUrl = clipboardUrl,
+                        clipboardDomain = clipboardDomain,
+                        isKeyboardOpen = isKeyboardOpen,
+                        bottomPadding = innerPadding.calculateBottomPadding()
+                    )
+                } else {
+                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                        val minContentHeight = maxHeight
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = minContentHeight)
                             .verticalScroll(rememberScrollState())
                             .padding(horizontal = 16.dp, vertical = 6.dp)
                     ) {
             if (pageType != SavedItemType.MEDIA) {
-                // TITLE FIELD CARD
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = if (useBlur) MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.72f) else MaterialTheme.colorScheme.surfaceContainerLow,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp)
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.padding(bottom = 6.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(pageCategoryColor)
-                            )
+                // Clean Single Title Input (no double container!)
+                BasicTextField(
+                    value = item.title,
+                    onValueChange = { viewModel.updateActiveCaptureItem { cur -> cur.copy(title = it) } },
+                    textStyle = MaterialTheme.typography.headlineSmall.copy(
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    ),
+                    cursorBrush = SolidColor(pageCategoryColor),
+                    decorationBox = { innerTextField ->
+                        if (item.title.isEmpty()) {
                             Text(
                                 text = "Title",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.secondary
+                                style = MaterialTheme.typography.headlineSmall.copy(
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                                )
                             )
                         }
-                        OutlinedTextField(
-                            value = item.title,
-                            onValueChange = { viewModel.updateActiveCaptureItem { item -> item.copy(title = it) } },
-                            placeholder = { Text("Add an archive title...", style = MaterialTheme.typography.bodyMedium) },
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                                textDirection = androidx.compose.ui.text.style.TextDirection.Content
-                            ),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = pageCategoryColor,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-                                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                            ),
-                            trailingIcon = {
-                                if (item.title.isNotBlank()) {
-                                    IconButton(onClick = { viewModel.updateActiveCaptureItem { item -> item.copy(title = "") } }) {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.ic_custom_close),
-                                            contentDescription = "Clear",
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("capture_title_input")
-                        )
-                    }
-                }
+                        innerTextField()
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                        .testTag("capture_title_input")
+                )
+
+                HorizontalDivider(
+                    thickness = 0.75.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp)
+                )
             }
 
             // MEDIA DRAWING CANVAS (OCR Region Selection)
@@ -1379,41 +2772,16 @@ fun CaptureScreen(
                             .testTag("capture_content_input")
                     )
                 } else {
-                    if (pageType == SavedItemType.LINK && item.content.isBlank() && clipboardUrl.isNotBlank()) {
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = CategoryLink.copy(alpha = 0.16f),
-                            border = BorderStroke(1.dp, CategoryLink.copy(alpha = 0.4f)),
-                            modifier = Modifier
-                                .padding(bottom = 10.dp)
-                                .bounceClick()
-                                .clickable {
-                                    val urlToSet = if (!clipboardUrl.startsWith("http://") && !clipboardUrl.startsWith("https://")) {
-                                        "https://$clipboardUrl"
-                                    } else clipboardUrl
-                                    viewModel.updateActiveCaptureItem { it.copy(content = urlToSet) }
-                                    viewModel.fetchLinkPreviewForActiveItem(urlToSet)
-                                }
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_link),
-                                    contentDescription = null,
-                                    tint = CategoryLink,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Text(
-                                    text = "Paste Link: ${clipboardUrl.take(28)}...",
-                                    color = CategoryLink,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
+                    if (pageType == SavedItemType.LINK && item.content.isBlank() && clipboardUrl != null) {
+                        ClipboardPasteChip(
+                            label = "Paste link: $clipboardDomain",
+                            accentColor = CategoryLink,
+                            onClick = {
+                                viewModel.updateActiveCaptureItem { it.copy(content = clipboardUrl) }
+                                viewModel.fetchLinkPreviewForActiveItem(clipboardUrl)
+                            },
+                            modifier = Modifier.padding(bottom = 10.dp)
+                        )
                     }
 
                     OutlinedTextField(
@@ -1667,184 +3035,57 @@ fun CaptureScreen(
                 }
             }
 
-                        // White space eliminator: pushes folders and category assurance note to the bottom of the screen
-                        Spacer(modifier = Modifier.weight(1f))
-                        Spacer(modifier = Modifier.height(16.dp))
+                        if (!isKeyboardOpen) {
+                            // White space eliminator: pushes folders and category assurance note to the bottom of the screen
+                            Spacer(modifier = Modifier.weight(1f))
+                            Spacer(modifier = Modifier.height(16.dp))
 
-                        // ORGANIZATIONAL FOLDERS SELECTION
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = if (useBlur) MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.72f) else MaterialTheme.colorScheme.surfaceContainerLow,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.ic_custom_folder),
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.secondary,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Text(
-                                            text = "Assign to Custom Folders",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.secondary
-                                        )
-                                    }
-
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .clickable { showNewFolderCreator = true }
-                                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                                            .bounceClick()
-                                            .testTag("capture_new_folder_button")
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.ic_custom_plus),
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = "New Folder",
-                                            style = MaterialTheme.typography.bodySmall.copy(
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold
-                                            ),
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                }
-
-                                if (showNewFolderCreator) {
-                                    InlineNewFolderCreator(
-                                        onAddFolder = { name, icon ->
-                                            viewModel.createFolder(name, iconName = icon)
-                                            viewModel.updateActiveCaptureItem { it.copy(folders = it.folders + name) }
-                                            showNewFolderCreator = false
-                                        },
-                                        onCancel = { showNewFolderCreator = false }
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                }
-
-                                if (customFolders.isEmpty()) {
-                                    Text(
-                                        text = "No custom folders created yet. Create folder tags above or on the Home Screen to tag your items.",
-                                        fontSize = 12.sp,
-                                        lineHeight = 16.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                        modifier = Modifier.padding(vertical = 4.dp)
-                                    )
-                                } else {
-                                    FlowRow(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        customFolders.forEach { folder ->
-                                            val isAssigned = item.folders.contains(folder)
-                                            Surface(
-                                                shape = RoundedCornerShape(16.dp),
-                                                color = if (isAssigned) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-                                                contentColor = if (isAssigned) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-                                                border = BorderStroke(
-                                                    1.dp,
-                                                    if (isAssigned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
-                                                ),
-                                                modifier = Modifier
-                                                    .bounceClick()
-                                                    .clickable {
-                                                        viewModel.updateActiveCaptureItem { item ->
-                                                            val newFoldersList = if (isAssigned) {
-                                                                item.folders - folder
-                                                            } else {
-                                                                item.folders + folder
-                                                            }
-                                                            item.copy(folders = newFoldersList)
-                                                        }
-                                                    }
-                                                    .testTag("tag_chip_$folder")
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                                ) {
-                                                    if (isAssigned) {
-                                                        Icon(
-                                                            painter = painterResource(id = R.drawable.ic_custom_check),
-                                                            contentDescription = null,
-                                                            tint = MaterialTheme.colorScheme.primary,
-                                                            modifier = Modifier.size(12.dp)
-                                                        )
-                                                    }
-                                                    Text(
-                                                        folder,
-                                                        fontSize = 12.sp,
-                                                        fontWeight = if (isAssigned) FontWeight.Bold else FontWeight.Medium
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // AUTO-CATEGORIZATION ASSURANCE BOX (Design polish)
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = if (useBlur) MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.65f) else MaterialTheme.colorScheme.surfaceContainerLow,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_info),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.secondary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = buildAnnotatedString {
-                                        append("This item will be automatically archived into system category '")
-                                        withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
-                                            append(pageType.displayName)
-                                        }
-                                        append("'.")
+                            if (showNewFolderCreator) {
+                                InlineNewFolderCreator(
+                                    onAddFolder = { name, icon ->
+                                        viewModel.createFolder(name, iconName = icon)
+                                        viewModel.updateActiveCaptureItem { it.copy(folders = it.folders + name) }
+                                        showNewFolderCreator = false
                                     },
-                                    fontSize = 12.sp,
-                                    lineHeight = 16.sp,
-                                    color = MaterialTheme.colorScheme.secondary
+                                    onCancel = { showNewFolderCreator = false },
+                                    modifier = Modifier.padding(bottom = 10.dp)
                                 )
                             }
+
+                            // Clean Folder Row with sticky dashed + New button and fading edges
+                            CleanFolderRow(
+                                customFolders = customFolders,
+                                folderMap = folderMap,
+                                assignedFolders = item.folders,
+                                onToggleFolder = { folderName ->
+                                    viewModel.updateActiveCaptureItem { cur ->
+                                        val updated = if (cur.folders.contains(folderName)) cur.folders - folderName else cur.folders + folderName
+                                        cur.copy(folders = updated)
+                                    }
+                                },
+                                showNewFolderCreator = showNewFolderCreator,
+                                onToggleNewFolder = { showNewFolderCreator = !showNewFolderCreator },
+                                accentColor = pageCategoryColor
+                            )
+
+                            // Clean minimal info text
+                            Text(
+                                text = "Saves to ${pageType.displayName}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                                modifier = Modifier.padding(top = 8.dp, start = 4.dp, bottom = 4.dp)
+                            )
                         }
 
-                        // Bottom clearance for the thumb action bar
-                        Spacer(modifier = Modifier.height(96.dp))
+                        // Bottom clearance for the frosted bottom bar
+                        Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding() + 24.dp))
                     }
                 }
             }
         }
     }
+}
 }
 
 @Composable

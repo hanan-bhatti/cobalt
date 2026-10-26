@@ -164,62 +164,14 @@ fun RichTextEditor(
 
             if (!isPreviewMode) {
                 // Formatting Toolbar - Bear / Obsidian inspired ergonomic mobile accessory bar
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surface)
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val toolbarActions = listOf(
-                        MarkdownToolbarAction("H1", "Header 1", FormatType.Heading1),
-                        MarkdownToolbarAction("H2", "Header 2", FormatType.Heading2),
-                        MarkdownToolbarAction("B", "Bold", FormatType.Bold, isBoldLabel = true),
-                        MarkdownToolbarAction("I", "Italic", FormatType.Italic, isItalicLabel = true),
-                        MarkdownToolbarAction("S", "Strikethrough", FormatType.Strikethrough),
-                        MarkdownToolbarAction("”", "Quote", FormatType.Quote),
-                        MarkdownToolbarAction("•", "Bullet List", FormatType.BulletList),
-                        MarkdownToolbarAction("1.", "Numbered List", FormatType.NumberedList),
-                        MarkdownToolbarAction("☑", "Checklist", FormatType.Checklist),
-                        MarkdownToolbarAction("<>", "Code Inline", FormatType.CodeInline),
-                        MarkdownToolbarAction("```", "Code Block", FormatType.CodeBlock),
-                        MarkdownToolbarAction("🔗", "Link", FormatType.Link)
-                    )
-
-                    toolbarActions.forEach { action ->
-                        Surface(
-                            onClick = {
-                                applyMarkdownFormat(textFieldValue, action.type) { updated ->
-                                    textFieldValue = updated
-                                    onValueChange(updated.text)
-                                }
-                            },
-                            shape = RoundedCornerShape(10.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                            modifier = Modifier
-                                .height(34.dp)
-                                .defaultMinSize(minWidth = 36.dp)
-                                .bounceClick()
-                                .testTag("markdown_action_${action.label}")
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier.padding(horizontal = 8.dp)
-                            ) {
-                                Text(
-                                    text = action.label,
-                                    fontSize = 13.sp,
-                                    fontWeight = if (action.isBoldLabel) FontWeight.ExtraBold else FontWeight.SemiBold,
-                                    fontStyle = if (action.isItalicLabel) androidx.compose.ui.text.font.FontStyle.Italic else androidx.compose.ui.text.font.FontStyle.Normal,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    }
-                }
+                MarkdownAccessoryToolbar(
+                    textFieldValue = textFieldValue,
+                    onApplyFormat = { updated ->
+                        textFieldValue = updated
+                        onValueChange(updated.text)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
@@ -285,7 +237,99 @@ fun RichTextEditor(
     }
 }
 
-private data class MarkdownToolbarAction(
+@Composable
+fun MarkdownAccessoryToolbar(
+    textFieldValue: TextFieldValue,
+    onApplyFormat: (TextFieldValue) -> Unit,
+    modifier: Modifier = Modifier,
+    isPreviewMode: Boolean = false,
+    onTogglePreview: (() -> Unit)? = null
+) {
+    Row(
+        modifier = modifier
+            .background(MaterialTheme.colorScheme.surface)
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (onTogglePreview != null) {
+            Surface(
+                onClick = onTogglePreview,
+                shape = RoundedCornerShape(10.dp),
+                color = if (isPreviewMode) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                modifier = Modifier
+                    .height(34.dp)
+                    .defaultMinSize(minWidth = 36.dp)
+                    .bounceClick()
+                    .testTag("markdown_preview_toggle")
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                ) {
+                    Text(
+                        text = if (isPreviewMode) "Edit" else "Preview",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isPreviewMode) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+
+        if (!isPreviewMode) {
+            val toolbarActions = listOf(
+                MarkdownToolbarAction("H1", "Header 1", FormatType.Heading1),
+                MarkdownToolbarAction("H2", "Header 2", FormatType.Heading2),
+                MarkdownToolbarAction("B", "Bold", FormatType.Bold, isBoldLabel = true),
+                MarkdownToolbarAction("I", "Italic", FormatType.Italic, isItalicLabel = true),
+                MarkdownToolbarAction("S", "Strikethrough", FormatType.Strikethrough),
+                MarkdownToolbarAction("”", "Quote", FormatType.Quote),
+                MarkdownToolbarAction("•", "Bullet List", FormatType.BulletList),
+                MarkdownToolbarAction("1.", "Numbered List", FormatType.NumberedList),
+                MarkdownToolbarAction("☑", "Checklist", FormatType.Checklist),
+                MarkdownToolbarAction("<>", "Code Inline", FormatType.CodeInline),
+                MarkdownToolbarAction("```", "Code Block", FormatType.CodeBlock),
+                MarkdownToolbarAction("🔗", "Link", FormatType.Link)
+            )
+
+            toolbarActions.forEach { action ->
+                Surface(
+                    onClick = {
+                        applyMarkdownFormat(textFieldValue, action.type) { updated ->
+                            onApplyFormat(updated)
+                        }
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                    modifier = Modifier
+                        .height(34.dp)
+                        .defaultMinSize(minWidth = 36.dp)
+                        .bounceClick()
+                        .testTag("markdown_action_${action.label}")
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    ) {
+                        Text(
+                            text = action.label,
+                            fontSize = 13.sp,
+                            fontWeight = if (action.isBoldLabel) FontWeight.ExtraBold else FontWeight.SemiBold,
+                            fontStyle = if (action.isItalicLabel) androidx.compose.ui.text.font.FontStyle.Italic else androidx.compose.ui.text.font.FontStyle.Normal,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+data class MarkdownToolbarAction(
     val label: String,
     val description: String,
     val type: FormatType,
@@ -293,11 +337,11 @@ private data class MarkdownToolbarAction(
     val isItalicLabel: Boolean = false
 )
 
-private enum class FormatType {
+enum class FormatType {
     Bold, Italic, Strikethrough, Heading1, Heading2, Quote, BulletList, NumberedList, Checklist, CodeInline, CodeBlock, Link
 }
 
-private fun applyMarkdownFormat(
+fun applyMarkdownFormat(
     value: TextFieldValue,
     formatType: FormatType,
     onValueChange: (TextFieldValue) -> Unit

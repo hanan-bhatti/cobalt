@@ -197,19 +197,76 @@ fun HomeScreen(
     }
 
     val coroutineScope = rememberCoroutineScope()
-    var showUndoToast by remember { mutableStateOf(false) }
-    var deletedItemForUndo by remember { mutableStateOf<SavedItem?>(null) }
+    val lastDeletedItem by viewModel.lastDeletedItemForUndo.collectAsState()
     var undoDismissJob by remember { mutableStateOf<Job?>(null) }
+    var toastOffsetX by remember { mutableFloatStateOf(0f) }
     var itemToDelete by remember { mutableStateOf<SavedItem?>(null) }
     var showBulkDeleteConfirm by remember { mutableStateOf(false) }
     var showReleaseNotesSheet by remember { mutableStateOf(false) }
 
+    LaunchedEffect(lastDeletedItem) {
+        undoDismissJob?.cancel()
+        toastOffsetX = 0f
+        if (lastDeletedItem != null) {
+            undoDismissJob = launch {
+                kotlinx.coroutines.delay(4000)
+                viewModel.clearUndoToast()
+            }
+        }
+    }
+
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val gridState = rememberLazyStaggeredGridState()
 
+    val homeVisibleItemIds by remember(listState, gridState, isListView) {
+        derivedStateOf {
+            if (isListView) {
+                val layout = listState.layoutInfo
+                val vStart = layout.viewportStartOffset
+                val vEnd = layout.viewportEndOffset
+                layout.visibleItemsInfo.filter { info ->
+                    info.offset >= vStart && (info.offset + info.size) <= vEnd
+                }.mapNotNull { it.key as? String }.toSet()
+            } else {
+                val layout = gridState.layoutInfo
+                val vStart = layout.viewportStartOffset
+                val vEnd = layout.viewportEndOffset
+                layout.visibleItemsInfo.filter { info ->
+                    info.offset.y >= vStart && (info.offset.y + info.size.height) <= vEnd
+                }.mapNotNull { it.key as? String }.toSet()
+            }
+        }
+    }
+
+    LaunchedEffect(homeVisibleItemIds) {
+        TransitionCoordinator.homeVisibleItemIds = homeVisibleItemIds
+    }
+
+    LaunchedEffect(listState, gridState, isListView, items) {
+        TransitionCoordinator.requestScrollHalfVisibleHomeItem = {
+            if (isListView) {
+                val layout = listState.layoutInfo
+                val vStart = layout.viewportStartOffset
+                val vEnd = layout.viewportEndOffset
+                val partiallyClippedMedia = layout.visibleItemsInfo.firstOrNull { info ->
+                    val item = items.getOrNull(info.index)
+                    if (item?.type == SavedItemType.MEDIA) {
+                        val top = info.offset
+                        val bottom = info.offset + info.size
+                        top < vStart && bottom > vStart
+                    } else false
+                }
+                if (partiallyClippedMedia != null) {
+                    coroutineScope.launch {
+                        listState.animateScrollToItem(partiallyClippedMedia.index, scrollOffset = 0)
+                    }
+                }
+            }
+        }
+    }
+
     val showUndoToastWithItem = { item: SavedItem ->
-        deletedItemForUndo = item
-        showUndoToast = true
+        viewModel.triggerUndoToast(item)
     }
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
@@ -241,13 +298,22 @@ fun HomeScreen(
                         }
                     },
                     actions = {
+                        val isAllSelected = items.isNotEmpty() && items.all { it.id in selectedItemIds }
                         IconButton(
-                            onClick = { viewModel.selectAll(items.map { it.id }) },
+                            onClick = {
+                                if (isAllSelected) {
+                                    viewModel.clearSelection()
+                                } else {
+                                    viewModel.selectAll(items.map { it.id })
+                                }
+                            },
                             modifier = Modifier.testTag("select_all_button")
                         ) {
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_select_all),
-                                contentDescription = "Select all",
+                                painter = painterResource(
+                                    id = if (isAllSelected) R.drawable.ic_custom_select_all_bold else R.drawable.ic_custom_select_all
+                                ),
+                                contentDescription = if (isAllSelected) "Deselect all" else "Select all",
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -400,10 +466,16 @@ fun HomeScreen(
                 // 2. Custom Folders
                 items(filteredCustomFolders, key = { it }) { folder ->
                     val isSelected = selectedFolder == folder
+                    val folderEntity = customFolderEntities.find { it.name.equals(folder, ignoreCase = true) }
+                    val iconRes = getFolderIconRes(folderEntity?.iconName)
+                    val folderAccentColor = folderEntity?.colorHex?.takeIf { it.isNotBlank() }?.let { hex ->
+                        parseHexColor(hex, defaultColor = MaterialTheme.colorScheme.primary, isDark = isDark)
+                    }
                     FolderChipItem(
                         folder = folder,
                         isSelected = isSelected,
-                        painter = painterResource(id = R.drawable.ic_custom_star),
+                        painter = painterResource(id = iconRes),
+                        accentColor = folderAccentColor,
                         onClick = { viewModel.setFolderFilter(folder) }
                     )
                 }
@@ -417,6 +489,7 @@ fun HomeScreen(
                         "Videos" -> painterResource(id = R.drawable.ic_custom_video)
                         "Code" -> painterResource(id = R.drawable.ic_custom_code)
                         "Text" -> painterResource(id = R.drawable.ic_custom_text)
+                        "Audio" -> painterResource(id = R.drawable.ic_custom_voice)
                         "Movies & Anime" -> painterResource(id = R.drawable.ic_custom_movie)
                         else -> painterResource(id = R.drawable.ic_custom_folder)
                     }
@@ -748,59 +821,90 @@ fun HomeScreen(
                     }
             }
         }
-        // Beautiful interactive Undo Toast UI overlay
+        // Sleek interactive Undo Toast UI overlay (half height, auto-dismiss, swipe-to-dismiss)
         AnimatedVisibility(
-            visible = showUndoToast && deletedItemForUndo != null,
+            visible = lastDeletedItem != null,
             enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
             exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 100.dp, start = 16.dp, end = 16.dp)
+                .padding(bottom = 96.dp, start = 20.dp, end = 20.dp)
+                .offset { androidx.compose.ui.unit.IntOffset(toastOffsetX.toInt(), 0) }
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            if (kotlin.math.abs(toastOffsetX) > 120f) {
+                                undoDismissJob?.cancel()
+                                viewModel.clearUndoToast()
+                            }
+                            toastOffsetX = 0f
+                        },
+                        onDragCancel = {
+                            toastOffsetX = 0f
+                        },
+                        onHorizontalDrag = { _, dragAmount ->
+                            toastOffsetX += dragAmount
+                        }
+                    )
+                }
         ) {
             Surface(
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(22.dp),
                 color = MaterialTheme.colorScheme.inverseSurface,
                 contentColor = MaterialTheme.colorScheme.inverseOnSurface,
-                tonalElevation = 6.dp,
+                tonalElevation = 4.dp,
                 shadowElevation = 8.dp,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(42.dp)
                     .testTag("undo_toast")
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_custom_delete),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = "Item deleted",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.inverseOnSurface
                         )
                     }
-                    TextButton(
+
+                    Surface(
                         onClick = {
-                            deletedItemForUndo?.let { item ->
+                            undoDismissJob?.cancel()
+                            lastDeletedItem?.let { item ->
                                 viewModel.restoreDeletedItem(item)
                                 android.widget.Toast.makeText(context, "Item restored!", android.widget.Toast.LENGTH_SHORT).show()
                             }
-                            showUndoToast = false
-                            deletedItemForUndo = null
                         },
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = MaterialTheme.colorScheme.inversePrimary
-                        ),
-                        modifier = Modifier.testTag("undo_button")
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.inversePrimary.copy(alpha = 0.22f),
+                        modifier = Modifier
+                            .bounceClick()
+                            .testTag("undo_button")
                     ) {
-                        Text("UNDO", fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "UNDO",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.inversePrimary,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
                     }
                 }
             }
@@ -1703,12 +1807,15 @@ fun FolderChipItem(
     folder: String,
     isSelected: Boolean,
     painter: androidx.compose.ui.graphics.painter.Painter,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    accentColor: Color? = null
 ) {
+    val chipAccentColor = accentColor ?: MaterialTheme.colorScheme.primary
+    val isDark = isSystemInDarkTheme()
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = if (isSelected) {
-            MaterialTheme.colorScheme.primary
+            chipAccentColor
         } else {
             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         },
@@ -1720,7 +1827,9 @@ fun FolderChipItem(
         border = BorderStroke(
             width = 1.dp,
             color = if (isSelected) {
-                MaterialTheme.colorScheme.primary
+                chipAccentColor
+            } else if (accentColor != null) {
+                accentColor.copy(alpha = if (isDark) 0.55f else 0.40f)
             } else {
                 MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
             }
@@ -1743,7 +1852,7 @@ fun FolderChipItem(
                 tint = if (isSelected) {
                     MaterialTheme.colorScheme.onPrimary
                 } else {
-                    MaterialTheme.colorScheme.primary
+                    chipAccentColor
                 }
             )
             Text(
