@@ -57,6 +57,17 @@ fun MediaSearchBottomSheet(viewModel: CobaltViewModel) {
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
+            val userFeedback by viewModel.userFeedback.collectAsState()
+            if (userFeedback != null) {
+                AppFeedbackBanner(
+                    feedbackMessage = userFeedback,
+                    onDismiss = { viewModel.dismissFeedback() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                )
+            }
+
             // Header Row
             Row(
                 verticalAlignment = Alignment.CenterVertically,
