@@ -784,14 +784,17 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
+                        val showMediaSearchBottomSheet by viewModel.showMediaSearchBottomSheet.collectAsState()
                         val userFeedback by viewModel.userFeedback.collectAsState()
-                        com.example.ui.components.AppFeedbackBanner(
-                            feedbackMessage = userFeedback,
-                            onDismiss = { viewModel.dismissFeedback() },
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .statusBarsPadding()
-                        )
+                        if (!showMediaSearchBottomSheet) {
+                            com.example.ui.components.AppFeedbackBanner(
+                                feedbackMessage = userFeedback,
+                                onDismiss = { viewModel.dismissFeedback() },
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    .statusBarsPadding()
+                            )
+                        }
                     }
                 }
             }
