@@ -46,10 +46,12 @@ import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageMetadata
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -382,80 +384,90 @@ class CobaltRepository(private val context: Context) {
     suspend fun searchMedia(query: String): List<MediaSearchResultItem> = withContext(Dispatchers.IO) {
         if (query.isBlank()) return@withContext emptyList()
 
-        val results = mutableListOf<MediaSearchResultItem>()
+        val results = java.util.Collections.synchronizedList(mutableListOf<MediaSearchResultItem>())
         val apiKey = getTmdbApiKey()
 
-        if (apiKey.isNotBlank()) {
-            try {
-                val tmdbResponse = MediaApiClient.tmdbApiService.searchMulti(query = query, apiKey = apiKey)
-                tmdbResponse.results?.forEach { item ->
-                    val type = item.mediaType
-                    if (type == "movie" || type == "tv") {
-                        val title = if (type == "movie") (item.title ?: item.name ?: "") else (item.name ?: item.title ?: "")
-                        val releaseYear = if (type == "movie") {
-                            item.releaseDate?.take(4)
-                        } else {
-                            item.firstAirDate?.take(4)
-                        }
-                        val posterUrl = item.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }
-                        val backdropUrl = item.backdropPath?.let { "https://image.tmdb.org/t/p/w780$it" }
-
-                        results.add(
-                            MediaSearchResultItem(
-                                id = "tmdb_${type}_${item.id}",
-                                title = title,
-                                mediaType = type,
-                                posterUrl = posterUrl,
-                                backdropUrl = backdropUrl,
-                                releaseYear = releaseYear,
-                                overview = item.overview,
-                                genres = emptyList(),
-                                watchProviders = emptyList(),
-                                trailerUrl = null,
-                                rating = item.voteAverage
-                            )
-                        )
+        val tmdbJob = async {
+            if (apiKey.isNotBlank()) {
+                try {
+                    val tmdbResponse = withTimeoutOrNull(6000L) {
+                        MediaApiClient.tmdbApiService.searchMulti(query = query, apiKey = apiKey)
                     }
+                    tmdbResponse?.results?.forEach { item ->
+                        val type = item.mediaType
+                        if (type == "movie" || type == "tv") {
+                            val title = if (type == "movie") (item.title ?: item.name ?: "") else (item.name ?: item.title ?: "")
+                            val releaseYear = if (type == "movie") {
+                                item.releaseDate?.take(4)
+                            } else {
+                                item.firstAirDate?.take(4)
+                            }
+                            val posterUrl = item.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }
+                            val backdropUrl = item.backdropPath?.let { "https://image.tmdb.org/t/p/w780$it" }
+
+                            results.add(
+                                MediaSearchResultItem(
+                                    id = "tmdb_${type}_${item.id}",
+                                    title = title,
+                                    mediaType = type,
+                                    posterUrl = posterUrl,
+                                    backdropUrl = backdropUrl,
+                                    releaseYear = releaseYear,
+                                    overview = item.overview,
+                                    genres = emptyList(),
+                                    watchProviders = emptyList(),
+                                    trailerUrl = null,
+                                    rating = item.voteAverage
+                                )
+                            )
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e("CobaltRepo", "TMDb searchMulti failed: ${e.message}", e)
+                }
+            }
+        }
+
+        val jikanJob = async {
+            try {
+                val jikanResponse = withTimeoutOrNull(3500L) {
+                    MediaApiClient.jikanApiService.searchAnime(query = query, limit = 10)
+                }
+                jikanResponse?.data?.forEach { item ->
+                    val title = item.titleEnglish?.takeIf { it.isNotBlank() } ?: item.title ?: ""
+                    val posterUrl = item.images?.jpg?.largeImageUrl ?: item.images?.jpg?.imageUrl
+                    val backdropUrl = item.images?.jpg?.largeImageUrl ?: item.images?.jpg?.imageUrl
+                    val releaseYear = item.year?.toString()
+                        ?: item.aired?.prop?.from?.year?.toString()
+                        ?: item.aired?.string?.take(4)
+                    val trailerUrl = item.trailer?.url ?: item.trailer?.embedUrl
+                        ?: item.trailer?.youtubeId?.let { "https://www.youtube.com/watch?v=$it" }
+                    val genres = item.genres?.mapNotNull { it.name } ?: emptyList()
+
+                    results.add(
+                        MediaSearchResultItem(
+                            id = "jikan_anime_${item.malId}",
+                            title = title,
+                            mediaType = "anime",
+                            posterUrl = posterUrl,
+                            backdropUrl = backdropUrl,
+                            releaseYear = releaseYear,
+                            overview = item.synopsis,
+                            genres = genres,
+                            watchProviders = emptyList(),
+                            trailerUrl = trailerUrl,
+                            rating = item.score
+                        )
+                    )
                 }
             } catch (e: Exception) {
-                Log.e("CobaltRepo", "TMDb searchMulti failed")
+                Log.w("CobaltRepo", "Jikan searchAnime fallback: ${e.message}")
             }
         }
 
-        try {
-            val jikanResponse = MediaApiClient.jikanApiService.searchAnime(query = query, limit = 10)
-            jikanResponse.data?.forEach { item ->
-                val title = item.titleEnglish?.takeIf { it.isNotBlank() } ?: item.title ?: ""
-                val posterUrl = item.images?.jpg?.largeImageUrl ?: item.images?.jpg?.imageUrl
-                val backdropUrl = item.images?.jpg?.largeImageUrl ?: item.images?.jpg?.imageUrl
-                val releaseYear = item.year?.toString()
-                    ?: item.aired?.prop?.from?.year?.toString()
-                    ?: item.aired?.string?.take(4)
-                val trailerUrl = item.trailer?.url ?: item.trailer?.embedUrl
-                    ?: item.trailer?.youtubeId?.let { "https://www.youtube.com/watch?v=$it" }
-                val genres = item.genres?.mapNotNull { it.name } ?: emptyList()
-
-                results.add(
-                    MediaSearchResultItem(
-                        id = "jikan_anime_${item.malId}",
-                        title = title,
-                        mediaType = "anime",
-                        posterUrl = posterUrl,
-                        backdropUrl = backdropUrl,
-                        releaseYear = releaseYear,
-                        overview = item.synopsis,
-                        genres = genres,
-                        watchProviders = emptyList(),
-                        trailerUrl = trailerUrl,
-                        rating = item.score
-                    )
-                )
-            }
-        } catch (e: Exception) {
-            Log.e("CobaltRepo", "Jikan searchAnime failed")
-        }
-
-        results
+        tmdbJob.await()
+        jikanJob.await()
+        results.toList()
     }
 
     suspend fun enrichMediaItemDetails(item: SavedItem, saveToDb: Boolean = true): SavedItem = withContext(Dispatchers.IO) {
