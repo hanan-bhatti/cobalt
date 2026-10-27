@@ -850,9 +850,10 @@ fun HomeScreen(
         ) {
             Surface(
                 shape = RoundedCornerShape(22.dp),
-                color = MaterialTheme.colorScheme.inverseSurface,
-                contentColor = MaterialTheme.colorScheme.inverseOnSurface,
-                tonalElevation = 4.dp,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                tonalElevation = 6.dp,
                 shadowElevation = 8.dp,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -880,7 +881,7 @@ fun HomeScreen(
                             text = "Item deleted",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.inverseOnSurface
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
@@ -893,7 +894,7 @@ fun HomeScreen(
                             }
                         },
                         shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.inversePrimary.copy(alpha = 0.22f),
+                        color = MaterialTheme.colorScheme.primaryContainer,
                         modifier = Modifier
                             .bounceClick()
                             .testTag("undo_button")
@@ -902,7 +903,7 @@ fun HomeScreen(
                             text = "UNDO",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.inversePrimary,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
                     }
