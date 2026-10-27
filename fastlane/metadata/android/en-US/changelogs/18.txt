@@ -1,0 +1,5 @@
+- Capture Screen Overhaul: Modular text, audio, and link pages with real-time waveform recorder and editable link descriptions.
+- Edit Deletion: Dedicated delete button in edit mode and detail top bar with confirmation dialog.
+- GFM Markdown: Interactive task checklists, tables, strikethrough, and universal formatting toolbar.
+- Quick Actions: Smart clipboard paste chip and sleek undo capsule.
+- Media Hub: Parallel TMDb & Jikan search with faster timeout fallbacks.

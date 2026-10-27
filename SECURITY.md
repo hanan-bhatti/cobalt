@@ -19,7 +19,7 @@ If you discover a security vulnerability in Cobalt, please report it immediately
 *   **Direct Email:** Alternatively, you can contact the maintainer directly at hannanbhatti2006@gmail.com.
 
 When reporting a vulnerability, please include the following details to help us triage the issue:
-*   **Affected Version:** The version of the app where you observed the issue (e.g., `v2.2.1`).
+*   **Affected Version:** The version of the app where you observed the issue (e.g., `v2.2.2`).
 *   **Description:** A detailed explanation of the vulnerability and its potential impact.
 *   **Steps to Reproduce:** Clear, step-by-step instructions (and proof-of-concept code, if applicable) showing how to trigger the vulnerability.
 *   **Potential Impact:** Who is affected and what an attacker could achieve by exploiting the vulnerability.

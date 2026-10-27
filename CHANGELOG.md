@@ -4,6 +4,73 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.2] - 2026-10-27
+
+### Added
+- **GFM Markdown Tables & Strikethrough:**
+  - Added `commonmark-ext-gfm-tables` and `commonmark-ext-gfm-strikethrough` dependencies.
+  - Horizontally scrollable Markdown tables with distinct headers, alternating row colors, and border strokes in `MarkdownRenderer.kt`.
+  - Full support for strikethrough formatting (`~~text~~`).
+- **Interactive Markdown Task Lists:**
+  - Tasks formatted with `- [ ]` and `- [x]` now render as interactive checkboxes.
+  - Tapping a checkbox toggles the task live and persists the updated Markdown string directly to the database.
+- **Universal Markdown Accessory Toolbar (`MarkdownAccessoryToolbar`):**
+  - Quick-format toolbar with actions for H1, H2, Bold, Italic, Strikethrough, Checklist, Quote, Bullet list, Numbered list, Inline code, Code block, and Links.
+  - Pinned Edit / Preview toggle to switch between typing and rendered Markdown on the fly.
+  - Pinned above the software keyboard in `CaptureScreen.kt` and inside `GlobalExpandingFab.kt`.
+- **Smart Clipboard URL Detection & Quick Paste Chip:**
+  - Added `ClipboardUrlHelper.kt` to validate URLs, prepend `https://` if missing, and parse clean domain names.
+  - One-tap `ClipboardPasteChip` in both Capture Screen and Side Dock, reading clipboard once per mount to eliminate Android 12+ clipboard toast spam.
+- **Dedicated Delete Button in Edit Mode:**
+  - Added a minimal 44dp circular delete control in `CaptureScreen.kt` bottom bar (isolated on the left) with `ExpressiveConfirmationDialog` to prevent accidental deletion.
+- **Detail Screen Top Bar Deletion:**
+  - Streamlined delete icon button directly in `DetailScreen.kt` top bar with confirmation dialog and automatic navigation back to Home.
+- **Curated 20-Icon Folder Palette & Unified Styling:**
+  - Expanded `FoldersScreen.kt` with a curated 20-icon set (bookmark, idea, checklist, vault, globe, movie, image, archive, lock, tools, etc.) with alias resolution in `getFolderIconRes(...)`.
+  - Consistent folder icons and hex theme colors across Home chips, Detail view, Floating Side Dock, and OCR capture.
+- **Dynamic Issue Template Version Synchronization:**
+  - Added `scripts/sync_issue_versions.py` and Gradle task `syncIssueVersions` wired to `preBuild`, automatically keeping GitHub issue templates and security policy in sync with the current app version.
+- **Direct FOSS Markdown Export & Fixed Email Flow:**
+  - Added direct `.md` file export via `FileProvider` (`shareOrExportFeedback`) for bug reports and survey responses on FOSS flavor.
+  - Updated developer contact email to `hannanbhatti2006@gmail.com` with URL-encoded mailto fallback.
+- **Gradient Fading Edge Modifier (`Modifier.horizontalFadingEdges`):**
+  - Added `FadingEdges.kt` providing subtle horizontal gradient fade masks for scrollable rows.
+- **Custom Vector Drawables:**
+  - Added `ic_custom_bookmark`, `ic_custom_checklist`, `ic_custom_idea`, `ic_custom_paste`, `ic_custom_select_all_bold`, `ic_custom_sidedock`, `ic_custom_vault`.
+
+### Changed & Improved
+- **Modular Capture Screen Architecture:**
+  - Decomposed into dedicated sub-screens: `TextCapturePage`, `AudioCapturePage`, and `LinkCapturePage`.
+  - Borderless title input with category-accented cursor.
+  - Keyboard Inset Awareness: Hides heavy bottom elements when typing for maximum vertical space.
+  - Settled-state pager synchronization (`snapshotFlow { pagerState.settledPage }`) preventing swipe jank.
+  - Frosted bottom action bar with blurred Haze effect, cancel on left, and save on right.
+- **Audio Recorder & Player Overhaul:**
+  - Frosted container with subtle accent border and rounded corners.
+  - Real-time waveform visualizer with normalized amplitudes and pulsating recording dot indicator.
+  - Monospace font for clear elapsed/total time readout (`00:00 / 00:00`).
+  - Action row with Retry Transcript (with live spinner) and Re-record.
+  - Added audio safety checks requiring minimum file size (1 KB) and duration.
+- **Sleek Half-Height (42dp) Undo Deletion Toast:**
+  - Redesigned item deletion toast to a sleek 42dp capsule with 4-second auto-dismiss and horizontal swipe-to-dismiss.
+  - Corrected surface container and on-surface colors to naturally adapt to both Light and Dark themes.
+- **Multi-Selection Mode (`HomeScreen.kt`):**
+  - "Select all" button now functions as a toggle (Select All / Deselect All) with dynamic icon switching.
+- **Cloud Undo Preservation:**
+  - Soft-deleting items preserves Cloud Storage media so tapping UNDO fully restores cloud-synced items.
+
+### Fixed
+- **TMDb Search Retry Above Scrim:**
+  - Rendered network timeout feedback banner inside `MediaSearchBottomSheet`, ensuring Retry clicks are directly handled without dismiss scrim interference.
+- **Shared Element Transition Glitches:**
+  - Introduced `TransitionCoordinator` in `SharedElementHelper.kt` to selectively enable shared bounds only for items in viewport, eliminating layout jumps between Home and Media Hub.
+- **Auto-Title Fallback for Untitled Items:**
+  - Automatically extracts up to 60 characters from the first non-blank line of content (stripping `#` headers) when title is left empty.
+- **Detail Screen Folder Tag Overflow:**
+  - Made folder tags horizontally scrollable to prevent UI clipping.
+- **Side Dock Header Icon & Detail View Styling:**
+  - Replaced generic tool icon with dedicated `ic_custom_sidedock` and unified folder colors.
+
 ## [2.2.1] - 2026-10-26
 
 ### Fixed & Improved
