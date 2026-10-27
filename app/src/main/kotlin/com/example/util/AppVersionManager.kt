@@ -121,12 +121,39 @@ object AppVersionManager {
      */
     val releaseHistory: List<ReleaseNote> = listOf(
         ReleaseNote(
+            versionName = "2.2.2",
+            versionCode = 18,
+            releaseDate = "October 27, 2026",
+            tag = AppVersionTag.STABLE,
+            isCurrent = true,
+            isLatest = true,
+            highlights = listOf(
+                "Capture Screen & Audio Redesign",
+                "Dedicated Delete in Edit Mode",
+                "Theme-Aware Half-Height Undo Toast",
+                "UX Polish & Reliability Fixes"
+            ),
+            features = listOf(
+                "Refined note capture experience with dedicated delete and universal markdown toolbar",
+                "Added delete confirmation in detail screen with instant home return"
+            ),
+            improvements = listOf(
+                "Sleek 42dp half-height undo deletion capsule with theme-aware styling",
+                "Streamlined TMDb search retry toasts above sheet scrims"
+            ),
+            bugFixes = listOf(
+                "Resolved TMDb search timeout sheet dismissal conflict",
+                "Fixed inverted surface colors on undo deletion toast across themes",
+                "General performance improvements and UI polish"
+            )
+        ),
+        ReleaseNote(
             versionName = "2.2.1",
             versionCode = 17,
             releaseDate = "October 26, 2026",
             tag = AppVersionTag.STABLE,
-            isCurrent = true,
-            isLatest = true,
+            isCurrent = false,
+            isLatest = false,
             highlights = listOf(
                 "Video Playback & YouTube URLs",
                 "Gemini Audio Transcription Fix",
