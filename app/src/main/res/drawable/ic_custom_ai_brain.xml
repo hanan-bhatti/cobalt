@@ -1,0 +1,27 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Outer Cognitive Geometric Core -->
+    <path
+        android:pathData="M12,2.5L20.225,7.25V16.75L12,21.5L3.775,16.75V7.25L12,2.5Z"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <!-- Center Node -->
+    <path
+        android:pathData="M12,10.2A1.8,1.8 0,1 0,12,13.8A1.8,1.8 0,1 0,12,10.2Z"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <!-- Neural Synapse Connections -->
+    <path
+        android:pathData="M12,4.5V10.2M12,13.8V19.5M18.2,8.4L13.5,11.1M18.2,15.6L13.5,12.9M5.8,8.4L10.5,11.1M5.8,15.6L10.5,12.9"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

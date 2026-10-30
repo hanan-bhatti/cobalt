@@ -140,10 +140,15 @@ enum class SettingsCategory(
         subtitle = "Themes, dynamic wallpaper palette, and frosted blur",
         iconRes = R.drawable.ic_settings_appearance
     ),
+    ORGANIZATION(
+        title = "Archive & Organization",
+        subtitle = "Folder ranking, adaptive suggestions, and activity heatmap",
+        iconRes = R.drawable.ic_custom_organization
+    ),
     INTELLIGENCE(
         title = "Intelligence & Gemini AI",
         subtitle = "API key, vision OCR models, and detection sensitivity",
-        iconRes = R.drawable.ic_settings_intelligence
+        iconRes = R.drawable.ic_custom_ai_brain
     ),
     FLOATING_DOCK(
         title = "Floating Dock & Capture",
@@ -169,6 +174,7 @@ fun getSettingsCategoryColors(category: SettingsCategory, isDark: Boolean): Pair
     return if (isDark) {
         when (category) {
             SettingsCategory.APPEARANCE -> Color(0xFF532342) to Color(0xFFFFD8EC)
+            SettingsCategory.ORGANIZATION -> Color(0xFF382352) to Color(0xFFEADBFF)
             SettingsCategory.INTELLIGENCE -> Color(0xFF004F58) to Color(0xFF88FAFF)
             SettingsCategory.FLOATING_DOCK -> Color(0xFF5E3000) to Color(0xFFFFDCC1)
             SettingsCategory.WIDGETS -> Color(0xFF1E4624) to Color(0xFFB8F5C2)
@@ -177,6 +183,7 @@ fun getSettingsCategoryColors(category: SettingsCategory, isDark: Boolean): Pair
     } else {
         when (category) {
             SettingsCategory.APPEARANCE -> Color(0xFFFFD8EC) to Color(0xFF631B4B)
+            SettingsCategory.ORGANIZATION -> Color(0xFFEADBFF) to Color(0xFF4A2574)
             SettingsCategory.INTELLIGENCE -> Color(0xFFCCE8EA) to Color(0xFF004F58)
             SettingsCategory.FLOATING_DOCK -> Color(0xFFFFDCC1) to Color(0xFF8B4A00)
             SettingsCategory.WIDGETS -> Color(0xFFD4F8DC) to Color(0xFF14532D)
@@ -272,7 +279,9 @@ fun SettingsScreen(
     onNavigateToCategory: ((SettingsCategory) -> Unit)? = null,
     onNavigateToEdgePanelSettings: (() -> Unit)? = null,
     onNavigateToWidgetSettings: (() -> Unit)? = null,
-    onNavigateToEdgeAnimSettings: (() -> Unit)? = null
+    onNavigateToEdgeAnimSettings: (() -> Unit)? = null,
+    onNavigateToGeminiUsage: (() -> Unit)? = null,
+    onNavigateToArchiveSettings: (() -> Unit)? = null
 ) {
     var selectedCategory by remember { mutableStateOf<SettingsCategory?>(null) }
     var showEdgePanelSettings by remember { mutableStateOf(false) }
@@ -310,7 +319,9 @@ fun SettingsScreen(
             onNavigateBack = { selectedCategory = null },
             onNavigateToEdgePanelSettings = onNavigateToEdgePanelSettings ?: { showEdgePanelSettings = true },
             onNavigateToWidgetSettings = onNavigateToWidgetSettings ?: { showWidgetSettings = true },
-            onNavigateToEdgeAnimSettings = onNavigateToEdgeAnimSettings ?: { showEdgeAnimSettings = true }
+            onNavigateToEdgeAnimSettings = onNavigateToEdgeAnimSettings ?: { showEdgeAnimSettings = true },
+            onNavigateToGeminiUsage = onNavigateToGeminiUsage ?: {},
+            onNavigateToArchiveSettings = onNavigateToArchiveSettings ?: {}
         )
         return
     }
@@ -365,7 +376,9 @@ fun SettingsScreen(
                         ExpressiveCategoryItem(
                             category = category,
                             onClick = {
-                                if (onNavigateToCategory != null) {
+                                if (category == SettingsCategory.ORGANIZATION && onNavigateToArchiveSettings != null) {
+                                    onNavigateToArchiveSettings()
+                                } else if (onNavigateToCategory != null) {
                                     onNavigateToCategory(category)
                                 } else {
                                     selectedCategory = category
@@ -402,7 +415,9 @@ fun SettingsCategoryDetailScreen(
     onNavigateBack: () -> Unit,
     onNavigateToEdgePanelSettings: () -> Unit,
     onNavigateToWidgetSettings: () -> Unit,
-    onNavigateToEdgeAnimSettings: () -> Unit
+    onNavigateToEdgeAnimSettings: () -> Unit,
+    onNavigateToGeminiUsage: () -> Unit = {},
+    onNavigateToArchiveSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val lazyListState = rememberLazyListState()
@@ -611,6 +626,48 @@ fun SettingsCategoryDetailScreen(
                                         com.example.util.HapticManager.performSuccess(context)
                                     }
                                 },
+                                shape = RoundedCornerShape(24.dp)
+                            )
+                        }
+                    }
+                }
+
+                // ==========================================
+                // SUBPAGE: ARCHIVE & ORGANIZATION
+                // ==========================================
+                SettingsCategory.ORGANIZATION -> {
+                    item {
+                        SettingsSubsectionHeader(
+                            title = "Smart Organization & Folder Ranking",
+                            description = "Configure intelligent on-device folder ranking and suggestions.",
+                            tooltipText = "When enabled, folders in capture rows and move dialogs are dynamically sorted based on your recent activity and item content."
+                        )
+
+                        val isFolderRankingEnabled by viewModel.settingsRepository.isFolderRankingEnabled.collectAsState()
+                        ExpressiveSettingsGroup {
+                            ExpressiveSettingsSwitchItem(
+                                title = "Smart Folder Ranking",
+                                subtitle = "Adaptive suggestions & usage-based sorting",
+                                checked = isFolderRankingEnabled,
+                                onCheckedChange = { viewModel.settingsRepository.setFolderRankingEnabled(it) },
+                                shape = RoundedCornerShape(24.dp)
+                            )
+                        }
+                    }
+
+                    item {
+                        SettingsSubsectionHeader(
+                            title = "Profile Archive Display Style",
+                            description = "Choose how your archive is visualised on the profile screen.",
+                            tooltipText = "Switch between category counter tiles and an interactive GitHub-style contribution heatmap."
+                        )
+
+                        val profileArchiveStyle by viewModel.settingsRepository.profileArchiveStyle.collectAsState()
+                        ExpressiveSettingsGroup {
+                            ExpressiveSettingsNavigationItem(
+                                title = if (profileArchiveStyle == "heatmap") "GitHub-Style Heatmap" else "Category Piles Grid",
+                                subtitle = "Tap to open full display and ranking configuration",
+                                onClick = onNavigateToArchiveSettings,
                                 shape = RoundedCornerShape(24.dp)
                             )
                         }
@@ -929,6 +986,23 @@ fun SettingsCategoryDetailScreen(
                                 selectedModel = selectedAudioModel,
                                 onModelSelected = { viewModel.settingsRepository.setSelectedAudioModel(it) },
                                 onRefreshModels = { viewModel.fetchAvailableModels(isUserTriggered = true) },
+                                shape = RoundedCornerShape(24.dp)
+                            )
+                        }
+                    }
+
+                    item {
+                        SettingsSubsectionHeader(
+                            title = "Gemini Token & Request Metrics",
+                            description = "Inspect token consumption, request counts, and task activity for OCR and voice transcription.",
+                            tooltipText = "View detailed analytics on your token consumption and API activity in a clean dedicated metrics dashboard."
+                        )
+
+                        ExpressiveSettingsGroup {
+                            ExpressiveSettingsNavigationItem(
+                                title = "AI Token & Request Usage",
+                                subtitle = "Detailed tokens, OCR requests & speech metrics",
+                                onClick = onNavigateToGeminiUsage,
                                 shape = RoundedCornerShape(24.dp)
                             )
                         }

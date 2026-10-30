@@ -119,6 +119,7 @@ fun ProfileMainContent(
     val totalMedia = allItems.count { it.type == SavedItemType.MEDIA }
 
     val isSyncing by viewModel.isSyncing.collectAsState()
+    val profileArchiveStyle by viewModel.settingsRepository.profileArchiveStyle.collectAsState()
 
     val context = LocalContext.current
     val downloadProgress by DataDownloadManager.progress.collectAsState()
@@ -538,81 +539,136 @@ fun ProfileMainContent(
             // YOUR ARCHIVE
             SectionContainer(title = "YOUR ARCHIVE") {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.Bottom) {
-                        Text(text = "$totalItems", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "items captured", fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 6.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text(text = "$totalItems", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = "items captured", fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 6.dp))
+                        }
+
+                        // Style Toggle (Pills vs GitHub-Style Heatmap)
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                        ) {
+                            Row(modifier = Modifier.padding(3.dp)) {
+                                val isHeatmap = profileArchiveStyle == "heatmap"
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(9.dp))
+                                        .background(if (!isHeatmap) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                        .clickable { viewModel.settingsRepository.setProfileArchiveStyle("pills") }
+                                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                                ) {
+                                    Text(
+                                        text = "Piles",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (!isHeatmap) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(9.dp))
+                                        .background(if (isHeatmap) MaterialTheme.colorScheme.primary else Color.Transparent)
+                                        .clickable { viewModel.settingsRepository.setProfileArchiveStyle("heatmap") }
+                                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                                ) {
+                                    Text(
+                                        text = "Heatmap",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isHeatmap) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    if (profileArchiveStyle == "heatmap") {
+                        com.example.ui.components.KnowledgeHeatmap(
+                            items = allItems,
+                            weeksToShow = 20,
+                            modifier = Modifier.padding(vertical = 12.dp)
+                        )
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            ArchiveStatRow(
-                                iconResId = R.drawable.ic_custom_link, count = totalLinks, label = "Links",
-                                baseColor = CategoryLink,
-                                modifier = Modifier.weight(1f),
-                                onClick = { onNavigateToCategory("Links") }
-                            )
-                            ArchiveStatRow(
-                                iconResId = R.drawable.ic_custom_image, count = totalImages, label = "Images",
-                                baseColor = CategoryImage,
-                                modifier = Modifier.weight(1f),
-                                onClick = { onNavigateToCategory("Images") }
-                            )
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            ArchiveStatRow(
-                                iconResId = R.drawable.ic_custom_video, count = totalVideos, label = "Videos",
-                                baseColor = CategoryVideo,
-                                modifier = Modifier.weight(1f),
-                                onClick = { onNavigateToCategory("Videos") }
-                            )
-                            ArchiveStatRow(
-                                iconResId = R.drawable.ic_custom_text, count = totalText, label = "Text",
-                                baseColor = CategoryText,
-                                modifier = Modifier.weight(1f),
-                                onClick = { onNavigateToCategory("Text") }
-                            )
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            ArchiveStatRow(
-                                iconResId = R.drawable.ic_custom_code, count = totalCode, label = "Code",
-                                baseColor = CategoryCode,
-                                modifier = Modifier.weight(1f),
-                                onClick = { onNavigateToCategory("Code") }
-                            )
-                            ArchiveStatRow(
-                                iconResId = R.drawable.ic_custom_voice, count = totalAudio, label = "Audio",
-                                baseColor = CategoryAudio,
-                                modifier = Modifier.weight(1f),
-                                onClick = { onNavigateToCategory("Audio") }
-                            )
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            ArchiveStatRow(
-                                iconResId = R.drawable.ic_custom_movie, count = totalMedia, label = "Movies & Anime",
-                                baseColor = CategoryMedia,
-                                modifier = Modifier.weight(1f),
-                                onClick = { onNavigateToCategory("Movies & Anime") }
-                            )
-                            Spacer(modifier = Modifier.weight(1f))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                ArchiveStatRow(
+                                    iconResId = R.drawable.ic_custom_link, count = totalLinks, label = "Links",
+                                    baseColor = CategoryLink,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { onNavigateToCategory("Links") }
+                                )
+                                ArchiveStatRow(
+                                    iconResId = R.drawable.ic_custom_image, count = totalImages, label = "Images",
+                                    baseColor = CategoryImage,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { onNavigateToCategory("Images") }
+                                )
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                ArchiveStatRow(
+                                    iconResId = R.drawable.ic_custom_video, count = totalVideos, label = "Videos",
+                                    baseColor = CategoryVideo,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { onNavigateToCategory("Videos") }
+                                )
+                                ArchiveStatRow(
+                                    iconResId = R.drawable.ic_custom_text, count = totalText, label = "Text",
+                                    baseColor = CategoryText,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { onNavigateToCategory("Text") }
+                                )
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                ArchiveStatRow(
+                                    iconResId = R.drawable.ic_custom_code, count = totalCode, label = "Code",
+                                    baseColor = CategoryCode,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { onNavigateToCategory("Code") }
+                                )
+                                ArchiveStatRow(
+                                    iconResId = R.drawable.ic_custom_voice, count = totalAudio, label = "Audio",
+                                    baseColor = CategoryAudio,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { onNavigateToCategory("Audio") }
+                                )
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                ArchiveStatRow(
+                                    iconResId = R.drawable.ic_custom_movie, count = totalMedia, label = "Movies & Anime",
+                                    baseColor = CategoryMedia,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { onNavigateToCategory("Movies & Anime") }
+                                )
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
                     }
                 }
