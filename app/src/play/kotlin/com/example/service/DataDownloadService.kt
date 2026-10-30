@@ -90,12 +90,7 @@ class DataDownloadService : Service() {
                 )
                 updateNotificationError(e.localizedMessage ?: "Download failed")
             } finally {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                } else {
-                    @Suppress("DEPRECATION")
-                    stopForeground(true)
-                }
+                androidx.core.app.ServiceCompat.stopForeground(this@DataDownloadService, androidx.core.app.ServiceCompat.STOP_FOREGROUND_REMOVE)
                 stopSelf(startId)
             }
         }

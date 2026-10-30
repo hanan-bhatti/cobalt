@@ -367,7 +367,18 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                     var isPreviewMode by remember { mutableStateOf(true) }
                     val customFolders by viewModel.customFolders.collectAsState()
                     val customFolderEntities by viewModel.customFolderEntities.collectAsState()
-                    var selectedFolders by remember { mutableStateOf(setOf("AI Extracted")) }
+                    val allArchiveItems by viewModel.allItems.collectAsState()
+                    val rankedFolders = remember(customFolders, customFolderEntities, allArchiveItems, noteTitle, activeItem?.extractedText) {
+                        com.example.util.FolderRankingEngine.rankFolders(
+                            folders = customFolders,
+                            folderEntities = customFolderEntities,
+                            allItems = allArchiveItems,
+                            currentItemType = SavedItemType.TEXT,
+                            currentItemTitle = noteTitle,
+                            currentItemContent = activeItem?.extractedText
+                        )
+                    }
+                    var selectedFolders by remember { mutableStateOf(emptySet<String>()) }
                     var showNewFolderDialog by remember { mutableStateOf(false) }
                     var newFolderName by remember { mutableStateOf("") }
 
@@ -872,20 +883,16 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             val isDark = isSystemInDarkTheme()
-                                            val allFolders = listOf("AI Extracted") + customFolders.filter { it != "All" && it != "Archive" }
-                                            allFolders.distinct().forEach { folder ->
+                                            rankedFolders.forEach { ranked ->
+                                                val folder = ranked.name
                                                 val isFolderSelected = selectedFolders.contains(folder)
-                                                val folderEntity = customFolderEntities.find { it.name.equals(folder, ignoreCase = true) }
+                                                val folderEntity = ranked.entity ?: customFolderEntities.find { it.name.equals(folder, ignoreCase = true) }
                                                 val resolvedColor = parseHexColor(
                                                     folderEntity?.colorHex,
                                                     defaultColor = MaterialTheme.colorScheme.primary,
                                                     isDark = isDark
                                                 )
-                                                val folderIconRes = if (folder == "AI Extracted") {
-                                                    R.drawable.ic_custom_ocr
-                                                } else {
-                                                    getFolderIconRes(folderEntity?.iconName)
-                                                }
+                                                val folderIconRes = getFolderIconRes(folderEntity?.iconName)
 
                                                 Surface(
                                                     onClick = {
@@ -898,13 +905,17 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                     shape = RoundedCornerShape(50),
                                                     color = if (isFolderSelected) {
                                                         resolvedColor.copy(alpha = 0.16f)
+                                                    } else if (ranked.isSuggested) {
+                                                        resolvedColor.copy(alpha = 0.08f)
                                                     } else {
                                                         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                                                     },
                                                     border = BorderStroke(
-                                                        width = 1.dp,
+                                                        width = if (isFolderSelected) 1.5.dp else if (ranked.isSuggested) 1.5.dp else 1.dp,
                                                         color = if (isFolderSelected) {
                                                             resolvedColor
+                                                        } else if (ranked.isSuggested) {
+                                                            resolvedColor.copy(alpha = 0.75f)
                                                         } else {
                                                             MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                                                         }
@@ -919,13 +930,13 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                         Icon(
                                                             painter = painterResource(id = folderIconRes),
                                                             contentDescription = null,
-                                                            tint = if (isFolderSelected) resolvedColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            tint = if (isFolderSelected || ranked.isSuggested) resolvedColor else MaterialTheme.colorScheme.onSurfaceVariant,
                                                             modifier = Modifier.size(14.dp)
                                                         )
                                                         Text(
                                                             text = folder,
                                                             style = MaterialTheme.typography.bodySmall,
-                                                            fontWeight = if (isFolderSelected) FontWeight.Bold else FontWeight.Normal,
+                                                            fontWeight = if (isFolderSelected || ranked.isSuggested) FontWeight.Bold else FontWeight.Normal,
                                                             color = if (isFolderSelected) resolvedColor else MaterialTheme.colorScheme.onSurfaceVariant
                                                         )
                                                         if (isFolderSelected) {

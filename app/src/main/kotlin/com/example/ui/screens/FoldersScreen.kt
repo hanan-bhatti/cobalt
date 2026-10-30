@@ -46,6 +46,11 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.animation.core.spring
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -465,7 +470,7 @@ fun FoldersScreen(
                                 ) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         Icon(
-                                            painter = painterResource(id = R.drawable.ic_custom_folder_open),
+                                            painter = painterResource(id = R.drawable.ic_custom_folder),
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.secondary,
                                             modifier = Modifier.size(48.dp)
@@ -1006,7 +1011,7 @@ fun FolderContentsBrowser(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_folder_open),
+                            painter = painterResource(id = R.drawable.ic_custom_folder),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.secondary,
                             modifier = Modifier.size(64.dp)
@@ -1064,6 +1069,7 @@ fun FolderBrowseItemRow(
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     var showContextMenu by remember { mutableStateOf(false) }
     var showMoveDialog by remember { mutableStateOf(false) }
+    var isExpanded by remember { mutableStateOf(false) }
 
     val typeColor = when (item.type) {
         SavedItemType.LINK -> CategoryLink
@@ -1102,6 +1108,7 @@ fun FolderBrowseItemRow(
             border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
             modifier = Modifier
                 .fillMaxWidth()
+                .animateContentSize(animationSpec = spring(stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow))
                 .maybeSharedBounds(
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
@@ -1117,93 +1124,307 @@ fun FolderBrowseItemRow(
                     onLongClick = { showContextMenu = true }
                 )
         ) {
-            Row(
-                modifier = Modifier
-                    .padding(12.dp)
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (hasImage) {
-                    Box(
-                        modifier = Modifier
-                            .size(52.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                    ) {
-                        AsyncImage(
-                            model = displayImage,
-                            contentDescription = item.title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .padding(12.dp)
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (hasImage) {
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                        ) {
+                            AsyncImage(
+                                model = displayImage,
+                                contentDescription = item.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            if (item.type == SavedItemType.VIDEO) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                        .align(Alignment.Center),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_play),
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(10.dp)
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(typeColor.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(id = iconResId),
+                                contentDescription = null,
+                                tint = typeColor,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = item.title.ifBlank { "Untitled Item" },
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                        if (item.type == SavedItemType.VIDEO) {
-                            Box(
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .background(Color.Black.copy(alpha = 0.5f), CircleShape)
-                                    .align(Alignment.Center),
-                                contentAlignment = Alignment.Center
+                        val cDesc = if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO) {
+                            item.extractedText?.trim() ?: ""
+                        } else {
+                            item.linkDescription?.trim() ?: item.content.trim()
+                        }
+                        if (cDesc.isNotBlank() && cDesc.lowercase() != item.title.trim().lowercase()) {
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = cDesc,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_custom_chevron_right),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier
+                            .size(18.dp)
+                            .rotate(if (isExpanded) 90f else 0f)
+                    )
+                }
+
+                // In-place vertical expansion (Quick Peek)
+                AnimatedVisibility(
+                    visible = isExpanded,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                    ) {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+
+                        when (item.type) {
+                            SavedItemType.LINK -> {
+                                if (!item.linkImage.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = item.linkImage,
+                                        contentDescription = item.title,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(95.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                }
+                                if (!item.linkDescription.isNullOrBlank()) {
+                                    Text(
+                                        text = item.linkDescription!!,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                }
+                                Text(
+                                    text = item.content,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            SavedItemType.IMAGE, SavedItemType.VIDEO -> {
+                                if (hasImage) {
+                                    AsyncImage(
+                                        model = displayImage,
+                                        contentDescription = item.title,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(110.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                }
+                                if (!item.extractedText.isNullOrBlank()) {
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = "OCR: ${item.extractedText!!.trim().take(120)}...",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(8.dp),
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                            SavedItemType.TEXT, SavedItemType.CODE -> {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = item.content.trim().take(180),
+                                        style = if (item.type == SavedItemType.CODE) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodySmall,
+                                        fontFamily = if (item.type == SavedItemType.CODE) androidx.compose.ui.text.font.FontFamily.Monospace else androidx.compose.ui.text.font.FontFamily.Default,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(8.dp),
+                                        maxLines = 3,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                            SavedItemType.AUDIO -> {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.padding(8.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_custom_voice),
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "Voice Memo Transcription",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        val transcript = item.extractedText ?: item.content
+                                        Text(
+                                            text = if (transcript.isNotBlank()) transcript.trim().take(150) else "No transcription text available.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 3,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                            SavedItemType.MEDIA -> {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    item.watchStatus?.let { status ->
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                        ) {
+                                            Text(
+                                                text = status,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                fontWeight = FontWeight.Bold,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    item.releaseYear?.let { year ->
+                                        Text(text = year, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                                    }
+                                    item.rating?.let { rating ->
+                                        Text(text = "★ $rating", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                if (item.genres.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = item.genres.joinToString(" • "),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        // Footer row with date & full page button
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            val formattedDate = remember(item.timestamp) {
+                                val sdf = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+                                sdf.format(Date(item.timestamp))
+                            }
+                            Text(
+                                text = "Saved $formattedDate",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            )
+
+                            TextButton(
+                                onClick = onClick,
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                modifier = Modifier.height(28.dp)
                             ) {
+                                Text(
+                                    text = "Full Details",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_play),
+                                    painter = painterResource(id = R.drawable.ic_custom_chevron_right),
                                     contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(10.dp)
+                                    modifier = Modifier.size(12.dp),
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
                     }
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(52.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(typeColor.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            painter = painterResource(id = iconResId),
-                            contentDescription = null,
-                            tint = typeColor,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
                 }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = item.title.ifBlank { "Untitled Item" },
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    val cDesc = if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO) {
-                        item.extractedText?.trim() ?: ""
-                    } else {
-                        item.linkDescription?.trim() ?: item.content.trim()
-                    }
-                    if (cDesc.isNotBlank() && cDesc.lowercase() != item.title.trim().lowercase()) {
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = cDesc,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_custom_chevron_right),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    modifier = Modifier.size(18.dp)
-                )
             }
         }
 
@@ -1221,20 +1442,20 @@ fun FolderBrowseItemRow(
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier.width(220.dp)
             ) {
-                // 1. View Action (For all)
+                // 1. View Detail Action (Toggles in-place animated expansion)
                 DropdownMenuItem(
                     leadingIcon = {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_eye),
+                            painter = painterResource(id = if (isExpanded) R.drawable.ic_custom_close else R.drawable.ic_custom_eye),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
                     },
-                    text = { Text("View Detail", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
+                    text = { Text(if (isExpanded) "Collapse Details" else "View Details", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
                     onClick = {
                         showContextMenu = false
-                        onClick()
+                        isExpanded = !isExpanded
                     },
                     colors = MenuDefaults.itemColors(
                         textColor = MaterialTheme.colorScheme.onSurface,
@@ -1317,25 +1538,7 @@ fun FolderBrowseItemRow(
                         )
                     }
                     SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.MEDIA -> {
-                        DropdownMenuItem(
-                            leadingIcon = {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_eye),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            },
-                            text = { Text("View Fullscreen", fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
-                            onClick = {
-                                showContextMenu = false
-                                onClick()
-                            },
-                            colors = MenuDefaults.itemColors(
-                                textColor = MaterialTheme.colorScheme.onSurface,
-                                leadingIconColor = MaterialTheme.colorScheme.primary
-                            )
-                        )
+                        // "View Fullscreen" removed as requested: onClick() on card already handles this and View Details provides in-place preview
                     }
                 }
 
@@ -1439,67 +1642,24 @@ fun FolderMoveDialog(
     onDismiss: () -> Unit
 ) {
     val customFolders by viewModel.customFolders.collectAsState()
-    var currentFolders by remember { mutableStateOf(item.folders.toSet()) }
+    val customFolderEntities by viewModel.customFolderEntities.collectAsState()
+    val allItems by viewModel.allItems.collectAsState()
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Move / Assign Folders") },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-            ) {
-                if (customFolders.isEmpty()) {
-                    Text("No custom folders created yet.", color = MaterialTheme.colorScheme.secondary, style = MaterialTheme.typography.bodyMedium)
-                } else {
-                    customFolders.forEach { folder ->
-                        val isAssigned = currentFolders.contains(folder)
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    currentFolders = if (isAssigned) {
-                                        currentFolders - folder
-                                    } else {
-                                        currentFolders + folder
-                                    }
-                                }
-                                .padding(vertical = 8.dp)
-                        ) {
-                            Checkbox(
-                                checked = isAssigned,
-                                onCheckedChange = { checked ->
-                                    currentFolders = if (checked == true) {
-                                        currentFolders + folder
-                                    } else {
-                                        currentFolders - folder
-                                    }
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(folder)
-                        }
-                    }
-                }
-            }
+    com.example.ui.components.MoveToFolderDialog(
+        title = "Move / Assign Folders",
+        subtitle = "Assign folders for \"${item.title.take(28)}\"",
+        customFolders = customFolders,
+        customFolderEntities = customFolderEntities,
+        allItems = allItems,
+        initialSelectedFolders = item.folders.toSet(),
+        isMultiSelect = true,
+        onDismiss = onDismiss,
+        onCreateFolder = { name, iconName ->
+            viewModel.createFolder(name = name, iconName = iconName)
         },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    val updated = item.copy(folders = currentFolders.toList())
-                    viewModel.updateSavedItem(updated)
-                    onDismiss()
-                }
-            ) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
+        onConfirm = { selected ->
+            val updated = item.copy(folders = selected.toList())
+            viewModel.updateSavedItem(updated)
         }
     )
 }

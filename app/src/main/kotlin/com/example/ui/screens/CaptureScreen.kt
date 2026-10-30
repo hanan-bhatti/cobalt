@@ -290,7 +290,8 @@ fun CleanFolderRow(
     showNewFolderCreator: Boolean,
     onToggleNewFolder: () -> Unit,
     accentColor: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    rankedFolders: List<com.example.util.RankedFolder>? = null
 ) {
     val foldersScrollState = rememberScrollState()
 
@@ -345,7 +346,13 @@ fun CleanFolderRow(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (customFolders.isEmpty()) {
+            val displayFolders = if (!rankedFolders.isNullOrEmpty()) {
+                rankedFolders.map { it.name to it.isSuggested }
+            } else {
+                customFolders.map { it to false }
+            }
+
+            if (displayFolders.isEmpty()) {
                 Text(
                     text = "No custom folders yet",
                     fontSize = 11.sp,
@@ -354,7 +361,7 @@ fun CleanFolderRow(
                 )
             } else {
                 val isDark = isSystemInDarkTheme()
-                customFolders.forEach { folderName ->
+                displayFolders.forEach { (folderName, isSuggested) ->
                     val isAssigned = assignedFolders.contains(folderName)
                     val entity = folderMap[folderName]
                     val folderColor = parseHexColor(entity?.colorHex, isDark = isDark)
@@ -362,10 +369,22 @@ fun CleanFolderRow(
                     Surface(
                         onClick = { onToggleFolder(folderName) },
                         shape = RoundedCornerShape(12.dp),
-                        color = if (isAssigned) folderColor.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                        color = if (isAssigned) {
+                            folderColor.copy(alpha = 0.2f)
+                        } else if (isSuggested) {
+                            folderColor.copy(alpha = 0.10f)
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                        },
                         border = BorderStroke(
-                            1.dp,
-                            if (isAssigned) folderColor else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                            width = if (isAssigned) 1.5.dp else if (isSuggested) 1.5.dp else 1.dp,
+                            color = if (isAssigned) {
+                                folderColor
+                            } else if (isSuggested) {
+                                folderColor.copy(alpha = 0.75f)
+                            } else {
+                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                            }
                         ),
                         modifier = Modifier
                             .bounceClick()
@@ -378,13 +397,13 @@ fun CleanFolderRow(
                         ) {
                             FolderIcon(
                                 iconName = entity?.iconName,
-                                tint = if (isAssigned) folderColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                                tint = if (isAssigned || isSuggested) folderColor else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(12.dp)
                             )
                             Text(
                                 text = folderName,
                                 fontSize = 11.sp,
-                                fontWeight = if (isAssigned) FontWeight.Bold else FontWeight.Medium,
+                                fontWeight = if (isAssigned || isSuggested) FontWeight.Bold else FontWeight.Medium,
                                 color = if (isAssigned) folderColor else MaterialTheme.colorScheme.onSurface
                             )
                         }

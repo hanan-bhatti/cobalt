@@ -84,12 +84,7 @@ class DataUploadService : Service() {
                 updateNotificationError("Upload failed: ${e.message}")
             } finally {
                 BackupSyncManager.updateProgress(BackupSyncManager.SyncProgress(isSyncing = false))
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                } else {
-                    @Suppress("DEPRECATION")
-                    stopForeground(true)
-                }
+                androidx.core.app.ServiceCompat.stopForeground(this@DataUploadService, androidx.core.app.ServiceCompat.STOP_FOREGROUND_REMOVE)
                 stopSelf(startId)
             }
         }

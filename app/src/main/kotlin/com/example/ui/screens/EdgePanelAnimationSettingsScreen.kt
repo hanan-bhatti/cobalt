@@ -685,7 +685,7 @@ fun DockPhysicsAnimatedIcon(
     val outlineColor = MaterialTheme.colorScheme.outlineVariant
     val surfaceColor = MaterialTheme.colorScheme.surfaceContainerHighest
     val onSurfaceColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val accentBlue = Color(0xFF3B82F6)
+    val handleAccent = primaryColor
 
     Box(
         modifier = modifier
@@ -764,9 +764,9 @@ fun DockPhysicsAnimatedIcon(
                 )
             }
 
-            // Fill color transition from Blue handle to Solid Card
+            // Fill color transition from handle to Solid Card
             val fillColor = lerp(
-                start = accentBlue,
+                start = handleAccent,
                 stop = if (isSelected) primaryColor.copy(alpha = 0.25f) else surfaceColor,
                 fraction = (p / 0.35f).coerceIn(0f, 1f)
             )
@@ -789,7 +789,7 @@ fun DockPhysicsAnimatedIcon(
                 val headerW = 6.dp.toPx()
                 val headerH = 2.dp.toPx()
                 drawRoundRect(
-                    color = accentBlue.copy(alpha = contentAlpha * 0.85f),
+                    color = handleAccent.copy(alpha = contentAlpha * 0.85f),
                     topLeft = Offset(cardLeft + 2.5.dp.toPx(), cardTop + 2.5.dp.toPx()),
                     size = Size(headerW, headerH),
                     cornerRadius = CornerRadius(1.dp.toPx(), 1.dp.toPx())

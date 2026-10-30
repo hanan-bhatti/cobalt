@@ -38,10 +38,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -51,7 +49,6 @@ import com.example.util.FossCrashReporter
 /**
  * Material 3 Expressive Crash Report Dialog shown on app startup after an unexpected crash.
  */
-@Suppress("DEPRECATION")
 @Composable
 fun ExpressiveCrashReportDialog(
     crashReportText: String,
@@ -59,7 +56,6 @@ fun ExpressiveCrashReportDialog(
     onSendEmail: () -> Unit
 ) {
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -154,7 +150,8 @@ fun ExpressiveCrashReportDialog(
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(
                     onClick = {
-                        clipboardManager.setText(AnnotatedString(crashReportText))
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                        clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("Crash Report", crashReportText))
                     },
                     shape = RoundedCornerShape(14.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)

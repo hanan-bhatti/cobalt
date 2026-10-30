@@ -1096,110 +1096,23 @@ fun HomeScreen(
 
     // Bulk Tag / Category Assignment Dialog
     if (showBulkTagDialog) {
-        AlertDialog(
-            onDismissRequest = { showBulkTagDialog = false },
-            title = {
-                Column {
-                    Text(
-                        text = "Bulk Tag Folders",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Assign ${selectedItemIds.size} selected items to a folder",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                }
+        com.example.ui.components.MoveToFolderDialog(
+            title = "Move to Folder",
+            subtitle = "Assign ${selectedItemIds.size} selected items to a folder",
+            customFolders = customFolders,
+            customFolderEntities = customFolderEntities,
+            allItems = items,
+            initialSelectedFolders = emptySet(),
+            isMultiSelect = false,
+            onDismiss = { showBulkTagDialog = false },
+            onCreateFolder = { name, iconName ->
+                viewModel.createFolder(name = name, iconName = iconName)
             },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-
-                    Text(
-                        text = "Select Custom Folder",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    if (customFolders.isEmpty()) {
-                        Text(
-                            text = "No custom folders yet. Create one below!",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 200.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(customFolders) { folder ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .clickable {
-                                            viewModel.tagSelectedItems(folder)
-                                            showBulkTagDialog = false
-                                        }
-                                        .padding(vertical = 8.dp, horizontal = 12.dp)
-                                        .testTag("bulk_tag_row_$folder"),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_custom_folder),
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Text(
-                                        text = folder,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-
-                    Text(
-                        text = "Create and Assign Folder",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    InlineNewFolderCreator(
-                        onAddFolder = { name, iconName ->
-                            viewModel.createFolder(name = name, iconName = iconName)
-                            viewModel.tagSelectedItems(name)
-                            showBulkTagDialog = false
-                        },
-                        onCancel = { showBulkTagDialog = false }
-                    )
+            onConfirm = { targetFolders ->
+                targetFolders.firstOrNull()?.let { folder ->
+                    viewModel.tagSelectedItems(folder)
                 }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { showBulkTagDialog = false },
-                    modifier = Modifier.testTag("close_bulk_tag_button")
-                ) {
-                    Text("Cancel", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surface
+            }
         )
     }
 

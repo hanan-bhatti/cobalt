@@ -19,9 +19,18 @@
 package com.example.data.local
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "saved_items")
+@Entity(
+    tableName = "saved_items",
+    indices = [
+        Index(value = ["timestamp"]),
+        Index(value = ["type"]),
+        Index(value = ["isArchived"]),
+        Index(value = ["updatedAt"])
+    ]
+)
 data class SavedItemEntity(
     @PrimaryKey val id: String,
     val type: String,          // "Link", "Image", "Video", "Code", "Text", "MEDIA"

@@ -171,12 +171,8 @@ fun VideoPlayer(
         val listener = object : Player.Listener {
             override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
                 if (videoSize.width > 0 && videoSize.height > 0) {
-                    val rotation = videoSize.unappliedRotationDegrees
-                    val calculatedAspect = if (rotation == 90 || rotation == 270) {
-                        videoSize.height.toFloat() / videoSize.width.toFloat()
-                    } else {
-                        videoSize.width.toFloat() / videoSize.height.toFloat()
-                    }
+                    val pixelRatio = if (videoSize.pixelWidthHeightRatio > 0f) videoSize.pixelWidthHeightRatio else 1f
+                    val calculatedAspect = (videoSize.width.toFloat() * pixelRatio) / videoSize.height.toFloat()
                     if (calculatedAspect > 0.1f) {
                         exactAspectRatio = calculatedAspect
                     }
