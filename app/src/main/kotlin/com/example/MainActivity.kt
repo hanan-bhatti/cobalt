@@ -478,11 +478,17 @@ class MainActivity : ComponentActivity() {
                                                 viewModel = viewModel,
                                                 onNavigateBack = { navController.popBackStack() },
                                                 onNavigateToCategory = { category ->
-                                                    navController.navigate("settings_category/${category.name}")
+                                                    if (category == com.example.ui.screens.SettingsCategory.ORGANIZATION) {
+                                                        navController.navigate("archive_organization_settings")
+                                                    } else {
+                                                        navController.navigate("settings_category/${category.name}")
+                                                    }
                                                 },
                                                 onNavigateToEdgePanelSettings = { navController.navigate("edge_panel_settings") },
                                                 onNavigateToWidgetSettings = { navController.navigate("widget_settings") },
-                                                onNavigateToEdgeAnimSettings = { navController.navigate("edge_anim_settings") }
+                                                onNavigateToEdgeAnimSettings = { navController.navigate("edge_anim_settings") },
+                                                onNavigateToGeminiUsage = { navController.navigate("gemini_usage") },
+                                                onNavigateToArchiveSettings = { navController.navigate("archive_organization_settings") }
                                             )
                                         }
                                     }
@@ -501,7 +507,25 @@ class MainActivity : ComponentActivity() {
                                                 onNavigateBack = { navController.popBackStack() },
                                                 onNavigateToEdgePanelSettings = { navController.navigate("edge_panel_settings") },
                                                 onNavigateToWidgetSettings = { navController.navigate("widget_settings") },
-                                                onNavigateToEdgeAnimSettings = { navController.navigate("edge_anim_settings") }
+                                                onNavigateToEdgeAnimSettings = { navController.navigate("edge_anim_settings") },
+                                                onNavigateToGeminiUsage = { navController.navigate("gemini_usage") },
+                                                onNavigateToArchiveSettings = { navController.navigate("archive_organization_settings") }
+                                            )
+                                        }
+                                    }
+                                    composable("gemini_usage") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.GeminiUsageScreen(
+                                                viewModel = viewModel,
+                                                onNavigateBack = { navController.popBackStack() }
+                                            )
+                                        }
+                                    }
+                                    composable("archive_organization_settings") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.ArchiveOrganizationSettingsScreen(
+                                                viewModel = viewModel,
+                                                onNavigateBack = { navController.popBackStack() }
                                             )
                                         }
                                     }
@@ -823,12 +847,7 @@ class MainActivity : ComponentActivity() {
         if (Intent.ACTION_SEND == action && type != null) {
             val textContent = intent.getStringExtra(Intent.EXTRA_TEXT)
             val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)
-            val mediaUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                intent.getParcelableExtra(Intent.EXTRA_STREAM)
-            }
+            val mediaUri = androidx.core.content.IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
             viewModel.handleSharedIntent(type, textContent, mediaUri, subject)
         } else if (Intent.ACTION_VIEW == action) {
             val data: Uri? = intent.data

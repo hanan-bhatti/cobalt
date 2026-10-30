@@ -83,7 +83,15 @@ data class GenerationConfig(
 @JsonClass(generateAdapter = true)
 data class GenerateContentResponse(
     @param:Json(name = "candidates") val candidates: List<Candidate>? = null,
-    @param:Json(name = "promptFeedback") val promptFeedback: PromptFeedback? = null
+    @param:Json(name = "promptFeedback") val promptFeedback: PromptFeedback? = null,
+    @param:Json(name = "usageMetadata") val usageMetadata: UsageMetadata? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class UsageMetadata(
+    @param:Json(name = "promptTokenCount") val promptTokenCount: Int? = null,
+    @param:Json(name = "candidatesTokenCount") val candidatesTokenCount: Int? = null,
+    @param:Json(name = "totalTokenCount") val totalTokenCount: Int? = null
 )
 
 @JsonClass(generateAdapter = true)
