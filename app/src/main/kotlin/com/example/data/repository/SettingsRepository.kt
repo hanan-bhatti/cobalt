@@ -117,6 +117,22 @@ class SettingsRepository(private val context: Context) {
     private val _edgePanelAnimDamping = MutableStateFlow(prefs.getFloat(KEY_EDGE_ANIM_DAMPING, 0.72f))
     val edgePanelAnimDamping: StateFlow<Float> = _edgePanelAnimDamping.asStateFlow()
 
+    private val _profileArchiveStyle = MutableStateFlow(prefs.getString(KEY_PROFILE_ARCHIVE_STYLE, "pills") ?: "pills")
+    val profileArchiveStyle: StateFlow<String> = _profileArchiveStyle.asStateFlow()
+
+    private val _isFolderRankingEnabled = MutableStateFlow(prefs.getBoolean(KEY_FOLDER_RANKING_ENABLED, true))
+    val isFolderRankingEnabled: StateFlow<Boolean> = _isFolderRankingEnabled.asStateFlow()
+
+    fun setProfileArchiveStyle(style: String) {
+        prefs.edit().putString(KEY_PROFILE_ARCHIVE_STYLE, style).apply()
+        _profileArchiveStyle.value = style
+    }
+
+    fun setFolderRankingEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_FOLDER_RANKING_ENABLED, enabled).apply()
+        _isFolderRankingEnabled.value = enabled
+    }
+
     fun setGeminiApiKey(key: String) {
         prefs.edit().putString(KEY_GEMINI_API_KEY, key).apply()
         _geminiApiKey.value = key
@@ -356,6 +372,8 @@ class SettingsRepository(private val context: Context) {
             KEY_EDGE_ANIM_PRESET -> _edgePanelAnimPreset.value = prefs.getString(KEY_EDGE_ANIM_PRESET, "Smooth") ?: "Smooth"
             KEY_EDGE_ANIM_STIFFNESS -> _edgePanelAnimStiffness.value = prefs.getFloat(KEY_EDGE_ANIM_STIFFNESS, 340f)
             KEY_EDGE_ANIM_DAMPING -> _edgePanelAnimDamping.value = prefs.getFloat(KEY_EDGE_ANIM_DAMPING, 0.72f)
+            KEY_PROFILE_ARCHIVE_STYLE -> _profileArchiveStyle.value = prefs.getString(KEY_PROFILE_ARCHIVE_STYLE, "pills") ?: "pills"
+            KEY_FOLDER_RANKING_ENABLED -> _isFolderRankingEnabled.value = prefs.getBoolean(KEY_FOLDER_RANKING_ENABLED, true)
         }
     }
 
@@ -364,6 +382,8 @@ class SettingsRepository(private val context: Context) {
     }
 
     companion object {
+        const val KEY_PROFILE_ARCHIVE_STYLE = "profile_archive_style"
+        const val KEY_FOLDER_RANKING_ENABLED = "folder_ranking_enabled"
         const val KEY_GEMINI_API_KEY = "gemini_api_key"
         const val KEY_SELECTED_MODEL = "selected_model"
         const val KEY_SELECTED_AUDIO_MODEL = "selected_audio_model"

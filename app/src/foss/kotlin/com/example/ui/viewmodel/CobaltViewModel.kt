@@ -210,22 +210,13 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    // Filtered Items (computes search query over folder items)
+    // Filtered Items (computes search query over folder items using ElasticFuzzySearchEngine)
     val filteredItems: StateFlow<List<SavedItem>> = combine(
         homeItems,
         _searchQuery
     ) { items, query ->
         if (query.isNotBlank()) {
-            val queryTerms = query.lowercase().split(Regex("[^a-zA-Z0-9]")).filter { it.isNotBlank() }
-            if (queryTerms.isNotEmpty()) {
-                items
-                    .map { item -> item to calculateSearchScore(item, queryTerms) }
-                    .filter { it.second > 0 }
-                    .sortedByDescending { it.second }
-                    .map { it.first }
-            } else {
-                items
-            }
+            com.example.util.ElasticFuzzySearchEngine.search(items, query)
         } else {
             items
         }
@@ -1239,7 +1230,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                 try {
                     val newId = java.util.UUID.randomUUID().toString()
-                    val foldersToUse = if (selectedFolders.isNotEmpty()) selectedFolders else listOf("AI Extracted")
+                    val foldersToUse = selectedFolders
                     val initialTitle = if (reviewItem.description.isNotBlank()) reviewItem.description else reviewItem.url
 
                     val initialItem = com.example.data.model.SavedItem(

@@ -77,7 +77,7 @@ fun SearchScreen(
     val prefs = remember { context.getSharedPreferences("draft_prefs", android.content.Context.MODE_PRIVATE) }
     var historyList by remember { mutableStateOf(getSearchHistory(prefs)) }
     var selectedFilter by remember { mutableStateOf<SavedItemType?>(null) }
-    var sortOrder by remember { mutableStateOf(SearchSortOrder.NEWEST) }
+    var sortOrder by remember { mutableStateOf(SearchSortOrder.RELEVANCE) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
 
@@ -229,7 +229,7 @@ fun SearchScreen(
                         )
                     )
                 }
-                items(SavedItemType.values()) { type ->
+                items(SavedItemType.entries.toTypedArray()) { type ->
                     FilterChip(
                         selected = selectedFilter == type,
                         onClick = { selectedFilter = type },
@@ -245,6 +245,7 @@ fun SearchScreen(
             val displayItems = items.filter { selectedFilter == null || it.type == selectedFilter }
                 .let { filteredList ->
                     when (sortOrder) {
+                        SearchSortOrder.RELEVANCE -> filteredList
                         SearchSortOrder.NEWEST -> filteredList.sortedByDescending { it.timestamp }
                         SearchSortOrder.OLDEST -> filteredList.sortedBy { it.timestamp }
                         SearchSortOrder.ALPHABETICAL -> filteredList.sortedBy { it.title.lowercase() }
@@ -338,9 +339,10 @@ fun SearchScreen(
                                 IconButton(
                                     onClick = {
                                         sortOrder = when (sortOrder) {
+                                            SearchSortOrder.RELEVANCE -> SearchSortOrder.NEWEST
                                             SearchSortOrder.NEWEST -> SearchSortOrder.OLDEST
                                             SearchSortOrder.OLDEST -> SearchSortOrder.ALPHABETICAL
-                                            SearchSortOrder.ALPHABETICAL -> SearchSortOrder.NEWEST
+                                            SearchSortOrder.ALPHABETICAL -> SearchSortOrder.RELEVANCE
                                         }
                                     },
                                     modifier = Modifier.size(24.dp)
@@ -413,9 +415,10 @@ fun SearchScreen(
                         IconButton(
                             onClick = {
                                 sortOrder = when (sortOrder) {
+                                    SearchSortOrder.RELEVANCE -> SearchSortOrder.NEWEST
                                     SearchSortOrder.NEWEST -> SearchSortOrder.OLDEST
                                     SearchSortOrder.OLDEST -> SearchSortOrder.ALPHABETICAL
-                                    SearchSortOrder.ALPHABETICAL -> SearchSortOrder.NEWEST
+                                    SearchSortOrder.ALPHABETICAL -> SearchSortOrder.RELEVANCE
                                 }
                             },
                             modifier = Modifier.size(24.dp)
@@ -660,6 +663,7 @@ fun formatRelativeTime(timestamp: Long): String {
 }
 
 enum class SearchSortOrder(val displayName: String) {
+    RELEVANCE("Best Match"),
     NEWEST("Newest"),
     OLDEST("Oldest"),
     ALPHABETICAL("A-Z")

@@ -132,6 +132,19 @@ class CobaltRepository(private val context: Context) {
                 ?.joinToString("")
                 ?.trim()
 
+            val usage = response.usageMetadata
+            val promptTokens = usage?.promptTokenCount ?: (base64Audio.length / 400).coerceAtLeast(10)
+            val candTokens = usage?.candidatesTokenCount ?: ((candidateText?.length ?: 0) / 4).coerceAtLeast(1)
+            val totalTokens = usage?.totalTokenCount ?: (promptTokens + candTokens)
+            com.example.util.GeminiUsageTracker.recordUsage(
+                context = context,
+                taskType = "AUDIO",
+                promptTokens = promptTokens,
+                candidateTokens = candTokens,
+                totalTokens = totalTokens,
+                modelName = cleanModel
+            )
+
             val finishReason = candidate?.finishReason
             val blockReason = response.promptFeedback?.blockReason
             Log.d("CobaltRepo", "Gemini Audio call completed: candidatesCount=${response.candidates?.size}, finishReason=$finishReason, blockReason=$blockReason, textLength=${candidateText?.length ?: 0}")
@@ -1597,7 +1610,20 @@ class CobaltRepository(private val context: Context) {
 
         try {
             val response = RetrofitClient.geminiService.generateContent("models/$model", apiKey, request)
-            response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
+            val ocrText = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
+            val usage = response.usageMetadata
+            val promptTokens = usage?.promptTokenCount ?: 258
+            val candTokens = usage?.candidatesTokenCount ?: ((ocrText?.length ?: 0) / 4).coerceAtLeast(1)
+            val totalTokens = usage?.totalTokenCount ?: (promptTokens + candTokens)
+            com.example.util.GeminiUsageTracker.recordUsage(
+                context = context,
+                taskType = "OCR",
+                promptTokens = promptTokens,
+                candidateTokens = candTokens,
+                totalTokens = totalTokens,
+                modelName = model
+            )
+            ocrText
         } catch (e: Exception) {
             Log.e("CobaltRepo", "Gemini API call failed: ${e.message}", e)
             "Error: ${com.example.util.GoogleApiErrorMapper.formatException(e)}"
