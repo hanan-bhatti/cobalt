@@ -23,6 +23,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.app.WallpaperManager
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -46,7 +47,12 @@ import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.activity.setViewTreeOnBackPressedDispatcherOwner
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.app.NotificationCompat
@@ -57,6 +63,8 @@ import com.example.data.repository.CobaltRepository
 import com.example.data.repository.SettingsRepository
 import com.example.ui.dock.SideDockContent
 import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.theme.Primary
+import com.example.ui.theme.PrimaryDark
 import com.example.util.OverlayLifecycleOwner
 import com.example.utils.DevicePerformance
 import kotlinx.coroutines.CoroutineScope
@@ -160,6 +168,20 @@ class CobaltSideDockService : Service() {
         }
     }
 
+    private var wallpaperColorsListener: Any? = null
+    private val themeRevision = mutableIntStateOf(0)
+
+    private fun refreshThemeAndColors() {
+        mainHandler.post {
+            themeRevision.intValue++
+            updateHandleLayoutAndStyle()
+        }
+        mainHandler.postDelayed({
+            themeRevision.intValue++
+            updateHandleLayoutAndStyle()
+        }, 350)
+    }
+
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key in listOf(
                 "edge_panel_height", "edge_panel_thickness", "edge_panel_opacity",
@@ -169,17 +191,13 @@ class CobaltSideDockService : Service() {
                 "force_disable_blur", "blur_radius", "blur_opacity"
             )
         ) {
-            mainHandler.post {
-                updateHandleLayoutAndStyle()
-            }
+            refreshThemeAndColors()
         }
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
-        mainHandler.post {
-            updateHandleLayoutAndStyle()
-        }
+        refreshThemeAndColors()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -193,6 +211,19 @@ class CobaltSideDockService : Service() {
         prefs = applicationContext.getSharedPreferences("cobalt_settings", Context.MODE_PRIVATE)
         prefs.registerOnSharedPreferenceChangeListener(prefsListener)
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            try {
+                val wallpaperManager = WallpaperManager.getInstance(this)
+                val listener = WallpaperManager.OnColorsChangedListener { _, _ ->
+                    refreshThemeAndColors()
+                }
+                wallpaperManager.addOnColorsChangedListener(listener, mainHandler)
+                wallpaperColorsListener = listener
+            } catch (e: Exception) {
+                android.util.Log.w("CobaltSideDock", "Could not register OnColorsChangedListener: ${e.message}")
+            }
+        }
+
         createNotificationChannel()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -201,13 +232,9 @@ class CobaltSideDockService : Service() {
                 buildNotification(),
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
             )
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                NOTIFICATION_ID,
-                buildNotification(),
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-            )
         } else {
+            // Android 13 and below: No type parameter required for overlay services.
+            // Calling 2-argument startForeground bypasses the subset bitmask validation against 'specialUse'.
             startForeground(NOTIFICATION_ID, buildNotification())
         }
     }
@@ -413,9 +440,24 @@ class CobaltSideDockService : Service() {
         updateSystemGestureExclusions()
     }
 
+    private fun getHandleColor(): Int {
+        val useDynamic = prefs.getBoolean("dynamic_color", true)
+        val dark = isDarkTheme()
+        return if (useDynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            try {
+                val scheme = if (dark) dynamicDarkColorScheme(this) else dynamicLightColorScheme(this)
+                scheme.primary.toArgb()
+            } catch (_: Throwable) {
+                if (dark) PrimaryDark.toArgb() else Primary.toArgb()
+            }
+        } else {
+            if (dark) PrimaryDark.toArgb() else Primary.toArgb()
+        }
+    }
+
     private fun createHandleDrawable(side: String): GradientDrawable {
         return GradientDrawable().apply {
-            setColor(Color.parseColor("#3B82F6")) // Accent blue or theme accent
+            setColor(getHandleColor())
             val radiusPx = dpToPx(8).toFloat()
             cornerRadii = if (side == "Right") {
                 floatArrayOf(radiusPx, radiusPx, 0f, 0f, 0f, 0f, radiusPx, radiusPx)
@@ -556,63 +598,66 @@ class CobaltSideDockService : Service() {
             setViewTreeOnBackPressedDispatcherOwner(lifecycleOwner)
 
             setContent {
-                val isDark = isDarkTheme()
-                val customTabsUriHandler = androidx.compose.runtime.remember(this@CobaltSideDockService, isDark) {
-                    object : androidx.compose.ui.platform.UriHandler {
-                        override fun openUri(uri: String) {
-                            dismissDockAction?.invoke() ?: closeDock()
-                            com.example.util.CobaltCustomTabsLauncher.launch(
-                                context = this@CobaltSideDockService,
-                                url = uri,
-                                isDarkTheme = isDark
-                            )
+                key(themeRevision.intValue) {
+                    val isDark = isDarkTheme()
+                    val useDynamic = prefs.getBoolean("dynamic_color", true)
+                    val customTabsUriHandler = androidx.compose.runtime.remember(this@CobaltSideDockService, isDark) {
+                        object : androidx.compose.ui.platform.UriHandler {
+                            override fun openUri(uri: String) {
+                                dismissDockAction?.invoke() ?: closeDock()
+                                com.example.util.CobaltCustomTabsLauncher.launch(
+                                    context = this@CobaltSideDockService,
+                                    url = uri,
+                                    isDarkTheme = isDark
+                                )
+                            }
                         }
                     }
-                }
-                CompositionLocalProvider(
-                    LocalOnBackPressedDispatcherOwner provides lifecycleOwner,
-                    androidx.compose.ui.platform.LocalUriHandler provides customTabsUriHandler
-                ) {
-                    MyApplicationTheme(
-                        darkTheme = isDark,
-                        dynamicColor = prefs.getBoolean("dynamic_color", true)
+                    CompositionLocalProvider(
+                        LocalOnBackPressedDispatcherOwner provides lifecycleOwner,
+                        androidx.compose.ui.platform.LocalUriHandler provides customTabsUriHandler
                     ) {
-                        SideDockContent(
-                            side = getEdgePanelSide(),
-                            yPercent = getEdgePanelYPercent(),
-                            handleCenterYDp = exactHandleCenterYDp,
-                            handleHeightDp = getEffectiveHandleHeightDp(),
-                            handleThicknessDp = getEdgePanelThickness(),
-                            handleOpacity = getEdgePanelOpacity(),
-                            animPreset = getAnimPreset(),
-                            animStiffness = getAnimStiffness(),
-                            animDamping = getAnimDamping(),
-                            useBlur = false,
-                            blurRadius = currentBlurRadius,
-                            blurOpacity = currentBlurOpacity,
-                            repository = repository,
-                            onRegisterDismiss = { action ->
-                                dismissDockAction = action
-                            },
-                            onClose = {
-                                // Handled via SideDockContent's dismiss animation
-                            },
-                            onCloseFinished = {
-                                closeDock()
-                            },
-                            onLaunchOcr = {
-                                dismissDockAction?.invoke() ?: closeDock()
-                                launchOcrCapture()
-                            },
-                            onLaunchLink = {
-                                dismissDockAction?.invoke() ?: closeDock()
-                                launchLinkCapture()
-                            },
-                            onOpenMainApp = { itemId, destination ->
-                                dismissDockAction?.invoke() ?: closeDock()
-                                openMainApp(itemId, destination)
-                            }
-                        )
+                        MyApplicationTheme(
+                            darkTheme = isDark,
+                            dynamicColor = useDynamic
+                        ) {
+                            SideDockContent(
+                                side = getEdgePanelSide(),
+                                yPercent = getEdgePanelYPercent(),
+                                handleCenterYDp = exactHandleCenterYDp,
+                                handleHeightDp = getEffectiveHandleHeightDp(),
+                                handleThicknessDp = getEdgePanelThickness(),
+                                handleOpacity = getEdgePanelOpacity(),
+                                animPreset = getAnimPreset(),
+                                animStiffness = getAnimStiffness(),
+                                animDamping = getAnimDamping(),
+                                useBlur = false,
+                                blurRadius = currentBlurRadius,
+                                blurOpacity = currentBlurOpacity,
+                                repository = repository,
+                                onRegisterDismiss = { action ->
+                                    dismissDockAction = action
+                                },
+                                onClose = {
+                                    // Handled via SideDockContent's dismiss animation
+                                },
+                                onCloseFinished = {
+                                    closeDock()
+                                },
+                                onLaunchOcr = {
+                                    dismissDockAction?.invoke() ?: closeDock()
+                                    launchOcrCapture()
+                                },
+                                onLaunchLink = {
+                                    dismissDockAction?.invoke() ?: closeDock()
+                                    launchLinkCapture()
+                                },
+                                onOpenMainApp = { itemId, destination ->
+                                    dismissDockAction?.invoke() ?: closeDock()
+                                    openMainApp(itemId, destination)
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -729,6 +774,16 @@ class CobaltSideDockService : Service() {
         super.onDestroy()
         prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
         serviceScope.cancel()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            try {
+                wallpaperColorsListener?.let {
+                    (getSystemService(Context.WALLPAPER_SERVICE) as? WallpaperManager)
+                        ?.removeOnColorsChangedListener(it as WallpaperManager.OnColorsChangedListener)
+                }
+            } catch (_: Exception) {}
+            wallpaperColorsListener = null
+        }
 
         closeDock()
 

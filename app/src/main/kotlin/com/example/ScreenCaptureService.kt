@@ -61,11 +61,8 @@ class ScreenCaptureService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         var resultCode = intent?.getIntExtra("result_code", 0) ?: 0
-        var resultData = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent?.getParcelableExtra("result_data", Intent::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            intent?.getParcelableExtra("result_data")
+        var resultData = intent?.let {
+            androidx.core.content.IntentCompat.getParcelableExtra(it, "result_data", Intent::class.java)
         }
 
         if (resultCode == 0 || resultData == null) {

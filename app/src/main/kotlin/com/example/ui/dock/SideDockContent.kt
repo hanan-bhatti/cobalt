@@ -384,14 +384,14 @@ fun SideDockContent(
         MaterialTheme.colorScheme.surfaceContainerHigh
     }
 
-    val handleBlueColor = if (useBlur) {
-        Color(0xFF3B82F6).copy(alpha = handleOpacity.coerceIn(0.6f, 1f))
+    val handleColor = if (useBlur) {
+        MaterialTheme.colorScheme.primary.copy(alpha = handleOpacity.coerceIn(0.6f, 1f))
     } else {
-        Color(0xFF3B82F6)
+        MaterialTheme.colorScheme.primary
     }
 
     val dockSurfaceColor = lerp(
-        start = handleBlueColor,
+        start = handleColor,
         stop = baseSurfaceColor,
         fraction = (p / 0.32f).coerceIn(0f, 1f)
     )
