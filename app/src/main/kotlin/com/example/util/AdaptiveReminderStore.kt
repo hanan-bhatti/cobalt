@@ -41,6 +41,10 @@ class AdaptiveReminderStore(context: Context) {
         get() = prefs.getInt(KEY_DELIVERY_HOUR, 9) // Default 9 AM
         set(value) = prefs.edit().putInt(KEY_DELIVERY_HOUR, value).apply()
 
+    var deliveryMinute: Int
+        get() = prefs.getInt(KEY_DELIVERY_MINUTE, 0) // Default 0 min
+        set(value) = prefs.edit().putInt(KEY_DELIVERY_MINUTE, value).apply()
+
     var inactivityDaysThreshold: Int
         get() = prefs.getInt(KEY_INACTIVITY_THRESHOLD, 3) // Default 3 days
         set(value) = prefs.edit().putInt(KEY_INACTIVITY_THRESHOLD, value).apply()
@@ -265,6 +269,7 @@ class AdaptiveReminderStore(context: Context) {
     companion object {
         private const val KEY_ENABLED = "reminders_enabled"
         private const val KEY_DELIVERY_HOUR = "reminders_delivery_hour"
+        private const val KEY_DELIVERY_MINUTE = "reminders_delivery_minute"
         private const val KEY_INACTIVITY_THRESHOLD = "reminders_inactivity_threshold"
         private const val KEY_PRIORITIZE_FOLDERS = "reminders_prioritize_active_folders"
         private const val KEY_INCLUDE_WEEKENDS = "reminders_include_weekends"

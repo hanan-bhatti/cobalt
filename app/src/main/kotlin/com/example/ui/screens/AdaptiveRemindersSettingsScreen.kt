@@ -60,6 +60,9 @@ import com.example.util.AdaptiveReminderEngine
 import com.example.util.AdaptiveReminderNotificationHelper
 import com.example.util.AdaptiveReminderStore
 import com.example.util.AdaptiveReminderWorker
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -77,6 +80,7 @@ fun AdaptiveRemindersSettingsScreen(
 
     var isEnabled by remember { mutableStateOf(store.isRemindersEnabled) }
     var deliveryHour by remember { mutableIntStateOf(store.deliveryHour) }
+    var deliveryMinute by remember { mutableIntStateOf(store.deliveryMinute) }
     var inactivityDays by remember { mutableIntStateOf(store.inactivityDaysThreshold) }
     var prioritizeFolders by remember { mutableStateOf(store.prioritizeActiveFolders) }
     var includeWeekends by remember { mutableStateOf(store.includeWeekends) }
@@ -257,7 +261,7 @@ fun AdaptiveRemindersSettingsScreen(
                             )
 
                             // Preferred Time
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Text(
                                     text = "Delivery Time",
                                     style = MaterialTheme.typography.titleSmall,
@@ -265,17 +269,19 @@ fun AdaptiveRemindersSettingsScreen(
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
 
+                                val presets = listOf(
+                                    Triple(9, 0, "9:00 AM"),
+                                    Triple(14, 0, "2:00 PM"),
+                                    Triple(20, 0, "8:00 PM")
+                                )
+                                val isPresetSelected = presets.any { it.first == deliveryHour && it.second == deliveryMinute }
+
                                 Row(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    val times = listOf(
-                                        9 to "9:00 AM",
-                                        14 to "2:00 PM",
-                                        20 to "8:00 PM"
-                                    )
-                                    times.forEach { (hour, label) ->
-                                        val isSelected = deliveryHour == hour
+                                    presets.forEach { (hour, minute, label) ->
+                                        val isSelected = deliveryHour == hour && deliveryMinute == minute
                                         Surface(
                                             shape = RoundedCornerShape(12.dp),
                                             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
@@ -287,7 +293,9 @@ fun AdaptiveRemindersSettingsScreen(
                                                 .weight(1f)
                                                 .clickable {
                                                     deliveryHour = hour
+                                                    deliveryMinute = minute
                                                     store.deliveryHour = hour
+                                                    store.deliveryMinute = minute
                                                     AdaptiveReminderWorker.schedule(context)
                                                 }
                                                 .bounceClick()
@@ -301,6 +309,72 @@ fun AdaptiveRemindersSettingsScreen(
                                                 )
                                             }
                                         }
+                                    }
+                                }
+
+                                val formattedCustomTime = remember(deliveryHour, deliveryMinute) {
+                                    val cal = Calendar.getInstance().apply {
+                                        set(Calendar.HOUR_OF_DAY, deliveryHour)
+                                        set(Calendar.MINUTE, deliveryMinute)
+                                    }
+                                    SimpleDateFormat("h:mm a", Locale.getDefault()).format(cal.time)
+                                }
+
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (!isPresetSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface,
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (!isPresetSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            android.app.TimePickerDialog(
+                                                context,
+                                                { _, pickedHour, pickedMinute ->
+                                                    deliveryHour = pickedHour
+                                                    deliveryMinute = pickedMinute
+                                                    store.deliveryHour = pickedHour
+                                                    store.deliveryMinute = pickedMinute
+                                                    AdaptiveReminderWorker.schedule(context)
+                                                },
+                                                deliveryHour,
+                                                deliveryMinute,
+                                                false
+                                            ).show()
+                                        }
+                                        .bounceClick()
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_custom_edit),
+                                                contentDescription = null,
+                                                tint = if (!isPresetSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Text(
+                                                text = if (!isPresetSelected) "Custom Delivery Time: $formattedCustomTime" else "Choose Custom Time...",
+                                                fontSize = 12.sp,
+                                                fontWeight = if (!isPresetSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (!isPresetSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+
+                                        Text(
+                                            text = if (!isPresetSelected) "Change" else "Pick",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
                                     }
                                 }
                             }

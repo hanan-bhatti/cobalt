@@ -82,10 +82,11 @@ class AdaptiveReminderWorker(
             if (!store.isRemindersEnabled) return
 
             val targetHour = store.deliveryHour
+            val targetMinute = store.deliveryMinute
             val now = Calendar.getInstance()
             val target = Calendar.getInstance().apply {
                 set(Calendar.HOUR_OF_DAY, targetHour)
-                set(Calendar.MINUTE, 0)
+                set(Calendar.MINUTE, targetMinute)
                 set(Calendar.SECOND, 0)
                 set(Calendar.MILLISECOND, 0)
             }
