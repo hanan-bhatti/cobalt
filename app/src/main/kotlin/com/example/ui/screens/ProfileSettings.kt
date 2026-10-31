@@ -649,9 +649,9 @@ fun SettingsCategoryDetailScreen(
                 SettingsCategory.ORGANIZATION -> {
                     item {
                         SettingsSubsectionHeader(
-                            title = "Smart Organization & Folder Ranking",
-                            description = "Configure intelligent on-device folder ranking and suggestions.",
-                            tooltipText = "When enabled, folders in capture rows and move dialogs are dynamically sorted based on your recent activity and item content."
+                            title = "Smart Folder Ranking",
+                            description = "Prioritize frequently used folders in capture rows and dialogs.",
+                            tooltipText = "When enabled, folders in capture rows and move dialogs are dynamically sorted based on your recent activity, folder assignment frequency, and content affinity."
                         )
 
                         val isFolderRankingEnabled by viewModel.settingsRepository.isFolderRankingEnabled.collectAsState()
@@ -674,11 +674,17 @@ fun SettingsCategoryDetailScreen(
                         )
 
                         val profileArchiveStyle by viewModel.settingsRepository.profileArchiveStyle.collectAsState()
+                        val archiveStyleOptions = mapOf(
+                            "pills" to "Category Piles Grid",
+                            "heatmap" to "GitHub-Style Activity Heatmap"
+                        )
                         ExpressiveSettingsGroup {
-                            ExpressiveSettingsNavigationItem(
-                                title = if (profileArchiveStyle == "heatmap") "GitHub-Style Heatmap" else "Category Piles Grid",
-                                subtitle = "Tap to open full display and ranking configuration",
-                                onClick = onNavigateToArchiveSettings,
+                            ExpressiveSettingsSelectorItem(
+                                title = "Archive Display Style",
+                                description = if (profileArchiveStyle == "heatmap") "GitHub-Style Activity Heatmap" else "Category Piles Grid",
+                                options = archiveStyleOptions,
+                                selectedKey = profileArchiveStyle,
+                                onSelectionChanged = { viewModel.settingsRepository.setProfileArchiveStyle(it) },
                                 shape = RoundedCornerShape(24.dp)
                             )
                         }
@@ -692,14 +698,14 @@ fun SettingsCategoryDetailScreen(
                     item {
                         SettingsSubsectionHeader(
                             title = "Adaptive Knowledge Reminders",
-                            description = "Configure on-device self-learning nudges for forgotten notes and captures.",
+                            description = "Configure review schedule for forgotten notes and captures.",
                             tooltipText = "Cobalt analyzes inactive notes and active folder synergy to suggest items before you forget them."
                         )
 
                         ExpressiveSettingsGroup {
                             ExpressiveSettingsNavigationItem(
-                                title = "Adaptive Reminder Preferences",
-                                subtitle = "Delivery time, sensitivity & on-device learning metrics",
+                                title = "Adaptive Reminder Schedule",
+                                subtitle = "Delivery time, sensitivity & notification preview",
                                 onClick = onNavigateToRemindersSettings,
                                 shape = RoundedCornerShape(24.dp)
                             )
