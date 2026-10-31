@@ -66,7 +66,13 @@ data class SavedItem(
     val productionCompanies: List<String> = emptyList(),
     val isArchived: Boolean = false,
     val updatedAt: Long = timestamp,
-    val isDeleted: Boolean = false
+    val isDeleted: Boolean = false,
+    val traktId: Long? = null,
+    val tmdbId: Int? = null,
+    val imdbId: String? = null,
+    val userRating: Int? = null,
+    val lastWatchedAt: Long? = null,
+    val showProgress: TvShowProgress? = null
 )
 
 fun SavedItem.getBestImagePath(): String? {

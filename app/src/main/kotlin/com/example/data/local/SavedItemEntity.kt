@@ -28,7 +28,9 @@ import androidx.room.PrimaryKey
         Index(value = ["timestamp"]),
         Index(value = ["type"]),
         Index(value = ["isArchived"]),
-        Index(value = ["updatedAt"])
+        Index(value = ["updatedAt"]),
+        Index(value = ["traktId"]),
+        Index(value = ["tmdbId"])
     ]
 )
 data class SavedItemEntity(
@@ -65,7 +67,13 @@ data class SavedItemEntity(
     val productionCompaniesJson: String = "[]",
     val isArchived: Boolean = false,
     val updatedAt: Long = timestamp,
-    val isDeleted: Boolean = false
+    val isDeleted: Boolean = false,
+    val traktId: Long? = null,
+    val tmdbId: Int? = null,
+    val imdbId: String? = null,
+    val userRating: Int? = null,
+    val lastWatchedAt: Long? = null,
+    val showProgressJson: String? = null
 ) {
     fun toDomainModel(): com.example.data.model.SavedItem {
         val foldersList = try {
@@ -139,7 +147,62 @@ data class SavedItemEntity(
             } catch (_: Exception) { emptyList() },
             isArchived = isArchived,
             updatedAt = updatedAt,
-            isDeleted = isDeleted
+            isDeleted = isDeleted,
+            traktId = traktId,
+            tmdbId = tmdbId,
+            imdbId = imdbId,
+            userRating = userRating,
+            lastWatchedAt = lastWatchedAt,
+            showProgress = com.example.data.model.TvShowProgress.fromJson(showProgressJson)
         )
     }
+
+    companion object {
+        fun fromDomainModel(item: com.example.data.model.SavedItem): SavedItemEntity {
+            return SavedItemEntity(
+                id = item.id,
+                type = item.type.name,
+                title = item.title,
+                content = item.content,
+                timestamp = item.timestamp,
+                foldersJson = "[${item.folders.joinToString(",") { "\"$it\"" }}]",
+                extractedText = item.extractedText,
+                thumbnailPath = item.thumbnailPath,
+                orderIndex = item.orderIndex,
+                isSynced = item.isSynced,
+                linkTitle = item.linkTitle,
+                linkDescription = item.linkDescription,
+                linkImage = item.linkImage,
+                isBackedUp = item.isBackedUp,
+                sizeBytes = item.sizeBytes,
+                isPendingBackup = item.isPendingBackup,
+                isUnavailable = item.isUnavailable,
+                mediaType = item.mediaType,
+                watchStatus = item.watchStatus,
+                genresJson = "[${item.genres.joinToString(",") { "\"$it\"" }}]",
+                watchProvidersJson = "[${item.watchProviders.joinToString(",") { "\"$it\"" }}]",
+                trailerUrl = item.trailerUrl,
+                backdropUrl = item.backdropUrl,
+                releaseYear = item.releaseYear,
+                rating = item.rating,
+                runtime = item.runtime,
+                tagline = item.tagline,
+                budget = item.budget,
+                revenue = item.revenue,
+                status = item.status,
+                productionCompaniesJson = "[${item.productionCompanies.joinToString(",") { "\"$it\"" }}]",
+                isArchived = item.isArchived,
+                updatedAt = item.updatedAt,
+                isDeleted = item.isDeleted,
+                traktId = item.traktId,
+                tmdbId = item.tmdbId,
+                imdbId = item.imdbId,
+                userRating = item.userRating,
+                lastWatchedAt = item.lastWatchedAt,
+                showProgressJson = item.showProgress?.toJson()
+            )
+        }
+    }
 }
+
+fun com.example.data.model.SavedItem.toEntity(): SavedItemEntity = SavedItemEntity.fromDomainModel(this)

@@ -40,4 +40,13 @@ interface SavedItemDao {
 
     @Query("SELECT * FROM saved_items ORDER BY orderIndex DESC, timestamp DESC")
     suspend fun getAllItems(): List<SavedItemEntity>
+
+    @Query("SELECT * FROM saved_items WHERE traktId = :traktId LIMIT 1")
+    suspend fun getItemByTraktId(traktId: Long): SavedItemEntity?
+
+    @Query("SELECT * FROM saved_items WHERE tmdbId = :tmdbId LIMIT 1")
+    suspend fun getItemByTmdbId(tmdbId: Int): SavedItemEntity?
+
+    @Query("SELECT * FROM saved_items WHERE traktId IS NOT NULL AND isDeleted = 0")
+    suspend fun getAllTraktItems(): List<SavedItemEntity>
 }

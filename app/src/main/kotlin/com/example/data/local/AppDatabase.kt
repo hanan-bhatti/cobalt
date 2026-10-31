@@ -25,7 +25,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [SavedItemEntity::class, CustomFolderEntity::class], version = 7, exportSchema = false)
+@Database(entities = [SavedItemEntity::class, CustomFolderEntity::class], version = 8, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun savedItemDao(): SavedItemDao
     abstract fun customFolderDao(): CustomFolderDao
@@ -43,6 +43,19 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `saved_items` ADD COLUMN `traktId` INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE `saved_items` ADD COLUMN `tmdbId` INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE `saved_items` ADD COLUMN `imdbId` TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE `saved_items` ADD COLUMN `userRating` INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE `saved_items` ADD COLUMN `lastWatchedAt` INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE `saved_items` ADD COLUMN `showProgressJson` TEXT DEFAULT NULL")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_saved_items_traktId` ON `saved_items` (`traktId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_saved_items_tmdbId` ON `saved_items` (`tmdbId`)")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -50,7 +63,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "cobalt_db"
                 )
-                .addMigrations(MIGRATION_6_7)
+                .addMigrations(MIGRATION_6_7, MIGRATION_7_8)
                 .fallbackToDestructiveMigration(true)
                 .build()
                 INSTANCE = instance
