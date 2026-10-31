@@ -66,4 +66,80 @@ data class SavedItemEntity(
     val isArchived: Boolean = false,
     val updatedAt: Long = timestamp,
     val isDeleted: Boolean = false
-)
+) {
+    fun toDomainModel(): com.example.data.model.SavedItem {
+        val foldersList = try {
+            foldersJson.removeSurrounding("[", "]")
+                .split(",")
+                .map { it.trim().removeSurrounding("\"") }
+                .filter { it.isNotEmpty() }
+        } catch (_: Exception) {
+            emptyList()
+        }
+        val genresList = try {
+            genresJson.removeSurrounding("[", "]")
+                .split(",")
+                .map { it.trim().removeSurrounding("\"") }
+                .filter { it.isNotEmpty() }
+        } catch (_: Exception) {
+            emptyList()
+        }
+        val watchProvidersList = try {
+            watchProvidersJson.removeSurrounding("[", "]")
+                .split(",")
+                .map { it.trim().removeSurrounding("\"") }
+                .filter { it.isNotEmpty() }
+        } catch (_: Exception) {
+            emptyList()
+        }
+        val itemType = try {
+            com.example.data.model.SavedItemType.valueOf(type)
+        } catch (_: Exception) {
+            com.example.data.model.SavedItemType.TEXT
+        }
+        val isMedia = itemType == com.example.data.model.SavedItemType.IMAGE ||
+                itemType == com.example.data.model.SavedItemType.VIDEO ||
+                itemType == com.example.data.model.SavedItemType.AUDIO
+        return com.example.data.model.SavedItem(
+            id = id,
+            type = itemType,
+            title = title,
+            content = content,
+            timestamp = timestamp,
+            folders = foldersList,
+            extractedText = extractedText,
+            thumbnailPath = thumbnailPath,
+            orderIndex = orderIndex,
+            isSynced = isSynced,
+            linkTitle = linkTitle,
+            linkDescription = linkDescription,
+            linkImage = linkImage,
+            isBackedUp = isBackedUp,
+            sizeBytes = sizeBytes,
+            isPendingBackup = isPendingBackup,
+            isUnavailable = if (isMedia) isUnavailable else false,
+            mediaType = mediaType,
+            watchStatus = watchStatus,
+            genres = genresList,
+            watchProviders = watchProvidersList,
+            trailerUrl = trailerUrl,
+            backdropUrl = backdropUrl,
+            releaseYear = releaseYear,
+            rating = rating,
+            runtime = runtime,
+            tagline = tagline,
+            budget = budget,
+            revenue = revenue,
+            status = status,
+            productionCompanies = try {
+                productionCompaniesJson.removeSurrounding("[", "]")
+                    .split(",")
+                    .map { it.trim().removeSurrounding("\"") }
+                    .filter { it.isNotEmpty() }
+            } catch (_: Exception) { emptyList() },
+            isArchived = isArchived,
+            updatedAt = updatedAt,
+            isDeleted = isDeleted
+        )
+    }
+}

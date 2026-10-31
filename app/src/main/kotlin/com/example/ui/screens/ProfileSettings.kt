@@ -145,6 +145,11 @@ enum class SettingsCategory(
         subtitle = "Folder ranking, adaptive suggestions, and activity heatmap",
         iconRes = R.drawable.ic_custom_organization
     ),
+    REMINDERS(
+        title = "Adaptive Reminders",
+        subtitle = "Self-learning resurfacing for neglected notes and folders",
+        iconRes = R.drawable.ic_custom_reminder
+    ),
     INTELLIGENCE(
         title = "Intelligence & Gemini AI",
         subtitle = "API key, vision OCR models, and detection sensitivity",
@@ -175,6 +180,7 @@ fun getSettingsCategoryColors(category: SettingsCategory, isDark: Boolean): Pair
         when (category) {
             SettingsCategory.APPEARANCE -> Color(0xFF532342) to Color(0xFFFFD8EC)
             SettingsCategory.ORGANIZATION -> Color(0xFF382352) to Color(0xFFEADBFF)
+            SettingsCategory.REMINDERS -> Color(0xFF4A3400) to Color(0xFFFFDF9E)
             SettingsCategory.INTELLIGENCE -> Color(0xFF004F58) to Color(0xFF88FAFF)
             SettingsCategory.FLOATING_DOCK -> Color(0xFF5E3000) to Color(0xFFFFDCC1)
             SettingsCategory.WIDGETS -> Color(0xFF1E4624) to Color(0xFFB8F5C2)
@@ -184,6 +190,7 @@ fun getSettingsCategoryColors(category: SettingsCategory, isDark: Boolean): Pair
         when (category) {
             SettingsCategory.APPEARANCE -> Color(0xFFFFD8EC) to Color(0xFF631B4B)
             SettingsCategory.ORGANIZATION -> Color(0xFFEADBFF) to Color(0xFF4A2574)
+            SettingsCategory.REMINDERS -> Color(0xFFFFDF9E) to Color(0xFF6B4B00)
             SettingsCategory.INTELLIGENCE -> Color(0xFFCCE8EA) to Color(0xFF004F58)
             SettingsCategory.FLOATING_DOCK -> Color(0xFFFFDCC1) to Color(0xFF8B4A00)
             SettingsCategory.WIDGETS -> Color(0xFFD4F8DC) to Color(0xFF14532D)
@@ -281,7 +288,8 @@ fun SettingsScreen(
     onNavigateToWidgetSettings: (() -> Unit)? = null,
     onNavigateToEdgeAnimSettings: (() -> Unit)? = null,
     onNavigateToGeminiUsage: (() -> Unit)? = null,
-    onNavigateToArchiveSettings: (() -> Unit)? = null
+    onNavigateToArchiveSettings: (() -> Unit)? = null,
+    onNavigateToRemindersSettings: (() -> Unit)? = null
 ) {
     var selectedCategory by remember { mutableStateOf<SettingsCategory?>(null) }
     var showEdgePanelSettings by remember { mutableStateOf(false) }
@@ -378,6 +386,8 @@ fun SettingsScreen(
                             onClick = {
                                 if (category == SettingsCategory.ORGANIZATION && onNavigateToArchiveSettings != null) {
                                     onNavigateToArchiveSettings()
+                                } else if (category == SettingsCategory.REMINDERS && onNavigateToRemindersSettings != null) {
+                                    onNavigateToRemindersSettings()
                                 } else if (onNavigateToCategory != null) {
                                     onNavigateToCategory(category)
                                 } else {
@@ -417,7 +427,8 @@ fun SettingsCategoryDetailScreen(
     onNavigateToWidgetSettings: () -> Unit,
     onNavigateToEdgeAnimSettings: () -> Unit,
     onNavigateToGeminiUsage: () -> Unit = {},
-    onNavigateToArchiveSettings: () -> Unit = {}
+    onNavigateToArchiveSettings: () -> Unit = {},
+    onNavigateToRemindersSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val lazyListState = rememberLazyListState()
@@ -668,6 +679,28 @@ fun SettingsCategoryDetailScreen(
                                 title = if (profileArchiveStyle == "heatmap") "GitHub-Style Heatmap" else "Category Piles Grid",
                                 subtitle = "Tap to open full display and ranking configuration",
                                 onClick = onNavigateToArchiveSettings,
+                                shape = RoundedCornerShape(24.dp)
+                            )
+                        }
+                    }
+                }
+
+                // ==========================================
+                // SUBPAGE: ADAPTIVE REMINDERS
+                // ==========================================
+                SettingsCategory.REMINDERS -> {
+                    item {
+                        SettingsSubsectionHeader(
+                            title = "Adaptive Knowledge Reminders",
+                            description = "Configure on-device self-learning nudges for forgotten notes and captures.",
+                            tooltipText = "Cobalt analyzes inactive notes and active folder synergy to suggest items before you forget them."
+                        )
+
+                        ExpressiveSettingsGroup {
+                            ExpressiveSettingsNavigationItem(
+                                title = "Adaptive Reminder Preferences",
+                                subtitle = "Delivery time, sensitivity & on-device learning metrics",
+                                onClick = onNavigateToRemindersSettings,
                                 shape = RoundedCornerShape(24.dp)
                             )
                         }

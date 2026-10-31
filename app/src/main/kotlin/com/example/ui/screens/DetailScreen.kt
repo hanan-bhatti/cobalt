@@ -120,6 +120,7 @@ fun DetailScreen(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     itemId: String? = null
 ) {
+    val context = LocalContext.current
     val activeItem by viewModel.activeDetailItem.collectAsState()
     val allItems by viewModel.allItems.collectAsState()
     val item = remember(activeItem, allItems, itemId) {
@@ -135,6 +136,12 @@ fun DetailScreen(
             onClose()
         }
         return
+    }
+
+    LaunchedEffect(item.id) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.example.util.AdaptiveReminderStore(context).recordItemOpened(item)
+        }
     }
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -170,7 +177,6 @@ fun DetailScreen(
     }
 
     val scrollState = rememberScrollState()
-    val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val coroutineScope = rememberCoroutineScope()
     val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()

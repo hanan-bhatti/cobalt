@@ -480,6 +480,8 @@ class MainActivity : ComponentActivity() {
                                                 onNavigateToCategory = { category ->
                                                     if (category == com.example.ui.screens.SettingsCategory.ORGANIZATION) {
                                                         navController.navigate("archive_organization_settings")
+                                                    } else if (category == com.example.ui.screens.SettingsCategory.REMINDERS) {
+                                                        navController.navigate("adaptive_reminders_settings")
                                                     } else {
                                                         navController.navigate("settings_category/${category.name}")
                                                     }
@@ -488,7 +490,8 @@ class MainActivity : ComponentActivity() {
                                                 onNavigateToWidgetSettings = { navController.navigate("widget_settings") },
                                                 onNavigateToEdgeAnimSettings = { navController.navigate("edge_anim_settings") },
                                                 onNavigateToGeminiUsage = { navController.navigate("gemini_usage") },
-                                                onNavigateToArchiveSettings = { navController.navigate("archive_organization_settings") }
+                                                onNavigateToArchiveSettings = { navController.navigate("archive_organization_settings") },
+                                                onNavigateToRemindersSettings = { navController.navigate("adaptive_reminders_settings") }
                                             )
                                         }
                                     }
@@ -509,7 +512,8 @@ class MainActivity : ComponentActivity() {
                                                 onNavigateToWidgetSettings = { navController.navigate("widget_settings") },
                                                 onNavigateToEdgeAnimSettings = { navController.navigate("edge_anim_settings") },
                                                 onNavigateToGeminiUsage = { navController.navigate("gemini_usage") },
-                                                onNavigateToArchiveSettings = { navController.navigate("archive_organization_settings") }
+                                                onNavigateToArchiveSettings = { navController.navigate("archive_organization_settings") },
+                                                onNavigateToRemindersSettings = { navController.navigate("adaptive_reminders_settings") }
                                             )
                                         }
                                     }
@@ -524,6 +528,14 @@ class MainActivity : ComponentActivity() {
                                     composable("archive_organization_settings") {
                                         ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
                                             com.example.ui.screens.ArchiveOrganizationSettingsScreen(
+                                                viewModel = viewModel,
+                                                onNavigateBack = { navController.popBackStack() }
+                                            )
+                                        }
+                                    }
+                                    composable("adaptive_reminders_settings") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.AdaptiveRemindersSettingsScreen(
                                                 viewModel = viewModel,
                                                 onNavigateBack = { navController.popBackStack() }
                                             )
@@ -835,6 +847,16 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
+
+        val reminderItemId = intent.getStringExtra(com.example.util.AdaptiveReminderNotificationHelper.EXTRA_REMINDER_ITEM_ID)
+        if (reminderItemId != null) {
+            val fromReminder = intent.getBooleanExtra(com.example.util.AdaptiveReminderNotificationHelper.EXTRA_FROM_REMINDER, false)
+            if (fromReminder) {
+                com.example.util.AdaptiveReminderStore(applicationContext).recordNotificationOpened(reminderItemId)
+            }
+            viewModel.openItemById(reminderItemId)
+            pendingNavDestination.value = "detail/$reminderItemId"
+        }
 
         val openItemId = intent.getStringExtra("OPEN_ITEM_ID")
         if (openItemId != null) {
