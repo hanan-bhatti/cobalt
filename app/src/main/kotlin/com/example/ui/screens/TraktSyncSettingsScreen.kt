@@ -62,7 +62,7 @@ import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import com.example.R
 import com.example.data.remote.trakt.TraktAuthManager
-import com.example.data.remote.trakt.TraktDeviceCodeResponse
+import com.example.data.remote.trakt.TraktDeviceAuthState
 import com.example.data.remote.trakt.TraktSyncEngine
 import com.example.data.remote.trakt.TraktSyncStatus
 import com.example.ui.components.CollapsibleCommonTopBar
@@ -76,8 +76,6 @@ import com.example.ui.components.rememberCollapsibleTopBarState
 import com.example.ui.viewmodel.CobaltViewModel
 import com.example.util.CobaltCustomTabsLauncher
 import com.example.util.TraktSyncWorker
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,22 +86,16 @@ fun TraktSyncSettingsScreen(
 ) {
     val context = LocalContext.current
     val authManager = remember { TraktAuthManager.getInstance(context) }
-    val coroutineScope = rememberCoroutineScope()
 
     val isConnected by authManager.isConnected.collectAsState()
     val currentUser by authManager.currentUser.collectAsState()
     val syncStatus by TraktSyncEngine.syncStatus.collectAsState()
+    val deviceAuthState by authManager.deviceAuthState.collectAsState()
 
     var isSyncWatched by remember { mutableStateOf(authManager.isSyncWatchedEnabled()) }
     var isSyncTv by remember { mutableStateOf(authManager.isSyncTvProgressEnabled()) }
     var isSyncWatchlist by remember { mutableStateOf(authManager.isSyncWatchlistEnabled()) }
     var isSyncRatings by remember { mutableStateOf(authManager.isSyncRatingsEnabled()) }
-
-    var showDeviceAuthDialog by remember { mutableStateOf(false) }
-    var deviceCodeResponse by remember { mutableStateOf<TraktDeviceCodeResponse?>(null) }
-    var authPollingJob by remember { mutableStateOf<Job?>(null) }
-    var authStatusMessage by remember { mutableStateOf("Generating secure activation code...") }
-    var isRequestingCode by remember { mutableStateOf(false) }
 
     var showAdvancedDialog by remember { mutableStateOf(false) }
     var showDisconnectDialog by remember { mutableStateOf(false) }
@@ -138,42 +130,6 @@ fun TraktSyncSettingsScreen(
         }
         TraktSyncWorker.enqueueOneTimeSync(context)
         Toast.makeText(context, "Trakt background sync started.", Toast.LENGTH_SHORT).show()
-    }
-
-    fun startDeviceCodeFlow() {
-        showDeviceAuthDialog = true
-        isRequestingCode = true
-        authStatusMessage = "Requesting code from Trakt..."
-        deviceCodeResponse = null
-
-        authPollingJob?.cancel()
-        authPollingJob = coroutineScope.launch {
-            val codeResult = authManager.requestDeviceCode()
-            isRequestingCode = false
-            if (codeResult.isSuccess) {
-                val response = codeResult.getOrThrow()
-                deviceCodeResponse = response
-                authStatusMessage = "Enter the code at trakt.tv/activate to approve."
-
-                // Start polling
-                val pollResult = authManager.pollForToken(
-                    deviceCode = response.device_code,
-                    intervalSeconds = response.interval,
-                    expiresInSeconds = response.expires_in,
-                    onProgress = { msg -> authStatusMessage = msg }
-                )
-
-                if (pollResult.isSuccess) {
-                    showDeviceAuthDialog = false
-                    Toast.makeText(context, "Connected to Trakt!", Toast.LENGTH_SHORT).show()
-                    startSyncWithBackgroundPermission()
-                } else {
-                    authStatusMessage = pollResult.exceptionOrNull()?.message ?: "Authorization failed."
-                }
-            } else {
-                authStatusMessage = codeResult.exceptionOrNull()?.message ?: "Failed to connect to Trakt."
-            }
-        }
     }
 
     Box(
@@ -254,7 +210,7 @@ fun TraktSyncSettingsScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
-                                            text = currentUser?.name ?: currentUser?.username ?: "Trakt User",
+                                            text = currentUser?.name?.takeIf { it.isNotBlank() } ?: currentUser?.username ?: "Trakt User",
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurface
@@ -378,7 +334,7 @@ fun TraktSyncSettingsScreen(
                             }
 
                             Button(
-                                onClick = { startDeviceCodeFlow() },
+                                onClick = { authManager.startDeviceAuth() },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Color(0xFFED1C24)
                                 ),
@@ -493,11 +449,11 @@ fun TraktSyncSettingsScreen(
     // ──────────────────────────────────────────────
     // DEVICE CODE ACTIVATION DIALOG
     // ──────────────────────────────────────────────
-    if (showDeviceAuthDialog) {
+    val authState = deviceAuthState
+    if (authState !is TraktDeviceAuthState.Idle) {
         Dialog(
             onDismissRequest = {
-                authPollingJob?.cancel()
-                showDeviceAuthDialog = false
+                authManager.cancelDeviceAuth()
             },
             properties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
@@ -537,99 +493,163 @@ fun TraktSyncSettingsScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    Text(
-                        text = "Enter this activation code at trakt.tv/activate to link Cobalt with your account:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
+                    when (authState) {
+                        is TraktDeviceAuthState.RequestingCode -> {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            CircularProgressIndicator(
+                                color = Color(0xFFED1C24),
+                                modifier = Modifier.size(40.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Requesting secure code from Trakt...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            TextButton(onClick = { authManager.cancelDeviceAuth() }) {
+                                Text("Cancel", color = MaterialTheme.colorScheme.outline)
+                            }
+                        }
 
-                    val code = deviceCodeResponse?.user_code
-                    if (isRequestingCode || code == null) {
-                        CircularProgressIndicator(
-                            color = Color(0xFFED1C24),
-                            modifier = Modifier.size(40.dp)
-                        )
-                    } else {
-                        // Display Big Activation Code
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            border = BorderStroke(1.dp, Color(0xFFED1C24).copy(alpha = 0.4f)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 16.dp, horizontal = 20.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                        is TraktDeviceAuthState.PendingApproval -> {
+                            Text(
+                                text = "Enter this activation code at the link below to connect Cobalt:",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+
+                            // Display Big Activation Code
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                border = BorderStroke(1.dp, Color(0xFFED1C24).copy(alpha = 0.4f)),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 16.dp, horizontal = 20.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = authState.userCode,
+                                        fontSize = 32.sp,
+                                        fontWeight = FontWeight.Black,
+                                        fontFamily = FontFamily.Monospace,
+                                        letterSpacing = 4.sp,
+                                        color = Color(0xFFED1C24)
+                                    )
+                                }
+                            }
+
+                            // Copy Code & Open Browser Buttons
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                FilledTonalButton(
+                                    onClick = {
+                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        clipboard.setPrimaryClip(ClipData.newPlainText("Trakt Code", authState.userCode))
+                                        Toast.makeText(context, "Code copied to clipboard", Toast.LENGTH_SHORT).show()
+                                    },
+                                    shape = RoundedCornerShape(14.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Copy Code", fontWeight = FontWeight.SemiBold)
+                                }
+
+                                Button(
+                                    onClick = {
+                                        CobaltCustomTabsLauncher.launch(context, authState.verificationUrl)
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFED1C24)),
+                                    shape = RoundedCornerShape(14.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Open Trakt", fontWeight = FontWeight.Bold, color = Color.White)
+                                }
+                            }
+
+                            // Polling Status Message
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(14.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                                 Text(
-                                    text = code,
-                                    fontSize = 32.sp,
-                                    fontWeight = FontWeight.Black,
-                                    fontFamily = FontFamily.Monospace,
-                                    letterSpacing = 4.sp,
-                                    color = Color(0xFFED1C24)
+                                    text = authState.statusMessage,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                        }
 
-                        // Copy Code & Open Browser Buttons
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            FilledTonalButton(
-                                onClick = {
-                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    clipboard.setPrimaryClip(ClipData.newPlainText("Trakt Code", code))
-                                    Toast.makeText(context, "Code copied to clipboard", Toast.LENGTH_SHORT).show()
-                                },
-                                shape = RoundedCornerShape(14.dp),
-                                modifier = Modifier.weight(1f)
+                            TextButton(
+                                onClick = { authManager.cancelDeviceAuth() },
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("Copy Code", fontWeight = FontWeight.SemiBold)
-                            }
-
-                            Button(
-                                onClick = {
-                                    CobaltCustomTabsLauncher.launch(context, "https://trakt.tv/activate")
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFED1C24)),
-                                shape = RoundedCornerShape(14.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Open Trakt", fontWeight = FontWeight.Bold, color = Color.White)
+                                Text("Cancel", color = MaterialTheme.colorScheme.outline)
                             }
                         }
-                    }
 
-                    // Polling Status Message
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(14.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = authStatusMessage,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                        is TraktDeviceAuthState.Success -> {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = null,
+                                tint = Color(0xFF10B981),
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Text(
+                                text = "Successfully Connected!",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF10B981)
+                            )
+                            Text(
+                                text = "Logged in as @${authState.user?.username ?: "user"}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
 
-                    TextButton(
-                        onClick = {
-                            authPollingJob?.cancel()
-                            showDeviceAuthDialog = false
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Cancel", color = MaterialTheme.colorScheme.outline)
+                        is TraktDeviceAuthState.Error -> {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = authState.message,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                TextButton(
+                                    onClick = { authManager.cancelDeviceAuth() },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Dismiss", color = MaterialTheme.colorScheme.outline)
+                                }
+                                Button(
+                                    onClick = { authManager.startDeviceAuth() },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFED1C24)),
+                                    shape = RoundedCornerShape(14.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Try Again", color = Color.White)
+                                }
+                            }
+                        }
+
+                        is TraktDeviceAuthState.Idle -> {}
                     }
                 }
             }

@@ -20,12 +20,29 @@ package com.example.data.remote.trakt
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+sealed class TraktDeviceAuthState {
+    object Idle : TraktDeviceAuthState()
+    object RequestingCode : TraktDeviceAuthState()
+    data class PendingApproval(
+        val userCode: String,
+        val verificationUrl: String,
+        val deviceCode: String,
+        val statusMessage: String = "Waiting for approval at trakt.tv/activate..."
+    ) : TraktDeviceAuthState()
+    data class Success(val user: TraktUser?) : TraktDeviceAuthState()
+    data class Error(val message: String) : TraktDeviceAuthState()
+}
 
 /**
  * Manages Trakt OAuth2 Device Code authentication, tokens, custom client credentials,
@@ -34,6 +51,8 @@ import kotlinx.coroutines.withContext
 class TraktAuthManager(private val context: Context) {
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val authScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var pollingJob: Job? = null
 
     init {
         TraktClient.tokenProvider = { getAccessToken() }
@@ -46,6 +65,9 @@ class TraktAuthManager(private val context: Context) {
 
     private val _currentUser = MutableStateFlow(loadCachedUser())
     val currentUser: StateFlow<TraktUser?> = _currentUser.asStateFlow()
+
+    private val _deviceAuthState = MutableStateFlow<TraktDeviceAuthState>(TraktDeviceAuthState.Idle)
+    val deviceAuthState: StateFlow<TraktDeviceAuthState> = _deviceAuthState.asStateFlow()
 
     fun getAccessToken(): String? = prefs.getString(KEY_ACCESS_TOKEN, null)
     fun getRefreshToken(): String? = prefs.getString(KEY_REFRESH_TOKEN, null)
@@ -144,77 +166,98 @@ class TraktAuthManager(private val context: Context) {
     }
 
     /**
-     * Step 1 of Device Code Flow: Requests a unique verification code from Trakt.
+     * Starts the asynchronous Device Code authorization process and polls in a persistent supervisor scope.
+     * Survives activity backgrounding, custom tabs switching, and configuration changes.
      */
-    suspend fun requestDeviceCode(): Result<TraktDeviceCodeResponse> = withContext(Dispatchers.IO) {
-        try {
-            val response = TraktClient.apiService.getDeviceCode(
-                TraktDeviceCodeRequest(client_id = getClientId())
-            )
-            Result.success(response)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to get device code: ${e.message}", e)
-            Result.failure(e)
+    fun startDeviceAuth() {
+        pollingJob?.cancel()
+        _deviceAuthState.value = TraktDeviceAuthState.RequestingCode
+
+        pollingJob = authScope.launch {
+            try {
+                val codeResponse = TraktClient.apiService.getDeviceCode(
+                    TraktDeviceCodeRequest(client_id = getClientId())
+                )
+
+                _deviceAuthState.value = TraktDeviceAuthState.PendingApproval(
+                    userCode = codeResponse.user_code,
+                    verificationUrl = codeResponse.verification_url,
+                    deviceCode = codeResponse.device_code,
+                    statusMessage = "Enter the code at ${codeResponse.verification_url} to approve."
+                )
+
+                val startTime = System.currentTimeMillis()
+                val timeoutMs = codeResponse.expires_in * 1000L
+                var intervalMs = (codeResponse.interval.coerceAtLeast(5)) * 1000L
+
+                while (System.currentTimeMillis() - startTime < timeoutMs) {
+                    delay(intervalMs)
+                    try {
+                        val response = TraktClient.apiService.getDeviceToken(
+                            TraktDeviceTokenRequest(
+                                code = codeResponse.device_code,
+                                client_id = getClientId()
+                            )
+                        )
+
+                        when (response.code()) {
+                            200 -> {
+                                val tokenResponse = response.body()
+                                if (tokenResponse != null) {
+                                    saveTokens(tokenResponse)
+                                    val userResult = fetchAndSaveUserProfile()
+                                    val user = userResult.getOrNull() ?: _currentUser.value
+                                    _deviceAuthState.value = TraktDeviceAuthState.Success(user)
+                                    delay(1500)
+                                    _deviceAuthState.value = TraktDeviceAuthState.Idle
+                                    return@launch
+                                }
+                            }
+                            400 -> {
+                                // Pending approval from user - keep polling
+                                val current = _deviceAuthState.value
+                                if (current is TraktDeviceAuthState.PendingApproval) {
+                                    _deviceAuthState.value = current.copy(
+                                        statusMessage = "Waiting for approval at ${current.verificationUrl}..."
+                                    )
+                                }
+                            }
+                            404, 410 -> {
+                                _deviceAuthState.value = TraktDeviceAuthState.Error("Activation code expired. Please try again.")
+                                return@launch
+                            }
+                            409 -> {
+                                _deviceAuthState.value = TraktDeviceAuthState.Error("Activation code already used. Please request a new code.")
+                                return@launch
+                            }
+                            418, 429 -> {
+                                // Polling too fast - back off
+                                intervalMs += 2000L
+                            }
+                            else -> {
+                                Log.w(TAG, "Unexpected poll status: ${response.code()}")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Device token poll iteration error: ${e.message}")
+                    }
+                }
+
+                _deviceAuthState.value = TraktDeviceAuthState.Error("Verification timed out. Please try again.")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed device authorization flow: ${e.message}", e)
+                _deviceAuthState.value = TraktDeviceAuthState.Error(e.localizedMessage ?: "Failed to connect to Trakt.")
+            }
         }
     }
 
     /**
-     * Step 2 of Device Code Flow: Polls Trakt until user approves at trakt.tv/activate.
+     * Cancels active device authentication and resets state to Idle.
      */
-    suspend fun pollForToken(
-        deviceCode: String,
-        intervalSeconds: Int = 5,
-        expiresInSeconds: Int = 600,
-        onProgress: (statusMessage: String) -> Unit = {}
-    ): Result<TraktTokenResponse> = withContext(Dispatchers.IO) {
-        val startTime = System.currentTimeMillis()
-        val timeoutMs = expiresInSeconds * 1000L
-        val pollIntervalMs = (intervalSeconds.coerceAtLeast(5)) * 1000L
-
-        while (System.currentTimeMillis() - startTime < timeoutMs) {
-            delay(pollIntervalMs)
-            try {
-                val response = TraktClient.apiService.getDeviceToken(
-                    TraktDeviceTokenRequest(
-                        client_id = getClientId(),
-                        device_code = deviceCode
-                    )
-                )
-
-                when (response.code()) {
-                    200 -> {
-                        val tokenResponse = response.body()
-                        if (tokenResponse != null) {
-                            saveTokens(tokenResponse)
-                            fetchAndSaveUserProfile()
-                            return@withContext Result.success(tokenResponse)
-                        }
-                    }
-                    400 -> {
-                        // Pending approval from user - continue polling
-                        onProgress("Waiting for approval at trakt.tv/activate...")
-                    }
-                    404 -> {
-                        // Slow down
-                        onProgress("Polling too fast, adjusting interval...")
-                        delay(2000)
-                    }
-                    409 -> {
-                        return@withContext Result.failure(Exception("Activation code expired. Please try again."))
-                    }
-                    410 -> {
-                        return@withContext Result.failure(Exception("Access was denied by the user."))
-                    }
-                    else -> {
-                        Log.w(TAG, "Unexpected poll status: ${response.code()}")
-                    }
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Poll iteration error: ${e.message}")
-            }
-        }
-
-        Result.failure(Exception("Verification timed out. Please try again."))
+    fun cancelDeviceAuth() {
+        pollingJob?.cancel()
+        pollingJob = null
+        _deviceAuthState.value = TraktDeviceAuthState.Idle
     }
 
     fun saveTokens(token: TraktTokenResponse) {

@@ -41,8 +41,8 @@ data class TraktDeviceCodeResponse(
 
 @JsonClass(generateAdapter = true)
 data class TraktDeviceTokenRequest(
-    val client_id: String,
-    val device_code: String
+    val code: String,
+    val client_id: String
 )
 
 @JsonClass(generateAdapter = true)
