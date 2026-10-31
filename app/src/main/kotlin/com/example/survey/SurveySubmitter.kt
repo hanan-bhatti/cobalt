@@ -12,7 +12,8 @@ data class SurveyPayload(
     val favoriteFeatures: List<String>,
     val desiredImprovements: List<String>,
     val npsScore: Int,
-    val customFeedback: String
+    val customFeedback: String,
+    val almostQuitReason: String = ""
 )
 
 interface SurveySubmitter {

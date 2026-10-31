@@ -131,6 +131,7 @@ object FeedbackSubmissionManager {
         desiredImprovements: List<String>,
         npsScore: Int,
         customFeedback: String,
+        almostQuitReason: String = "",
         userEmail: String,
         userId: String,
         deviceModel: String,
@@ -145,6 +146,7 @@ object FeedbackSubmissionManager {
             "favoriteFeatures" to favoriteFeatures,
             "desiredImprovements" to desiredImprovements,
             "npsScore" to npsScore,
+            "almostQuitReason" to almostQuitReason,
             "customFeedback" to customFeedback,
             "userEmail" to userEmail,
             "userId" to userId,
@@ -218,7 +220,7 @@ object FeedbackSubmissionManager {
         }
     }
 
-    private fun copyToClipboard(context: Context, label: String, text: String) {
+    fun copyToClipboard(context: Context, label: String, text: String) {
         try {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
             clipboard?.setPrimaryClip(ClipData.newPlainText(label, text))
@@ -317,12 +319,14 @@ object FeedbackSubmissionManager {
         desiredImprovements: List<String>,
         npsScore: Int,
         customFeedback: String,
+        almostQuitReason: String = "",
         userEmail: String,
         deviceModel: String,
         osVersion: String,
         appVersion: String
     ): String {
         val favs = if (favoriteFeatures.isNotEmpty()) favoriteFeatures.map { "- $it" }.joinToString("\n") else "- _None specified_"
+        val frustration = if (almostQuitReason.isNotBlank()) almostQuitReason else "_No frustration reported_"
         val imps = if (desiredImprovements.isNotEmpty()) desiredImprovements.map { "- $it" }.joinToString("\n") else "- _None specified_"
         val comments = if (customFeedback.isNotBlank()) customFeedback else "_No additional feedback entered_"
 
@@ -335,6 +339,9 @@ object FeedbackSubmissionManager {
             
             ### ❤️ Favorite Features Used Most
             $favs
+            
+            ### ⚠️ What Almost Made You Quit / Biggest Frustration
+            > $frustration
             
             ### 🛠️ Most Desired Improvements / Wishlist
             $imps

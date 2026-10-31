@@ -130,6 +130,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
     fun dismissProactiveSurvey() {
         _showProactiveSurvey.value = false
+        prefs.edit().putLong("survey_last_dismissed", System.currentTimeMillis()).apply()
     }
 
     fun checkProactiveSurvey() {
@@ -137,7 +138,11 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         prefs.edit().putInt("saved_items_count", count).apply()
         
         val surveySubmitted = prefs.getBoolean("survey_submitted", false)
-        if (!surveySubmitted && count == 5) {
+        val lastDismissed = prefs.getLong("survey_last_dismissed", 0L)
+        val now = System.currentTimeMillis()
+        val cooldownPassed = (now - lastDismissed) > (7 * 24 * 60 * 60 * 1000L)
+
+        if (!surveySubmitted && (count == 5 || (count > 5 && count % 15 == 0 && cooldownPassed))) {
             _showProactiveSurvey.value = true
         }
     }
@@ -2557,10 +2562,11 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
     suspend fun submitSurvey(
         context: android.content.Context, reaction: String, favoriteFeatures: List<String>, desiredImprovements: List<String>,
-        npsScore: Int, customFeedback: String, userEmail: String, userId: String, deviceModel: String, osVersion: String, appVersion: String
+        npsScore: Int, customFeedback: String, userEmail: String, userId: String, deviceModel: String, osVersion: String, appVersion: String,
+        almostQuitReason: String = ""
     ): Boolean {
         return com.example.util.FeedbackSubmissionManager.submitSurvey(
-            context, reaction, favoriteFeatures, desiredImprovements, npsScore, customFeedback, userEmail, userId, deviceModel, osVersion, appVersion,
+            context, reaction, favoriteFeatures, desiredImprovements, npsScore, customFeedback, almostQuitReason, userEmail, userId, deviceModel, osVersion, appVersion,
             submitToCloud = { coll, payload -> repository.submitFeedbackToCloud(coll, payload) }
         )
     }
