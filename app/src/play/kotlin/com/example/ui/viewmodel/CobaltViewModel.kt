@@ -1568,11 +1568,16 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     private suspend fun buildItemWithFetchedMetadata(item: SavedItem): SavedItem {
         if (item.type != SavedItemType.LINK) return item
         val metadata = repository.fetchLinkMetadata(item.content)
+        val finalDescription = metadata.description?.takeIf { it.isNotBlank() }
+            ?: item.linkDescription?.takeIf { it.isNotBlank() }
+        val finalTitle = metadata.title?.takeIf { it.isNotBlank() }
+            ?: item.title.takeIf { it.isNotBlank() }
+            ?: "Shared Link"
         return item.copy(
-            linkTitle = metadata.title,
-            linkDescription = metadata.description,
-            linkImage = metadata.imageUrl,
-            title = metadata.title ?: item.title.ifBlank { "Shared Link" }
+            linkTitle = metadata.title ?: item.linkTitle,
+            linkDescription = finalDescription,
+            linkImage = metadata.imageUrl ?: item.linkImage,
+            title = finalTitle
         )
     }
 
@@ -1749,12 +1754,16 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     // 2. Fetch metadata in background and update DB
                     try {
                         val meta = repository.fetchLinkMetadata(reviewItem.url)
-                        if (!meta.title.isNullOrBlank() || !meta.description.isNullOrBlank() || !meta.imageUrl.isNullOrBlank()) {
+                        val realDesc = meta.description?.takeIf { it.isNotBlank() }
+                        val realTitle = meta.title?.takeIf { it.isNotBlank() }
+                        val realImage = meta.imageUrl?.takeIf { it.isNotBlank() }
+
+                        if (realTitle != null || realDesc != null || realImage != null) {
                             val updatedItem = savedItem.copy(
-                                title = meta.title ?: savedItem.title,
-                                linkTitle = meta.title,
-                                linkDescription = reviewItem.description.ifBlank { meta.description },
-                                linkImage = meta.imageUrl
+                                title = realTitle ?: savedItem.title,
+                                linkTitle = realTitle ?: savedItem.linkTitle,
+                                linkDescription = realDesc ?: reviewItem.description.takeIf { it.isNotBlank() },
+                                linkImage = realImage ?: savedItem.linkImage
                             )
                             repository.saveItem(updatedItem, null)
                             withContext(Dispatchers.Main) {
@@ -1798,11 +1807,13 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 val metadata = repository.fetchLinkMetadata(url)
                 val updatedItem = _activeCaptureItem.value ?: return@launch
                 if (updatedItem.content == url) {
+                    val finalDescription = metadata.description?.takeIf { it.isNotBlank() }
+                        ?: updatedItem.linkDescription?.takeIf { it.isNotBlank() }
                     _activeCaptureItem.value = updatedItem.copy(
-                        linkTitle = metadata.title,
-                        linkDescription = metadata.description,
-                        linkImage = metadata.imageUrl,
-                        title = metadata.title ?: updatedItem.title
+                        linkTitle = metadata.title ?: updatedItem.linkTitle,
+                        linkDescription = finalDescription,
+                        linkImage = metadata.imageUrl ?: updatedItem.linkImage,
+                        title = metadata.title?.takeIf { it.isNotBlank() } ?: updatedItem.title
                     )
 
                     if (metadata.title.isNullOrBlank() && metadata.description.isNullOrBlank() && metadata.imageUrl.isNullOrBlank()) {
@@ -2089,6 +2100,11 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 } else {
                     AnalyticsHelper.logNoteCreated(context, finalItem.id, finalItem.type.name)
                 }
+                
+                if (_activeDetailItem.value?.id == finalItem.id || _activeDetailItem.value?.id == editOriginalId) {
+                    _activeDetailItem.value = finalItem
+                }
+                
                 _saveProgress.value = 1.0f
                 kotlinx.coroutines.delay(200) // slight delay to show 100% progress state
                 cancelCapture()

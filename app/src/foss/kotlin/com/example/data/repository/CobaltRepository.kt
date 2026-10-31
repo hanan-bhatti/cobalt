@@ -867,8 +867,11 @@ class CobaltRepository(private val context: Context) {
                 ?: document.select("meta[name=twitter:title]").attr("content").takeIf { !it.isNullOrBlank() }
 
             val description = document.select("meta[property=og:description]").attr("content").takeIf { !it.isNullOrBlank() }
+                ?: document.select("meta[name=og:description]").attr("content").takeIf { !it.isNullOrBlank() }
                 ?: document.select("meta[name=description]").attr("content").takeIf { !it.isNullOrBlank() }
                 ?: document.select("meta[name=twitter:description]").attr("content").takeIf { !it.isNullOrBlank() }
+                ?: document.select("meta[property=twitter:description]").attr("content").takeIf { !it.isNullOrBlank() }
+                ?: document.select("meta[itemprop=description]").attr("content").takeIf { !it.isNullOrBlank() }
 
             val imageUrl = document.select("meta[property=og:image]").firstOrNull()?.absUrl("content")?.takeIf { it.isNotBlank() }
                 ?: document.select("meta[name=twitter:image]").firstOrNull()?.absUrl("content")?.takeIf { it.isNotBlank() }

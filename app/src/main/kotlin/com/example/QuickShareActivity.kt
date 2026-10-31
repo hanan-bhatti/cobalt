@@ -103,12 +103,16 @@ class QuickShareActivity : ComponentActivity() {
                                 val db = AppDatabase.getDatabase(appContext)
                                 val current = db.savedItemDao().getItemById(id)
                                 if (current != null) {
+                                    val realDesc = metadata.description?.takeIf { it.isNotBlank() }
+                                    val realTitle = metadata.title?.takeIf { it.isNotBlank() }
+                                    val realImage = metadata.imageUrl?.takeIf { it.isNotBlank() }
+
                                     db.savedItemDao().insertItem(
                                         current.copy(
-                                            title = metadata.title?.takeIf { it.isNotBlank() } ?: current.title,
-                                            linkTitle = metadata.title,
-                                            linkDescription = metadata.description,
-                                            linkImage = metadata.imageUrl,
+                                            title = realTitle ?: current.title,
+                                            linkTitle = realTitle ?: current.linkTitle,
+                                            linkDescription = realDesc ?: current.linkDescription,
+                                            linkImage = realImage ?: current.linkImage,
                                             updatedAt = System.currentTimeMillis()
                                         )
                                     )

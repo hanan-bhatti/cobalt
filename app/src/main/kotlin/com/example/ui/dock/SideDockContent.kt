@@ -444,9 +444,9 @@ fun SideDockContent(
                         if (hasTitle || hasDesc || hasImage) {
                             val enriched = newItem.copy(
                                 title = meta.title?.takeIf { it.isNotBlank() } ?: hostName,
-                                linkTitle = meta.title,
-                                linkDescription = meta.description,
-                                linkImage = meta.imageUrl
+                                linkTitle = meta.title ?: newItem.linkTitle,
+                                linkDescription = meta.description?.takeIf { it.isNotBlank() } ?: newItem.linkDescription,
+                                linkImage = meta.imageUrl ?: newItem.linkImage
                             )
                             repository.saveItem(enriched)
                             WidgetUpdater.update(context)

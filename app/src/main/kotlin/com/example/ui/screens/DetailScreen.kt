@@ -123,9 +123,12 @@ fun DetailScreen(
     val activeItem by viewModel.activeDetailItem.collectAsState()
     val allItems by viewModel.allItems.collectAsState()
     val item = remember(activeItem, allItems, itemId) {
-        activeItem?.takeIf { itemId.isNullOrBlank() || it.id == itemId }
-            ?: (if (!itemId.isNullOrBlank()) allItems.find { it.id == itemId } else null)
-            ?: activeItem
+        val targetId = itemId?.takeIf { it.isNotBlank() } ?: activeItem?.id
+        if (!targetId.isNullOrBlank()) {
+            allItems.find { it.id == targetId } ?: activeItem
+        } else {
+            activeItem
+        }
     }
     if (item == null) {
         LaunchedEffect(Unit) {
