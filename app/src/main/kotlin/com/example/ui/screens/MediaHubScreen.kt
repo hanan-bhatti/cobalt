@@ -73,6 +73,7 @@ import java.util.Locale
 fun MediaHubScreen(
     viewModel: CobaltViewModel,
     onMediaClick: (SavedItem) -> Unit,
+    onNavigateToTraktSync: (() -> Unit)? = null,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     modifier: Modifier = Modifier
@@ -140,6 +141,18 @@ fun MediaHubScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background
                 ),
+                actions = {
+                    if (onNavigateToTraktSync != null) {
+                        IconButton(onClick = onNavigateToTraktSync) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_movie),
+                                contentDescription = "Trakt Sync",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                },
                 scrollBehavior = scrollBehavior
             )
         },

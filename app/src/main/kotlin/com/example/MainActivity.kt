@@ -468,7 +468,8 @@ class MainActivity : ComponentActivity() {
                                                 },
                                                 onNavigateToSettings = { navController.navigate("settings") },
                                                 onNavigateToDevices = { navController.navigate("devices") },
-                                                onNavigateToMovieApiKey = { navController.navigate("movie_api_key") }
+                                                onNavigateToMovieApiKey = { navController.navigate("movie_api_key") },
+                                                onNavigateToTraktSync = { navController.navigate("trakt_sync_settings") }
                                             )
                                         }
                                     }
@@ -552,6 +553,14 @@ class MainActivity : ComponentActivity() {
                                     composable("movie_api_key") {
                                         ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
                                             com.example.ui.screens.MovieApiKeyScreen(
+                                                viewModel = viewModel,
+                                                onNavigateBack = { navController.popBackStack() }
+                                            )
+                                        }
+                                    }
+                                    composable("trakt_sync_settings") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.TraktSyncSettingsScreen(
                                                 viewModel = viewModel,
                                                 onNavigateBack = { navController.popBackStack() }
                                             )
@@ -689,6 +698,7 @@ class MainActivity : ComponentActivity() {
                                                     viewModel.showDetailItem(item)
                                                     navController.navigate("detail/${item.id}")
                                                 },
+                                                onNavigateToTraktSync = { navController.navigate("trakt_sync_settings") },
                                                 sharedTransitionScope = this@SharedTransitionLayout,
                                                 animatedVisibilityScope = this@composable
                                             )

@@ -44,7 +44,7 @@ import com.example.ui.components.bounceClick
 import com.example.ui.viewmodel.CobaltViewModel
 
 enum class ProfileSubScreen {
-    MAIN, SETTINGS, DEVICES, MOVIE_API_KEY
+    MAIN, SETTINGS, DEVICES, MOVIE_API_KEY, TRAKT_SYNC
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -58,9 +58,10 @@ fun ProfileScreen(
     onNavigateToCategory: (String) -> Unit = {},
     onNavigateToSettings: (() -> Unit)? = null,
     onNavigateToDevices: (() -> Unit)? = null,
-    onNavigateToMovieApiKey: (() -> Unit)? = null
+    onNavigateToMovieApiKey: (() -> Unit)? = null,
+    onNavigateToTraktSync: (() -> Unit)? = null
 ) {
-    if (onNavigateToSettings != null && onNavigateToDevices != null && onNavigateToMovieApiKey != null) {
+    if (onNavigateToSettings != null && onNavigateToDevices != null && onNavigateToMovieApiKey != null && onNavigateToTraktSync != null) {
         ProfileMainContent(
             viewModel = viewModel,
             onNavigateBack = onNavigateBack,
@@ -69,6 +70,7 @@ fun ProfileScreen(
             onNavigateToSettings = onNavigateToSettings,
             onNavigateToDevices = onNavigateToDevices,
             onNavigateToMovieApiKey = onNavigateToMovieApiKey,
+            onNavigateToTraktSync = onNavigateToTraktSync,
             onNavigateToManageStorage = onNavigateToManageStorage,
             onNavigateToCategory = onNavigateToCategory
         )
@@ -91,6 +93,7 @@ fun ProfileScreen(
                 onNavigateToSettings = { currentScreen = ProfileSubScreen.SETTINGS },
                 onNavigateToDevices = { currentScreen = ProfileSubScreen.DEVICES },
                 onNavigateToMovieApiKey = { currentScreen = ProfileSubScreen.MOVIE_API_KEY },
+                onNavigateToTraktSync = { currentScreen = ProfileSubScreen.TRAKT_SYNC },
                 onNavigateToManageStorage = onNavigateToManageStorage,
                 onNavigateToCategory = onNavigateToCategory
             )
@@ -109,6 +112,12 @@ fun ProfileScreen(
         }
         ProfileSubScreen.MOVIE_API_KEY -> {
             MovieApiKeyScreen(
+                viewModel = viewModel,
+                onNavigateBack = { currentScreen = ProfileSubScreen.MAIN }
+            )
+        }
+        ProfileSubScreen.TRAKT_SYNC -> {
+            TraktSyncSettingsScreen(
                 viewModel = viewModel,
                 onNavigateBack = { currentScreen = ProfileSubScreen.MAIN }
             )

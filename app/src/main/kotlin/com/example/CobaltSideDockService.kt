@@ -224,24 +224,37 @@ class CobaltSideDockService : Service() {
             }
         }
 
-        createNotificationChannel()
+        ensureForeground()
+    }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(
-                NOTIFICATION_ID,
-                buildNotification(),
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-            )
-        } else {
-            // Android 13 and below: No type parameter required for overlay services.
-            // Calling 2-argument startForeground bypasses the subset bitmask validation against 'specialUse'.
-            startForeground(NOTIFICATION_ID, buildNotification())
+    private fun ensureForeground() {
+        createNotificationChannel()
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    buildNotification(),
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, buildNotification())
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CobaltSideDock", "Failed to start foreground: ${e.message}", e)
         }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        ensureForeground()
+
         if (!com.example.utils.PermissionUtils.hasOverlayPermission(this)) {
             Toast.makeText(this, "Enable Draw Over Other Apps permission to use Cobalt SideDock", Toast.LENGTH_LONG).show()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
             stopSelf()
             return START_NOT_STICKY
         }

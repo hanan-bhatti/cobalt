@@ -28,7 +28,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 
 /**
- * Manages Trakt OAuth2 Device Code authentication, tokens, and active session state.
+ * Manages Trakt OAuth2 Device Code authentication, tokens, custom client credentials,
+ * and active session state.
  */
 class TraktAuthManager(private val context: Context) {
 
@@ -36,6 +37,8 @@ class TraktAuthManager(private val context: Context) {
 
     init {
         TraktClient.tokenProvider = { getAccessToken() }
+        TraktClient.clientIdProvider = { getClientId() }
+        TraktClient.baseUrlProvider = { getBaseUrl() }
     }
 
     private val _isConnected = MutableStateFlow(hasValidToken())
@@ -51,6 +54,83 @@ class TraktAuthManager(private val context: Context) {
         val token = prefs.getString(KEY_ACCESS_TOKEN, null)
         return !token.isNullOrBlank()
     }
+
+    // ==========================================
+    // ADVANCED / SELF-HOSTED CONFIGURATION
+    // ==========================================
+
+    fun getClientId(): String {
+        return prefs.getString(KEY_CUSTOM_CLIENT_ID, null)?.takeIf { it.isNotBlank() } ?: DEFAULT_CLIENT_ID
+    }
+
+    fun getCustomClientId(): String? {
+        return prefs.getString(KEY_CUSTOM_CLIENT_ID, null)?.takeIf { it.isNotBlank() }
+    }
+
+    fun setCustomClientId(clientId: String?) {
+        if (clientId.isNullOrBlank()) {
+            prefs.edit().remove(KEY_CUSTOM_CLIENT_ID).apply()
+        } else {
+            prefs.edit().putString(KEY_CUSTOM_CLIENT_ID, clientId.trim()).apply()
+        }
+        TraktClient.resetClient()
+    }
+
+    fun getBaseUrl(): String {
+        return prefs.getString(KEY_CUSTOM_BASE_URL, null)?.takeIf { it.isNotBlank() } ?: DEFAULT_BASE_URL
+    }
+
+    fun getCustomBaseUrl(): String? {
+        return prefs.getString(KEY_CUSTOM_BASE_URL, null)?.takeIf { it.isNotBlank() }
+    }
+
+    fun setCustomBaseUrl(url: String?) {
+        if (url.isNullOrBlank()) {
+            prefs.edit().remove(KEY_CUSTOM_BASE_URL).apply()
+        } else {
+            val formatted = if (url.endsWith("/")) url else "$url/"
+            prefs.edit().putString(KEY_CUSTOM_BASE_URL, formatted.trim()).apply()
+        }
+        TraktClient.resetClient()
+    }
+
+    fun isCustomConfigured(): Boolean {
+        return !getCustomClientId().isNullOrBlank() || !getCustomBaseUrl().isNullOrBlank()
+    }
+
+    fun resetToDefaults() {
+        prefs.edit()
+            .remove(KEY_CUSTOM_CLIENT_ID)
+            .remove(KEY_CUSTOM_BASE_URL)
+            .apply()
+        TraktClient.resetClient()
+    }
+
+    // ==========================================
+    // SYNC PREFERENCES & METRICS
+    // ==========================================
+
+    fun isSyncWatchedEnabled(): Boolean = prefs.getBoolean(KEY_SYNC_WATCHED, true)
+    fun setSyncWatchedEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_SYNC_WATCHED, enabled).apply()
+
+    fun isSyncWatchlistEnabled(): Boolean = prefs.getBoolean(KEY_SYNC_WATCHLIST, true)
+    fun setSyncWatchlistEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_SYNC_WATCHLIST, enabled).apply()
+
+    fun isSyncRatingsEnabled(): Boolean = prefs.getBoolean(KEY_SYNC_RATINGS, true)
+    fun setSyncRatingsEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_SYNC_RATINGS, enabled).apply()
+
+    fun isSyncTvProgressEnabled(): Boolean = prefs.getBoolean(KEY_SYNC_TV_PROGRESS, true)
+    fun setSyncTvProgressEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_SYNC_TV_PROGRESS, enabled).apply()
+
+    fun getLastSyncTimestamp(): Long = prefs.getLong(KEY_LAST_SYNC_TIMESTAMP, 0L)
+    fun setLastSyncTimestamp(timestamp: Long) = prefs.edit().putLong(KEY_LAST_SYNC_TIMESTAMP, timestamp).apply()
+
+    fun getLastSyncSummary(): String? = prefs.getString(KEY_LAST_SYNC_SUMMARY, null)
+    fun setLastSyncSummary(summary: String) = prefs.edit().putString(KEY_LAST_SYNC_SUMMARY, summary).apply()
+
+    // ==========================================
+    // USER PROFILE & SESSION
+    // ==========================================
 
     private fun loadCachedUser(): TraktUser? {
         val username = prefs.getString(KEY_USERNAME, null) ?: return null
@@ -69,7 +149,7 @@ class TraktAuthManager(private val context: Context) {
     suspend fun requestDeviceCode(): Result<TraktDeviceCodeResponse> = withContext(Dispatchers.IO) {
         try {
             val response = TraktClient.apiService.getDeviceCode(
-                TraktDeviceCodeRequest(client_id = CLIENT_ID)
+                TraktDeviceCodeRequest(client_id = getClientId())
             )
             Result.success(response)
         } catch (e: Exception) {
@@ -96,7 +176,7 @@ class TraktAuthManager(private val context: Context) {
             try {
                 val response = TraktClient.apiService.getDeviceToken(
                     TraktDeviceTokenRequest(
-                        client_id = CLIENT_ID,
+                        client_id = getClientId(),
                         device_code = deviceCode
                     )
                 )
@@ -186,7 +266,7 @@ class TraktAuthManager(private val context: Context) {
         try {
             val response = TraktClient.apiService.refreshToken(
                 TraktRefreshTokenRequest(
-                    client_id = CLIENT_ID,
+                    client_id = getClientId(),
                     refresh_token = refreshToken
                 )
             )
@@ -199,16 +279,22 @@ class TraktAuthManager(private val context: Context) {
     }
 
     /**
-     * Disconnects and wipes all Trakt tokens and profile metadata.
+     * Disconnects and wipes all Trakt tokens, session data, and cached profiles.
+     * Preserves custom client ID and custom base URL if configured.
      */
     fun disconnect() {
+        val customClientId = getCustomClientId()
+        val customBaseUrl = getCustomBaseUrl()
         prefs.edit().clear().apply()
+        if (customClientId != null) setCustomClientId(customClientId)
+        if (customBaseUrl != null) setCustomBaseUrl(customBaseUrl)
         _isConnected.value = false
         _currentUser.value = null
     }
 
     companion object {
-        const val CLIENT_ID = "dj1F8ZeR5jYd9_Bs8ZeKRJOP-B3kydXanE43vwHW9tQ"
+        const val DEFAULT_CLIENT_ID = "dj1F8ZeR5jYd9_Bs8ZeKRJOP-B3kydXanE43vwHW9tQ"
+        const val DEFAULT_BASE_URL = "https://api.trakt.tv/"
         private const val TAG = "TraktAuthManager"
         private const val PREFS_NAME = "cobalt_trakt_prefs"
         private const val KEY_ACCESS_TOKEN = "trakt_access_token"
@@ -217,6 +303,16 @@ class TraktAuthManager(private val context: Context) {
         private const val KEY_USERNAME = "trakt_username"
         private const val KEY_USER_NAME = "trakt_user_name"
         private const val KEY_USER_AVATAR = "trakt_user_avatar"
+
+        private const val KEY_CUSTOM_CLIENT_ID = "trakt_custom_client_id"
+        private const val KEY_CUSTOM_BASE_URL = "trakt_custom_base_url"
+
+        private const val KEY_SYNC_WATCHED = "trakt_sync_watched"
+        private const val KEY_SYNC_WATCHLIST = "trakt_sync_watchlist"
+        private const val KEY_SYNC_RATINGS = "trakt_sync_ratings"
+        private const val KEY_SYNC_TV_PROGRESS = "trakt_sync_tv_progress"
+        private const val KEY_LAST_SYNC_TIMESTAMP = "trakt_last_sync_timestamp"
+        private const val KEY_LAST_SYNC_SUMMARY = "trakt_last_sync_summary"
 
         @Volatile
         private var instance: TraktAuthManager? = null
