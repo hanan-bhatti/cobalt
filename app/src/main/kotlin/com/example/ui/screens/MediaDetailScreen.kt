@@ -100,6 +100,7 @@ fun MediaDetailSection(
 ) {
     var showPosterZoom by remember { mutableStateOf(false) }
     var showMoreInfoSheet by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     LaunchedEffect(item.id) {
         viewModel.enrichMediaItem(item)
@@ -457,6 +458,134 @@ fun MediaDetailSection(
             }
         }
 
+        // TV SERIES PROGRESS (Seasons & Episodes)
+        val progress = item.showProgress
+        if (progress != null && (progress.totalWatched > 0 || progress.seasons.isNotEmpty())) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_trakt),
+                            contentDescription = null,
+                            tint = Color(0xFFED1C24),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = "WATCH PROGRESS",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                    if (progress.lastWatchedSeason != null && progress.lastWatchedEpisode != null) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color(0xFFED1C24).copy(alpha = 0.12f)
+                        ) {
+                            Text(
+                                text = "Last: S%02dE%02d".format(progress.lastWatchedSeason, progress.lastWatchedEpisode),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFED1C24),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (progress.totalAired > 0) "${progress.totalWatched} of ${progress.totalAired} episodes"
+                                       else "${progress.totalWatched} episodes watched",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "${progress.progressPercent}%",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Black,
+                                color = if (progress.completed) Color(0xFF10B981) else Color(0xFFED1C24)
+                            )
+                        }
+
+                        LinearProgressIndicator(
+                            progress = { progress.progressFraction },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(CircleShape),
+                            color = if (progress.completed) Color(0xFF10B981) else Color(0xFFED1C24),
+                            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                        )
+
+                        if (progress.seasons.isNotEmpty()) {
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                items(progress.seasons.sortedBy { it.seasonNumber }, key = { it.seasonNumber }) { season ->
+                                    val isSeasonDone = season.isCompleted
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = if (isSeasonDone) Color(0xFF10B981).copy(alpha = 0.12f)
+                                                else MaterialTheme.colorScheme.surface,
+                                        border = BorderStroke(
+                                            1.dp,
+                                            if (isSeasonDone) Color(0xFF10B981).copy(alpha = 0.35f)
+                                            else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                                        )
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = "Season ${season.seasonNumber}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isSeasonDone) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = "• ${season.watchedEpisodes} eps",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // GENRES SECTION
         if (item.genres.isNotEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -517,11 +646,17 @@ fun MediaDetailSection(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     items(uniqueProviders, key = { it.label }) { config ->
+                        val watchUrl = getStreamingWatchUrl(config.label, item.title)
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = config.backgroundColor,
                             contentColor = config.contentColor,
-                            shadowElevation = 1.dp
+                            shadowElevation = 1.dp,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    com.example.util.CobaltCustomTabsLauncher.launch(context, watchUrl)
+                                }
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -542,6 +677,12 @@ fun MediaDetailSection(
                                     fontWeight = FontWeight.Bold,
                                     color = config.contentColor
                                 )
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_link_external),
+                                    contentDescription = "Watch on ${config.label}",
+                                    modifier = Modifier.size(11.dp),
+                                    tint = config.contentColor.copy(alpha = 0.8f)
+                                )
                             }
                         }
                     }
@@ -550,7 +691,11 @@ fun MediaDetailSection(
         }
 
         // SYNOPSIS / OVERVIEW SECTION
-        if (item.content.isNotBlank()) {
+        val cleanSynopsis = item.extractedText?.takeIf { it.isNotBlank() }
+            ?: item.content.takeIf { !it.startsWith("http://") && !it.startsWith("https://") }
+            ?: ""
+
+        if (cleanSynopsis.isNotBlank()) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     text = "SYNOPSIS",
@@ -560,7 +705,7 @@ fun MediaDetailSection(
                     color = MaterialTheme.colorScheme.secondary
                 )
                 MarkdownText(
-                    markdown = item.content,
+                    markdown = cleanSynopsis,
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -576,6 +721,41 @@ fun MediaDetailSection(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
                         )
+                    }
+                }
+            }
+        }
+
+        // SOURCE / WEB LINK (e.g. Trakt.tv page)
+        if (item.content.startsWith("http://") || item.content.startsWith("https://")) {
+            OutlinedButton(
+                onClick = {
+                    com.example.util.CobaltCustomTabsLauncher.launch(context, item.content)
+                },
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (item.traktId != null && item.traktId > 0) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_trakt),
+                            contentDescription = null,
+                            tint = Color(0xFFED1C24),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text("View on Trakt.tv", color = MaterialTheme.colorScheme.onSurface)
+                    } else {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_link_external),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text("Open Source Link", color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }
@@ -1094,5 +1274,26 @@ fun getStreamingProviderConfig(name: String): StreamingProviderConfig {
         clean.contains("iplayer") || clean.contains("bbc") -> StreamingProviderConfig(StreamingBbc, Color.White, null, "BBC iPlayer")
         clean.contains("hidive") -> StreamingProviderConfig(StreamingHidive, Color.White, null, "HIDIVE")
         else -> StreamingProviderConfig(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant, null, name)
+    }
+}
+
+fun getStreamingWatchUrl(providerName: String, title: String): String {
+    val clean = providerName.lowercase().trim()
+    val encoded = Uri.encode(title.trim())
+    return when {
+        clean.contains("netflix") -> "https://www.netflix.com/search?q=$encoded"
+        clean.contains("prime") || clean.contains("amazon") -> "https://www.amazon.com/s?k=$encoded&i=instant-video"
+        clean.contains("disney") -> "https://www.disneyplus.com/search?q=$encoded"
+        clean.contains("crunchyroll") -> "https://www.crunchyroll.com/search?q=$encoded"
+        clean.contains("hulu") -> "https://www.hulu.com/search?q=$encoded"
+        clean.contains("apple") || clean.contains("itunes") -> "https://tv.apple.com/search?term=$encoded"
+        clean.contains("hbo") || clean.contains("max") -> "https://play.max.com/search?q=$encoded"
+        clean.contains("paramount") -> "https://www.paramountplus.com/search/?q=$encoded"
+        clean.contains("peacock") -> "https://www.peacocktv.com/search?q=$encoded"
+        clean.contains("youtube") -> "https://www.youtube.com/results?search_query=$encoded"
+        clean.contains("tubi") -> "https://tubitv.com/search/$encoded"
+        clean.contains("pluto") -> "https://pluto.tv/search/details?q=$encoded"
+        clean.contains("vudu") || clean.contains("fandango") -> "https://www.vudu.com/content/movies/search?searchString=$encoded"
+        else -> "https://www.justwatch.com/us/search?q=$encoded"
     }
 }

@@ -386,8 +386,12 @@ class CobaltRepository(private val context: Context) {
 
     private val prefs = context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE)
 
+    companion object {
+        const val DEFAULT_TMDB_API_KEY = "712732e6f259631c21129a94a273a7bb"
+    }
+
     fun getTmdbApiKey(): String {
-        return prefs.getString("tmdb_api_key", "") ?: ""
+        return prefs.getString("tmdb_api_key", null)?.takeIf { it.isNotBlank() } ?: DEFAULT_TMDB_API_KEY
     }
 
     fun setTmdbApiKey(key: String) {

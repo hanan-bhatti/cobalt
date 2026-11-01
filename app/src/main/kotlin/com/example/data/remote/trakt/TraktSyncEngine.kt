@@ -60,6 +60,7 @@ data class TraktSyncSummary(
 object TraktSyncEngine {
 
     private const val TAG = "TraktSyncEngine"
+    const val DEFAULT_TMDB_API_KEY = "712732e6f259631c21129a94a273a7bb"
 
     private val _syncStatus = MutableStateFlow<TraktSyncStatus>(TraktSyncStatus.Idle)
     val syncStatus: StateFlow<TraktSyncStatus> = _syncStatus.asStateFlow()
@@ -231,9 +232,14 @@ object TraktSyncEngine {
                         val totalAired = (show.aired_episodes ?: 0).coerceAtLeast(totalWatchedEps)
                         val isComplete = totalAired > 0 && totalWatchedEps >= totalAired
 
+                        val lastSeason = seasonList.maxByOrNull { it.seasonNumber }
+                        val lastEp = lastSeason?.episodes?.maxByOrNull { it.episodeNumber }
+
                         val progress = TvShowProgress(
                             totalAired = totalAired,
                             totalWatched = totalWatchedEps,
+                            lastWatchedSeason = lastSeason?.seasonNumber,
+                            lastWatchedEpisode = lastEp?.episodeNumber,
                             completed = isComplete,
                             seasons = seasonList.sortedBy { it.seasonNumber }
                         )
@@ -391,11 +397,75 @@ object TraktSyncEngine {
             }
 
             // ──────────────────────────────────────────────
-            // 5. ATOMIC LOCAL PERSISTENCE
+            // 5. ENRICH VIA TMDB (POSTERS, BACKDROPS, PROVIDERS)
+            // ──────────────────────────────────────────────
+            updateProgress("Enriching posters & streaming providers...", 0.90f)
+            val prefs = context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE)
+            val tmdbKey = prefs.getString("tmdb_api_key", null)?.takeIf { it.isNotBlank() }
+                ?: DEFAULT_TMDB_API_KEY
+
+            val enrichedMap = mutableMapOf<String, SavedItemEntity>()
+            for ((id, entity) in itemsToUpsert) {
+                if (entity.tmdbId != null && entity.tmdbId > 0 && (entity.thumbnailPath.isNullOrBlank() || entity.backdropUrl.isNullOrBlank())) {
+                    val isTv = entity.mediaType?.lowercase() == "tv"
+                    try {
+                        val details = if (isTv) {
+                            com.example.data.remote.MediaApiClient.tmdbApiService.getTvDetails(entity.tmdbId, tmdbKey)
+                        } else {
+                            com.example.data.remote.MediaApiClient.tmdbApiService.getMovieDetails(entity.tmdbId, tmdbKey)
+                        }
+
+                        val posterUrl = details.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }
+                        val backdropUrl = details.backdropPath?.let { "https://image.tmdb.org/t/p/w780$it" }
+                        val fetchedGenres = details.genres?.mapNotNull { it.name } ?: emptyList()
+                        val genresJson = if (fetchedGenres.isNotEmpty()) {
+                            "[${fetchedGenres.joinToString(",") { "\"$it\"" }}]"
+                        } else entity.genresJson
+
+                        val providerList = mutableListOf<String>()
+                        val countryMap = details.watchProviders?.results
+                        val countryData = countryMap?.get("US") ?: countryMap?.values?.firstOrNull()
+                        countryData?.flatrate?.forEach { p -> p.providerName?.let { providerList.add(it) } }
+                        countryData?.rent?.forEach { p -> p.providerName?.let { providerList.add(it) } }
+                        countryData?.buy?.forEach { p -> p.providerName?.let { providerList.add(it) } }
+                        val fetchedProviders = providerList.filter { it.isNotBlank() }.distinct()
+                        val providersJson = if (fetchedProviders.isNotEmpty()) {
+                            "[${fetchedProviders.joinToString(",") { "\"$it\"" }}]"
+                        } else entity.watchProvidersJson
+
+                        val ytKey = details.videos?.results?.firstOrNull {
+                            it.site?.equals("YouTube", ignoreCase = true) == true &&
+                            (it.type?.equals("Trailer", ignoreCase = true) == true || it.type?.equals("Teaser", ignoreCase = true) == true)
+                        }?.key ?: details.videos?.results?.firstOrNull { it.site?.equals("YouTube", ignoreCase = true) == true }?.key
+                        val trailerUrl = ytKey?.let { "https://www.youtube.com/watch?v=$it" } ?: entity.trailerUrl
+
+                        enrichedMap[id] = entity.copy(
+                            thumbnailPath = posterUrl ?: entity.thumbnailPath,
+                            backdropUrl = backdropUrl ?: entity.backdropUrl,
+                            extractedText = details.overview?.takeIf { it.isNotBlank() } ?: entity.extractedText,
+                            genresJson = genresJson,
+                            watchProvidersJson = providersJson,
+                            trailerUrl = trailerUrl,
+                            runtime = details.runtime ?: entity.runtime,
+                            status = details.status ?: entity.status,
+                            tagline = details.tagline ?: entity.tagline
+                        )
+                        Log.d(TAG, "Enriched ${entity.title} with TMDb metadata (poster: ${posterUrl != null})")
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed TMDb enrichment for ${entity.title}: ${e.message}")
+                        enrichedMap[id] = entity
+                    }
+                } else {
+                    enrichedMap[id] = entity
+                }
+            }
+
+            // ──────────────────────────────────────────────
+            // 6. ATOMIC LOCAL PERSISTENCE
             // ──────────────────────────────────────────────
             updateProgress("Saving changes to local library...", 0.95f)
-            if (itemsToUpsert.isNotEmpty()) {
-                dao.insertItems(itemsToUpsert.values.toList())
+            if (enrichedMap.isNotEmpty()) {
+                dao.insertItems(enrichedMap.values.toList())
             }
 
             val summary = TraktSyncSummary(
@@ -403,13 +473,13 @@ object TraktSyncEngine {
                 showsSynced = showsCount,
                 ratingsSynced = ratingsCount,
                 watchlistSynced = watchlistCount,
-                totalItems = itemsToUpsert.size
+                totalItems = enrichedMap.size
             )
 
             authManager.setLastSyncTimestamp(System.currentTimeMillis())
             authManager.setLastSyncSummary(summary.message)
 
-            _syncStatus.value = TraktSyncStatus.Success(itemsToUpsert.size, summary.message)
+            _syncStatus.value = TraktSyncStatus.Success(enrichedMap.size, summary.message)
 
             if (isBackground) {
                 TraktNotificationHelper.showCompleteNotification(

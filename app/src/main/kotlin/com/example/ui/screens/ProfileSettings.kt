@@ -180,23 +180,23 @@ enum class SettingsCategory(
 fun getSettingsCategoryColors(category: SettingsCategory, isDark: Boolean): Pair<Color, Color> {
     return if (isDark) {
         when (category) {
-            SettingsCategory.APPEARANCE -> Color(0xFF3B1F54) to Color(0xFFD8B4FE)
-            SettingsCategory.ORGANIZATION -> Color(0xFF452B07) to Color(0xFFFDE68A)
-            SettingsCategory.REMINDERS -> Color(0xFF4D2208) to Color(0xFFFDBA74)
-            SettingsCategory.INTELLIGENCE -> Color(0xFF0C3854) to Color(0xFF7DD3FC)
-            SettingsCategory.FLOATING_DOCK -> Color(0xFF4C0F1E) to Color(0xFFFDA4AF)
-            SettingsCategory.WIDGETS -> Color(0xFF0E3E26) to Color(0xFF86EFAC)
-            SettingsCategory.SYSTEM_HEALTH -> Color(0xFF1E2452) to Color(0xFFA5B4FC)
+            SettingsCategory.APPEARANCE -> Color(0xFF2E1C44) to Color(0xFFD8B4FE)
+            SettingsCategory.ORGANIZATION -> Color(0xFF382A12) to Color(0xFFFDE68A)
+            SettingsCategory.REMINDERS -> Color(0xFF3B1D0E) to Color(0xFFFDBA74)
+            SettingsCategory.INTELLIGENCE -> Color(0xFF0F2D3F) to Color(0xFF7DD3FC)
+            SettingsCategory.FLOATING_DOCK -> Color(0xFF3D141F) to Color(0xFFFDA4AF)
+            SettingsCategory.WIDGETS -> Color(0xFF0F3320) to Color(0xFF86EFAC)
+            SettingsCategory.SYSTEM_HEALTH -> Color(0xFF1B2144) to Color(0xFFA5B4FC)
         }
     } else {
         when (category) {
-            SettingsCategory.APPEARANCE -> Color(0xFFEDE7F6) to Color(0xFF7C3AED)
-            SettingsCategory.ORGANIZATION -> Color(0xFFFEF3C7) to Color(0xFFD97706)
-            SettingsCategory.REMINDERS -> Color(0xFFFFEDD5) to Color(0xFFEA580C)
-            SettingsCategory.INTELLIGENCE -> Color(0xFFE0F2FE) to Color(0xFF0284C7)
-            SettingsCategory.FLOATING_DOCK -> Color(0xFFFFE4E6) to Color(0xFFE11D48)
-            SettingsCategory.WIDGETS -> Color(0xFFDCFCE7) to Color(0xFF059669)
-            SettingsCategory.SYSTEM_HEALTH -> Color(0xFFE0E7FF) to Color(0xFF4F46E5)
+            SettingsCategory.APPEARANCE -> Color(0xFFF3E8FF) to Color(0xFF7E22CE)
+            SettingsCategory.ORGANIZATION -> Color(0xFFFEF3C7) to Color(0xFFB45309)
+            SettingsCategory.REMINDERS -> Color(0xFFFFEDD5) to Color(0xFFC2410C)
+            SettingsCategory.INTELLIGENCE -> Color(0xFFE0F2FE) to Color(0xFF0369A1)
+            SettingsCategory.FLOATING_DOCK -> Color(0xFFFFE4E6) to Color(0xFFBE123C)
+            SettingsCategory.WIDGETS -> Color(0xFFD1FAE5) to Color(0xFF047857)
+            SettingsCategory.SYSTEM_HEALTH -> Color(0xFFE0E7FF) to Color(0xFF4338CA)
         }
     }
 }

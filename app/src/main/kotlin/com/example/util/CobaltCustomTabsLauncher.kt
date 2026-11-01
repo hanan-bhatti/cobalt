@@ -43,7 +43,7 @@ object CobaltCustomTabsLauncher {
 
     fun resolveThemeState(context: Context): Pair<Boolean, Boolean> {
         val prefs = context.getSharedPreferences("cobalt_settings", Context.MODE_PRIVATE)
-        val mode = prefs.getString("theme_mode", "System Default") ?: "System Default"
+        val mode = prefs.getString("theme_mode", "Light") ?: "Light"
         val isSystemDark = (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
 
         val isDark = when (mode.lowercase()) {
@@ -88,7 +88,6 @@ object CobaltCustomTabsLauncher {
             // Setup Theme Color Schemes (Light, Dark, AMOLED)
             val lightToolbarColor = 0xFFFDFBF9.toInt() // CreamPaper
             val darkToolbarColor = if (effectiveAmoled) 0xFF000000.toInt() else 0xFF1A120E.toInt() // TrueBlack or SurfaceDark
-            val activeToolbarColor = if (effectiveDark) darkToolbarColor else lightToolbarColor
 
             val lightParams = CustomTabColorSchemeParams.Builder()
                 .setToolbarColor(lightToolbarColor)
@@ -100,14 +99,13 @@ object CobaltCustomTabsLauncher {
                 .setNavigationBarColor(darkToolbarColor)
                 .build()
 
-            val defaultParams = CustomTabColorSchemeParams.Builder()
-                .setToolbarColor(activeToolbarColor)
-                .setNavigationBarColor(activeToolbarColor)
-                .build()
+            val targetParams = if (effectiveDark) darkParams else lightParams
 
-            builder.setDefaultColorSchemeParams(defaultParams)
-            builder.setColorSchemeParams(CustomTabsIntent.COLOR_SCHEME_LIGHT, lightParams)
-            builder.setColorSchemeParams(CustomTabsIntent.COLOR_SCHEME_DARK, darkParams)
+            // Set both schemes and default to targetParams so Chrome Custom Tabs never inverts
+            // based on the host OS mode when Cobalt is running in the opposite mode.
+            builder.setDefaultColorSchemeParams(targetParams)
+            builder.setColorSchemeParams(CustomTabsIntent.COLOR_SCHEME_LIGHT, targetParams)
+            builder.setColorSchemeParams(CustomTabsIntent.COLOR_SCHEME_DARK, targetParams)
             builder.setColorScheme(
                 if (effectiveDark) CustomTabsIntent.COLOR_SCHEME_DARK
                 else CustomTabsIntent.COLOR_SCHEME_LIGHT
