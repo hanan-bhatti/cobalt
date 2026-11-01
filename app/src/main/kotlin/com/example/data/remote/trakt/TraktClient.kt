@@ -18,6 +18,7 @@
 
 package com.example.data.remote.trakt
 
+import android.util.Log
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.OkHttpClient
@@ -32,6 +33,7 @@ import java.util.concurrent.TimeUnit
  */
 object TraktClient {
     const val DEFAULT_BASE_URL = "https://api.trakt.tv/"
+    private const val HTTP_TAG = "TraktHttp"
 
     /**
      * Optional provider for the active user's OAuth access token.
@@ -59,6 +61,7 @@ object TraktClient {
             val apiKey = clientIdProvider?.invoke()?.takeIf { it.isNotBlank() } ?: TraktAuthManager.DEFAULT_CLIENT_ID
             val requestBuilder = original.newBuilder()
                 .header("Content-Type", "application/json")
+                .header("User-Agent", "Cobalt/2.2.3 (Android)")
                 .header("trakt-api-version", "2")
                 .header("trakt-api-key", apiKey)
 
@@ -67,7 +70,32 @@ object TraktClient {
                 requestBuilder.header("Authorization", "Bearer $token")
             }
 
-            chain.proceed(requestBuilder.build())
+            val request = requestBuilder.build()
+            val startMs = System.currentTimeMillis()
+            Log.d(HTTP_TAG, "--> ${request.method} ${request.url}")
+
+            val response = try {
+                chain.proceed(request)
+            } catch (e: Exception) {
+                val elapsed = System.currentTimeMillis() - startMs
+                Log.e(HTTP_TAG, "<-- HTTP FAILED: ${request.method} ${request.url} after ${elapsed}ms: ${e.message}", e)
+                throw e
+            }
+
+            val durationMs = System.currentTimeMillis() - startMs
+            val peekedBody = try {
+                response.peekBody(2048).string()
+            } catch (_: Exception) {
+                "<body peek unavailable>"
+            }
+
+            if (response.isSuccessful) {
+                Log.d(HTTP_TAG, "<-- ${response.code} ${request.method} ${request.url} (${durationMs}ms) [body: ${peekedBody.take(200)}]")
+            } else {
+                Log.w(HTTP_TAG, "<-- ${response.code} ${request.method} ${request.url} (${durationMs}ms) [error: ${peekedBody.take(300)}]")
+            }
+
+            response
         }
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(25, TimeUnit.SECONDS)

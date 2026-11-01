@@ -453,10 +453,10 @@ fun TraktSyncSettingsScreen(
     if (authState !is TraktDeviceAuthState.Idle) {
         Dialog(
             onDismissRequest = {
-                // Keep background auth polling active when user is in Custom Tabs or switching apps
+                authManager.cancelDeviceAuth()
             },
             properties = DialogProperties(
-                dismissOnBackPress = false,
+                dismissOnBackPress = true,
                 dismissOnClickOutside = false,
                 usePlatformDefaultWidth = false
             )

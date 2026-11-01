@@ -35,32 +35,30 @@ data class TraktDeviceCodeResponse(
     val device_code: String,
     val user_code: String,
     val verification_url: String,
-    val expires_in: Int,
-    val interval: Int
+    val expires_in: Int = 600,
+    val interval: Int = 6
 )
 
 @JsonClass(generateAdapter = true)
 data class TraktDeviceTokenRequest(
     val code: String,
-    val client_id: String,
-    val client_secret: String? = null
+    val client_id: String
 )
 
 @JsonClass(generateAdapter = true)
 data class TraktTokenResponse(
-    val access_token: String,
+    val access_token: String = "",
     val token_type: String = "bearer",
-    val expires_in: Long,
-    val refresh_token: String,
+    val expires_in: Long = 7200L,
+    val refresh_token: String = "",
     val scope: String = "public",
-    val created_at: Long
+    val created_at: Long = 0L
 )
 
 @JsonClass(generateAdapter = true)
 data class TraktRefreshTokenRequest(
     val client_id: String,
     val refresh_token: String,
-    val client_secret: String? = null,
     val grant_type: String = "refresh_token"
 )
 

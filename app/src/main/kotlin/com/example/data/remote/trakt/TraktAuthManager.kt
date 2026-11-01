@@ -175,9 +175,11 @@ class TraktAuthManager(private val context: Context) {
 
         pollingJob = authScope.launch {
             try {
+                Log.d(TAG, "Requesting Trakt device code for client_id: ${getClientId()}...")
                 val codeResponse = TraktClient.apiService.getDeviceCode(
                     TraktDeviceCodeRequest(client_id = getClientId())
                 )
+                Log.i(TAG, "Device code generated: user_code=${codeResponse.user_code}, verification_url=${codeResponse.verification_url}, interval=${codeResponse.interval}s, expires_in=${codeResponse.expires_in}s")
 
                 _deviceAuthState.value = TraktDeviceAuthState.PendingApproval(
                     userCode = codeResponse.user_code,
@@ -188,11 +190,15 @@ class TraktAuthManager(private val context: Context) {
 
                 val startTime = System.currentTimeMillis()
                 val timeoutMs = codeResponse.expires_in * 1000L
-                var intervalMs = (codeResponse.interval.coerceAtLeast(5)) * 1000L
+                var intervalMs = (codeResponse.interval.coerceAtLeast(6)) * 1000L
+                var pollCount = 0
 
                 while (System.currentTimeMillis() - startTime < timeoutMs) {
                     delay(intervalMs)
+                    pollCount++
                     try {
+                        val elapsedSec = (System.currentTimeMillis() - startTime) / 1000
+                        Log.d(TAG, "Device token poll #$pollCount (elapsed: ${elapsedSec}s, interval: ${intervalMs / 1000}s)...")
                         val response = TraktClient.apiService.getDeviceToken(
                             TraktDeviceTokenRequest(
                                 code = codeResponse.device_code,
@@ -200,23 +206,54 @@ class TraktAuthManager(private val context: Context) {
                             )
                         )
 
+                        Log.d(TAG, "Device token poll #$pollCount HTTP response code: ${response.code()}")
+
                         when (response.code()) {
                             200 -> {
                                 val tokenResponse = response.body()
-                                if (tokenResponse != null) {
+                                Log.i(TAG, "Device token poll: 200 OK. Token body present: ${tokenResponse != null}")
+                                if (tokenResponse != null && tokenResponse.access_token.isNotBlank()) {
                                     saveTokens(tokenResponse)
-                                    val userResult = fetchAndSaveUserProfile()
-                                    val user = userResult.getOrNull() ?: _currentUser.value
-                                    _deviceAuthState.value = TraktDeviceAuthState.Success(user)
-                                    // Trigger immediate library sync upon successful authentication!
-                                    com.example.util.TraktSyncWorker.enqueueOneTimeSync(context)
-                                    delay(1500)
+                                    Log.i(TAG, "Trakt tokens successfully saved! (expires in: ${tokenResponse.expires_in}s)")
+
+                                    // Immediately transition UI to Success so the dialog updates instantly
+                                    _deviceAuthState.value = TraktDeviceAuthState.Success(_currentUser.value)
+
+                                    // Run non-blocking background tasks for user profile and initial sync
+                                    authScope.launch {
+                                        try {
+                                            Log.d(TAG, "Fetching user profile post-auth...")
+                                            val userResult = fetchAndSaveUserProfile()
+                                            val user = userResult.getOrNull()
+                                            if (user != null) {
+                                                Log.i(TAG, "Trakt profile loaded: @${user.username}")
+                                                _deviceAuthState.value = TraktDeviceAuthState.Success(user)
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.w(TAG, "Non-fatal: failed to fetch profile: ${e.message}")
+                                        }
+
+                                        try {
+                                            Log.d(TAG, "Enqueuing initial Trakt sync...")
+                                            com.example.util.TraktSyncWorker.enqueueOneTimeSync(context)
+                                        } catch (e: Exception) {
+                                            Log.w(TAG, "Failed to enqueue initial sync: ${e.message}")
+                                        }
+                                    }
+
+                                    delay(1800)
                                     _deviceAuthState.value = TraktDeviceAuthState.Idle
+                                    return@launch
+                                } else {
+                                    val errStr = response.errorBody()?.string() ?: "Empty body"
+                                    Log.e(TAG, "Device token returned 200 OK but token body is empty or invalid: $errStr")
+                                    _deviceAuthState.value = TraktDeviceAuthState.Error("Failed to parse Trakt token response.")
                                     return@launch
                                 }
                             }
                             400 -> {
                                 // Pending approval from user - keep polling
+                                Log.d(TAG, "Device token poll #$pollCount: 400 (Pending user approval). Continuing to poll...")
                                 val current = _deviceAuthState.value
                                 if (current is TraktDeviceAuthState.PendingApproval) {
                                     _deviceAuthState.value = current.copy(
@@ -225,29 +262,44 @@ class TraktAuthManager(private val context: Context) {
                                 }
                             }
                             404 -> {
-                                // Code pending propagation or user has not navigated to trakt.tv/activate yet
-                                Log.d(TAG, "Device token poll: 404 (pending), continuing to poll...")
+                                Log.e(TAG, "Device token poll #$pollCount: 404 (Not Found). Device code invalid or not recognized.")
+                                _deviceAuthState.value = TraktDeviceAuthState.Error("Device activation code was not found. Please try again.")
+                                return@launch
                             }
                             409 -> {
-                                // Code already approved or token generation in progress
-                                Log.d(TAG, "Device token poll: 409 (approved/processing), continuing to poll...")
+                                Log.w(TAG, "Device token poll #$pollCount: 409 (Conflict - code already used).")
+                                if (hasValidToken()) {
+                                    _deviceAuthState.value = TraktDeviceAuthState.Success(_currentUser.value)
+                                    delay(1500)
+                                    _deviceAuthState.value = TraktDeviceAuthState.Idle
+                                    return@launch
+                                } else {
+                                    _deviceAuthState.value = TraktDeviceAuthState.Error("Activation code has already been used. Please try again.")
+                                    return@launch
+                                }
                             }
                             410 -> {
+                                Log.e(TAG, "Device token poll #$pollCount: 410 (Gone). Activation code expired.")
                                 _deviceAuthState.value = TraktDeviceAuthState.Error("Activation code expired. Please try again.")
                                 return@launch
                             }
-                            418, 429 -> {
-                                // Polling too fast - back off
+                            418 -> {
+                                Log.e(TAG, "Device token poll #$pollCount: 418 (Denied). User denied authorization.")
+                                _deviceAuthState.value = TraktDeviceAuthState.Error("Authorization was denied on Trakt.")
+                                return@launch
+                            }
+                            429 -> {
+                                Log.w(TAG, "Device token poll #$pollCount: 429 (Too Many Requests). Backing off interval.")
                                 intervalMs += 2000L
                             }
                             else -> {
-                                Log.w(TAG, "Unexpected poll status: ${response.code()}")
+                                Log.w(TAG, "Device token poll #$pollCount: Unexpected HTTP status ${response.code()}")
                             }
                         }
                     } catch (e: kotlinx.coroutines.CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        Log.w(TAG, "Device token poll iteration error: ${e.message}")
+                        Log.w(TAG, "Device token poll iteration error: ${e.message}", e)
                     }
                 }
 
