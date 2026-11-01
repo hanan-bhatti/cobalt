@@ -475,11 +475,12 @@ class CobaltRepository(private val context: Context) {
         var revenue = item.revenue
         var status = item.status
         var productionCompanies = item.productionCompanies
+        var thumbnailPath = item.thumbnailPath
 
         var updated = false
 
-        if (item.id.startsWith("tmdb_") || item.mediaType?.lowercase() == "movie" || item.mediaType?.lowercase() == "tv") {
-            val tmdbId = item.id.substringAfterLast("_").toIntOrNull()
+        if (item.id.startsWith("tmdb_") || item.mediaType?.lowercase() == "movie" || item.mediaType?.lowercase() == "tv" || item.tmdbId != null) {
+            val tmdbId = item.tmdbId ?: item.id.substringAfterLast("_").toIntOrNull()
             val apiKey = getTmdbApiKey()
 
             if (tmdbId != null && apiKey.isNotBlank()) {
@@ -489,6 +490,11 @@ class CobaltRepository(private val context: Context) {
                         MediaApiClient.tmdbApiService.getTvDetails(tmdbId, apiKey)
                     } else {
                         MediaApiClient.tmdbApiService.getMovieDetails(tmdbId, apiKey)
+                    }
+
+                    if (thumbnailPath.isNullOrBlank() && details.posterPath != null) {
+                        thumbnailPath = "https://image.tmdb.org/t/p/w500${details.posterPath}"
+                        updated = true
                     }
 
                     if (rating == null && details.voteAverage != null) {
@@ -591,6 +597,7 @@ class CobaltRepository(private val context: Context) {
 
         if (updated) {
             val newItem = item.copy(
+                thumbnailPath = thumbnailPath,
                 mediaType = mediaType,
                 genres = genres,
                 watchProviders = watchProviders,

@@ -19,6 +19,18 @@
     <uses-permission android:name="com.vivo.permission.safe.autostart" />
     <uses-permission android:name="com.miui.securitycenter.permission.CLONE_APP_AUTORUN" />
 
+    <!-- Chrome Custom Tabs and Browser Query Intent Filters (API 30+) -->
+    <queries>
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
+
     <application
         android:name=".CobaltApplication"
         android:allowBackup="true"

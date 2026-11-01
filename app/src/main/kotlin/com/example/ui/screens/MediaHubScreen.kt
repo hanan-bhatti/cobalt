@@ -145,10 +145,10 @@ fun MediaHubScreen(
                     if (onNavigateToTraktSync != null) {
                         IconButton(onClick = onNavigateToTraktSync) {
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_movie),
+                                painter = painterResource(id = R.drawable.ic_trakt),
                                 contentDescription = "Trakt Sync",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(22.dp)
+                                tint = Color(0xFFED1C24),
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }
@@ -181,7 +181,10 @@ fun MediaHubScreen(
     ) { innerPadding ->
         PullToRefreshBox(
             isRefreshing = isSyncing,
-            onRefresh = { viewModel.syncData() },
+            onRefresh = {
+                viewModel.syncData()
+                com.example.util.TraktSyncWorker.enqueueOneTimeSync(context)
+            },
             state = pullToRefreshState,
             modifier = Modifier
                 .padding(innerPadding)
@@ -267,8 +270,11 @@ fun MediaHubContent(
 
     val mediaItems = remember(allMediaItems, selectedStatus, selectedType, selectedGenre) {
         allMediaItems.filter { item ->
-            if (selectedStatus == "All") true
-            else item.watchStatus?.equals(selectedStatus, ignoreCase = true) == true
+            when (selectedStatus) {
+                "All" -> true
+                "Completed" -> item.watchStatus.equals("Completed", ignoreCase = true) || item.watchStatus.equals("Watched", ignoreCase = true)
+                else -> item.watchStatus.equals(selectedStatus, ignoreCase = true)
+            }
         }.filter { item ->
             when (selectedType) {
                 "All Types" -> true

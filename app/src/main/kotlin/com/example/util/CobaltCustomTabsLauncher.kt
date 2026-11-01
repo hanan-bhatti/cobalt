@@ -41,17 +41,36 @@ object CobaltCustomTabsLauncher {
 
     private const val TAG = "CobaltCustomTabs"
 
+    fun resolveThemeState(context: Context): Pair<Boolean, Boolean> {
+        val prefs = context.getSharedPreferences("cobalt_settings", Context.MODE_PRIVATE)
+        val mode = prefs.getString("theme_mode", "System Default") ?: "System Default"
+        val isSystemDark = (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+
+        val isDark = when (mode.lowercase()) {
+            "dark" -> true
+            "amoled" -> true
+            "light" -> false
+            else -> isSystemDark
+        }
+        val isAmoled = mode.equals("amoled", ignoreCase = true)
+        return Pair(isDark, isAmoled)
+    }
+
     /**
      * Launch a URL in Chrome Custom Tabs with Cobalt branding and actions.
      */
     fun launch(
         context: Context,
         url: String,
-        isDarkTheme: Boolean = false,
-        isAmoled: Boolean = false,
+        isDarkTheme: Boolean? = null,
+        isAmoled: Boolean? = null,
         itemId: String? = null,
         itemTitle: String? = null
     ) {
+        val (autoDark, autoAmoled) = resolveThemeState(context)
+        val effectiveDark = isDarkTheme ?: autoDark
+        val effectiveAmoled = isAmoled ?: autoAmoled
+
         val cleanUrl = normalizeUrl(url)
         val uri = try {
             Uri.parse(cleanUrl)
@@ -68,8 +87,8 @@ object CobaltCustomTabsLauncher {
 
             // Setup Theme Color Schemes (Light, Dark, AMOLED)
             val lightToolbarColor = 0xFFFDFBF9.toInt() // CreamPaper
-            val darkToolbarColor = if (isAmoled) 0xFF000000.toInt() else 0xFF1A120E.toInt() // TrueBlack or SurfaceDark
-            val activeToolbarColor = if (isDarkTheme) darkToolbarColor else lightToolbarColor
+            val darkToolbarColor = if (effectiveAmoled) 0xFF000000.toInt() else 0xFF1A120E.toInt() // TrueBlack or SurfaceDark
+            val activeToolbarColor = if (effectiveDark) darkToolbarColor else lightToolbarColor
 
             val lightParams = CustomTabColorSchemeParams.Builder()
                 .setToolbarColor(lightToolbarColor)
@@ -90,7 +109,7 @@ object CobaltCustomTabsLauncher {
             builder.setColorSchemeParams(CustomTabsIntent.COLOR_SCHEME_LIGHT, lightParams)
             builder.setColorSchemeParams(CustomTabsIntent.COLOR_SCHEME_DARK, darkParams)
             builder.setColorScheme(
-                if (isDarkTheme) CustomTabsIntent.COLOR_SCHEME_DARK
+                if (effectiveDark) CustomTabsIntent.COLOR_SCHEME_DARK
                 else CustomTabsIntent.COLOR_SCHEME_LIGHT
             )
 
@@ -154,8 +173,16 @@ object CobaltCustomTabsLauncher {
 
             val customTabsIntent = builder.build()
 
-            // Resolve CCT package if available
-            val cctPackage = CustomTabsClient.getPackageName(context, null)
+            // Resolve CCT package if available, preferring standard Chrome to avoid OEM toolbar splits
+            val preferredPackages = listOf(
+                "com.android.chrome",
+                "com.chrome.beta",
+                "com.chrome.dev",
+                "com.chrome.canary",
+                "com.google.android.apps.chrome"
+            )
+            val cctPackage = CustomTabsClient.getPackageName(context, preferredPackages)
+                ?: CustomTabsClient.getPackageName(context, null)
             if (!cctPackage.isNullOrBlank()) {
                 customTabsIntent.intent.setPackage(cctPackage)
             }

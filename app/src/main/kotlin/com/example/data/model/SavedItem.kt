@@ -103,6 +103,11 @@ fun SavedItem.getBestImagePath(): String? {
     if (this.type == SavedItemType.LINK && !this.linkImage.isNullOrBlank()) {
         return this.linkImage
     }
+
+    // For media items, fallback to backdropUrl if poster/thumbnail is not yet cached
+    if (this.type == SavedItemType.MEDIA && !this.backdropUrl.isNullOrBlank()) {
+        return this.backdropUrl
+    }
     
     return null
 }

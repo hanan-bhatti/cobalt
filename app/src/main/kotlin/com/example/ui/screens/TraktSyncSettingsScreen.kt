@@ -195,14 +195,14 @@ fun TraktSyncSettingsScreen(
                                         modifier = Modifier
                                             .size(54.dp)
                                             .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.primaryContainer),
+                                            .background(Color(0xFFED1C24).copy(alpha = 0.15f)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
-                                            painter = painterResource(id = R.drawable.ic_custom_movie),
+                                            painter = painterResource(id = R.drawable.ic_trakt),
                                             contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(26.dp)
+                                            tint = Color(0xFFED1C24),
+                                            modifier = Modifier.size(28.dp)
                                         )
                                     }
                                 }
@@ -310,7 +310,7 @@ fun TraktSyncSettingsScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        painter = painterResource(id = R.drawable.ic_custom_movie),
+                                        painter = painterResource(id = R.drawable.ic_trakt),
                                         contentDescription = null,
                                         tint = Color(0xFFED1C24),
                                         modifier = Modifier.size(24.dp)
@@ -453,9 +453,13 @@ fun TraktSyncSettingsScreen(
     if (authState !is TraktDeviceAuthState.Idle) {
         Dialog(
             onDismissRequest = {
-                authManager.cancelDeviceAuth()
+                // Keep background auth polling active when user is in Custom Tabs or switching apps
             },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
+            properties = DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false,
+                usePlatformDefaultWidth = false
+            )
         ) {
             Surface(
                 shape = RoundedCornerShape(28.dp),
@@ -479,7 +483,7 @@ fun TraktSyncSettingsScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_movie),
+                            painter = painterResource(id = R.drawable.ic_trakt),
                             contentDescription = null,
                             tint = Color(0xFFED1C24),
                             modifier = Modifier.size(28.dp)

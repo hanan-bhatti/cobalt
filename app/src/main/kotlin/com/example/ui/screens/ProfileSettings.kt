@@ -41,6 +41,7 @@ import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -174,27 +175,28 @@ enum class SettingsCategory(
 
 /**
  * Dual-tone color mapping for Category avatar badges matching PixelPlayer's style.
+ * Uses high-contrast, vibrant, and theme-harmonized pairs for pristine clarity in both Light and Dark themes.
  */
 fun getSettingsCategoryColors(category: SettingsCategory, isDark: Boolean): Pair<Color, Color> {
     return if (isDark) {
         when (category) {
-            SettingsCategory.APPEARANCE -> Color(0xFF532342) to Color(0xFFFFD8EC)
-            SettingsCategory.ORGANIZATION -> Color(0xFF382352) to Color(0xFFEADBFF)
-            SettingsCategory.REMINDERS -> Color(0xFF4A3400) to Color(0xFFFFDF9E)
-            SettingsCategory.INTELLIGENCE -> Color(0xFF004F58) to Color(0xFF88FAFF)
-            SettingsCategory.FLOATING_DOCK -> Color(0xFF5E3000) to Color(0xFFFFDCC1)
-            SettingsCategory.WIDGETS -> Color(0xFF1E4624) to Color(0xFFB8F5C2)
-            SettingsCategory.SYSTEM_HEALTH -> Color(0xFF263A64) to Color(0xFFD8E2FF)
+            SettingsCategory.APPEARANCE -> Color(0xFF3B1F54) to Color(0xFFD8B4FE)
+            SettingsCategory.ORGANIZATION -> Color(0xFF452B07) to Color(0xFFFDE68A)
+            SettingsCategory.REMINDERS -> Color(0xFF4D2208) to Color(0xFFFDBA74)
+            SettingsCategory.INTELLIGENCE -> Color(0xFF0C3854) to Color(0xFF7DD3FC)
+            SettingsCategory.FLOATING_DOCK -> Color(0xFF4C0F1E) to Color(0xFFFDA4AF)
+            SettingsCategory.WIDGETS -> Color(0xFF0E3E26) to Color(0xFF86EFAC)
+            SettingsCategory.SYSTEM_HEALTH -> Color(0xFF1E2452) to Color(0xFFA5B4FC)
         }
     } else {
         when (category) {
-            SettingsCategory.APPEARANCE -> Color(0xFFFFD8EC) to Color(0xFF631B4B)
-            SettingsCategory.ORGANIZATION -> Color(0xFFEADBFF) to Color(0xFF4A2574)
-            SettingsCategory.REMINDERS -> Color(0xFFFFDF9E) to Color(0xFF6B4B00)
-            SettingsCategory.INTELLIGENCE -> Color(0xFFCCE8EA) to Color(0xFF004F58)
-            SettingsCategory.FLOATING_DOCK -> Color(0xFFFFDCC1) to Color(0xFF8B4A00)
-            SettingsCategory.WIDGETS -> Color(0xFFD4F8DC) to Color(0xFF14532D)
-            SettingsCategory.SYSTEM_HEALTH -> Color(0xFFD8E2FF) to Color(0xFF1E3A8A)
+            SettingsCategory.APPEARANCE -> Color(0xFFEDE7F6) to Color(0xFF7C3AED)
+            SettingsCategory.ORGANIZATION -> Color(0xFFFEF3C7) to Color(0xFFD97706)
+            SettingsCategory.REMINDERS -> Color(0xFFFFEDD5) to Color(0xFFEA580C)
+            SettingsCategory.INTELLIGENCE -> Color(0xFFE0F2FE) to Color(0xFF0284C7)
+            SettingsCategory.FLOATING_DOCK -> Color(0xFFFFE4E6) to Color(0xFFE11D48)
+            SettingsCategory.WIDGETS -> Color(0xFFDCFCE7) to Color(0xFF059669)
+            SettingsCategory.SYSTEM_HEALTH -> Color(0xFFE0E7FF) to Color(0xFF4F46E5)
         }
     }
 }
@@ -209,7 +211,7 @@ fun ExpressiveCategoryItem(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(24.dp)
 ) {
-    val isDark = isSystemInDarkTheme()
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val colors = remember(category, isDark) { getSettingsCategoryColors(category, isDark) }
 
     Surface(

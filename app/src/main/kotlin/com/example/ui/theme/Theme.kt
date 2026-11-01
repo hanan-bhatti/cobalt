@@ -19,6 +19,7 @@
  package com.example.ui.theme
 
  import android.os.Build
+ import androidx.compose.ui.graphics.Color
  import androidx.compose.foundation.isSystemInDarkTheme
  import androidx.compose.material3.MaterialTheme
  import androidx.compose.material3.darkColorScheme
@@ -48,6 +49,10 @@
      onSurface = OnSurfaceDark,
      surfaceVariant = SurfaceVariantDark,
      onSurfaceVariant = OnSurfaceVariantDark,
+     surfaceContainer = Color(0xFF241C18),
+     surfaceContainerHigh = Color(0xFF2E2420),
+     surfaceContainerHighest = Color(0xFF382D28),
+     surfaceContainerLow = Color(0xFF1E1612),
      outline = OutlineDark,
      outlineVariant = OutlineVariantDark
  )
@@ -72,6 +77,10 @@
      onSurface = OnSurface,
      surfaceVariant = SurfaceVariant,
      onSurfaceVariant = OnSurfaceVariant,
+     surfaceContainer = Color(0xFFF5EFE9),
+     surfaceContainerHigh = Color(0xFFECE4DC),
+     surfaceContainerHighest = Color(0xFFE4DAD0),
+     surfaceContainerLow = Color(0xFFFAF5F0),
      outline = Outline,
      outlineVariant = OutlineVariant
  )

@@ -72,7 +72,7 @@ object TraktNotificationHelper {
         )
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_custom_movie)
+            .setSmallIcon(R.drawable.ic_trakt)
             .setColor(android.graphics.Color.parseColor("#ED1C24")) // Trakt brand red
             .setContentTitle("Syncing with Trakt.tv")
             .setContentText(message)
@@ -114,7 +114,7 @@ object TraktNotificationHelper {
         )
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_custom_movie)
+            .setSmallIcon(R.drawable.ic_trakt)
             .setColor(android.graphics.Color.parseColor("#ED1C24"))
             .setContentTitle("Trakt.tv Sync Complete")
             .setContentText(summary)
@@ -139,7 +139,7 @@ object TraktNotificationHelper {
         if (!notificationManager.areNotificationsEnabled()) return
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_custom_movie)
+            .setSmallIcon(R.drawable.ic_trakt)
             .setColor(android.graphics.Color.parseColor("#EF4444"))
             .setContentTitle("Trakt Sync Issue")
             .setContentText(errorMessage)

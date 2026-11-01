@@ -715,7 +715,9 @@ fun ProfileMainContent(
                 ClickableRow(
                     title = "Trakt.tv Sync",
                     subtitle = if (isTraktConnected) "Connected as @${traktUser?.username ?: "user"} • Two-way sync" else "Sync watched history, ratings & TV progress",
-                    leadingIconRes = R.drawable.ic_custom_movie,
+                    leadingIconRes = R.drawable.ic_trakt,
+                    iconTint = Color(0xFFED1C24),
+                    iconContainerColor = Color(0xFFED1C24).copy(alpha = 0.15f),
                     onClick = onNavigateToTraktSync
                 )
             }
@@ -1450,6 +1452,8 @@ fun ClickableRow(
     title: String,
     subtitle: String? = null,
     leadingIconRes: Int? = null,
+    iconTint: Color? = null,
+    iconContainerColor: Color? = null,
     onClick: () -> Unit
 ) {
     Row(
@@ -1470,13 +1474,13 @@ fun ClickableRow(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)),
+                        .background(iconContainerColor ?: MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         painter = painterResource(id = leadingIconRes),
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = iconTint ?: MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
                 }

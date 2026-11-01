@@ -42,7 +42,8 @@ data class TraktDeviceCodeResponse(
 @JsonClass(generateAdapter = true)
 data class TraktDeviceTokenRequest(
     val code: String,
-    val client_id: String
+    val client_id: String,
+    val client_secret: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -59,6 +60,7 @@ data class TraktTokenResponse(
 data class TraktRefreshTokenRequest(
     val client_id: String,
     val refresh_token: String,
+    val client_secret: String? = null,
     val grant_type: String = "refresh_token"
 )
 
@@ -68,7 +70,7 @@ data class TraktRefreshTokenRequest(
 
 @JsonClass(generateAdapter = true)
 data class TraktUser(
-    val username: String,
+    val username: String = "",
     val name: String? = null,
     val private: Boolean = false,
     val vip: Boolean = false,
@@ -92,7 +94,7 @@ data class TraktUserAvatar(
 
 @JsonClass(generateAdapter = true)
 data class TraktIds(
-    val trakt: Long,
+    val trakt: Long = 0L,
     val slug: String? = null,
     val imdb: String? = null,
     val tmdb: Int? = null
@@ -100,9 +102,9 @@ data class TraktIds(
 
 @JsonClass(generateAdapter = true)
 data class TraktMovie(
-    val title: String,
+    val title: String = "",
     val year: Int? = null,
-    val ids: TraktIds,
+    val ids: TraktIds = TraktIds(),
     val overview: String? = null,
     val runtime: Int? = null,
     val rating: Double? = null,
@@ -111,9 +113,9 @@ data class TraktMovie(
 
 @JsonClass(generateAdapter = true)
 data class TraktShow(
-    val title: String,
+    val title: String = "",
     val year: Int? = null,
-    val ids: TraktIds,
+    val ids: TraktIds = TraktIds(),
     val overview: String? = null,
     val status: String? = null,
     val rating: Double? = null,
@@ -169,45 +171,47 @@ data class TraktLastActivitiesWatchlist(
 @JsonClass(generateAdapter = true)
 data class TraktWatchedMovieItem(
     val plays: Int = 1,
-    val last_watched_at: String,
-    val movie: TraktMovie
+    val last_watched_at: String? = null,
+    val last_updated_at: String? = null,
+    val movie: TraktMovie? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class TraktWatchedShowItem(
     val plays: Int = 1,
-    val last_watched_at: String,
-    val show: TraktShow,
+    val last_watched_at: String? = null,
+    val last_updated_at: String? = null,
+    val show: TraktShow? = null,
     val seasons: List<TraktWatchedSeason>? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class TraktWatchedSeason(
-    val number: Int,
+    val number: Int = 0,
     val episodes: List<TraktWatchedEpisode>? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class TraktWatchedEpisode(
-    val number: Int,
+    val number: Int = 0,
     val plays: Int = 1,
-    val last_watched_at: String
+    val last_watched_at: String? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class TraktWatchlistItem(
     val id: Long? = null,
-    val listed_at: String,
-    val type: String, // "movie" or "show"
+    val listed_at: String? = null,
+    val type: String? = null, // "movie" or "show"
     val movie: TraktMovie? = null,
     val show: TraktShow? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class TraktRatingItem(
-    val rating: Int, // 1 to 10
-    val rated_at: String,
-    val type: String, // "movie" or "show"
+    val rating: Int = 0, // 1 to 10
+    val rated_at: String? = null,
+    val type: String? = null, // "movie" or "show"
     val movie: TraktMovie? = null,
     val show: TraktShow? = null
 )

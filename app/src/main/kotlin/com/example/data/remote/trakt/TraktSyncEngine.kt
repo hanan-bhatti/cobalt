@@ -134,18 +134,21 @@ object TraktSyncEngine {
                 updateProgress("Downloading watched movies...", 0.20f)
                 try {
                     val watchedMovies = TraktClient.apiService.getWatchedMovies()
+                    Log.i(TAG, "Fetched ${watchedMovies.size} watched movies from Trakt")
                     for (item in watchedMovies) {
-                        val traktId = item.movie.ids.trakt
-                        val tmdbId = item.movie.ids.tmdb
-                        val imdbId = item.movie.ids.imdb
-                        val title = item.movie.title
+                        val movie = item.movie ?: continue
+                        val ids = movie.ids
+                        val traktId = ids.trakt
+                        val tmdbId = ids.tmdb
+                        val imdbId = ids.imdb
+                        val title = movie.title.takeIf { it.isNotBlank() } ?: "Untitled Movie"
                         val watchedTimestamp = parseIsoDate(item.last_watched_at)
 
                         val existing = (if (traktId > 0) dao.getItemByTraktId(traktId) else null)
                             ?: (if (tmdbId != null && tmdbId > 0) dao.getItemByTmdbId(tmdbId) else null)
 
                         val entity = existing?.copy(
-                            watchStatus = "Watched",
+                            watchStatus = "Completed",
                             lastWatchedAt = watchedTimestamp,
                             traktId = traktId,
                             tmdbId = tmdbId ?: existing.tmdbId,
@@ -155,16 +158,16 @@ object TraktSyncEngine {
                             id = UUID.randomUUID().toString(),
                             type = SavedItemType.MEDIA.name,
                             title = title,
-                            content = "https://trakt.tv/movies/${item.movie.ids.slug ?: traktId}",
+                            content = "https://trakt.tv/movies/${ids.slug ?: traktId}",
                             timestamp = watchedTimestamp,
                             foldersJson = "[\"Movies\"]",
-                            extractedText = item.movie.overview,
+                            extractedText = movie.overview,
                             thumbnailPath = null,
                             mediaType = "movie",
-                            watchStatus = "Watched",
-                            releaseYear = item.movie.year?.toString(),
-                            rating = item.movie.rating,
-                            runtime = item.movie.runtime,
+                            watchStatus = "Completed",
+                            releaseYear = movie.year?.toString(),
+                            rating = movie.rating,
+                            runtime = movie.runtime,
                             traktId = traktId,
                             tmdbId = tmdbId,
                             imdbId = imdbId,
@@ -175,7 +178,7 @@ object TraktSyncEngine {
                         moviesCount++
                     }
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed syncing watched movies: ${e.message}")
+                    Log.w(TAG, "Failed syncing watched movies: ${e.message}", e)
                 }
             }
 
@@ -186,11 +189,14 @@ object TraktSyncEngine {
                 updateProgress("Downloading series & episode progress...", 0.50f)
                 try {
                     val watchedShows = TraktClient.apiService.getWatchedShows()
+                    Log.i(TAG, "Fetched ${watchedShows.size} watched shows from Trakt")
                     for (item in watchedShows) {
-                        val traktId = item.show.ids.trakt
-                        val tmdbId = item.show.ids.tmdb
-                        val imdbId = item.show.ids.imdb
-                        val title = item.show.title
+                        val show = item.show ?: continue
+                        val ids = show.ids
+                        val traktId = ids.trakt
+                        val tmdbId = ids.tmdb
+                        val imdbId = ids.imdb
+                        val title = show.title.takeIf { it.isNotBlank() } ?: "Untitled Show"
                         val overallWatchedAt = parseIsoDate(item.last_watched_at)
 
                         val seasonList = mutableListOf<TvSeasonProgress>()
@@ -222,7 +228,7 @@ object TraktSyncEngine {
                             )
                         }
 
-                        val totalAired = (item.show.aired_episodes ?: 0).coerceAtLeast(totalWatchedEps)
+                        val totalAired = (show.aired_episodes ?: 0).coerceAtLeast(totalWatchedEps)
                         val isComplete = totalAired > 0 && totalWatchedEps >= totalAired
 
                         val progress = TvShowProgress(
@@ -247,16 +253,16 @@ object TraktSyncEngine {
                             id = UUID.randomUUID().toString(),
                             type = SavedItemType.MEDIA.name,
                             title = title,
-                            content = "https://trakt.tv/shows/${item.show.ids.slug ?: traktId}",
+                            content = "https://trakt.tv/shows/${ids.slug ?: traktId}",
                             timestamp = overallWatchedAt,
                             foldersJson = "[\"TV Shows\"]",
-                            extractedText = item.show.overview,
+                            extractedText = show.overview,
                             thumbnailPath = null,
                             mediaType = "tv",
                             watchStatus = if (isComplete) "Completed" else "Watching",
-                            releaseYear = item.show.year?.toString(),
-                            rating = item.show.rating,
-                            status = item.show.status,
+                            releaseYear = show.year?.toString(),
+                            rating = show.rating,
+                            status = show.status,
                             traktId = traktId,
                             tmdbId = tmdbId,
                             imdbId = imdbId,
@@ -268,7 +274,7 @@ object TraktSyncEngine {
                         showsCount++
                     }
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed syncing watched shows: ${e.message}")
+                    Log.w(TAG, "Failed syncing watched shows: ${e.message}", e)
                 }
             }
 
@@ -311,10 +317,12 @@ object TraktSyncEngine {
                 updateProgress("Downloading watchlist...", 0.85f)
                 try {
                     val watchlistMovies = TraktClient.apiService.getWatchlistMovies()
+                    Log.i(TAG, "Fetched ${watchlistMovies.size} watchlist movies from Trakt")
                     for (wItem in watchlistMovies) {
                         val movie = wItem.movie ?: continue
-                        val traktId = movie.ids.trakt
-                        val tmdbId = movie.ids.tmdb
+                        val ids = movie.ids
+                        val traktId = ids.trakt
+                        val tmdbId = ids.tmdb
                         val existing = itemsToUpsert.values.firstOrNull { it.traktId == traktId }
                             ?: dao.getItemByTraktId(traktId)
 
@@ -322,8 +330,8 @@ object TraktSyncEngine {
                             val entity = SavedItemEntity(
                                 id = UUID.randomUUID().toString(),
                                 type = SavedItemType.MEDIA.name,
-                                title = movie.title,
-                                content = "https://trakt.tv/movies/${movie.ids.slug ?: traktId}",
+                                title = movie.title.takeIf { it.isNotBlank() } ?: "Untitled Movie",
+                                content = "https://trakt.tv/movies/${ids.slug ?: traktId}",
                                 timestamp = parseIsoDate(wItem.listed_at),
                                 foldersJson = "[\"Watchlist\"]",
                                 extractedText = movie.overview,
@@ -335,7 +343,7 @@ object TraktSyncEngine {
                                 runtime = movie.runtime,
                                 traktId = traktId,
                                 tmdbId = tmdbId,
-                                imdbId = movie.ids.imdb,
+                                imdbId = ids.imdb,
                                 updatedAt = System.currentTimeMillis()
                             )
                             itemsToUpsert[entity.id] = entity
@@ -344,10 +352,12 @@ object TraktSyncEngine {
                     }
 
                     val watchlistShows = TraktClient.apiService.getWatchlistShows()
+                    Log.i(TAG, "Fetched ${watchlistShows.size} watchlist shows from Trakt")
                     for (wItem in watchlistShows) {
                         val show = wItem.show ?: continue
-                        val traktId = show.ids.trakt
-                        val tmdbId = show.ids.tmdb
+                        val ids = show.ids
+                        val traktId = ids.trakt
+                        val tmdbId = ids.tmdb
                         val existing = itemsToUpsert.values.firstOrNull { it.traktId == traktId }
                             ?: dao.getItemByTraktId(traktId)
 
@@ -355,8 +365,8 @@ object TraktSyncEngine {
                             val entity = SavedItemEntity(
                                 id = UUID.randomUUID().toString(),
                                 type = SavedItemType.MEDIA.name,
-                                title = show.title,
-                                content = "https://trakt.tv/shows/${show.ids.slug ?: traktId}",
+                                title = show.title.takeIf { it.isNotBlank() } ?: "Untitled Show",
+                                content = "https://trakt.tv/shows/${ids.slug ?: traktId}",
                                 timestamp = parseIsoDate(wItem.listed_at),
                                 foldersJson = "[\"Watchlist\"]",
                                 extractedText = show.overview,
@@ -368,7 +378,7 @@ object TraktSyncEngine {
                                 status = show.status,
                                 traktId = traktId,
                                 tmdbId = tmdbId,
-                                imdbId = show.ids.imdb,
+                                imdbId = ids.imdb,
                                 updatedAt = System.currentTimeMillis()
                             )
                             itemsToUpsert[entity.id] = entity

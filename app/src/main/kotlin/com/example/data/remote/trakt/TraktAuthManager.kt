@@ -208,6 +208,8 @@ class TraktAuthManager(private val context: Context) {
                                     val userResult = fetchAndSaveUserProfile()
                                     val user = userResult.getOrNull() ?: _currentUser.value
                                     _deviceAuthState.value = TraktDeviceAuthState.Success(user)
+                                    // Trigger immediate library sync upon successful authentication!
+                                    com.example.util.TraktSyncWorker.enqueueOneTimeSync(context)
                                     delay(1500)
                                     _deviceAuthState.value = TraktDeviceAuthState.Idle
                                     return@launch
@@ -222,12 +224,16 @@ class TraktAuthManager(private val context: Context) {
                                     )
                                 }
                             }
-                            404, 410 -> {
-                                _deviceAuthState.value = TraktDeviceAuthState.Error("Activation code expired. Please try again.")
-                                return@launch
+                            404 -> {
+                                // Code pending propagation or user has not navigated to trakt.tv/activate yet
+                                Log.d(TAG, "Device token poll: 404 (pending), continuing to poll...")
                             }
                             409 -> {
-                                _deviceAuthState.value = TraktDeviceAuthState.Error("Activation code already used. Please request a new code.")
+                                // Code already approved or token generation in progress
+                                Log.d(TAG, "Device token poll: 409 (approved/processing), continuing to poll...")
+                            }
+                            410 -> {
+                                _deviceAuthState.value = TraktDeviceAuthState.Error("Activation code expired. Please try again.")
                                 return@launch
                             }
                             418, 429 -> {
@@ -238,12 +244,17 @@ class TraktAuthManager(private val context: Context) {
                                 Log.w(TAG, "Unexpected poll status: ${response.code()}")
                             }
                         }
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         Log.w(TAG, "Device token poll iteration error: ${e.message}")
                     }
                 }
 
                 _deviceAuthState.value = TraktDeviceAuthState.Error("Verification timed out. Please try again.")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                Log.d(TAG, "Device auth job cancelled normally.")
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Failed device authorization flow: ${e.message}", e)
                 _deviceAuthState.value = TraktDeviceAuthState.Error(e.localizedMessage ?: "Failed to connect to Trakt.")
