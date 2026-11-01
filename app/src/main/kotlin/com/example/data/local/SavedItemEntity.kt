@@ -92,13 +92,18 @@ data class SavedItemEntity(
         } catch (_: Exception) {
             emptyList()
         }
-        val watchProvidersList = try {
-            watchProvidersJson.removeSurrounding("[", "]")
-                .split(",")
-                .map { it.trim().removeSurrounding("\"") }
-                .filter { it.isNotEmpty() }
-        } catch (_: Exception) {
-            emptyList()
+        val richProviders = com.example.data.model.MediaWatchProvider.listFromJson(watchProvidersJson)
+        val watchProvidersList = if (richProviders.isNotEmpty()) {
+            richProviders.map { it.name }
+        } else {
+            try {
+                watchProvidersJson.removeSurrounding("[", "]")
+                    .split(",")
+                    .map { it.trim().removeSurrounding("\"") }
+                    .filter { it.isNotEmpty() }
+            } catch (_: Exception) {
+                emptyList()
+            }
         }
         val itemType = try {
             com.example.data.model.SavedItemType.valueOf(type)
@@ -130,6 +135,7 @@ data class SavedItemEntity(
             watchStatus = watchStatus,
             genres = genresList,
             watchProviders = watchProvidersList,
+            richWatchProviders = richProviders,
             trailerUrl = trailerUrl,
             backdropUrl = backdropUrl,
             releaseYear = releaseYear,
@@ -180,7 +186,11 @@ data class SavedItemEntity(
                 mediaType = item.mediaType,
                 watchStatus = item.watchStatus,
                 genresJson = "[${item.genres.joinToString(",") { "\"$it\"" }}]",
-                watchProvidersJson = "[${item.watchProviders.joinToString(",") { "\"$it\"" }}]",
+                watchProvidersJson = if (item.richWatchProviders.isNotEmpty()) {
+                    com.example.data.model.MediaWatchProvider.listToJson(item.richWatchProviders)
+                } else {
+                    "[${item.watchProviders.joinToString(",") { "\"$it\"" }}]"
+                },
                 trailerUrl = item.trailerUrl,
                 backdropUrl = item.backdropUrl,
                 releaseYear = item.releaseYear,

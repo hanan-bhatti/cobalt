@@ -110,6 +110,13 @@ data class TraktMovie(
 )
 
 @JsonClass(generateAdapter = true)
+data class TraktAirs(
+    val day: String? = null,
+    val time: String? = null,
+    val timezone: String? = null
+)
+
+@JsonClass(generateAdapter = true)
 data class TraktShow(
     val title: String = "",
     val year: Int? = null,
@@ -117,6 +124,14 @@ data class TraktShow(
     val overview: String? = null,
     val status: String? = null,
     val rating: Double? = null,
+    val votes: Int? = null,
+    val airs: TraktAirs? = null,
+    val runtime: Int? = null,
+    val certification: String? = null,
+    val network: String? = null,
+    val country: String? = null,
+    val language: String? = null,
+    val genres: List<String>? = null,
     val aired_episodes: Int? = null
 )
 
@@ -250,4 +265,77 @@ data class TraktSyncCounts(
 data class TraktSyncNotFound(
     val movies: List<Map<String, Any?>>? = null,
     val shows: List<Map<String, Any?>>? = null
+)
+
+// ==========================================
+// 6. TRAKT RICH SHOW PROGRESS & STATS
+// ==========================================
+
+@JsonClass(generateAdapter = true)
+data class TraktShowWatchedProgressResponse(
+    val aired: Int = 0,
+    val completed: Int = 0,
+    val last_watched_at: String? = null,
+    val last_episode: TraktProgressEpisode? = null,
+    val next_episode: TraktProgressEpisode? = null,
+    val stats: TraktProgressStats? = null,
+    val seasons: List<TraktProgressSeason>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktProgressEpisode(
+    val season: Int = 0,
+    val number: Int = 0,
+    val title: String? = null,
+    val overview: String? = null,
+    val rating: Double? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktProgressStats(
+    val play_count: Int = 0,
+    val minutes_watched: Int = 0,
+    val minutes_left: Int = 0
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktProgressSeason(
+    val number: Int = 0,
+    val title: String? = null,
+    val aired: Int = 0,
+    val completed: Int = 0,
+    val episodes: List<TraktProgressSeasonEpisode>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktProgressSeasonEpisode(
+    val number: Int = 0,
+    val completed: Boolean = false,
+    val last_watched_at: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktRatingsResponse(
+    val rating: Double = 0.0,
+    val votes: Int = 0,
+    val distribution: Map<String, Int>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktStatsResponse(
+    val watchers: Long = 0L,
+    val plays: Long = 0L,
+    val collectors: Long = 0L,
+    val lists: Long = 0L,
+    val favorited: Long = 0L
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktSeasonFullItem(
+    val number: Int = 0,
+    val title: String? = null,
+    val rating: Double? = null,
+    val votes: Int? = null,
+    val episode_count: Int? = null,
+    val aired_episodes: Int? = null
 )

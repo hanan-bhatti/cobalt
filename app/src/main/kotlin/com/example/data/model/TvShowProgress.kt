@@ -23,13 +23,45 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
 @JsonClass(generateAdapter = true)
+data class SeasonQualityPoint(
+    val seasonNumber: Int,
+    val ratingPercent: Int
+)
+
+@JsonClass(generateAdapter = true)
 data class TvShowProgress(
     val totalAired: Int = 0,
     val totalWatched: Int = 0,
     val lastWatchedSeason: Int? = null,
     val lastWatchedEpisode: Int? = null,
+    val lastWatchedTitle: String? = null,
+    val nextEpisodeSeason: Int? = null,
+    val nextEpisodeNumber: Int? = null,
+    val nextEpisodeTitle: String? = null,
     val completed: Boolean = false,
-    val seasons: List<TvSeasonProgress> = emptyList()
+    val minutesWatched: Int = 0,
+    val minutesLeft: Int = 0,
+    val seasons: List<TvSeasonProgress> = emptyList(),
+    val traktRatingPercent: Int? = null,
+    val traktVotes: Int? = null,
+    val imdbRating: String? = null,
+    val imdbVotes: String? = null,
+    val rottenTomatoesScore: String? = null,
+    val popcornScore: String? = null,
+    val metacriticScore: String? = null,
+    val seasonRatings: List<SeasonQualityPoint> = emptyList(),
+    val plays: Long? = null,
+    val watchers: Long? = null,
+    val listsCount: Long? = null,
+    val favoritesCount: Long? = null,
+    val network: String? = null,
+    val airsTime: String? = null,
+    val country: String? = null,
+    val language: String? = null,
+    val creators: List<String> = emptyList(),
+    val studios: List<String> = emptyList(),
+    val contentRating: String? = null,
+    val totalRuntimeFormatted: String? = null
 ) {
     val progressFraction: Float
         get() = if (totalAired > 0) (totalWatched.toFloat() / totalAired.toFloat()).coerceIn(0f, 1f) else 0f

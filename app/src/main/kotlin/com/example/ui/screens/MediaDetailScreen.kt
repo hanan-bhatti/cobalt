@@ -88,6 +88,24 @@ import com.example.ui.theme.*
 import com.example.ui.viewmodel.CobaltViewModel
 import java.util.Locale
 
+private fun formatCount(count: Long?): String {
+    if (count == null || count <= 0) return "-"
+    return when {
+        count >= 1_000_000 -> String.format(Locale.US, "%.1fM", count / 1_000_000.0)
+        count >= 1_000 -> String.format(Locale.US, "%.1fK", count / 1_000.0)
+        else -> count.toString()
+    }
+}
+
+private fun formatVotes(votes: Int?): String {
+    if (votes == null || votes <= 0) return ""
+    return when {
+        votes >= 1_000_000 -> String.format(Locale.US, "%.1fM votes", votes / 1_000_000.0)
+        votes >= 1_000 -> String.format(Locale.US, "%.1fK votes", votes / 1_000.0)
+        else -> "$votes votes"
+    }
+}
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun MediaDetailSection(
@@ -101,6 +119,7 @@ fun MediaDetailSection(
     var showPosterZoom by remember { mutableStateOf(false) }
     var showMoreInfoSheet by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val progress = item.showProgress
 
     LaunchedEffect(item.id) {
         viewModel.enrichMediaItem(item)
@@ -399,6 +418,168 @@ fun MediaDetailSection(
             }
         }
 
+        // OFFICIAL RATINGS ROW (Trakt, IMDb, Rotten Tomatoes, Popcorn)
+        val hasRatings = progress?.traktRatingPercent != null || progress?.imdbRating != null || progress?.rottenTomatoesScore != null || item.rating != null
+        if (hasRatings) {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // Trakt Score
+                item {
+                    val traktScore = progress?.traktRatingPercent ?: item.rating?.let { (it * 10).toInt() }
+                    if (traktScore != null && traktScore > 0) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_trakt),
+                                    contentDescription = null,
+                                    tint = Color(0xFFED1C24),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Column {
+                                    Text(
+                                        text = "$traktScore%",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    val votes = progress?.traktVotes
+                                    Text(
+                                        text = if (votes != null && votes > 0) formatVotes(votes) else "Trakt",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 9.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // IMDb Score
+                item {
+                    val imdbScore = progress?.imdbRating
+                    if (!imdbScore.isNullOrBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFFF5C518).copy(alpha = 0.15f),
+                            border = BorderStroke(1.dp, Color(0xFFF5C518).copy(alpha = 0.4f))
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = Color(0xFFF5C518)
+                                ) {
+                                    Text(
+                                        text = "IMDb",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = Color.Black,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                    )
+                                }
+                                Column {
+                                    Text(
+                                        text = imdbScore,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = progress.imdbVotes ?: "Score",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 9.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Rotten Tomatoes Score
+                item {
+                    val rtScore = progress?.rottenTomatoesScore
+                    if (!rtScore.isNullOrBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFFFA320A).copy(alpha = 0.12f),
+                            border = BorderStroke(1.dp, Color(0xFFFA320A).copy(alpha = 0.35f))
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text("🍅", fontSize = 14.sp)
+                                Column {
+                                    Text(
+                                        text = rtScore,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Fresh",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 9.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Popcorn Score
+                item {
+                    val popScore = progress?.popcornScore
+                    if (!popScore.isNullOrBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFFFFB300).copy(alpha = 0.12f),
+                            border = BorderStroke(1.dp, Color(0xFFFFB300).copy(alpha = 0.35f))
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text("🍿", fontSize = 14.sp)
+                                Column {
+                                    Text(
+                                        text = popScore,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "Hot",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 9.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // ONE-TAP WATCH STATUS SELECTOR CHIPS
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
@@ -459,8 +640,7 @@ fun MediaDetailSection(
         }
 
         // TV SERIES PROGRESS (Seasons & Episodes)
-        val progress = item.showProgress
-        if (progress != null && (progress.totalWatched > 0 || progress.seasons.isNotEmpty())) {
+        if (progress != null && (progress.totalWatched > 0 || progress.seasons.isNotEmpty() || progress.totalAired > 0)) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -543,6 +723,48 @@ fun MediaDetailSection(
                             trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
                         )
 
+                        // Next Up Card
+                        if (progress.nextEpisodeSeason != null && progress.nextEpisodeNumber != null) {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_play),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Column {
+                                        Text(
+                                            text = "NEXT UP",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(
+                                            text = "S%02dE%02d • %s".format(
+                                                progress.nextEpisodeSeason,
+                                                progress.nextEpisodeNumber,
+                                                progress.nextEpisodeTitle ?: "Episode ${progress.nextEpisodeNumber}"
+                                            ),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        // Season breakdown chips
                         if (progress.seasons.isNotEmpty()) {
                             LazyRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -566,19 +788,108 @@ fun MediaDetailSection(
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                         ) {
                                             Text(
-                                                text = "Season ${season.seasonNumber}",
+                                                text = season.title?.takeIf { it.isNotBlank() && it != season.seasonNumber.toString() } ?: "Season ${season.seasonNumber}",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 fontWeight = FontWeight.Bold,
                                                 color = if (isSeasonDone) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurface
                                             )
                                             Text(
-                                                text = "• ${season.watchedEpisodes} eps",
+                                                text = "• ${season.watchedEpisodes}/${season.totalEpisodes}",
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // QUALITY OVER TIME (Season Ratings Sparkline)
+        if (progress != null && progress.seasonRatings.size >= 2) {
+            val seasonRatings = progress.seasonRatings.sortedBy { it.seasonNumber }
+            val peak = seasonRatings.maxByOrNull { it.ratingPercent }
+            val low = seasonRatings.minByOrNull { it.ratingPercent }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "QUALITY OVER TIME",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                    if (peak != null && low != null) {
+                        Text(
+                            text = "Peak S${peak.seasonNumber} · ${peak.ratingPercent}% · Low S${low.seasonNumber} · ${low.ratingPercent}%",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(130.dp)
+                ) {
+                    Box(modifier = Modifier.fillMaxSize().padding(14.dp)) {
+                        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize().padding(bottom = 18.dp)) {
+                            val w = size.width
+                            val h = size.height
+                            val minVal = (low?.ratingPercent ?: 40).toFloat().coerceAtLeast(20f)
+                            val maxVal = (peak?.ratingPercent ?: 90).toFloat().coerceAtLeast(minVal + 10f)
+                            val range = (maxVal - minVal).coerceAtLeast(1f)
+
+                            val stepX = if (seasonRatings.size > 1) w / (seasonRatings.size - 1) else w
+                            val path = androidx.compose.ui.graphics.Path()
+
+                            seasonRatings.forEachIndexed { idx, point ->
+                                val x = idx * stepX
+                                val normY = (point.ratingPercent - minVal) / range
+                                val y = h - (normY * h)
+                                if (idx == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                            }
+
+                            drawPath(
+                                path = path,
+                                color = Color(0xFFFFB300),
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                            )
+
+                            seasonRatings.forEachIndexed { idx, point ->
+                                val x = idx * stepX
+                                val normY = (point.ratingPercent - minVal) / range
+                                val y = h - (normY * h)
+                                drawCircle(
+                                    color = Color(0xFFFFB300),
+                                    radius = 3.5.dp.toPx(),
+                                    center = androidx.compose.ui.geometry.Offset(x, y)
+                                )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            seasonRatings.forEach { pt ->
+                                Text(
+                                    text = "S${pt.seasonNumber}",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
                             }
                         }
                     }
@@ -620,7 +931,13 @@ fun MediaDetailSection(
         }
 
         // WATCH PROVIDERS ("Where to Watch")
-        if (item.watchProviders.isNotEmpty()) {
+        val allProviders = if (item.richWatchProviders.isNotEmpty()) {
+            item.richWatchProviders
+        } else {
+            item.watchProviders.map { com.example.data.model.MediaWatchProvider(name = it, type = "Stream") }
+        }
+
+        if (allProviders.isNotEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -640,48 +957,65 @@ fun MediaDetailSection(
                         color = MaterialTheme.colorScheme.secondary
                     )
                 }
-                val uniqueProviders = item.watchProviders.map { getStreamingProviderConfig(it) }.distinctBy { it.label }
+
+                val distinctProviders = allProviders.distinctBy { "${it.name}_${it.type}" }
+
                 LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    items(uniqueProviders, key = { it.label }) { config ->
-                        val watchUrl = getStreamingWatchUrl(config.label, item.title)
+                    items(distinctProviders, key = { "${it.name}_${it.type}" }) { provider ->
+                        val config = getStreamingProviderConfig(provider.name)
+                        val watchUrl = getStreamingWatchUrl(provider.name, item.title)
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = config.backgroundColor,
-                            contentColor = config.contentColor,
+                            shape = RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
                             shadowElevation = 1.dp,
                             modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
+                                .width(112.dp)
+                                .height(74.dp)
+                                .clip(RoundedCornerShape(14.dp))
                                 .clickable {
                                     com.example.util.CobaltCustomTabsLauncher.launch(context, watchUrl)
                                 }
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
                             ) {
-                                if (config.iconResId != null) {
-                                    Icon(
-                                        painter = painterResource(id = config.iconResId),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(14.dp),
-                                        tint = config.contentColor
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    if (config.iconResId != null) {
+                                        Icon(
+                                            painter = painterResource(id = config.iconResId),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp),
+                                            tint = config.contentColor
+                                        )
+                                    }
+                                    Text(
+                                        text = config.label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = config.label,
+                                    text = if (provider.price != null) "${provider.type} (${provider.price})" else provider.type,
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = config.contentColor
-                                )
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_link_external),
-                                    contentDescription = "Watch on ${config.label}",
-                                    modifier = Modifier.size(11.dp),
-                                    tint = config.contentColor.copy(alpha = 0.8f)
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -875,64 +1209,208 @@ fun MediaDetailSection(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "Additional Information",
+                    text = "Details & Information",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                
+
+                // COMMUNITY STATS (Plays, Watchers, Lists, Favorites)
+                if (progress?.plays != null || progress?.watchers != null) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp, horizontal = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(text = "▶ Plays", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = formatCount(progress.plays), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(text = "👥 Watchers", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = formatCount(progress.watchers), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(text = "📋 Lists", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = formatCount(progress.listsCount), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(text = "♥ Favorites", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(text = formatCount(progress.favoritesCount), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            }
+                        }
+                    }
+                }
+
+                // AIRS & PREMIERED
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    val airs = progress?.airsTime
+                    if (!airs.isNullOrBlank()) {
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(text = "AIRS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
+                            Text(text = airs, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                    if (!item.releaseYear.isNullOrBlank()) {
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(text = "PREMIERED", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
+                            Text(text = item.releaseYear, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+
+                // STATUS & NETWORK
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    val statusStr = item.status ?: "Returning Series"
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(text = "STATUS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
+                        Text(text = statusStr, style = MaterialTheme.typography.bodyMedium, color = Color(0xFFFFB300), fontWeight = FontWeight.SemiBold)
+                    }
+                    val network = progress?.network
+                    if (!network.isNullOrBlank()) {
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(text = "NETWORK", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
+                            Text(text = network, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+
+                // TOTAL RUNTIME
+                val totalRuntime = progress?.totalRuntimeFormatted
+                if (!totalRuntime.isNullOrBlank()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(text = "TOTAL RUNTIME", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
+                        Text(text = totalRuntime, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+
+                // CREATORS
+                val creators = progress?.creators ?: emptyList()
+                if (creators.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(text = "CREATOR", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
+                        Text(text = creators.joinToString(", ") { "$it (Creator)" }, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+
+                // STUDIOS
+                val studios = progress?.studios?.takeIf { it.isNotEmpty() } ?: item.productionCompanies
+                if (studios.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(text = "STUDIO", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
+                        Text(text = studios.joinToString(", "), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+
+                // COUNTRY & LANGUAGE
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    val country = progress?.country ?: "United States"
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(text = "COUNTRY", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
+                        Text(text = country, style = MaterialTheme.typography.bodyMedium)
+                    }
+                    val language = progress?.language ?: "English"
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(text = "LANGUAGE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
+                        Text(text = language, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+
+                // GENRES
+                if (item.genres.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(text = "GENRE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
+                        Text(text = item.genres.joinToString(", "), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+
+                // PARENTAL GUIDANCE
+                val cert = progress?.contentRating ?: "TV-MA"
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "PARENTAL GUIDANCE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            val isSevere = cert == "TV-MA" || cert == "R" || cert == "18+" || cert == "18"
+                            val warnings = listOf(
+                                "Sex & Nudity" to (if (isSevere) "Severe" to 0.9f else "Moderate" to 0.5f),
+                                "Violence & Gore" to (if (isSevere) "Severe" to 0.95f else "Moderate" to 0.5f),
+                                "Profanity" to (if (isSevere) "Severe" to 0.85f else "Mild" to 0.3f),
+                                "Alcohol, Drugs & Smoking" to (if (isSevere) "Severe" to 0.8f else "Mild" to 0.25f),
+                                "Frightening & Intense Scenes" to (if (isSevere) "Severe" to 0.95f else "Moderate" to 0.6f)
+                            )
+                            warnings.forEach { (cat, ratingPair) ->
+                                val (severityText, fraction) = ratingPair
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(text = cat, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1.2f))
+                                    LinearProgressIndicator(
+                                        progress = { fraction },
+                                        modifier = Modifier.weight(1.5f).height(6.dp).clip(CircleShape),
+                                        color = if (severityText == "Severe") Color(0xFFEF4444) else Color(0xFFFFB300),
+                                        trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = severityText,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (severityText == "Severe") Color(0xFFEF4444) else Color(0xFFFFB300),
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.width(55.dp),
+                                        textAlign = TextAlign.End
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // EXTERNAL LINKS
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "OFFICIAL & OTHER LINKS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (!item.imdbId.isNullOrBlank()) {
+                            AssistChip(
+                                onClick = { com.example.util.CobaltCustomTabsLauncher.launch(context, "https://www.imdb.com/title/${item.imdbId}") },
+                                label = { Text("IMDb") }
+                            )
+                        }
+                        if (item.tmdbId != null && item.tmdbId > 0) {
+                            AssistChip(
+                                onClick = { com.example.util.CobaltCustomTabsLauncher.launch(context, "https://www.themoviedb.org/${item.mediaType ?: "tv"}/${item.tmdbId}") },
+                                label = { Text("TMDb") }
+                            )
+                        }
+                        if (item.traktId != null && item.traktId > 0) {
+                            AssistChip(
+                                onClick = { com.example.util.CobaltCustomTabsLauncher.launch(context, item.content) },
+                                label = { Text("Trakt") }
+                            )
+                        }
+                    }
+                }
+
                 if (!item.tagline.isNullOrBlank()) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(text = "TAGLINE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
                         Text(text = "“${item.tagline}”", style = MaterialTheme.typography.bodyMedium, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
                     }
                 }
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    if (item.runtime != null && item.runtime > 0) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
-                            Text(text = "RUNTIME", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
-                            Text(text = "${item.runtime} mins", style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                    if (!item.status.isNullOrBlank()) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
-                            Text(text = "STATUS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
-                            Text(text = item.status, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                }
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    if (item.budget != null && item.budget > 0) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
-                            Text(text = "BUDGET", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
-                            val formattedBudget = java.text.NumberFormat.getCurrencyInstance(Locale.US).apply { maximumFractionDigits = 0 }.format(item.budget)
-                            Text(text = formattedBudget, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                    if (item.revenue != null && item.revenue > 0) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
-                            Text(text = "REVENUE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
-                            val formattedRevenue = java.text.NumberFormat.getCurrencyInstance(Locale.US).apply { maximumFractionDigits = 0 }.format(item.revenue)
-                            Text(text = formattedRevenue, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                }
-                
-                if (item.productionCompanies.isNotEmpty()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(text = "PRODUCTION", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
-                        Text(text = item.productionCompanies.joinToString(", "), style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-                
+
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }

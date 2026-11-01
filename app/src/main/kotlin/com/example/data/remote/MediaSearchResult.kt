@@ -84,7 +84,33 @@ data class TmdbDetailsResponse(
     @param:Json(name = "budget") val budget: Long? = null,
     @param:Json(name = "revenue") val revenue: Long? = null,
     @param:Json(name = "status") val status: String? = null,
-    @param:Json(name = "production_companies") val productionCompanies: List<TmdbProductionCompany>? = null
+    @param:Json(name = "production_companies") val productionCompanies: List<TmdbProductionCompany>? = null,
+    @param:Json(name = "created_by") val createdBy: List<TmdbCreator>? = null,
+    @param:Json(name = "networks") val networks: List<TmdbNetwork>? = null,
+    @param:Json(name = "origin_country") val originCountry: List<String>? = null,
+    @param:Json(name = "content_ratings") val contentRatings: TmdbContentRatingsResponse? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbCreator(
+    @param:Json(name = "name") val name: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbNetwork(
+    @param:Json(name = "name") val name: String? = null,
+    @param:Json(name = "logo_path") val logoPath: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbContentRatingsResponse(
+    @param:Json(name = "results") val results: List<TmdbContentRatingItem>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbContentRatingItem(
+    @param:Json(name = "iso_3166_1") val iso_3166_1: String? = null,
+    @param:Json(name = "rating") val rating: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -118,13 +144,37 @@ data class TmdbWatchProvidersResponse(
 @JsonClass(generateAdapter = true)
 data class TmdbWatchProviderCountry(
     @param:Json(name = "flatrate") val flatrate: List<TmdbWatchProviderItem>? = null,
+    @param:Json(name = "ads") val ads: List<TmdbWatchProviderItem>? = null,
     @param:Json(name = "rent") val rent: List<TmdbWatchProviderItem>? = null,
     @param:Json(name = "buy") val buy: List<TmdbWatchProviderItem>? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class TmdbWatchProviderItem(
-    @param:Json(name = "provider_name") val providerName: String? = null
+    @param:Json(name = "provider_name") val providerName: String? = null,
+    @param:Json(name = "provider_id") val providerId: Int? = null,
+    @param:Json(name = "logo_path") val logoPath: String? = null
+)
+
+// ==========================================
+// OMDB DTOs
+// ==========================================
+
+@JsonClass(generateAdapter = true)
+data class OmdbResponse(
+    @param:Json(name = "Title") val title: String? = null,
+    @param:Json(name = "Year") val year: String? = null,
+    @param:Json(name = "Rated") val rated: String? = null,
+    @param:Json(name = "imdbRating") val imdbRating: String? = null,
+    @param:Json(name = "imdbVotes") val imdbVotes: String? = null,
+    @param:Json(name = "Ratings") val ratings: List<OmdbRatingItem>? = null,
+    @param:Json(name = "Response") val response: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class OmdbRatingItem(
+    @param:Json(name = "Source") val source: String = "",
+    @param:Json(name = "Value") val value: String = ""
 )
 
 // Jikan DTOs

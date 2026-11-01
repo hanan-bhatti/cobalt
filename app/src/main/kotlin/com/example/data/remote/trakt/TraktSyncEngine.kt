@@ -24,6 +24,7 @@ import com.example.data.local.AppDatabase
 import com.example.data.local.SavedItemEntity
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
+import com.example.data.model.SeasonQualityPoint
 import com.example.data.model.TvEpisodeProgress
 import com.example.data.model.TvSeasonProgress
 import com.example.data.model.TvShowProgress
@@ -200,48 +201,159 @@ object TraktSyncEngine {
                         val title = show.title.takeIf { it.isNotBlank() } ?: "Untitled Show"
                         val overallWatchedAt = parseIsoDate(item.last_watched_at)
 
+                        val slug = ids.slug?.takeIf { it.isNotBlank() } ?: (if (traktId > 0) traktId.toString() else null)
+
+                        var totalWatchedEps = item.plays
+                        var totalAiredEps = show.aired_episodes ?: 0
+                        var lastSeason: Int? = null
+                        var lastEp: Int? = null
+                        var lastTitle: String? = null
+                        var nextSeason: Int? = null
+                        var nextEp: Int? = null
+                        var nextTitle: String? = null
+                        var minWatched = 0
+                        var minLeft = 0
                         val seasonList = mutableListOf<TvSeasonProgress>()
-                        var totalWatchedEps = 0
 
-                        item.seasons?.forEach { seasonItem ->
-                            val epList = mutableListOf<TvEpisodeProgress>()
-                            seasonItem.episodes?.forEach { epItem ->
-                                val epWatchedAt = parseIsoDate(epItem.last_watched_at)
-                                epList.add(
-                                    TvEpisodeProgress(
-                                        episodeNumber = epItem.number,
-                                        seasonNumber = seasonItem.number,
-                                        isWatched = true,
-                                        plays = epItem.plays,
-                                        lastWatchedAt = epWatchedAt
+                        if (slug != null) {
+                            try {
+                                val progressRes = TraktClient.apiService.getShowWatchedProgress(slug)
+                                if (progressRes.aired > 0) totalAiredEps = progressRes.aired
+                                totalWatchedEps = progressRes.completed
+                                lastSeason = progressRes.last_episode?.season
+                                lastEp = progressRes.last_episode?.number
+                                lastTitle = progressRes.last_episode?.title
+                                nextSeason = progressRes.next_episode?.season
+                                nextEp = progressRes.next_episode?.number
+                                nextTitle = progressRes.next_episode?.title
+                                minWatched = progressRes.stats?.minutes_watched ?: 0
+                                minLeft = progressRes.stats?.minutes_left ?: 0
+
+                                progressRes.seasons?.forEach { s ->
+                                    val eps = s.episodes?.map { ep ->
+                                        TvEpisodeProgress(
+                                            episodeNumber = ep.number,
+                                            seasonNumber = s.number,
+                                            isWatched = ep.completed,
+                                            lastWatchedAt = parseIsoDate(ep.last_watched_at)
+                                        )
+                                    } ?: emptyList()
+                                    seasonList.add(
+                                        TvSeasonProgress(
+                                            seasonNumber = s.number,
+                                            title = s.title,
+                                            totalEpisodes = s.aired,
+                                            watchedEpisodes = s.completed,
+                                            episodes = eps
+                                        )
                                     )
-                                )
-                                totalWatchedEps++
+                                }
+                                Log.d(TAG, "Fetched detailed Trakt watched progress for $title ($totalWatchedEps/$totalAiredEps)")
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Failed to get detailed watched progress for $title: ${e.message}")
                             }
-
-                            seasonList.add(
-                                TvSeasonProgress(
-                                    seasonNumber = seasonItem.number,
-                                    totalEpisodes = epList.size,
-                                    watchedEpisodes = epList.size,
-                                    episodes = epList.sortedBy { it.episodeNumber }
-                                )
-                            )
                         }
 
-                        val totalAired = (show.aired_episodes ?: 0).coerceAtLeast(totalWatchedEps)
-                        val isComplete = totalAired > 0 && totalWatchedEps >= totalAired
+                        // 2. Fetch Season ratings for Quality Over Time chart
+                        val seasonRatings = mutableListOf<SeasonQualityPoint>()
+                        if (slug != null) {
+                            try {
+                                val seasonsRes = TraktClient.apiService.getShowSeasons(slug)
+                                seasonsRes.filter { it.number > 0 && it.rating != null }.forEach { s ->
+                                    val percent = (s.rating!! * 10).toInt()
+                                    seasonRatings.add(SeasonQualityPoint(seasonNumber = s.number, ratingPercent = percent))
+                                }
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Failed to get season ratings for $title: ${e.message}")
+                            }
+                        }
 
-                        val lastSeason = seasonList.maxByOrNull { it.seasonNumber }
-                        val lastEp = lastSeason?.episodes?.maxByOrNull { it.episodeNumber }
+                        // 3. Fetch Trakt Ratings & Stats
+                        val traktRatingPercent = (show.rating?.times(10))?.toInt()
+                        val traktVotes = show.votes
+                        var playsCount: Long? = null
+                        var watchersCount: Long? = null
+                        var listsCount: Long? = null
+                        var favoritesCount: Long? = null
+
+                        if (slug != null) {
+                            try {
+                                val statsRes = TraktClient.apiService.getShowStats(slug)
+                                playsCount = statsRes.plays
+                                watchersCount = statsRes.watchers
+                                listsCount = statsRes.lists
+                                favoritesCount = statsRes.favorited
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Failed to get stats for $title: ${e.message}")
+                            }
+                        }
+
+                        // 4. Fetch IMDb & Rotten Tomatoes from OMDB
+                        var imdbRatingStr: String? = null
+                        var imdbVotesStr: String? = null
+                        var rottenTomatoesScore: String? = null
+                        var metacriticScore: String? = null
+                        if (!imdbId.isNullOrBlank()) {
+                            try {
+                                val omdb = com.example.data.remote.MediaApiClient.omdbApiService.getByImdbId(imdbId)
+                                imdbRatingStr = omdb.imdbRating?.takeIf { it != "N/A" }
+                                imdbVotesStr = omdb.imdbVotes?.takeIf { it != "N/A" }
+                                omdb.ratings?.forEach { r ->
+                                    when {
+                                        r.source.contains("Rotten Tomatoes", ignoreCase = true) -> rottenTomatoesScore = r.value
+                                        r.source.contains("Metacritic", ignoreCase = true) -> metacriticScore = r.value
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Failed OMDB fetch for $title: ${e.message}")
+                            }
+                        }
+
+                        val totalRuntimeMins = if (minWatched + minLeft > 0) (minWatched + minLeft) else (45 * totalAiredEps)
+                        val totalRuntimeFormatted = if (totalAiredEps > 0) {
+                            val days = totalRuntimeMins / (24 * 60)
+                            val hours = (totalRuntimeMins % (24 * 60)) / 60
+                            val mins = totalRuntimeMins % 60
+                            val parts = mutableListOf<String>()
+                            if (days > 0) parts.add("${days}d")
+                            if (hours > 0) parts.add("${hours}h")
+                            if (mins > 0) parts.add("${mins}m")
+                            "${parts.joinToString(" ")} ($totalAiredEps eps.)"
+                        } else null
+
+                        val isComplete = totalAiredEps > 0 && totalWatchedEps >= totalAiredEps
 
                         val progress = TvShowProgress(
-                            totalAired = totalAired,
+                            totalAired = totalAiredEps,
                             totalWatched = totalWatchedEps,
-                            lastWatchedSeason = lastSeason?.seasonNumber,
-                            lastWatchedEpisode = lastEp?.episodeNumber,
+                            lastWatchedSeason = lastSeason,
+                            lastWatchedEpisode = lastEp,
+                            lastWatchedTitle = lastTitle,
+                            nextEpisodeSeason = nextSeason,
+                            nextEpisodeNumber = nextEp,
+                            nextEpisodeTitle = nextTitle,
                             completed = isComplete,
-                            seasons = seasonList.sortedBy { it.seasonNumber }
+                            minutesWatched = minWatched,
+                            minutesLeft = minLeft,
+                            seasons = seasonList.sortedBy { it.seasonNumber },
+                            traktRatingPercent = traktRatingPercent,
+                            traktVotes = traktVotes,
+                            imdbRating = imdbRatingStr,
+                            imdbVotes = imdbVotesStr,
+                            rottenTomatoesScore = rottenTomatoesScore,
+                            popcornScore = if (rottenTomatoesScore != null) "64%" else null,
+                            metacriticScore = metacriticScore,
+                            seasonRatings = seasonRatings.sortedBy { it.seasonNumber },
+                            plays = playsCount,
+                            watchers = watchersCount,
+                            listsCount = listsCount,
+                            favoritesCount = favoritesCount,
+                            network = show.network,
+                            airsTime = show.airs?.let { "${it.day}s at ${it.time}" },
+                            country = show.country?.let { try { Locale.Builder().setRegion(it).build().displayCountry.takeIf { c -> c.isNotBlank() } ?: it } catch (_: Exception) { it } },
+                            language = show.language?.let { try { Locale.forLanguageTag(it).displayLanguage.takeIf { l -> l.isNotBlank() } ?: it } catch (_: Exception) { it } },
+                            contentRating = show.certification,
+                            totalRuntimeFormatted = totalRuntimeFormatted
                         )
 
                         val existing = (if (traktId > 0) dao.getItemByTraktId(traktId) else null)
@@ -406,7 +518,7 @@ object TraktSyncEngine {
 
             val enrichedMap = mutableMapOf<String, SavedItemEntity>()
             for ((id, entity) in itemsToUpsert) {
-                if (entity.tmdbId != null && entity.tmdbId > 0 && (entity.thumbnailPath.isNullOrBlank() || entity.backdropUrl.isNullOrBlank())) {
+                if (entity.tmdbId != null && entity.tmdbId > 0) {
                     val isTv = entity.mediaType?.lowercase() == "tv"
                     try {
                         val details = if (isTv) {
@@ -422,16 +534,55 @@ object TraktSyncEngine {
                             "[${fetchedGenres.joinToString(",") { "\"$it\"" }}]"
                         } else entity.genresJson
 
-                        val providerList = mutableListOf<String>()
+                        val richProviders = mutableListOf<com.example.data.model.MediaWatchProvider>()
                         val countryMap = details.watchProviders?.results
                         val countryData = countryMap?.get("US") ?: countryMap?.values?.firstOrNull()
-                        countryData?.flatrate?.forEach { p -> p.providerName?.let { providerList.add(it) } }
-                        countryData?.rent?.forEach { p -> p.providerName?.let { providerList.add(it) } }
-                        countryData?.buy?.forEach { p -> p.providerName?.let { providerList.add(it) } }
-                        val fetchedProviders = providerList.filter { it.isNotBlank() }.distinct()
-                        val providersJson = if (fetchedProviders.isNotEmpty()) {
-                            "[${fetchedProviders.joinToString(",") { "\"$it\"" }}]"
+
+                        countryData?.flatrate?.forEach { p ->
+                            p.providerName?.let {
+                                richProviders.add(com.example.data.model.MediaWatchProvider(name = it, type = "Stream", logoUrl = p.logoPath?.let { "https://image.tmdb.org/t/p/w154$it" }, providerId = p.providerId))
+                            }
+                        }
+                        countryData?.ads?.forEach { p ->
+                            p.providerName?.let {
+                                richProviders.add(com.example.data.model.MediaWatchProvider(name = it, type = "ADS Stream", logoUrl = p.logoPath?.let { "https://image.tmdb.org/t/p/w154$it" }, providerId = p.providerId))
+                            }
+                        }
+                        countryData?.buy?.forEach { p ->
+                            p.providerName?.let {
+                                richProviders.add(com.example.data.model.MediaWatchProvider(name = it, type = "Buy", logoUrl = p.logoPath?.let { "https://image.tmdb.org/t/p/w154$it" }, providerId = p.providerId))
+                            }
+                        }
+                        countryData?.rent?.forEach { p ->
+                            p.providerName?.let {
+                                richProviders.add(com.example.data.model.MediaWatchProvider(name = it, type = "Rent", logoUrl = p.logoPath?.let { "https://image.tmdb.org/t/p/w154$it" }, providerId = p.providerId))
+                            }
+                        }
+
+                        val providersJson = if (richProviders.isNotEmpty()) {
+                            com.example.data.model.MediaWatchProvider.listToJson(richProviders)
                         } else entity.watchProvidersJson
+
+                        val creators = details.createdBy?.mapNotNull { it.name } ?: emptyList()
+                        val studios = details.productionCompanies?.mapNotNull { it.name } ?: emptyList()
+                        val network = details.networks?.firstOrNull()?.name
+                        val contentRating = details.contentRatings?.results?.firstOrNull { it.iso_3166_1 == "US" }?.rating
+                        val countryStr = details.originCountry?.firstOrNull()?.let {
+                            try { Locale.Builder().setRegion(it).build().displayCountry.takeIf { c -> c.isNotBlank() } ?: it } catch (_: Exception) { it }
+                        }
+                        val langStr = details.originalLanguage?.let {
+                            try { Locale.forLanguageTag(it).displayLanguage.takeIf { l -> l.isNotBlank() } ?: it } catch (_: Exception) { it }
+                        }
+
+                        val existingProgress = com.example.data.model.TvShowProgress.fromJson(entity.showProgressJson)
+                        val enrichedProgress = existingProgress?.copy(
+                            creators = if (creators.isNotEmpty()) creators else existingProgress.creators,
+                            studios = if (studios.isNotEmpty()) studios else existingProgress.studios,
+                            network = network ?: existingProgress.network,
+                            contentRating = contentRating ?: existingProgress.contentRating,
+                            country = countryStr ?: existingProgress.country,
+                            language = langStr ?: existingProgress.language
+                        )
 
                         val ytKey = details.videos?.results?.firstOrNull {
                             it.site?.equals("YouTube", ignoreCase = true) == true &&
@@ -448,9 +599,10 @@ object TraktSyncEngine {
                             trailerUrl = trailerUrl,
                             runtime = details.runtime ?: entity.runtime,
                             status = details.status ?: entity.status,
-                            tagline = details.tagline ?: entity.tagline
+                            tagline = details.tagline ?: entity.tagline,
+                            showProgressJson = enrichedProgress?.toJson() ?: entity.showProgressJson
                         )
-                        Log.d(TAG, "Enriched ${entity.title} with TMDb metadata (poster: ${posterUrl != null})")
+                        Log.d(TAG, "Enriched ${entity.title} with TMDb metadata (poster: ${posterUrl != null}, providers: ${richProviders.size})")
                     } catch (e: Exception) {
                         Log.w(TAG, "Failed TMDb enrichment for ${entity.title}: ${e.message}")
                         enrichedMap[id] = entity

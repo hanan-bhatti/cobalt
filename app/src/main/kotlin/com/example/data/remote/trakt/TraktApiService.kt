@@ -115,4 +115,28 @@ interface TraktApiService {
     suspend fun removeFromWatchlist(
         @Body payload: TraktSyncPayload
     ): TraktSyncResponse
+
+    // ==========================================
+    // 5. SHOW ENRICHMENT & DETAILED PROGRESS
+    // ==========================================
+
+    @GET("shows/{id}/progress/watched")
+    suspend fun getShowWatchedProgress(
+        @retrofit2.http.Path("id") id: String
+    ): TraktShowWatchedProgressResponse
+
+    @GET("shows/{id}/ratings")
+    suspend fun getShowRatings(
+        @retrofit2.http.Path("id") id: String
+    ): TraktRatingsResponse
+
+    @GET("shows/{id}/stats")
+    suspend fun getShowStats(
+        @retrofit2.http.Path("id") id: String
+    ): TraktStatsResponse
+
+    @GET("shows/{id}/seasons?extended=full")
+    suspend fun getShowSeasons(
+        @retrofit2.http.Path("id") id: String
+    ): List<TraktSeasonFullItem>
 }

@@ -61,9 +61,18 @@ interface JikanApiService {
     ): JikanStreamingResponse
 }
 
+interface OmdbApiService {
+    @GET("/")
+    suspend fun getByImdbId(
+        @Query("i") imdbId: String,
+        @Query("apikey") apiKey: String = "trilogy"
+    ): OmdbResponse
+}
+
 object MediaApiClient {
     private const val TMDB_BASE_URL = "https://api.themoviedb.org/3/"
     private const val JIKAN_BASE_URL = "https://api.jikan.moe/v4/"
+    private const val OMDB_BASE_URL = "https://www.omdbapi.com/"
 
     private val moshi = Moshi.Builder()
         .addLast(KotlinJsonAdapterFactory())
@@ -100,7 +109,17 @@ object MediaApiClient {
             .build()
             .create(JikanApiService::class.java)
     }
+
+    val omdbApiService: OmdbApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl(OMDB_BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+            .create(OmdbApiService::class.java)
+    }
 }
 
 val tmdbApiService: TmdbApiService get() = MediaApiClient.tmdbApiService
 val jikanApiService: JikanApiService get() = MediaApiClient.jikanApiService
+val omdbApiService: OmdbApiService get() = MediaApiClient.omdbApiService

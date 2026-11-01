@@ -54,6 +54,7 @@ data class SavedItem(
     val watchStatus: String? = null,
     val genres: List<String> = emptyList(),
     val watchProviders: List<String> = emptyList(),
+    val richWatchProviders: List<MediaWatchProvider> = emptyList(),
     val trailerUrl: String? = null,
     val backdropUrl: String? = null,
     val releaseYear: String? = null,
