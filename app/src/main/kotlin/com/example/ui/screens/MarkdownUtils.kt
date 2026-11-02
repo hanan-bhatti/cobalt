@@ -127,6 +127,7 @@ fun parseMarkdown(
 
 class MarkdownVisualTransformation(val primaryColor: Color = LinkBlue) : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
+        if (com.example.notes.NoteEditorWindows.requiresWindow(text.text)) return TransformedText(text, OffsetMapping.Identity)
         // We will just return the original text styled, without replacing characters
         // to maintain 1:1 offset mapping and not crash the text field cursor.
         val styled = buildAnnotatedString {

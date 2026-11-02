@@ -124,9 +124,12 @@ fun DetailScreen(
     val activeItem by viewModel.activeDetailItem.collectAsState()
     val allItems by viewModel.allItems.collectAsState()
     val item = remember(activeItem, allItems, itemId) {
-        val targetId = itemId?.takeIf { it.isNotBlank() } ?: activeItem?.id
+        val active = activeItem
+        val targetId = itemId?.takeIf { it.isNotBlank() } ?: active?.id
         if (!targetId.isNullOrBlank()) {
-            allItems.find { it.id == targetId } ?: activeItem
+            val summary = allItems.find { it.id == targetId }
+            if (active?.id == targetId && (summary == null || active.contentHash == summary.contentHash)) active
+            else summary ?: active
         } else {
             activeItem
         }
@@ -135,6 +138,12 @@ fun DetailScreen(
         LaunchedEffect(Unit) {
             onClose()
         }
+        return
+    }
+
+    if (com.example.notes.NotePersistence.isNote(item) &&
+        (!item.bodyLoaded || item.bodyMissing || item.byteLength >= 8192 || item.content.count { it == '\n' } > 96)) {
+        FileNoteScreen(item, viewModel, onClose)
         return
     }
 

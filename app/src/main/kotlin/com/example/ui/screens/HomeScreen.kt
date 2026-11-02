@@ -1232,11 +1232,13 @@ fun HomeScreen(
                                 title = captureTitle,
                                 content = captureContent,
                                 type = captureType,
-                                selectedFolders = emptyList()
+                                selectedFolders = emptyList(),
+                                onSaved = {
+                                    showManualCaptureOverlay = false
+                                    captureTitle = ""
+                                    captureContent = ""
+                                }
                             )
-                            showManualCaptureOverlay = false
-                            captureTitle = ""
-                            captureContent = ""
                         }
                     },
                     shape = RoundedCornerShape(20.dp),
@@ -1822,10 +1824,9 @@ fun PersistentCaptureForm(viewModel: CobaltViewModel) {
                                     title = "Quick Note",
                                     content = noteText,
                                     type = SavedItemType.TEXT,
-                                    selectedFolders = tagsList
+                                    selectedFolders = tagsList,
+                                    onSaved = { noteText = ""; noteTags = "" }
                                 )
-                                noteText = ""
-                                noteTags = ""
                             } else {
                                 isExpanded = true
                             }
@@ -1850,20 +1851,12 @@ fun PersistentCaptureForm(viewModel: CobaltViewModel) {
                 }
                 Spacer(modifier = Modifier.height(12.dp))
 
-                OutlinedTextField(
+                RichTextEditor(
                     value = noteText,
                     onValueChange = { noteText = it },
                     placeholder = { Text("Quick note...") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 80.dp, max = 160.dp)
-                        .focusRequester(focusRequester),
-                    shape = RoundedCornerShape(20.dp),
-                    maxLines = 6,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                    )
+                    minLines = 2, maxLines = 6,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp, max = 360.dp)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -1904,12 +1897,14 @@ fun PersistentCaptureForm(viewModel: CobaltViewModel) {
                                 title = "Quick Note",
                                 content = noteText,
                                 type = SavedItemType.TEXT,
-                                selectedFolders = tagsList
+                                selectedFolders = tagsList,
+                                onSaved = {
+                                    noteText = ""
+                                    noteTags = ""
+                                    isExpanded = false
+                                    focusManager.clearFocus()
+                                }
                             )
-                            noteText = ""
-                            noteTags = ""
-                            isExpanded = false
-                            focusManager.clearFocus()
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(48.dp),

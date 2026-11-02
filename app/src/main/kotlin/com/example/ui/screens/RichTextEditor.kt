@@ -53,8 +53,15 @@ fun RichTextEditor(
     modifier: Modifier = Modifier,
     placeholder: @Composable (() -> Unit)? = null,
     minLines: Int = 3,
-    maxLines: Int = Int.MAX_VALUE
+    maxLines: Int = Int.MAX_VALUE,
+    documentKey: String = "editor",
+    isProcessing: Boolean = false,
+    onWindowChange: ((Int, Int, String) -> Unit)? = null
 ) {
+    if (com.example.notes.NoteEditorWindows.requiresWindow(value)) {
+        WindowedNoteInput(value, onValueChange, modifier, documentKey, isProcessing, onWindowChange)
+        return
+    }
     var textFieldValue by remember {
         mutableStateOf(TextFieldValue(text = value, selection = TextRange(value.length)))
     }
@@ -68,6 +75,7 @@ fun RichTextEditor(
 
     var isPreviewMode by remember { mutableStateOf(false) }
 
+    if (isProcessing) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -182,9 +190,15 @@ fun RichTextEditor(
                 TextField(
                     value = textFieldValue,
                     onValueChange = {
-                        textFieldValue = it
-                        onValueChange(it.text)
+                        if (com.example.notes.NoteEditorWindows.requiresWindow(it.text)) {
+                            if (onWindowChange != null) onWindowChange(0, value.length, it.text)
+                            else onValueChange(it.text)
+                        } else {
+                            textFieldValue = it
+                            onValueChange(it.text)
+                        }
                     },
+                    enabled = !isProcessing,
                     placeholder = placeholder,
                     minLines = minLines,
                     maxLines = maxLines,
@@ -438,4 +452,38 @@ fun applyMarkdownFormat(
         }
     }
     onValueChange(TextFieldValue(newText, newSelection))
+}
+
+@Composable
+private fun WindowedNoteInput(
+    value: String, onValueChange: (String) -> Unit, modifier: Modifier,
+    documentKey: String, isProcessing: Boolean, onWindowChange: ((Int, Int, String) -> Unit)?
+) {
+    var start by androidx.compose.runtime.saveable.rememberSaveable(documentKey) { mutableIntStateOf(0) }
+    val window = remember(value, start) { com.example.notes.NoteEditorWindows.at(value, start) }
+    var field by remember(documentKey, start) { mutableStateOf(TextFieldValue(window.text)) }
+    val previous = remember(documentKey) { mutableStateListOf<Int>() }
+    LaunchedEffect(window.text) {
+        if (field.text != window.text) field = TextFieldValue(window.text, TextRange(minOf(field.selection.end, window.text.length)))
+    }
+    fun apply(updated: TextFieldValue) {
+        if (!com.example.notes.NoteEditorWindows.requiresWindow(updated.text)) field = updated
+        if (onWindowChange != null) onWindowChange(window.start, window.end, updated.text)
+        else onValueChange(value.replaceRange(window.start, window.end, updated.text))
+    }
+    Column(modifier.fillMaxWidth()) {
+        Text("Editing a short section · ${window.start + 1}–${window.end} of ${value.length} characters", style = MaterialTheme.typography.labelMedium)
+        if (isProcessing) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        MarkdownAccessoryToolbar(textFieldValue = field, onApplyFormat = { apply(it) })
+        TextField(value = field, onValueChange = { apply(it) }, enabled = !isProcessing,
+            visualTransformation = MarkdownVisualTransformation(), maxLines = 12,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp, max = 360.dp),
+            textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content))
+        Row {
+            TextButton(onClick = { if (previous.isNotEmpty()) start = previous.removeAt(previous.lastIndex) },
+                enabled = previous.isNotEmpty() && !isProcessing) { Text("Previous") }
+            TextButton(onClick = { previous.add(window.start); start = window.end },
+                enabled = window.end < value.length && !isProcessing) { Text("Next") }
+        }
+    }
 }

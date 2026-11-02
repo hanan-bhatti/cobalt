@@ -532,7 +532,6 @@ fun TextCapturePage(
                     onClick = {
                         val newText = clipboardRawText
                         onTextContentChange(TextFieldValue(text = newText, selection = TextRange(newText.length)))
-                        viewModel.updateActiveCaptureItem { it.copy(content = newText) }
                     }
                 )
             }
@@ -541,8 +540,20 @@ fun TextCapturePage(
 
             // 3. Content Field or Preview
             if (!isPreviewMode) {
-                BasicTextField(
+                if (com.example.notes.NoteEditorWindows.requiresWindow(item.content)) {
+                    RichTextEditor(
+                        value = item.content,
+                        onValueChange = { viewModel.prepareNoteWindow(item.id, 0, item.content.length, it) },
+                        documentKey = item.id,
+                        isProcessing = viewModel.noteInputBusy.collectAsState().value,
+                        onWindowChange = { start, end, text -> viewModel.prepareNoteWindow(item.id, start, end, text) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    if (viewModel.noteInputBusy.collectAsState().value) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    BasicTextField(
                     value = textContent,
+                    enabled = !viewModel.noteInputBusy.collectAsState().value,
                     onValueChange = onTextContentChange,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         fontSize = 16.sp,
@@ -569,6 +580,7 @@ fun TextCapturePage(
                         .defaultMinSize(minHeight = 180.dp)
                         .testTag("capture_content_input")
                 )
+                }
             } else {
                 Box(
                     modifier = Modifier
@@ -583,14 +595,19 @@ fun TextCapturePage(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                         )
                     } else {
-                        MarkdownText(
-                            markdown = item.content,
+                        Column {
+                            if (com.example.notes.NoteEditorWindows.requiresWindow(item.content)) Text("Preview shows the first section. Save to read the complete note.", style = MaterialTheme.typography.labelSmall)
+                            MarkdownText(
+                            markdown = com.example.notes.NoteEditorWindows.at(item.content, 0).text,
                             color = MaterialTheme.colorScheme.onSurface,
                             onMarkdownChange = { updated ->
-                                onTextContentChange(TextFieldValue(text = updated, selection = TextRange(updated.length)))
-                                viewModel.updateActiveCaptureItem { it.copy(content = updated) }
+                                if (com.example.notes.NoteEditorWindows.requiresWindow(item.content)) {
+                                    val window = com.example.notes.NoteEditorWindows.at(item.content, 0)
+                                    viewModel.prepareNoteWindow(item.id, window.start, window.end, updated)
+                                } else onTextContentChange(TextFieldValue(text = updated, selection = TextRange(updated.length)))
                             }
                         )
+                        }
                     }
                 }
             }
@@ -749,8 +766,20 @@ fun AudioCapturePage(
 
             // 3. Transcription Notes / Markdown Preview
             if (!isPreviewMode) {
-                BasicTextField(
+                if (com.example.notes.NoteEditorWindows.requiresWindow(item.content)) {
+                    RichTextEditor(
+                        value = item.content,
+                        onValueChange = { viewModel.prepareNoteWindow(item.id, 0, item.content.length, it) },
+                        documentKey = item.id,
+                        isProcessing = viewModel.noteInputBusy.collectAsState().value,
+                        onWindowChange = { start, end, text -> viewModel.prepareNoteWindow(item.id, start, end, text) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    if (viewModel.noteInputBusy.collectAsState().value) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    BasicTextField(
                     value = textContent,
+                    enabled = !viewModel.noteInputBusy.collectAsState().value,
                     onValueChange = onTextContentChange,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         fontSize = 16.sp,
@@ -777,6 +806,7 @@ fun AudioCapturePage(
                         .defaultMinSize(minHeight = 140.dp)
                         .testTag("capture_content_input")
                 )
+                }
             } else {
                 Box(
                     modifier = Modifier
@@ -791,14 +821,19 @@ fun AudioCapturePage(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                         )
                     } else {
-                        MarkdownText(
-                            markdown = item.content,
+                        Column {
+                            if (com.example.notes.NoteEditorWindows.requiresWindow(item.content)) Text("Preview shows the first section. Save to read the complete note.", style = MaterialTheme.typography.labelSmall)
+                            MarkdownText(
+                            markdown = com.example.notes.NoteEditorWindows.at(item.content, 0).text,
                             color = MaterialTheme.colorScheme.onSurface,
                             onMarkdownChange = { updated ->
-                                onTextContentChange(TextFieldValue(text = updated, selection = TextRange(updated.length)))
-                                viewModel.updateActiveCaptureItem { it.copy(content = updated) }
+                                if (com.example.notes.NoteEditorWindows.requiresWindow(item.content)) {
+                                    val window = com.example.notes.NoteEditorWindows.at(item.content, 0)
+                                    viewModel.prepareNoteWindow(item.id, window.start, window.end, updated)
+                                } else onTextContentChange(TextFieldValue(text = updated, selection = TextRange(updated.length)))
                             }
                         )
+                        }
                     }
                 }
             }
@@ -1909,8 +1944,12 @@ fun CaptureScreen(
                         pageCategoryColor = pageCategoryColor,
                         textContent = textContent,
                         onTextContentChange = { updated ->
-                            textContent = updated
-                            viewModel.updateActiveCaptureItem { it.copy(content = updated.text) }
+                            if (com.example.notes.NoteEditorWindows.requiresWindow(updated.text)) {
+                                viewModel.prepareNoteWindow(item.id, 0, item.content.length, updated.text)
+                            } else {
+                                textContent = updated
+                                viewModel.updateActiveCaptureItem { it.copy(content = updated.text) }
+                            }
                         },
                         isPreviewMode = isPreviewMode,
                         onTogglePreview = { isPreviewMode = !isPreviewMode },
@@ -1929,8 +1968,12 @@ fun CaptureScreen(
                         pageCategoryColor = pageCategoryColor,
                         textContent = textContent,
                         onTextContentChange = { updated ->
-                            textContent = updated
-                            viewModel.updateActiveCaptureItem { it.copy(content = updated.text) }
+                            if (com.example.notes.NoteEditorWindows.requiresWindow(updated.text)) {
+                                viewModel.prepareNoteWindow(item.id, 0, item.content.length, updated.text)
+                            } else {
+                                textContent = updated
+                                viewModel.updateActiveCaptureItem { it.copy(content = updated.text) }
+                            }
                         },
                         isPreviewMode = isPreviewMode,
                         onTogglePreview = { isPreviewMode = !isPreviewMode },
@@ -2708,6 +2751,9 @@ fun CaptureScreen(
                         Text("Transcription / Notes:", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(4.dp))
                         RichTextEditor(
+                            documentKey = item.id,
+                            isProcessing = viewModel.noteInputBusy.collectAsState().value,
+                            onWindowChange = { start, end, text -> viewModel.prepareNoteWindow(item.id, start, end, text) },
                             value = item.content,
                             onValueChange = { newContent -> viewModel.updateActiveCaptureItem { it.copy(content = newContent) } },
                             placeholder = { Text("Audio transcription will appear here, or you can type your notes...") },
@@ -2715,8 +2761,11 @@ fun CaptureScreen(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
                         )
                     }
-                } else if (pageType == SavedItemType.TEXT) {
+                } else if (pageType == SavedItemType.TEXT || (pageType == SavedItemType.CODE && com.example.notes.NoteEditorWindows.requiresWindow(item.content))) {
                     RichTextEditor(
+                        documentKey = item.id,
+                        isProcessing = viewModel.noteInputBusy.collectAsState().value,
+                        onWindowChange = { start, end, text -> viewModel.prepareNoteWindow(item.id, start, end, text) },
                         value = item.content,
                         onValueChange = { newContent ->
                             viewModel.updateActiveCaptureItem { captured ->
@@ -2747,7 +2796,11 @@ fun CaptureScreen(
 
                     OutlinedTextField(
                         value = item.content,
-                        onValueChange = { viewModel.updateActiveCaptureItem { captured -> captured.copy(content = it) } },
+                        onValueChange = {
+                            if (pageType == SavedItemType.CODE && com.example.notes.NoteEditorWindows.requiresWindow(it)) {
+                                viewModel.prepareNoteWindow(item.id, 0, item.content.length, it)
+                            } else viewModel.updateActiveCaptureItem { captured -> captured.copy(content = it) }
+                        },
                         visualTransformation = if (pageType == SavedItemType.CODE) {
                             com.example.ui.components.CodeSyntaxHighlightTransformation(androidx.compose.foundation.isSystemInDarkTheme())
                         } else {

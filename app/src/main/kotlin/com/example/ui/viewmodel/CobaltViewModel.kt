@@ -222,7 +222,12 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         _searchQuery
     ) { items, query ->
         if (query.isNotBlank()) {
-            com.example.util.ElasticFuzzySearchEngine.search(items, query)
+            val metadataMatches = withContext(Dispatchers.Default) {
+                com.example.util.ElasticFuzzySearchEngine.search(items, query)
+            }
+            val allowedIds = items.map { it.id }.toHashSet()
+            val fileMatches = repository.searchNoteFiles(query).filter { it.id in allowedIds }
+            (metadataMatches + fileMatches).distinctBy { it.id }
         } else {
             items
         }
@@ -339,6 +344,14 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
     fun showDetailItem(item: com.example.data.model.SavedItem) {
         _activeDetailItem.value = item
+        if (com.example.notes.NotePersistence.isNote(item)) {
+            viewModelScope.launch {
+                val loaded = repository.getItemForOpen(item.id)
+                if (_activeDetailItem.value?.id == item.id && loaded != null) _activeDetailItem.value = loaded
+            }
+            return
+        }
+
 
         val isMedia = item.type == com.example.data.model.SavedItemType.IMAGE || item.type == com.example.data.model.SavedItemType.VIDEO || item.type == com.example.data.model.SavedItemType.AUDIO
         val hasRemoteContent = !item.content.isNullOrBlank() && (item.content.startsWith("http://") || item.content.startsWith("https://"))
@@ -363,8 +376,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     fun openItemById(itemId: String) {
         viewModelScope.launch {
             try {
-                val allItemsList = repository.getAllItemsFlow().first()
-                val item = allItemsList.find { it.id == itemId }
+                val item = repository.getItemForOpen(itemId)
                 if (item != null) {
                     _activeDetailItem.value = item
                 }
@@ -707,6 +719,11 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun cancelCapture() {
+        noteTextRevision++
+        noteTextJob?.cancel()
+        _noteInputBusy.value = false
+        saveAfterNoteInput = false
+
         _activeCaptureItem.value = null
         _capturedBitmap.value = null
         pendingMediaBytes = null
@@ -1262,6 +1279,15 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun startEditItem(item: SavedItem) {
+        if (com.example.notes.NotePersistence.isNote(item) && !item.bodyLoaded) {
+            viewModelScope.launch {
+                val loaded = repository.getItemForOpen(item.id)
+                if (loaded != null && loaded.bodyLoaded && !loaded.bodyMissing) startEditItem(loaded)
+                else showToast("Open this note and use Edit sections for large-note editing.")
+            }
+            return
+        }
+
         _capturedBitmap.value = null
         pendingMediaBytes = null
         _extractedLinksToReview.value = emptyList()
@@ -1366,6 +1392,58 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private val _noteInputBusy = MutableStateFlow(false)
+    val noteInputBusy = _noteInputBusy.asStateFlow()
+    data class PendingSection(val hash: String, val start: Long, val end: Long, val replacement: String)
+    private val _pendingSections = MutableStateFlow<Map<String, PendingSection>>(emptyMap())
+    val pendingSections = _pendingSections.asStateFlow()
+    fun retainNoteSection(id: String, section: PendingSection) {
+        _pendingSections.update { it + (id to section) }
+    }
+    fun clearNoteSection(id: String, expected: PendingSection? = null) {
+        _pendingSections.update { if (expected == null || it[id] === expected) it - id else it }
+    }
+    private var noteTextJob: kotlinx.coroutines.Job? = null
+    private var noteTextRevision = 0L
+    private var saveAfterNoteInput = false
+
+    fun prepareNoteWindow(id: String, start: Int, end: Int, replacement: String) {
+        val source = _activeCaptureItem.value?.takeIf { it.id == id } ?: return
+        val revision = ++noteTextRevision
+        noteTextJob?.cancel()
+        _noteInputBusy.value = true
+        noteTextJob = viewModelScope.launch {
+            var applied = false
+            try {
+                val text = withContext(Dispatchers.Default) {
+                    require(start in 0..end && end <= source.content.length)
+                    val merged = source.content.replaceRange(start, end, replacement)
+                    val cancellation = kotlin.coroutines.coroutineContext
+                    val bytes = com.example.notes.NoteEditorWindows.utf8Bytes(merged) {
+                        cancellation.ensureActive()
+                    }
+                    if (!com.example.notes.NoteSizePolicy.accepts(bytes, existing = source.byteLength > com.example.notes.NoteSizePolicy.IMPORT_MAX_BYTES)) {
+                        throw java.io.IOException("Note exceeds 55 MB. Split the paste or import smaller Markdown files.")
+                    }
+                    merged
+                }
+                if (revision == noteTextRevision && _activeCaptureItem.value?.id == id) {
+                    updateActiveCaptureItem { it.copy(content = text, bodyLoaded = true) }
+                    applied = true
+                }
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (error: Exception) { showToast(error.message ?: "Paste could not be applied. Saved note unchanged.") }
+            finally {
+                if (revision == noteTextRevision) {
+                    _noteInputBusy.value = false
+                    val save = saveAfterNoteInput && applied
+                    saveAfterNoteInput = false
+                    if (save) saveActiveItem()
+                }
+            }
+        }
+    }
+
     fun updateActiveCaptureItem(updater: (SavedItem) -> SavedItem) {
         val oldItem = _activeCaptureItem.value
         val newItem = oldItem?.let(updater)
@@ -1401,9 +1479,10 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         )
     }
 
-    fun saveLocalTextItem(title: String, content: String, type: SavedItemType, selectedFolders: List<String>) {
+    fun saveLocalTextItem(title: String, content: String, type: SavedItemType, selectedFolders: List<String>, onSaved: () -> Unit = {}) {
+        if (_isSaving.value) return
+        _isSaving.value = true
         viewModelScope.launch {
-            _isSaving.value = true
             try {
                 val newItem = SavedItem(
                     title = title,
@@ -1413,6 +1492,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     timestamp = System.currentTimeMillis()
                 )
                 val savedItem = repository.saveItem(newItem, null)
+                onSaved()
                 showToast("Item saved successfully.")
 
                 if (type == SavedItemType.LINK && content.isNotBlank()) {
@@ -1431,8 +1511,10 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                         }
                     }
                 }
-            } catch (e: Exception) {
-                Log.e("CobaltVM", "Failed to save quick note: ${e.message}")
+            } catch (cancel: kotlinx.coroutines.CancellationException) {
+                throw cancel
+            } catch (_: Exception) {
+                showToast("Could not save. Your draft has been retained; please retry.")
             } finally {
                 _isSaving.value = false
             }
@@ -1461,6 +1543,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun saveActiveItem() {
+        if (_noteInputBusy.value) { saveAfterNoteInput = true; return }
+
         val item = _activeCaptureItem.value ?: return
         viewModelScope.launch {
             _isSaving.value = true
@@ -1481,7 +1565,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     }
                 }
                 val isEdit = allItems.value.any { it.id == finalItem.id } || editOriginalId != null
-                repository.saveItem(finalItem, pendingMediaBytes) { progress ->
+                val persisted = repository.saveItem(finalItem, pendingMediaBytes) { progress ->
                     _saveProgress.value = progress
                 }
 
@@ -1493,7 +1577,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 }
 
                 if (_activeDetailItem.value?.id == finalItem.id || _activeDetailItem.value?.id == editOriginalId) {
-                    _activeDetailItem.value = finalItem
+                    _activeDetailItem.value = persisted
                 }
 
                 _saveProgress.value = 1.0f
@@ -1586,17 +1670,12 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun updateSavedItem(item: SavedItem) {
-        if (_activeDetailItem.value?.id == item.id) {
-            _activeDetailItem.value = item
-        }
         viewModelScope.launch {
-            repository.saveItem(item, null)
-            launch(kotlinx.coroutines.Dispatchers.IO) {
-                try {
-                } catch (e: Exception) {
-                    Log.e("CobaltVM", "Background sync failed: ${e.message}")
-                }
-            }
+            try {
+                val saved = repository.saveItem(item, null)
+                if (_activeDetailItem.value?.id == item.id) _activeDetailItem.value = saved
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: Exception) { showToast("Could not save this change. The saved body is unchanged.") }
         }
     }
 
@@ -1780,6 +1859,35 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     val shareDownloadProgress: StateFlow<Float?> = _shareDownloadProgress.asStateFlow()
 
     fun shareItem(item: com.example.data.model.SavedItem, context: android.content.Context) {
+        if (com.example.notes.NotePersistence.isNote(item)) {
+            viewModelScope.launch {
+                var exportFile: File? = null
+                try {
+                    val file = withContext(Dispatchers.IO) {
+                        val persistence = com.example.notes.NotePersistence(context)
+                        val saved = persistence.load(item.id, includeSmallBody = false)
+                            ?: throw java.io.IOException("Note is missing")
+                        val directory = File(context.cacheDir, "note_exports")
+                        check(directory.isDirectory || directory.mkdirs())
+                        File(directory, "note_${UUID.randomUUID()}.md").also { destination ->
+                            exportFile = destination
+                            val cancellation = kotlin.coroutines.coroutineContext
+                            destination.outputStream().use { output ->
+                                com.example.notes.NoteExport.write(saved, persistence.store, output) { cancellation.ensureActive() }
+                            }
+                        }
+                    }
+                    shareLocalFile(file, item, context)
+                } catch (cancel: kotlinx.coroutines.CancellationException) {
+                    exportFile?.let { file -> withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) { file.delete() } }
+                    throw cancel
+                } catch (_: Exception) {
+                    withContext(Dispatchers.IO) { exportFile?.delete() }
+                    showToast("Could not prepare Markdown for sharing. Original note retained.")
+                }
+            }
+            return
+        }
         val isMedia = item.type == com.example.data.model.SavedItemType.IMAGE || item.type == com.example.data.model.SavedItemType.VIDEO || item.type == com.example.data.model.SavedItemType.AUDIO
         val localPath = if (item.type == com.example.data.model.SavedItemType.AUDIO) item.thumbnailPath else item.content
 
@@ -1846,6 +1954,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
         val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
             type = when (item.type) {
+                com.example.data.model.SavedItemType.TEXT, com.example.data.model.SavedItemType.CODE -> "text/markdown"
                 com.example.data.model.SavedItemType.VIDEO -> "video/*"
                 com.example.data.model.SavedItemType.AUDIO -> "audio/*"
                 else -> "image/*"
