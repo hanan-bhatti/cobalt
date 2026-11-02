@@ -65,8 +65,12 @@ class NotePersistence(
         if (replaceExisting) {
             check(previous?.contentHash == item.contentHash) { "Note changed or was deleted; original retained" }
         }
-        val ref = store.writeAtomic(item.id, input, allowOversize) {
+        val ref = store.writeAtomic(item.id, input, allowOversize ||
+            (replaceExisting && (previous?.byteLength ?: 0) > NoteSizePolicy.IMPORT_MAX_BYTES)) {
             cancellation.ensureActive(); progress(it)
+        }
+        if (replaceExisting) check(NoteSizePolicy.acceptsEdit(ref.bytes, previous?.byteLength ?: 0)) {
+            "Note exceeds the permitted edit size; original and staged body retained"
         }
         if (previous != null && !replaceExisting) {
             check(previous.bodyLocation == "FILE" && previous.contentHash == ref.hash) {

@@ -11,6 +11,9 @@ import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import java.io.File
 import java.util.UUID
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -96,4 +99,40 @@ class NoteDraftRecoveryTest {
             assertNull(sections().load(saved.id))
         }
     }
+    @Test fun captureJournalRestoresWithoutSavingOverTheOriginal() = runBlocking {
+        val originalText = "first paragraph\n\n" + "more text\n".repeat(1_000)
+        val original = persistence.save(SavedItem(type = SavedItemType.TEXT, title = "Original", content = originalText))
+        val firstScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val first = FileEditorSession(context, firstScope, persistence)
+        first.open(original)
+        val oldEnd = first.state.value.window.end.toInt()
+        first.edit("edited 😀 paragraph\n")
+        first.flushJournal()
+        firstScope.cancel()
+        assertEquals(original.contentHash, persistence.load(original.id, false)!!.contentHash)
+        val restoredScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        try {
+            val restored = FileEditorSession(context, restoredScope, persistence)
+            restored.open(original)
+            assertEquals("edited 😀 paragraph\n", restored.state.value.text)
+            val saved = restored.save(original)
+            val actual = withContext(Dispatchers.IO) { persistence.store.open(saved.id, saved.contentHash!!).bufferedReader().use { it.readText() } }
+            assertEquals("edited 😀 paragraph\n" + originalText.substring(oldEnd), actual)
+        } finally { restoredScope.cancel() }
+    }
+
+    @Test fun largeCapturePasteIsOnlyCommittedWhenSaveIsRequested() = runBlocking {
+        val original = persistence.save(SavedItem(type = SavedItemType.TEXT, title = "Original", content = "old body"))
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        try {
+            val editor = FileEditorSession(context, scope, persistence)
+            val pasted = "[link](https://example.org/)\n\n".repeat(5_000)
+            pasted.byteInputStream().use { editor.stage(original, it) }
+            assertEquals(original.contentHash, persistence.load(original.id, false)!!.contentHash)
+            val saved = editor.save(original)
+            val actual = withContext(Dispatchers.IO) { persistence.store.open(saved.id, saved.contentHash!!).bufferedReader().use { it.readText() } }
+            assertEquals(pasted, actual)
+        } finally { scope.cancel() }
+    }
+
 }
