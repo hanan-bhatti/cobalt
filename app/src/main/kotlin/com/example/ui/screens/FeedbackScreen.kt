@@ -113,15 +113,6 @@ fun collectEnvironmentReport(
     var finalUserEmail = userEmail?.takeIf { it.isNotBlank() } ?: "Guest User"
     var finalUserId = userId?.takeIf { it.isNotBlank() } ?: "guest_session"
 
-    if (finalUserEmail == "Guest User") {
-        val prefs = context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE)
-        val simEmail = prefs.getString("simulated_email", null)
-        if (simEmail != null) {
-            finalUserEmail = simEmail
-            finalUserId = "local_session_${simEmail.hashCode()}"
-        }
-    }
-
     val deviceModel = "${Build.MANUFACTURER.uppercase()} ${Build.MODEL}"
     val osVersion = "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})"
     val locale = Locale.getDefault().toString()
@@ -299,7 +290,7 @@ private fun ExpressiveBugReportContent(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val userEmailState by viewModel.userEmail.collectAsState()
+    val userEmailState: String? = null
     val envReport = remember(context, userEmailState) {
         collectEnvironmentReport(context, userEmail = userEmailState)
     }
@@ -821,7 +812,7 @@ private fun ExpressiveFeatureRequestContent(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val userEmailState by viewModel.userEmail.collectAsState()
+    val userEmailState: String? = null
     val envReport = remember(context, userEmailState) {
         collectEnvironmentReport(context, userEmail = userEmailState)
     }

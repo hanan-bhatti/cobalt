@@ -168,7 +168,7 @@ enum class SettingsCategory(
     ),
     SYSTEM_HEALTH(
         title = "System & Background Health",
-        subtitle = "Battery optimization, background persistence, and sync",
+        subtitle = "Battery optimization and background persistence",
         iconRes = R.drawable.ic_settings_system_health
     )
 }
@@ -1290,7 +1290,7 @@ fun SettingsCategoryDetailScreen(
                         SettingsSubsectionHeader(
                             title = "Battery & Background Persistence",
                             description = subtextText,
-                            tooltipText = "Cobalt only uses background execution when updating home screen widgets or synchronizing your local archive."
+                            tooltipText = "Cobalt only uses background execution when updating home screen widgets or running enabled reminders and Trakt tasks."
                         )
 
                         ExpressiveSettingsGroup {

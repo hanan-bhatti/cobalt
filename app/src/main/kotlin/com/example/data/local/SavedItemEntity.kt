@@ -43,6 +43,8 @@ data class SavedItemEntity(
     val extractedText: String?, // OCR result
     val thumbnailPath: String?, // local file path or cache URI
     val orderIndex: Double = timestamp.toDouble(),
+    // Legacy v8 metadata only; no account, backup or cloud-sync behavior.
+    // Retained until an explicit migration so existing records remain compatible.
     val isSynced: Boolean = false,
     val linkTitle: String? = null,
     val linkDescription: String? = null,

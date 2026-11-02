@@ -37,8 +37,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.*
@@ -246,7 +244,7 @@ fun FoldersScreen(
             title = { Text("Preparing Share...", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Downloading media from the cloud so it can be shared.")
+                    Text("Downloading the saved media so it can be shared.")
                     LinearProgressIndicator(
                         progress = { shareDownloadProgress ?: 0f },
                         modifier = Modifier.fillMaxWidth(),
@@ -852,7 +850,6 @@ fun FolderContentsBrowser(
     animatedVisibilityScope: androidx.compose.animation.AnimatedVisibilityScope? = null
 ) {
     val items by viewModel.allItems.collectAsState()
-    val isSyncing by viewModel.isSyncing.collectAsState()
     val context = LocalContext.current
 
     val detailHazeState = remember { HazeState() }
@@ -987,23 +984,10 @@ fun FolderContentsBrowser(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        val pullToRefreshState = rememberPullToRefreshState()
-        androidx.compose.material3.pulltorefresh.PullToRefreshBox(
-            isRefreshing = isSyncing,
-            onRefresh = { viewModel.syncData() },
-            state = pullToRefreshState,
-            modifier = Modifier
+        Box(modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-                .hazeSource(state = detailHazeState),
-            indicator = {
-                PullToRefreshDefaults.LoadingIndicator(
-                    state = pullToRefreshState,
-                    isRefreshing = isSyncing,
-                    modifier = Modifier.align(Alignment.TopCenter)
-                )
-            }
-        ) {
+                .hazeSource(state = detailHazeState)) {
             if (folderItems.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),

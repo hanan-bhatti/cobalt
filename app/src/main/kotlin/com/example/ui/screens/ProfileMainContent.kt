@@ -27,8 +27,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.*
 import androidx.compose.animation.core.*
@@ -73,8 +71,6 @@ import com.example.ui.theme.CategoryText
 import com.example.ui.theme.CategoryCode
 import com.example.ui.theme.CategoryAudio
 import com.example.ui.theme.CategoryMedia
-import com.example.ui.theme.CloudStorageBlue
-import com.example.ui.theme.LocalStorageGreen
 import android.net.Uri
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -95,11 +91,7 @@ fun ProfileMainContent(
     onNavigateToCategory: (String) -> Unit = {}
 ) {
 
-    val userEmail by viewModel.userEmail.collectAsState()
-    val userName by viewModel.userName.collectAsState()
-    val userPhotoUrl by viewModel.userPhotoUrl.collectAsState()
     val allItems by viewModel.allItems.collectAsState()
-    val usedStorageBytes by viewModel.usedStorageBytes.collectAsState()
     val tmdbApiKey by viewModel.tmdbApiKey.collectAsState()
     var showSurveySheet by remember { mutableStateOf(false) }
 
@@ -112,7 +104,6 @@ fun ProfileMainContent(
     val totalAudio = allItems.count { it.type == SavedItemType.AUDIO }
     val totalMedia = allItems.count { it.type == SavedItemType.MEDIA }
 
-    val isSyncing by viewModel.isSyncing.collectAsState()
     val profileArchiveStyle by viewModel.settingsRepository.profileArchiveStyle.collectAsState()
 
     val context = LocalContext.current
@@ -120,20 +111,7 @@ fun ProfileMainContent(
     val isContributor = remember(showSurveySheet) { prefs.getBoolean("survey_submitted", false) }
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
-    val pullToRefreshState = rememberPullToRefreshState()
-    androidx.compose.material3.pulltorefresh.PullToRefreshBox(
-        isRefreshing = isSyncing,
-        onRefresh = { viewModel.syncData() },
-        state = pullToRefreshState,
-        modifier = Modifier.fillMaxSize(),
-        indicator = {
-            PullToRefreshDefaults.LoadingIndicator(
-                state = pullToRefreshState,
-                isRefreshing = isSyncing,
-                modifier = Modifier.align(Alignment.TopCenter)
-            )
-        }
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             modifier = Modifier
                 .fillMaxSize()
@@ -183,8 +161,6 @@ fun ProfileMainContent(
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
             // DOWNLOAD PROGRESS
-
-
 
             // YOUR ARCHIVE
             SectionContainer(title = "YOUR ARCHIVE") {
@@ -360,7 +336,6 @@ fun ProfileMainContent(
                 )
             }
 
-
             // 1. HELP & COMMUNITY
             SectionContainer(title = "HELP & COMMUNITY") {
                 Column {
@@ -425,8 +400,6 @@ fun ProfileMainContent(
                 }
             }
 
-
-
             if (showSurveySheet) {
                 com.example.ui.components.SurveyBottomSheet(
                     viewModel = viewModel,
@@ -468,15 +441,6 @@ fun ProfileMainContent(
 
             Spacer(modifier = Modifier.height(40.dp))
         }
-
-        // Delete Account Confirmation Dialog
-
-
-
-
-
-
-
 
 
         }
@@ -623,17 +587,5 @@ fun ClickableRow(
             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             modifier = Modifier.size(18.dp)
         )
-    }
-}
-
-private fun formatStorageSize(bytes: Long): String {
-    if (bytes <= 0L) return "0.0 KB"
-    val kb = bytes / 1024f
-    val mb = kb / 1024f
-    val gb = mb / 1024f
-    return when {
-        gb >= 1.0f -> String.format(Locale.US, "%.1f GB", gb)
-        mb >= 1.0f -> String.format(Locale.US, "%.1f MB", mb)
-        else -> String.format(Locale.US, "%.1f KB", kb)
     }
 }

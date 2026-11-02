@@ -60,10 +60,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshState
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -129,7 +125,6 @@ fun HomeScreen(
 
     val items by viewModel.homeItems.collectAsState()
     val isInitialLoading by viewModel.isInitialLoading.collectAsState()
-    val isSyncing by viewModel.isSyncing.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
     val customFolders by viewModel.customFolders.collectAsState()
     val customFolderEntities by viewModel.customFolderEntities.collectAsState()
@@ -138,7 +133,6 @@ fun HomeScreen(
     }
     val selectedFolder by viewModel.selectedFolder.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
-    val userEmail by viewModel.userEmail.collectAsState()
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
     val selectedItemIds by viewModel.selectedItemIds.collectAsState()
     val hasDismissedOnboarding by viewModel.hasDismissedOnboarding.collectAsState()
@@ -148,7 +142,6 @@ fun HomeScreen(
         "Light" -> false
         else -> isSystemInDarkTheme()
     }
-
 
     var showBulkTagDialog by remember { mutableStateOf(false) }
     var showAddFolderDialog by remember { mutableStateOf(false) }
@@ -395,22 +388,9 @@ fun HomeScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        val pullToRefreshState = rememberPullToRefreshState()
-        PullToRefreshBox(
-            isRefreshing = isSyncing,
-            onRefresh = { viewModel.syncData() },
-            state = pullToRefreshState,
-            modifier = Modifier
+        Box(modifier = Modifier
                 .padding(innerPadding)
-                .fillMaxSize(),
-            indicator = {
-                PullToRefreshDefaults.LoadingIndicator(
-                    state = pullToRefreshState,
-                    isRefreshing = isSyncing,
-                    modifier = Modifier.align(Alignment.TopCenter)
-                )
-            }
-        ) {
+                .fillMaxSize()) {
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
@@ -1299,10 +1279,6 @@ fun HomeScreen(
 }
         // The FAB overlay has been moved to MainActivity via GlobalExpandingFab
 
-
-
-
-
 @Composable
 fun SwipeToDismissWrapper(
     item: SavedItem,
@@ -1947,7 +1923,6 @@ fun PersistentCaptureForm(viewModel: CobaltViewModel) {
         }
     }
 }
-
 
 fun getSearchHistory(prefs: android.content.SharedPreferences): List<String> {
     val historyStr = prefs.getString("search_history", "") ?: ""

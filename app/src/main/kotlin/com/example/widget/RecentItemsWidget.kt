@@ -184,13 +184,7 @@ fun RecentItemsContent(items: List<SavedItem>, isFromCache: Boolean, isTimeout: 
 fun RecentItemsHeader(isFromCache: Boolean, isTimeout: Boolean) {
     val context = LocalContext.current
 
-    val userName = try {
-        val prefs = context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE)
-        prefs.getString("simulated_name", null)?.trim()?.ifBlank { null }
-            ?: prefs.getString("simulated_email", null)?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
-    } catch (e: Exception) {
-        null
-    } ?: "User"
+    val userName = "User"
 
     val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
     val greeting = when (hour) {

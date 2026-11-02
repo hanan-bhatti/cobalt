@@ -182,9 +182,6 @@ fun DetailScreen(
     val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
     val blurRadius by viewModel.blurRadius.collectAsState()
     val blurOpacity by viewModel.blurOpacity.collectAsState()
-    
-    val userEmail by viewModel.userEmail.collectAsState()
-    val isUserSignedIn = !userEmail.isNullOrBlank()
 
     var showLeaveAppDialog by remember { mutableStateOf(false) }
     var urlToOpen by remember { mutableStateOf("") }
@@ -207,7 +204,7 @@ fun DetailScreen(
             title = { Text("Preparing Share...", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Downloading media from the cloud so it can be shared.")
+                    Text("Downloading the saved media so it can be shared.")
                     androidx.compose.material3.LinearProgressIndicator(
                         progress = { shareDownloadProgress ?: 0f },
                         modifier = Modifier.fillMaxWidth(),
@@ -457,15 +454,7 @@ fun DetailScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        if (isUserSignedIn && !item.isBackedUp) {
-                            Text("•", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_cloud_queue),
-                                contentDescription = "Local Only",
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+
                     }
 
                     // Folders
@@ -806,8 +795,6 @@ fun DetailScreen(
                 )
             }
 
-
-            
             Spacer(modifier = Modifier.height(40.dp))
             
             if (showLeaveAppDialog) {

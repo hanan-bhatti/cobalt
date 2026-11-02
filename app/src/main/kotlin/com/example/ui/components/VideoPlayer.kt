@@ -331,7 +331,7 @@ fun VideoPlayer(
                         PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ->
                             "Network connection failed. Please verify your internet connection."
                         PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ->
-                            "Access denied or cloud link expired. Re-authentication may be required."
+                            "Access denied or the saved media link has expired."
                         PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND ->
                             "Video file could not be found locally."
                         else ->

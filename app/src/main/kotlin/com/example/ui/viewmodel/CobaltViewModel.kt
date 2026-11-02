@@ -261,8 +261,6 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         _selectedItemIds.value = emptySet()
     }
 
-
-
     fun selectAll(itemIds: List<String>) {
         _selectedItemIds.value = itemIds.toSet()
         _isSelectionMode.value = itemIds.isNotEmpty()
@@ -549,8 +547,6 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         postFeedback(message, severity)
     }
 
-    fun syncData() = Unit
-
     private val _extractedLinksToReview = MutableStateFlow<List<ExtractedLinkReview>>(emptyList())
     val extractedLinksToReview: StateFlow<List<ExtractedLinkReview>> = _extractedLinksToReview.asStateFlow()
 
@@ -651,55 +647,13 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     private var pendingMediaBytes: ByteArray? = null
 
     // ----------------------------------------------------
-    // AUTH STATE
+    // INITIAL LOADING STATE
     // ----------------------------------------------------
-
-    private val _userEmail = MutableStateFlow<String?>(null)
-    val userEmail: StateFlow<String?> = _userEmail.asStateFlow()
-
-    private val _userName = MutableStateFlow<String?>(null)
-    val userName: StateFlow<String?> = _userName.asStateFlow()
-
-    private val _userPhotoUrl = MutableStateFlow<String?>(null)
-    val userPhotoUrl: StateFlow<String?> = _userPhotoUrl.asStateFlow()
 
     private val _isInitialLoading = MutableStateFlow(true)
     val isInitialLoading: StateFlow<Boolean> = _isInitialLoading.asStateFlow()
 
-
-
-    val isSyncing: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
-
-
-
-
-
-
-
-
-    val usedStorageBytes: StateFlow<Long> = allItems.map { items: List<com.example.data.model.SavedItem> ->
-        var total = 0L
-        items.forEach { item ->
-            // Try to get file size if it's a local file
-            val path = item.thumbnailPath ?: item.content
-            if (path.startsWith("/")) {
-                val file = java.io.File(path)
-                if (file.exists()) {
-                    total += file.length()
-                }
-            } else {
-                total += path.toByteArray().size
-            }
-        }
-        total
-    }.stateIn(viewModelScope, SharingStarted.Lazily, 0L)
-
-
-
-
-
     private val prefs = context.getSharedPreferences("cobalt_prefs", android.content.Context.MODE_PRIVATE)
-
 
     init {
         _isInitialLoading.value = false
@@ -727,7 +681,6 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     // ----------------------------------------------------
-    // AUTH ACTIONS
     // ----------------------------------------------------
 
     // ----------------------------------------------------
@@ -874,7 +827,6 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         _isOcrLoading.value = false
         _ocrError.value = null
     }
-
 
     fun transcribeAudioMemo(file: java.io.File) {
         val currentItem = _activeCaptureItem.value ?: return
@@ -1036,7 +988,6 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             title = finalTitle
         )
     }
-
 
     fun performFullImageOcr(uri: android.net.Uri, context: android.content.Context) {
         val currentItem = _activeCaptureItem.value ?: return
@@ -1821,7 +1772,6 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
         return totalScore
     }
-
 
     private val _shareDownloadProgress = MutableStateFlow<Float?>(null)
     val shareDownloadProgress: StateFlow<Float?> = _shareDownloadProgress.asStateFlow()

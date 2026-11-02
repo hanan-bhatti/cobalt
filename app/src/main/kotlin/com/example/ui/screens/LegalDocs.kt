@@ -33,8 +33,8 @@ object LegalDocs {
         GitHub release checks are controlled in Release & Updates settings.
         See NETWORK.md in the source repository for the connection inventory and limitations.
 
-        Local backups and sharing are explicit user actions. Android system backup
-        currently remains governed by the application backup settings.
+        Sharing is an explicit user action. Automatic Android backup and device
+        transfer are disabled; uninstalling the app can permanently remove local data.
         Uninstalling the app can remove local data. Export anything you need to keep.
     """.trimIndent()
 
@@ -79,7 +79,8 @@ object LegalDocs {
         A: No. OCR runs through the Gemini API, so it needs an internet connection.
 
         Q: Is my data backed up?
-        A: Only if you sign in and enable sync. The app works fully offline too, and syncs once you're back online.
+        A: Cobalt has no account or cloud note sync. Notes stay local. Optional integrations
+        such as Trakt contact their services only when used or configured.
 
         Q: Can I use Markdown in notes?
         A: Yes, standard syntax works: bold, italics, and links.

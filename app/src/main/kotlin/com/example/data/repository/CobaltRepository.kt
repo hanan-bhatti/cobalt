@@ -61,7 +61,6 @@ class CobaltRepository(private val context: Context) {
     private val savedItemDao = db.savedItemDao()
     private val customFolderDao = db.customFolderDao()
 
-
     suspend fun extractTextFromAudio(
         base64Audio: String,
         apiKey: String,
@@ -343,8 +342,6 @@ class CobaltRepository(private val context: Context) {
             isDeleted = isDeleted
         )
     }
-
-
 
     fun readFileBytes(filePath: String): ByteArray? {
         return try {
@@ -670,7 +667,6 @@ class CobaltRepository(private val context: Context) {
         updatedItem
     }
 
-
     suspend fun saveItem(item: SavedItem, mediaBytes: ByteArray? = null, onProgress: (Float) -> Unit = {}): SavedItem = withContext(Dispatchers.IO) {
         val itemSize = when {
             mediaBytes != null -> mediaBytes.size.toLong()
@@ -683,7 +679,6 @@ class CobaltRepository(private val context: Context) {
         com.example.widget.WidgetUpdater.update(context)
         finalItem
     }
-
 
     suspend fun deleteItem(item: SavedItem) = withContext(Dispatchers.IO) {
         savedItemDao.deleteItem(item.toEntity())
@@ -743,7 +738,6 @@ class CobaltRepository(private val context: Context) {
         // 3. Delete old folder
         customFolderDao.deleteFolder(oldFolder)
     }
-
 
     // ----------------------------------------------------
     // GEMINI VISION OCR (TEXT EXTRACTION)
@@ -976,22 +970,6 @@ class CobaltRepository(private val context: Context) {
         }
     }
 
-
-
-
-
-
-
-
-
-    suspend fun wipeLocalData() = withContext(Dispatchers.IO) {
-        try {
-            db.clearAllTables()
-            context.cacheDir.deleteRecursively()
-        } catch (e: Exception) {
-            Log.e("CobaltRepo", "Failed to wipe local data: ${e.message}", e)
-        }
-    }
 }
 
 data class LinkMetadata(

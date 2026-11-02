@@ -33,9 +33,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -78,12 +75,7 @@ fun MediaHubScreen(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     modifier: Modifier = Modifier
 ) {
-    val isSyncing by viewModel.isSyncing.collectAsState()
-    val traktSyncStatus by com.example.data.remote.trakt.TraktSyncEngine.syncStatus.collectAsState()
-    val isTraktSyncing = traktSyncStatus is com.example.data.remote.trakt.TraktSyncStatus.Syncing
-    val isOverallRefreshing = isSyncing || isTraktSyncing
 
-    val pullToRefreshState = rememberPullToRefreshState()
     val context = LocalContext.current
     val hazeState = remember { HazeState() }
     val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
@@ -183,25 +175,10 @@ fun MediaHubScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        PullToRefreshBox(
-            isRefreshing = isOverallRefreshing,
-            onRefresh = {
-                viewModel.syncData()
-                com.example.util.TraktSyncWorker.enqueueOneTimeSync(context)
-            },
-            state = pullToRefreshState,
-            modifier = Modifier
+        Box(modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-                .hazeSource(state = hazeState),
-            indicator = {
-                PullToRefreshDefaults.LoadingIndicator(
-                    state = pullToRefreshState,
-                    isRefreshing = isOverallRefreshing,
-                    modifier = Modifier.align(Alignment.TopCenter)
-                )
-            }
-        ) {
+                .hazeSource(state = hazeState)) {
             MediaHubContent(
                 viewModel = viewModel,
                 onMediaClick = onMediaClick,
@@ -221,6 +198,8 @@ fun MediaHubContent(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     modifier: Modifier = Modifier
 ) {
+    val traktSyncStatus by com.example.data.remote.trakt.TraktSyncEngine.syncStatus.collectAsState()
+    val isTraktSyncing = traktSyncStatus is com.example.data.remote.trakt.TraktSyncStatus.Syncing
     val allItems by viewModel.allItems.collectAsState()
     var selectedStatus by rememberSaveable { mutableStateOf("All") }
     var selectedType by rememberSaveable { mutableStateOf("All Types") }
@@ -292,9 +271,6 @@ fun MediaHubContent(
             else item.genres.contains(selectedGenre)
         }
     }
-
-    val traktSyncStatus by com.example.data.remote.trakt.TraktSyncEngine.syncStatus.collectAsState()
-    val isTraktSyncing = traktSyncStatus is com.example.data.remote.trakt.TraktSyncStatus.Syncing
 
     Column(
         modifier = modifier.fillMaxSize()

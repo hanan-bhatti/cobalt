@@ -103,15 +103,7 @@ val LinkPurple = LinkBlue
  // Default theme color for unset folders
  val DefaultFolderColor = Color(0xFF6750A4)
 
- // Palette colors used in ManageStorageScreen
- val PaletteColor1 = Color(0xFFEC407A)
- val PaletteColor2 = Color(0xFF78909C)
- val PaletteColor3 = Color(0xFF8D6E63)
- val PaletteColor4 = Color(0xFFD4E157)
 
- // Storage status indicators (Cloud vs Local)
- val CloudStorageBlue = Color(0xFF2196F3)
- val LocalStorageGreen = Color(0xFF4CAF50)
 
  // Light theme colors
  val Primary = MarkerOrange

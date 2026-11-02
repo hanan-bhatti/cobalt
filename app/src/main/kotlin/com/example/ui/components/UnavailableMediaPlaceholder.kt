@@ -49,7 +49,7 @@ fun UnavailableMediaPlaceholder(
 
         val textToDisplay = when {
             isCompact -> compactMessage ?: "Media unavailable"
-            else -> message ?: "Removed from cloud on another device. Item unavailable."
+            else -> message ?: "Media is unavailable at its saved location."
         }
 
         Column(

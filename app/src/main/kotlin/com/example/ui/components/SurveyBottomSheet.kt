@@ -119,7 +119,7 @@ fun SurveyBottomSheet(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
-    val userEmailState by viewModel.userEmail.collectAsState()
+    val userEmailState: String? = null
     val envReport = remember(context, userEmailState) {
         collectEnvironmentReport(context, userEmail = userEmailState)
     }
@@ -171,7 +171,6 @@ fun SurveyBottomSheet(
         listOf(
             "Trakt Movie & TV Sync",
             "Fingerprint Lock & Encrypted Database",
-            "Automated Backup & Restore",
             "Obsidian / Markdown Vault Export",
             "Web / Desktop Companion App",
             "Delete button in edit mode",
@@ -186,7 +185,6 @@ fun SurveyBottomSheet(
         listOf(
             QuickPromptItem("Love the Markdown checklists!", iconResId = R.drawable.ic_custom_checklist),
             QuickPromptItem("Floating Side Dock is a game changer!", iconResId = R.drawable.ic_custom_sidedock),
-            QuickPromptItem("Add automated backup & export", iconResId = R.drawable.ic_custom_archive),
             QuickPromptItem("Best offline-first knowledge archive!", iconResId = R.drawable.ic_custom_vault)
         )
     }
@@ -372,7 +370,6 @@ fun SurveyBottomSheet(
                                     )
                                 }
 
-
                                     OutlinedButton(
                                         onClick = {
                                             com.example.util.FeedbackSubmissionManager.shareOrExportFeedback(
@@ -428,7 +425,7 @@ fun SurveyBottomSheet(
             } else if (currentStep == 1) {
                 // STEP 1: Experience & Features
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    // Pre-filled Account Pill
+                    // Optional feedback contact
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
