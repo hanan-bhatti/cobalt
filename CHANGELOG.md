@@ -7,6 +7,11 @@
 - Remove account state, storage-management helpers and pull-to-refresh controls.
 - Disable automatic Android backup and device transfer; retain existing note data.
 - Release verification remains in progress; this entry is not a release certification.
+- In development: private Markdown body files for every text/code note, verified
+  resumable conversion, a one-time migration prompt and a Data Migration results/retry page.
+- In development: body-free list queries, startup crash recovery and bounded
+  plain-text reading/section editing for large notes. Android verification is pending.
+- Preserve quick-note drafts when saving fails and stream complete Markdown when sharing notes.
 
 # Changelog
 
