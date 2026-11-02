@@ -150,6 +150,19 @@ class TraktAuthManager(private val context: Context) {
     fun getLastSyncSummary(): String? = prefs.getString(KEY_LAST_SYNC_SUMMARY, null)
     fun setLastSyncSummary(summary: String) = prefs.edit().putString(KEY_LAST_SYNC_SUMMARY, summary).apply()
 
+    fun getSyncCheckpointStep(): String? = prefs.getString(KEY_CHECKPOINT_STEP, null)
+    fun setSyncCheckpointStep(step: String?) {
+        if (step == null) prefs.edit().remove(KEY_CHECKPOINT_STEP).apply()
+        else prefs.edit().putString(KEY_CHECKPOINT_STEP, step).apply()
+    }
+
+    fun getSyncCheckpointPage(): Int = prefs.getInt(KEY_CHECKPOINT_PAGE, 1)
+    fun setSyncCheckpointPage(page: Int) = prefs.edit().putInt(KEY_CHECKPOINT_PAGE, page).apply()
+
+    fun clearSyncCheckpoint() {
+        prefs.edit().remove(KEY_CHECKPOINT_STEP).remove(KEY_CHECKPOINT_PAGE).apply()
+    }
+
     // ==========================================
     // USER PROFILE & SESSION
     // ==========================================
@@ -419,6 +432,8 @@ class TraktAuthManager(private val context: Context) {
         private const val KEY_SYNC_TV_PROGRESS = "trakt_sync_tv_progress"
         private const val KEY_LAST_SYNC_TIMESTAMP = "trakt_last_sync_timestamp"
         private const val KEY_LAST_SYNC_SUMMARY = "trakt_last_sync_summary"
+        private const val KEY_CHECKPOINT_STEP = "trakt_checkpoint_step"
+        private const val KEY_CHECKPOINT_PAGE = "trakt_checkpoint_page"
 
         @Volatile
         private var instance: TraktAuthManager? = null

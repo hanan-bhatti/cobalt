@@ -156,6 +156,43 @@ data class TmdbWatchProviderItem(
     @param:Json(name = "logo_path") val logoPath: String? = null
 )
 
+@JsonClass(generateAdapter = true)
+data class TmdbSeasonDetailsResponse(
+    @param:Json(name = "season_number") val seasonNumber: Int? = null,
+    @param:Json(name = "name") val name: String? = null,
+    @param:Json(name = "overview") val overview: String? = null,
+    @param:Json(name = "poster_path") val posterPath: String? = null,
+    @param:Json(name = "episodes") val episodes: List<TmdbEpisodeItem>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbEpisodeItem(
+    @param:Json(name = "id") val id: Int? = null,
+    @param:Json(name = "episode_number") val episodeNumber: Int,
+    @param:Json(name = "season_number") val seasonNumber: Int,
+    @param:Json(name = "name") val name: String? = null,
+    @param:Json(name = "overview") val overview: String? = null,
+    @param:Json(name = "still_path") val stillPath: String? = null,
+    @param:Json(name = "runtime") val runtime: Int? = null,
+    @param:Json(name = "vote_average") val voteAverage: Double? = null,
+    @param:Json(name = "air_date") val airDate: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbCreditsResponse(
+    @param:Json(name = "id") val id: Int? = null,
+    @param:Json(name = "cast") val cast: List<TmdbCastItem>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbCastItem(
+    @param:Json(name = "id") val id: Int? = null,
+    @param:Json(name = "name") val name: String? = null,
+    @param:Json(name = "character") val character: String? = null,
+    @param:Json(name = "profile_path") val profilePath: String? = null,
+    @param:Json(name = "order") val order: Int = 0
+)
+
 // ==========================================
 // OMDB DTOs
 // ==========================================

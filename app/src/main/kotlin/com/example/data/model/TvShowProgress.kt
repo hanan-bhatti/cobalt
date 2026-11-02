@@ -23,6 +23,20 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
 @JsonClass(generateAdapter = true)
+data class MediaCastMember(
+    val name: String,
+    val character: String? = null,
+    val profileUrl: String? = null,
+    val order: Int = 0
+)
+
+@JsonClass(generateAdapter = true)
+data class ParentalGuidanceItem(
+    val category: String, // e.g. "Sex & Nudity", "Violence & Gore", "Profanity", "Alcohol/Drugs", "Frightening"
+    val level: String     // e.g. "None", "Mild", "Moderate", "Severe"
+)
+
+@JsonClass(generateAdapter = true)
 data class SeasonQualityPoint(
     val seasonNumber: Int,
     val ratingPercent: Int
@@ -61,7 +75,13 @@ data class TvShowProgress(
     val creators: List<String> = emptyList(),
     val studios: List<String> = emptyList(),
     val contentRating: String? = null,
-    val totalRuntimeFormatted: String? = null
+    val totalRuntimeFormatted: String? = null,
+    val cast: List<MediaCastMember> = emptyList(),
+    val ratingDistribution: Map<String, Int> = emptyMap(),
+    val parentalGuidance: List<ParentalGuidanceItem> = emptyList(),
+    val highlight: String? = null,
+    val pros: List<String> = emptyList(),
+    val cons: List<String> = emptyList()
 ) {
     val progressFraction: Float
         get() = if (totalAired > 0) (totalWatched.toFloat() / totalAired.toFloat()).coerceIn(0f, 1f) else 0f
@@ -137,7 +157,10 @@ data class TvEpisodeProgress(
     val plays: Int = 0,
     val lastWatchedAt: Long? = null,
     val runtimeMinutes: Int? = null,
-    val airDate: String? = null
+    val airDate: String? = null,
+    val stillPath: String? = null,
+    val userRating: Int? = null,
+    val rating: Double? = null
 ) {
     val formattedCode: String
         get() = "S%02dE%02d".format(seasonNumber, episodeNumber)

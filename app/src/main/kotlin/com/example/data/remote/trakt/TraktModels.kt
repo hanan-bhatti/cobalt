@@ -236,12 +236,36 @@ data class TraktRatingItem(
 @JsonClass(generateAdapter = true)
 data class TraktSyncPayload(
     val movies: List<TraktSyncItemPayload>? = null,
-    val shows: List<TraktSyncItemPayload>? = null
+    val shows: List<TraktSyncShowPayload>? = null,
+    val seasons: List<TraktSyncSeasonPayload>? = null,
+    val episodes: List<TraktSyncEpisodePayload>? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class TraktSyncItemPayload(
     val ids: TraktIds,
+    val watched_at: String? = null,
+    val rating: Int? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktSyncShowPayload(
+    val ids: TraktIds,
+    val watched_at: String? = null,
+    val rating: Int? = null,
+    val seasons: List<TraktSyncSeasonPayload>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktSyncSeasonPayload(
+    val number: Int,
+    val watched_at: String? = null,
+    val episodes: List<TraktSyncEpisodePayload>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktSyncEpisodePayload(
+    val number: Int,
     val watched_at: String? = null,
     val rating: Int? = null
 )
@@ -338,4 +362,34 @@ data class TraktSeasonFullItem(
     val votes: Int? = null,
     val episode_count: Int? = null,
     val aired_episodes: Int? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktSeasonEpisodeItem(
+    val season: Int = 0,
+    val number: Int = 0,
+    val title: String? = null,
+    val overview: String? = null,
+    val rating: Double? = null,
+    val votes: Int? = null,
+    val runtime: Int? = null,
+    val first_aired: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktCastResponse(
+    val cast: List<TraktCastMemberItem>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktCastMemberItem(
+    val character: String? = null,
+    val characters: List<String>? = null,
+    val person: TraktPerson? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TraktPerson(
+    val name: String = "",
+    val ids: TraktIds = TraktIds()
 )

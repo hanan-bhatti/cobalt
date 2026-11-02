@@ -46,6 +46,25 @@ interface TmdbApiService {
         @Query("api_key") apiKey: String,
         @Query("append_to_response") append: String = "videos,watch/providers"
     ): TmdbDetailsResponse
+
+    @GET("tv/{id}/season/{season_number}")
+    suspend fun getTvSeasonDetails(
+        @Path("id") id: Int,
+        @Path("season_number") seasonNumber: Int,
+        @Query("api_key") apiKey: String
+    ): TmdbSeasonDetailsResponse
+
+    @GET("tv/{id}/credits")
+    suspend fun getTvCredits(
+        @Path("id") id: Int,
+        @Query("api_key") apiKey: String
+    ): TmdbCreditsResponse
+
+    @GET("movie/{id}/credits")
+    suspend fun getMovieCredits(
+        @Path("id") id: Int,
+        @Query("api_key") apiKey: String
+    ): TmdbCreditsResponse
 }
 
 interface JikanApiService {

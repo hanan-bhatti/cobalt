@@ -22,6 +22,9 @@ import android.content.Context
 import android.util.Log
 import com.example.data.local.AppDatabase
 import com.example.data.local.SavedItemEntity
+import com.example.data.model.MediaCastMember
+import com.example.data.model.MediaWatchProvider
+import com.example.data.model.ParentalGuidanceItem
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.data.model.SeasonQualityPoint
@@ -33,6 +36,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -62,9 +67,20 @@ object TraktSyncEngine {
 
     private const val TAG = "TraktSyncEngine"
     const val DEFAULT_TMDB_API_KEY = "712732e6f259631c21129a94a273a7bb"
+    private const val PAGE_SIZE = 100
+
+    private const val STEP_SHOWS = "SHOWS"
+    private const val STEP_MOVIES = "MOVIES"
+    private const val STEP_RATINGS = "RATINGS"
+    private const val STEP_WATCHLIST = "WATCHLIST"
+    private const val STEP_DONE = "DONE"
 
     private val _syncStatus = MutableStateFlow<TraktSyncStatus>(TraktSyncStatus.Idle)
     val syncStatus: StateFlow<TraktSyncStatus> = _syncStatus.asStateFlow()
+
+    private val writeMutex = Mutex()
+    @Volatile
+    private var lastWriteTimestamp = 0L
 
     private fun parseIsoDate(iso: String?): Long {
         if (iso.isNullOrBlank()) return System.currentTimeMillis()
@@ -86,7 +102,8 @@ object TraktSyncEngine {
     }
 
     /**
-     * Executes the comprehensive two-way sync between Trakt and Cobalt's local Room database.
+     * Executes the comprehensive paginated, resumable, rate-limit-safe Trakt sync.
+     * Pages items in chunks of 100 and persists them page-by-page to Room to preserve memory.
      */
     suspend fun performSync(
         context: Context,
@@ -121,517 +138,549 @@ object TraktSyncEngine {
 
             val db = AppDatabase.getDatabase(context)
             val dao = db.savedItemDao()
+            val prefs = context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE)
+            val tmdbKey = prefs.getString("tmdb_api_key", null)?.takeIf { it.isNotBlank() } ?: DEFAULT_TMDB_API_KEY
 
             var moviesCount = 0
             var showsCount = 0
             var ratingsCount = 0
             var watchlistCount = 0
 
-            val itemsToUpsert = mutableMapOf<String, SavedItemEntity>()
+            // Check Delta Activities if not resuming from an incomplete sync
+            var currentStep = authManager.getSyncCheckpointStep() ?: STEP_SHOWS
+            var currentPage = authManager.getSyncCheckpointPage()
 
-            // ──────────────────────────────────────────────
-            // 1. WATCHED MOVIES
-            // ──────────────────────────────────────────────
-            if (authManager.isSyncWatchedEnabled()) {
-                updateProgress("Downloading watched movies...", 0.20f)
+            val lastSyncTime = authManager.getLastSyncTimestamp()
+            var shouldSyncShows = authManager.isSyncTvProgressEnabled()
+            var shouldSyncMovies = authManager.isSyncWatchedEnabled()
+            var shouldSyncRatings = authManager.isSyncRatingsEnabled()
+            var shouldSyncWatchlist = authManager.isSyncWatchlistEnabled()
+
+            if (authManager.getSyncCheckpointStep() == null && lastSyncTime > 0) {
                 try {
-                    val watchedMovies = TraktClient.apiService.getWatchedMovies()
-                    Log.i(TAG, "Fetched ${watchedMovies.size} watched movies from Trakt")
-                    for (item in watchedMovies) {
-                        val movie = item.movie ?: continue
-                        val ids = movie.ids
-                        val traktId = ids.trakt
-                        val tmdbId = ids.tmdb
-                        val imdbId = ids.imdb
-                        val title = movie.title.takeIf { it.isNotBlank() } ?: "Untitled Movie"
-                        val watchedTimestamp = parseIsoDate(item.last_watched_at)
+                    val lastActivities = TraktClient.apiService.getLastActivities()
+                    val remoteShowsWatched = parseIsoDate(lastActivities.shows?.watched_at)
+                    val remoteMoviesWatched = parseIsoDate(lastActivities.movies?.watched_at)
+                    val remoteRatings = maxOf(
+                        parseIsoDate(lastActivities.shows?.rated_at),
+                        parseIsoDate(lastActivities.movies?.rated_at)
+                    )
+                    val remoteWatchlist = parseIsoDate(lastActivities.watchlist?.updated_at)
 
-                        val existing = (if (traktId > 0) dao.getItemByTraktId(traktId) else null)
-                            ?: (if (tmdbId != null && tmdbId > 0) dao.getItemByTmdbId(tmdbId) else null)
+                    if (remoteShowsWatched <= lastSyncTime) shouldSyncShows = false
+                    if (remoteMoviesWatched <= lastSyncTime) shouldSyncMovies = false
+                    if (remoteRatings <= lastSyncTime) shouldSyncRatings = false
+                    if (remoteWatchlist <= lastSyncTime) shouldSyncWatchlist = false
 
-                        val entity = existing?.copy(
-                            watchStatus = "Completed",
-                            lastWatchedAt = watchedTimestamp,
-                            traktId = traktId,
-                            tmdbId = tmdbId ?: existing.tmdbId,
-                            imdbId = imdbId ?: existing.imdbId,
-                            updatedAt = System.currentTimeMillis()
-                        ) ?: SavedItemEntity(
-                            id = UUID.randomUUID().toString(),
-                            type = SavedItemType.MEDIA.name,
-                            title = title,
-                            content = "https://trakt.tv/movies/${ids.slug ?: traktId}",
-                            timestamp = watchedTimestamp,
-                            foldersJson = "[\"Movies\"]",
-                            extractedText = movie.overview,
-                            thumbnailPath = null,
-                            mediaType = "movie",
-                            watchStatus = "Completed",
-                            releaseYear = movie.year?.toString(),
-                            rating = movie.rating,
-                            runtime = movie.runtime,
-                            traktId = traktId,
-                            tmdbId = tmdbId,
-                            imdbId = imdbId,
-                            lastWatchedAt = watchedTimestamp,
-                            updatedAt = System.currentTimeMillis()
-                        )
-                        itemsToUpsert[entity.id] = entity
-                        moviesCount++
+                    if (!shouldSyncShows && !shouldSyncMovies && !shouldSyncRatings && !shouldSyncWatchlist) {
+                        Log.i(TAG, "All Trakt categories are up-to-date with local library. Skipping download.")
+                        val summary = TraktSyncSummary(0, 0, 0, 0, 0)
+                        val upToDateMsg = "Everything is already up-to-date with Trakt."
+                        _syncStatus.value = TraktSyncStatus.Success(0, upToDateMsg)
+                        authManager.setLastSyncTimestamp(System.currentTimeMillis())
+                        authManager.setLastSyncSummary(upToDateMsg)
+                        if (isBackground) {
+                            TraktNotificationHelper.showCompleteNotification(context, upToDateMsg)
+                        }
+                        return@withContext Result.success(summary)
                     }
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed syncing watched movies: ${e.message}", e)
+                    Log.w(TAG, "Delta activity check failed: ${e.message}. Proceeding with standard paginated sync.")
                 }
             }
 
             // ──────────────────────────────────────────────
-            // 2. WATCHED TV SHOWS & EPISODES
+            // 1. WATCHED TV SHOWS & EPISODES (PAGINATED)
             // ──────────────────────────────────────────────
-            if (authManager.isSyncTvProgressEnabled()) {
-                updateProgress("Downloading series & episode progress...", 0.50f)
-                try {
-                    val watchedShows = TraktClient.apiService.getWatchedShows()
-                    Log.i(TAG, "Fetched ${watchedShows.size} watched shows from Trakt")
-                    for (item in watchedShows) {
-                        val show = item.show ?: continue
-                        val ids = show.ids
-                        val traktId = ids.trakt
-                        val tmdbId = ids.tmdb
-                        val imdbId = ids.imdb
-                        val title = show.title.takeIf { it.isNotBlank() } ?: "Untitled Show"
-                        val overallWatchedAt = parseIsoDate(item.last_watched_at)
+            if (shouldSyncShows && (currentStep == STEP_SHOWS)) {
+                var hasMore = true
+                var page = currentPage
+                while (hasMore) {
+                    updateProgress("Downloading watched shows (page $page)...", 0.15f + (page * 0.02f).coerceAtMost(0.25f))
+                    try {
+                        val watchedShows = TraktClient.apiService.getWatchedShows(page = page, limit = PAGE_SIZE)
+                        Log.i(TAG, "Fetched ${watchedShows.size} watched shows from Trakt (page $page)")
+                        if (watchedShows.isEmpty()) {
+                            hasMore = false
+                            break
+                        }
 
-                        val slug = ids.slug?.takeIf { it.isNotBlank() } ?: (if (traktId > 0) traktId.toString() else null)
+                        val pageEntities = mutableListOf<SavedItemEntity>()
+                        for (item in watchedShows) {
+                            val show = item.show ?: continue
+                            val ids = show.ids
+                            val traktId = ids.trakt
+                            val tmdbId = ids.tmdb
+                            val imdbId = ids.imdb
+                            val title = show.title.takeIf { it.isNotBlank() } ?: "Untitled Show"
+                            val overallWatchedAt = parseIsoDate(item.last_watched_at)
 
-                        var totalWatchedEps = item.plays
-                        var totalAiredEps = show.aired_episodes ?: 0
-                        var lastSeason: Int? = null
-                        var lastEp: Int? = null
-                        var lastTitle: String? = null
-                        var nextSeason: Int? = null
-                        var nextEp: Int? = null
-                        var nextTitle: String? = null
-                        var minWatched = 0
-                        var minLeft = 0
-                        val seasonList = mutableListOf<TvSeasonProgress>()
+                            var totalWatchedEps = 0
+                            val seasonList = mutableListOf<TvSeasonProgress>()
 
-                        if (slug != null) {
-                            try {
-                                val progressRes = TraktClient.apiService.getShowWatchedProgress(slug)
-                                if (progressRes.aired > 0) totalAiredEps = progressRes.aired
-                                totalWatchedEps = progressRes.completed
-                                lastSeason = progressRes.last_episode?.season
-                                lastEp = progressRes.last_episode?.number
-                                lastTitle = progressRes.last_episode?.title
-                                nextSeason = progressRes.next_episode?.season
-                                nextEp = progressRes.next_episode?.number
-                                nextTitle = progressRes.next_episode?.title
-                                minWatched = progressRes.stats?.minutes_watched ?: 0
-                                minLeft = progressRes.stats?.minutes_left ?: 0
-
-                                progressRes.seasons?.forEach { s ->
-                                    val eps = s.episodes?.map { ep ->
-                                        TvEpisodeProgress(
-                                            episodeNumber = ep.number,
-                                            seasonNumber = s.number,
-                                            isWatched = ep.completed,
-                                            lastWatchedAt = parseIsoDate(ep.last_watched_at)
-                                        )
-                                    } ?: emptyList()
-                                    seasonList.add(
-                                        TvSeasonProgress(
-                                            seasonNumber = s.number,
-                                            title = s.title,
-                                            totalEpisodes = s.aired,
-                                            watchedEpisodes = s.completed,
-                                            episodes = eps
-                                        )
+                            item.seasons?.forEach { s ->
+                                val eps = s.episodes?.map { ep ->
+                                    totalWatchedEps += ep.plays.coerceAtLeast(1)
+                                    TvEpisodeProgress(
+                                        episodeNumber = ep.number,
+                                        seasonNumber = s.number,
+                                        isWatched = true,
+                                        plays = ep.plays,
+                                        lastWatchedAt = parseIsoDate(ep.last_watched_at)
                                     )
-                                }
-                                Log.d(TAG, "Fetched detailed Trakt watched progress for $title ($totalWatchedEps/$totalAiredEps)")
-                            } catch (e: Exception) {
-                                Log.w(TAG, "Failed to get detailed watched progress for $title: ${e.message}")
+                                } ?: emptyList()
+
+                                seasonList.add(
+                                    TvSeasonProgress(
+                                        seasonNumber = s.number,
+                                        title = if (s.number == 0) "Specials" else "Season ${s.number}",
+                                        totalEpisodes = eps.size,
+                                        watchedEpisodes = eps.size,
+                                        episodes = eps
+                                    )
+                                )
                             }
-                        }
 
-                        // 2. Fetch Season ratings for Quality Over Time chart
-                        val seasonRatings = mutableListOf<SeasonQualityPoint>()
-                        if (slug != null) {
-                            try {
-                                val seasonsRes = TraktClient.apiService.getShowSeasons(slug)
-                                seasonsRes.filter { it.number > 0 && it.rating != null }.forEach { s ->
-                                    val percent = (s.rating!! * 10).toInt()
-                                    seasonRatings.add(SeasonQualityPoint(seasonNumber = s.number, ratingPercent = percent))
-                                }
-                            } catch (e: Exception) {
-                                Log.w(TAG, "Failed to get season ratings for $title: ${e.message}")
-                            }
-                        }
+                            val totalAiredEps = show.aired_episodes ?: totalWatchedEps
+                            val isComplete = totalAiredEps > 0 && totalWatchedEps >= totalAiredEps
+                            val traktRatingPercent = (show.rating?.times(10))?.toInt()
 
-                        // 3. Fetch Trakt Ratings & Stats
-                        val traktRatingPercent = (show.rating?.times(10))?.toInt()
-                        val traktVotes = show.votes
-                        var playsCount: Long? = null
-                        var watchersCount: Long? = null
-                        var listsCount: Long? = null
-                        var favoritesCount: Long? = null
-
-                        if (slug != null) {
-                            try {
-                                val statsRes = TraktClient.apiService.getShowStats(slug)
-                                playsCount = statsRes.plays
-                                watchersCount = statsRes.watchers
-                                listsCount = statsRes.lists
-                                favoritesCount = statsRes.favorited
-                            } catch (e: Exception) {
-                                Log.w(TAG, "Failed to get stats for $title: ${e.message}")
-                            }
-                        }
-
-                        // 4. Fetch IMDb & Rotten Tomatoes from OMDB
-                        var imdbRatingStr: String? = null
-                        var imdbVotesStr: String? = null
-                        var rottenTomatoesScore: String? = null
-                        var metacriticScore: String? = null
-                        if (!imdbId.isNullOrBlank()) {
-                            try {
-                                val omdb = com.example.data.remote.MediaApiClient.omdbApiService.getByImdbId(imdbId)
-                                imdbRatingStr = omdb.imdbRating?.takeIf { it != "N/A" }
-                                imdbVotesStr = omdb.imdbVotes?.takeIf { it != "N/A" }
-                                omdb.ratings?.forEach { r ->
-                                    when {
-                                        r.source.contains("Rotten Tomatoes", ignoreCase = true) -> rottenTomatoesScore = r.value
-                                        r.source.contains("Metacritic", ignoreCase = true) -> metacriticScore = r.value
-                                    }
-                                }
-                            } catch (e: Exception) {
-                                Log.w(TAG, "Failed OMDB fetch for $title: ${e.message}")
-                            }
-                        }
-
-                        val totalRuntimeMins = if (minWatched + minLeft > 0) (minWatched + minLeft) else (45 * totalAiredEps)
-                        val totalRuntimeFormatted = if (totalAiredEps > 0) {
-                            val days = totalRuntimeMins / (24 * 60)
-                            val hours = (totalRuntimeMins % (24 * 60)) / 60
-                            val mins = totalRuntimeMins % 60
-                            val parts = mutableListOf<String>()
-                            if (days > 0) parts.add("${days}d")
-                            if (hours > 0) parts.add("${hours}h")
-                            if (mins > 0) parts.add("${mins}m")
-                            "${parts.joinToString(" ")} ($totalAiredEps eps.)"
-                        } else null
-
-                        val isComplete = totalAiredEps > 0 && totalWatchedEps >= totalAiredEps
-
-                        val progress = TvShowProgress(
-                            totalAired = totalAiredEps,
-                            totalWatched = totalWatchedEps,
-                            lastWatchedSeason = lastSeason,
-                            lastWatchedEpisode = lastEp,
-                            lastWatchedTitle = lastTitle,
-                            nextEpisodeSeason = nextSeason,
-                            nextEpisodeNumber = nextEp,
-                            nextEpisodeTitle = nextTitle,
-                            completed = isComplete,
-                            minutesWatched = minWatched,
-                            minutesLeft = minLeft,
-                            seasons = seasonList.sortedBy { it.seasonNumber },
-                            traktRatingPercent = traktRatingPercent,
-                            traktVotes = traktVotes,
-                            imdbRating = imdbRatingStr,
-                            imdbVotes = imdbVotesStr,
-                            rottenTomatoesScore = rottenTomatoesScore,
-                            popcornScore = if (rottenTomatoesScore != null) "64%" else null,
-                            metacriticScore = metacriticScore,
-                            seasonRatings = seasonRatings.sortedBy { it.seasonNumber },
-                            plays = playsCount,
-                            watchers = watchersCount,
-                            listsCount = listsCount,
-                            favoritesCount = favoritesCount,
-                            network = show.network,
-                            airsTime = show.airs?.let { "${it.day}s at ${it.time}" },
-                            country = show.country?.let { try { Locale.Builder().setRegion(it).build().displayCountry.takeIf { c -> c.isNotBlank() } ?: it } catch (_: Exception) { it } },
-                            language = show.language?.let { try { Locale.forLanguageTag(it).displayLanguage.takeIf { l -> l.isNotBlank() } ?: it } catch (_: Exception) { it } },
-                            contentRating = show.certification,
-                            totalRuntimeFormatted = totalRuntimeFormatted
-                        )
-
-                        val existing = (if (traktId > 0) dao.getItemByTraktId(traktId) else null)
-                            ?: (if (tmdbId != null && tmdbId > 0) dao.getItemByTmdbId(tmdbId) else null)
-
-                        val entity = existing?.copy(
-                            watchStatus = if (isComplete) "Completed" else "Watching",
-                            showProgressJson = progress.toJson(),
-                            lastWatchedAt = overallWatchedAt,
-                            traktId = traktId,
-                            tmdbId = tmdbId ?: existing.tmdbId,
-                            imdbId = imdbId ?: existing.imdbId,
-                            updatedAt = System.currentTimeMillis()
-                        ) ?: SavedItemEntity(
-                            id = UUID.randomUUID().toString(),
-                            type = SavedItemType.MEDIA.name,
-                            title = title,
-                            content = "https://trakt.tv/shows/${ids.slug ?: traktId}",
-                            timestamp = overallWatchedAt,
-                            foldersJson = "[\"TV Shows\"]",
-                            extractedText = show.overview,
-                            thumbnailPath = null,
-                            mediaType = "tv",
-                            watchStatus = if (isComplete) "Completed" else "Watching",
-                            releaseYear = show.year?.toString(),
-                            rating = show.rating,
-                            status = show.status,
-                            traktId = traktId,
-                            tmdbId = tmdbId,
-                            imdbId = imdbId,
-                            lastWatchedAt = overallWatchedAt,
-                            showProgressJson = progress.toJson(),
-                            updatedAt = System.currentTimeMillis()
-                        )
-                        itemsToUpsert[entity.id] = entity
-                        showsCount++
-                    }
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed syncing watched shows: ${e.message}", e)
-                }
-            }
-
-            // ──────────────────────────────────────────────
-            // 3. RATINGS
-            // ──────────────────────────────────────────────
-            if (authManager.isSyncRatingsEnabled()) {
-                updateProgress("Downloading personal ratings...", 0.75f)
-                try {
-                    val movieRatings = TraktClient.apiService.getMovieRatings()
-                    for (ratingItem in movieRatings) {
-                        val traktId = ratingItem.movie?.ids?.trakt ?: continue
-                        val entity = itemsToUpsert.values.firstOrNull { it.traktId == traktId }
-                            ?: dao.getItemByTraktId(traktId)
-                        if (entity != null) {
-                            itemsToUpsert[entity.id] = entity.copy(userRating = ratingItem.rating)
-                            ratingsCount++
-                        }
-                    }
-
-                    val showRatings = TraktClient.apiService.getShowRatings()
-                    for (ratingItem in showRatings) {
-                        val traktId = ratingItem.show?.ids?.trakt ?: continue
-                        val entity = itemsToUpsert.values.firstOrNull { it.traktId == traktId }
-                            ?: dao.getItemByTraktId(traktId)
-                        if (entity != null) {
-                            itemsToUpsert[entity.id] = entity.copy(userRating = ratingItem.rating)
-                            ratingsCount++
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed syncing ratings: ${e.message}")
-                }
-            }
-
-            // ──────────────────────────────────────────────
-            // 4. WATCHLIST
-            // ──────────────────────────────────────────────
-            if (authManager.isSyncWatchlistEnabled()) {
-                updateProgress("Downloading watchlist...", 0.85f)
-                try {
-                    val watchlistMovies = TraktClient.apiService.getWatchlistMovies()
-                    Log.i(TAG, "Fetched ${watchlistMovies.size} watchlist movies from Trakt")
-                    for (wItem in watchlistMovies) {
-                        val movie = wItem.movie ?: continue
-                        val ids = movie.ids
-                        val traktId = ids.trakt
-                        val tmdbId = ids.tmdb
-                        val existing = itemsToUpsert.values.firstOrNull { it.traktId == traktId }
-                            ?: dao.getItemByTraktId(traktId)
-
-                        if (existing == null) {
-                            val entity = SavedItemEntity(
-                                id = UUID.randomUUID().toString(),
-                                type = SavedItemType.MEDIA.name,
-                                title = movie.title.takeIf { it.isNotBlank() } ?: "Untitled Movie",
-                                content = "https://trakt.tv/movies/${ids.slug ?: traktId}",
-                                timestamp = parseIsoDate(wItem.listed_at),
-                                foldersJson = "[\"Watchlist\"]",
-                                extractedText = movie.overview,
-                                thumbnailPath = null,
-                                mediaType = "movie",
-                                watchStatus = "Plan to Watch",
-                                releaseYear = movie.year?.toString(),
-                                rating = movie.rating,
-                                runtime = movie.runtime,
-                                traktId = traktId,
-                                tmdbId = tmdbId,
-                                imdbId = ids.imdb,
-                                updatedAt = System.currentTimeMillis()
+                            val progress = TvShowProgress(
+                                totalAired = totalAiredEps,
+                                totalWatched = totalWatchedEps,
+                                completed = isComplete,
+                                seasons = seasonList.sortedBy { it.seasonNumber },
+                                traktRatingPercent = traktRatingPercent,
+                                traktVotes = show.votes,
+                                network = show.network,
+                                airsTime = show.airs?.let { "${it.day}s at ${it.time}" },
+                                country = show.country,
+                                language = show.language,
+                                contentRating = show.certification
                             )
-                            itemsToUpsert[entity.id] = entity
-                            watchlistCount++
-                        }
-                    }
 
-                    val watchlistShows = TraktClient.apiService.getWatchlistShows()
-                    Log.i(TAG, "Fetched ${watchlistShows.size} watchlist shows from Trakt")
-                    for (wItem in watchlistShows) {
-                        val show = wItem.show ?: continue
-                        val ids = show.ids
-                        val traktId = ids.trakt
-                        val tmdbId = ids.tmdb
-                        val existing = itemsToUpsert.values.firstOrNull { it.traktId == traktId }
-                            ?: dao.getItemByTraktId(traktId)
+                            val existing = (if (traktId > 0) dao.getItemByTraktId(traktId) else null)
+                                ?: (if (tmdbId != null && tmdbId > 0) dao.getItemByTmdbId(tmdbId) else null)
 
-                        if (existing == null) {
-                            val entity = SavedItemEntity(
+                            val existingProgress = TvShowProgress.fromJson(existing?.showProgressJson)
+                            val mergedProgress = if (existingProgress != null && existingProgress.cast.isNotEmpty()) {
+                                progress.copy(
+                                    cast = existingProgress.cast,
+                                    ratingDistribution = existingProgress.ratingDistribution,
+                                    seasonRatings = existingProgress.seasonRatings,
+                                    plays = existingProgress.plays,
+                                    watchers = existingProgress.watchers,
+                                    listsCount = existingProgress.listsCount,
+                                    favoritesCount = existingProgress.favoritesCount
+                                )
+                            } else progress
+
+                            var thumbnailPath: String? = existing?.thumbnailPath
+                            var backdropUrl: String? = existing?.backdropUrl
+                            var genresJson: String = existing?.genresJson ?: "[]"
+                            var watchProvidersJson: String = existing?.watchProvidersJson ?: "[]"
+                            var trailerUrl: String? = existing?.trailerUrl
+
+                            if (thumbnailPath.isNullOrBlank() && tmdbId != null && tmdbId > 0 && tmdbKey.isNotBlank()) {
+                                try {
+                                    val details = com.example.data.remote.MediaApiClient.tmdbApiService.getTvDetails(tmdbId, tmdbKey)
+                                    if (details.posterPath != null) {
+                                        thumbnailPath = "https://image.tmdb.org/t/p/w500${details.posterPath}"
+                                    }
+                                    if (details.backdropPath != null) {
+                                        backdropUrl = "https://image.tmdb.org/t/p/w780${details.backdropPath}"
+                                    }
+                                    val fetchedGenres = details.genres?.mapNotNull { it.name } ?: emptyList()
+                                    if (fetchedGenres.isNotEmpty()) {
+                                        genresJson = "[${fetchedGenres.joinToString(",") { "\"$it\"" }}]"
+                                    }
+                                    val countryMap = details.watchProviders?.results
+                                    val countryData = countryMap?.get("US") ?: countryMap?.values?.firstOrNull()
+                                    val richList = mutableListOf<com.example.data.model.MediaWatchProvider>()
+                                    countryData?.flatrate?.forEach { p ->
+                                        p.providerName?.let {
+                                            richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Stream", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
+                                        }
+                                    }
+                                    countryData?.rent?.forEach { p ->
+                                        p.providerName?.let {
+                                            richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Rent", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
+                                        }
+                                    }
+                                    countryData?.buy?.forEach { p ->
+                                        p.providerName?.let {
+                                            richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Buy", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
+                                        }
+                                    }
+                                    if (richList.isNotEmpty()) {
+                                        watchProvidersJson = com.example.data.model.MediaWatchProvider.listToJson(richList)
+                                    }
+                                    val ytKey = details.videos?.results?.firstOrNull {
+                                        it.site?.equals("YouTube", ignoreCase = true) == true &&
+                                        (it.type?.equals("Trailer", ignoreCase = true) == true || it.type?.equals("Teaser", ignoreCase = true) == true)
+                                    }?.key ?: details.videos?.results?.firstOrNull { it.site?.equals("YouTube", ignoreCase = true) == true }?.key
+                                    if (ytKey != null) {
+                                        trailerUrl = "https://www.youtube.com/watch?v=$ytKey"
+                                    }
+                                } catch (e: Exception) {
+                                    Log.w(TAG, "TMDb quick TV enrichment skipped: ${e.message}")
+                                }
+                            }
+
+                            val entity = existing?.copy(
+                                watchStatus = if (isComplete) "Completed" else "Watching",
+                                showProgressJson = mergedProgress.toJson(),
+                                lastWatchedAt = overallWatchedAt,
+                                traktId = traktId,
+                                tmdbId = tmdbId ?: existing.tmdbId,
+                                imdbId = imdbId ?: existing.imdbId,
+                                thumbnailPath = thumbnailPath ?: existing.thumbnailPath,
+                                backdropUrl = backdropUrl ?: existing.backdropUrl,
+                                genresJson = if (genresJson != "[]") genresJson else existing.genresJson,
+                                watchProvidersJson = if (watchProvidersJson != "[]") watchProvidersJson else existing.watchProvidersJson,
+                                trailerUrl = trailerUrl ?: existing.trailerUrl,
+                                updatedAt = System.currentTimeMillis()
+                            ) ?: SavedItemEntity(
                                 id = UUID.randomUUID().toString(),
                                 type = SavedItemType.MEDIA.name,
-                                title = show.title.takeIf { it.isNotBlank() } ?: "Untitled Show",
+                                title = title,
                                 content = "https://trakt.tv/shows/${ids.slug ?: traktId}",
-                                timestamp = parseIsoDate(wItem.listed_at),
-                                foldersJson = "[\"Watchlist\"]",
+                                timestamp = overallWatchedAt,
+                                foldersJson = "[\"TV Shows\"]",
                                 extractedText = show.overview,
-                                thumbnailPath = null,
+                                thumbnailPath = thumbnailPath,
+                                backdropUrl = backdropUrl,
+                                genresJson = genresJson,
+                                watchProvidersJson = watchProvidersJson,
+                                trailerUrl = trailerUrl,
                                 mediaType = "tv",
-                                watchStatus = "Plan to Watch",
+                                watchStatus = if (isComplete) "Completed" else "Watching",
                                 releaseYear = show.year?.toString(),
                                 rating = show.rating,
                                 status = show.status,
                                 traktId = traktId,
                                 tmdbId = tmdbId,
-                                imdbId = ids.imdb,
+                                imdbId = imdbId,
+                                lastWatchedAt = overallWatchedAt,
+                                showProgressJson = mergedProgress.toJson(),
                                 updatedAt = System.currentTimeMillis()
                             )
-                            itemsToUpsert[entity.id] = entity
-                            watchlistCount++
+                            pageEntities.add(entity)
+                            showsCount++
                         }
+
+                        // Atomic page persistence directly to SQLite
+                        if (pageEntities.isNotEmpty()) {
+                            dao.insertItems(pageEntities)
+                        }
+
+                        if (watchedShows.size < PAGE_SIZE) {
+                            hasMore = false
+                        } else {
+                            page++
+                            authManager.setSyncCheckpointPage(page)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed syncing watched shows on page $page: ${e.message}", e)
+                        throw e
+                    }
+                }
+                currentStep = STEP_MOVIES
+                currentPage = 1
+                authManager.setSyncCheckpointStep(STEP_MOVIES)
+                authManager.setSyncCheckpointPage(1)
+            }
+
+            // ──────────────────────────────────────────────
+            // 2. WATCHED MOVIES (PAGINATED)
+            // ──────────────────────────────────────────────
+            if (shouldSyncMovies && (currentStep == STEP_MOVIES)) {
+                var hasMore = true
+                var page = currentPage
+                while (hasMore) {
+                    updateProgress("Downloading watched movies (page $page)...", 0.45f + (page * 0.02f).coerceAtMost(0.20f))
+                    try {
+                        val watchedMovies = TraktClient.apiService.getWatchedMovies(page = page, limit = PAGE_SIZE)
+                        Log.i(TAG, "Fetched ${watchedMovies.size} watched movies from Trakt (page $page)")
+                        if (watchedMovies.isEmpty()) {
+                            hasMore = false
+                            break
+                        }
+
+                        val pageEntities = mutableListOf<SavedItemEntity>()
+                        for (item in watchedMovies) {
+                            val movie = item.movie ?: continue
+                            val ids = movie.ids
+                            val traktId = ids.trakt
+                            val tmdbId = ids.tmdb
+                            val imdbId = ids.imdb
+                            val title = movie.title.takeIf { it.isNotBlank() } ?: "Untitled Movie"
+                            val watchedTimestamp = parseIsoDate(item.last_watched_at)
+
+                            val existing = (if (traktId > 0) dao.getItemByTraktId(traktId) else null)
+                                ?: (if (tmdbId != null && tmdbId > 0) dao.getItemByTmdbId(tmdbId) else null)
+
+                            var thumbnailPath: String? = existing?.thumbnailPath
+                            var backdropUrl: String? = existing?.backdropUrl
+                            var genresJson: String = existing?.genresJson ?: "[]"
+                            var watchProvidersJson: String = existing?.watchProvidersJson ?: "[]"
+                            var trailerUrl: String? = existing?.trailerUrl
+
+                            if (thumbnailPath.isNullOrBlank() && tmdbId != null && tmdbId > 0 && tmdbKey.isNotBlank()) {
+                                try {
+                                    val details = com.example.data.remote.MediaApiClient.tmdbApiService.getMovieDetails(tmdbId, tmdbKey)
+                                    if (details.posterPath != null) {
+                                        thumbnailPath = "https://image.tmdb.org/t/p/w500${details.posterPath}"
+                                    }
+                                    if (details.backdropPath != null) {
+                                        backdropUrl = "https://image.tmdb.org/t/p/w780${details.backdropPath}"
+                                    }
+                                    val fetchedGenres = details.genres?.mapNotNull { it.name } ?: emptyList()
+                                    if (fetchedGenres.isNotEmpty()) {
+                                        genresJson = "[${fetchedGenres.joinToString(",") { "\"$it\"" }}]"
+                                    }
+                                    val countryMap = details.watchProviders?.results
+                                    val countryData = countryMap?.get("US") ?: countryMap?.values?.firstOrNull()
+                                    val richList = mutableListOf<com.example.data.model.MediaWatchProvider>()
+                                    countryData?.flatrate?.forEach { p ->
+                                        p.providerName?.let {
+                                            richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Stream", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
+                                        }
+                                    }
+                                    countryData?.rent?.forEach { p ->
+                                        p.providerName?.let {
+                                            richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Rent", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
+                                        }
+                                    }
+                                    countryData?.buy?.forEach { p ->
+                                        p.providerName?.let {
+                                            richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Buy", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
+                                        }
+                                    }
+                                    if (richList.isNotEmpty()) {
+                                        watchProvidersJson = com.example.data.model.MediaWatchProvider.listToJson(richList)
+                                    }
+                                    val ytKey = details.videos?.results?.firstOrNull {
+                                        it.site?.equals("YouTube", ignoreCase = true) == true &&
+                                        (it.type?.equals("Trailer", ignoreCase = true) == true || it.type?.equals("Teaser", ignoreCase = true) == true)
+                                    }?.key ?: details.videos?.results?.firstOrNull { it.site?.equals("YouTube", ignoreCase = true) == true }?.key
+                                    if (ytKey != null) {
+                                        trailerUrl = "https://www.youtube.com/watch?v=$ytKey"
+                                    }
+                                } catch (e: Exception) {
+                                    Log.w(TAG, "TMDb quick movie enrichment skipped: ${e.message}")
+                                }
+                            }
+
+                            val entity = existing?.copy(
+                                watchStatus = "Completed",
+                                lastWatchedAt = watchedTimestamp,
+                                traktId = traktId,
+                                tmdbId = tmdbId ?: existing.tmdbId,
+                                imdbId = imdbId ?: existing.imdbId,
+                                thumbnailPath = thumbnailPath ?: existing.thumbnailPath,
+                                backdropUrl = backdropUrl ?: existing.backdropUrl,
+                                genresJson = if (genresJson != "[]") genresJson else existing.genresJson,
+                                watchProvidersJson = if (watchProvidersJson != "[]") watchProvidersJson else existing.watchProvidersJson,
+                                trailerUrl = trailerUrl ?: existing.trailerUrl,
+                                updatedAt = System.currentTimeMillis()
+                            ) ?: SavedItemEntity(
+                                id = UUID.randomUUID().toString(),
+                                type = SavedItemType.MEDIA.name,
+                                title = title,
+                                content = "https://trakt.tv/movies/${ids.slug ?: traktId}",
+                                timestamp = watchedTimestamp,
+                                foldersJson = "[\"Movies\"]",
+                                extractedText = movie.overview,
+                                thumbnailPath = thumbnailPath,
+                                backdropUrl = backdropUrl,
+                                genresJson = genresJson,
+                                watchProvidersJson = watchProvidersJson,
+                                trailerUrl = trailerUrl,
+                                mediaType = "movie",
+                                watchStatus = "Completed",
+                                releaseYear = movie.year?.toString(),
+                                rating = movie.rating,
+                                runtime = movie.runtime,
+                                traktId = traktId,
+                                tmdbId = tmdbId,
+                                imdbId = imdbId,
+                                lastWatchedAt = watchedTimestamp,
+                                updatedAt = System.currentTimeMillis()
+                            )
+                            pageEntities.add(entity)
+                            moviesCount++
+                        }
+
+                        if (pageEntities.isNotEmpty()) {
+                            dao.insertItems(pageEntities)
+                        }
+
+                        if (watchedMovies.size < PAGE_SIZE) {
+                            hasMore = false
+                        } else {
+                            page++
+                            authManager.setSyncCheckpointPage(page)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed syncing watched movies on page $page: ${e.message}", e)
+                        throw e
+                    }
+                }
+                currentStep = STEP_RATINGS
+                currentPage = 1
+                authManager.setSyncCheckpointStep(STEP_RATINGS)
+                authManager.setSyncCheckpointPage(1)
+            }
+
+            // ──────────────────────────────────────────────
+            // 3. RATINGS (PAGINATED)
+            // ──────────────────────────────────────────────
+            if (shouldSyncRatings && (currentStep == STEP_RATINGS)) {
+                updateProgress("Downloading personal ratings...", 0.70f)
+                try {
+                    var showRatingPage = 1
+                    var hasMoreShowRatings = true
+                    while (hasMoreShowRatings) {
+                        val showRatings = TraktClient.apiService.getShowRatings(page = showRatingPage, limit = PAGE_SIZE)
+                        for (r in showRatings) {
+                            val traktId = r.show?.ids?.trakt ?: continue
+                            val entity = dao.getItemByTraktId(traktId)
+                            if (entity != null && entity.userRating != r.rating) {
+                                dao.insertItem(entity.copy(userRating = r.rating))
+                                ratingsCount++
+                            }
+                        }
+                        if (showRatings.size < PAGE_SIZE) hasMoreShowRatings = false
+                        else showRatingPage++
+                    }
+
+                    var movieRatingPage = 1
+                    var hasMoreMovieRatings = true
+                    while (hasMoreMovieRatings) {
+                        val movieRatings = TraktClient.apiService.getMovieRatings(page = movieRatingPage, limit = PAGE_SIZE)
+                        for (r in movieRatings) {
+                            val traktId = r.movie?.ids?.trakt ?: continue
+                            val entity = dao.getItemByTraktId(traktId)
+                            if (entity != null && entity.userRating != r.rating) {
+                                dao.insertItem(entity.copy(userRating = r.rating))
+                                ratingsCount++
+                            }
+                        }
+                        if (movieRatings.size < PAGE_SIZE) hasMoreMovieRatings = false
+                        else movieRatingPage++
                     }
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed syncing watchlist: ${e.message}")
+                    Log.w(TAG, "Ratings sync encountered issue: ${e.message}")
                 }
+                currentStep = STEP_WATCHLIST
+                currentPage = 1
+                authManager.setSyncCheckpointStep(STEP_WATCHLIST)
+                authManager.setSyncCheckpointPage(1)
             }
 
             // ──────────────────────────────────────────────
-            // 5. ENRICH VIA TMDB (POSTERS, BACKDROPS, PROVIDERS)
+            // 4. WATCHLIST (PAGINATED)
             // ──────────────────────────────────────────────
-            updateProgress("Enriching posters & streaming providers...", 0.90f)
-            val prefs = context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE)
-            val tmdbKey = prefs.getString("tmdb_api_key", null)?.takeIf { it.isNotBlank() }
-                ?: DEFAULT_TMDB_API_KEY
-
-            val enrichedMap = mutableMapOf<String, SavedItemEntity>()
-            for ((id, entity) in itemsToUpsert) {
-                if (entity.tmdbId != null && entity.tmdbId > 0) {
-                    val isTv = entity.mediaType?.lowercase() == "tv"
-                    try {
-                        val details = if (isTv) {
-                            com.example.data.remote.MediaApiClient.tmdbApiService.getTvDetails(entity.tmdbId, tmdbKey)
-                        } else {
-                            com.example.data.remote.MediaApiClient.tmdbApiService.getMovieDetails(entity.tmdbId, tmdbKey)
-                        }
-
-                        val posterUrl = details.posterPath?.let { "https://image.tmdb.org/t/p/w500$it" }
-                        val backdropUrl = details.backdropPath?.let { "https://image.tmdb.org/t/p/w780$it" }
-                        val fetchedGenres = details.genres?.mapNotNull { it.name } ?: emptyList()
-                        val genresJson = if (fetchedGenres.isNotEmpty()) {
-                            "[${fetchedGenres.joinToString(",") { "\"$it\"" }}]"
-                        } else entity.genresJson
-
-                        val richProviders = mutableListOf<com.example.data.model.MediaWatchProvider>()
-                        val countryMap = details.watchProviders?.results
-                        val countryData = countryMap?.get("US") ?: countryMap?.values?.firstOrNull()
-
-                        countryData?.flatrate?.forEach { p ->
-                            p.providerName?.let {
-                                richProviders.add(com.example.data.model.MediaWatchProvider(name = it, type = "Stream", logoUrl = p.logoPath?.let { "https://image.tmdb.org/t/p/w154$it" }, providerId = p.providerId))
+            if (shouldSyncWatchlist && (currentStep == STEP_WATCHLIST)) {
+                updateProgress("Downloading watchlist...", 0.85f)
+                try {
+                    var showWatchlistPage = 1
+                    var hasMoreShowWatchlist = true
+                    while (hasMoreShowWatchlist) {
+                        val watchlistShows = TraktClient.apiService.getWatchlistShows(page = showWatchlistPage, limit = PAGE_SIZE)
+                        val pageEntities = mutableListOf<SavedItemEntity>()
+                        for (w in watchlistShows) {
+                            val show = w.show ?: continue
+                            val traktId = show.ids.trakt
+                            val existing = dao.getItemByTraktId(traktId)
+                            if (existing == null) {
+                                val entity = SavedItemEntity(
+                                    id = UUID.randomUUID().toString(),
+                                    type = SavedItemType.MEDIA.name,
+                                    title = show.title.takeIf { it.isNotBlank() } ?: "Untitled Show",
+                                    content = "https://trakt.tv/shows/${show.ids.slug ?: traktId}",
+                                    timestamp = parseIsoDate(w.listed_at),
+                                    foldersJson = "[\"Watchlist\"]",
+                                    extractedText = show.overview,
+                                    thumbnailPath = null,
+                                    mediaType = "tv",
+                                    watchStatus = "Plan to Watch",
+                                    releaseYear = show.year?.toString(),
+                                    rating = show.rating,
+                                    status = show.status,
+                                    traktId = traktId,
+                                    tmdbId = show.ids.tmdb,
+                                    imdbId = show.ids.imdb,
+                                    updatedAt = System.currentTimeMillis()
+                                )
+                                pageEntities.add(entity)
+                                watchlistCount++
                             }
                         }
-                        countryData?.ads?.forEach { p ->
-                            p.providerName?.let {
-                                richProviders.add(com.example.data.model.MediaWatchProvider(name = it, type = "ADS Stream", logoUrl = p.logoPath?.let { "https://image.tmdb.org/t/p/w154$it" }, providerId = p.providerId))
-                            }
-                        }
-                        countryData?.buy?.forEach { p ->
-                            p.providerName?.let {
-                                richProviders.add(com.example.data.model.MediaWatchProvider(name = it, type = "Buy", logoUrl = p.logoPath?.let { "https://image.tmdb.org/t/p/w154$it" }, providerId = p.providerId))
-                            }
-                        }
-                        countryData?.rent?.forEach { p ->
-                            p.providerName?.let {
-                                richProviders.add(com.example.data.model.MediaWatchProvider(name = it, type = "Rent", logoUrl = p.logoPath?.let { "https://image.tmdb.org/t/p/w154$it" }, providerId = p.providerId))
-                            }
-                        }
-
-                        val providersJson = if (richProviders.isNotEmpty()) {
-                            com.example.data.model.MediaWatchProvider.listToJson(richProviders)
-                        } else entity.watchProvidersJson
-
-                        val creators = details.createdBy?.mapNotNull { it.name } ?: emptyList()
-                        val studios = details.productionCompanies?.mapNotNull { it.name } ?: emptyList()
-                        val network = details.networks?.firstOrNull()?.name
-                        val contentRating = details.contentRatings?.results?.firstOrNull { it.iso_3166_1 == "US" }?.rating
-                        val countryStr = details.originCountry?.firstOrNull()?.let {
-                            try { Locale.Builder().setRegion(it).build().displayCountry.takeIf { c -> c.isNotBlank() } ?: it } catch (_: Exception) { it }
-                        }
-                        val langStr = details.originalLanguage?.let {
-                            try { Locale.forLanguageTag(it).displayLanguage.takeIf { l -> l.isNotBlank() } ?: it } catch (_: Exception) { it }
-                        }
-
-                        val existingProgress = com.example.data.model.TvShowProgress.fromJson(entity.showProgressJson)
-                        val enrichedProgress = existingProgress?.copy(
-                            creators = if (creators.isNotEmpty()) creators else existingProgress.creators,
-                            studios = if (studios.isNotEmpty()) studios else existingProgress.studios,
-                            network = network ?: existingProgress.network,
-                            contentRating = contentRating ?: existingProgress.contentRating,
-                            country = countryStr ?: existingProgress.country,
-                            language = langStr ?: existingProgress.language
-                        )
-
-                        val ytKey = details.videos?.results?.firstOrNull {
-                            it.site?.equals("YouTube", ignoreCase = true) == true &&
-                            (it.type?.equals("Trailer", ignoreCase = true) == true || it.type?.equals("Teaser", ignoreCase = true) == true)
-                        }?.key ?: details.videos?.results?.firstOrNull { it.site?.equals("YouTube", ignoreCase = true) == true }?.key
-                        val trailerUrl = ytKey?.let { "https://www.youtube.com/watch?v=$it" } ?: entity.trailerUrl
-
-                        enrichedMap[id] = entity.copy(
-                            thumbnailPath = posterUrl ?: entity.thumbnailPath,
-                            backdropUrl = backdropUrl ?: entity.backdropUrl,
-                            extractedText = details.overview?.takeIf { it.isNotBlank() } ?: entity.extractedText,
-                            genresJson = genresJson,
-                            watchProvidersJson = providersJson,
-                            trailerUrl = trailerUrl,
-                            runtime = details.runtime ?: entity.runtime,
-                            status = details.status ?: entity.status,
-                            tagline = details.tagline ?: entity.tagline,
-                            showProgressJson = enrichedProgress?.toJson() ?: entity.showProgressJson
-                        )
-                        Log.d(TAG, "Enriched ${entity.title} with TMDb metadata (poster: ${posterUrl != null}, providers: ${richProviders.size})")
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Failed TMDb enrichment for ${entity.title}: ${e.message}")
-                        enrichedMap[id] = entity
+                        if (pageEntities.isNotEmpty()) dao.insertItems(pageEntities)
+                        if (watchlistShows.size < PAGE_SIZE) hasMoreShowWatchlist = false
+                        else showWatchlistPage++
                     }
-                } else {
-                    enrichedMap[id] = entity
+
+                    var movieWatchlistPage = 1
+                    var hasMoreMovieWatchlist = true
+                    while (hasMoreMovieWatchlist) {
+                        val watchlistMovies = TraktClient.apiService.getWatchlistMovies(page = movieWatchlistPage, limit = PAGE_SIZE)
+                        val pageEntities = mutableListOf<SavedItemEntity>()
+                        for (w in watchlistMovies) {
+                            val movie = w.movie ?: continue
+                            val traktId = movie.ids.trakt
+                            val existing = dao.getItemByTraktId(traktId)
+                            if (existing == null) {
+                                val entity = SavedItemEntity(
+                                    id = UUID.randomUUID().toString(),
+                                    type = SavedItemType.MEDIA.name,
+                                    title = movie.title.takeIf { it.isNotBlank() } ?: "Untitled Movie",
+                                    content = "https://trakt.tv/movies/${movie.ids.slug ?: traktId}",
+                                    timestamp = parseIsoDate(w.listed_at),
+                                    foldersJson = "[\"Watchlist\"]",
+                                    extractedText = movie.overview,
+                                    thumbnailPath = null,
+                                    mediaType = "movie",
+                                    watchStatus = "Plan to Watch",
+                                    releaseYear = movie.year?.toString(),
+                                    rating = movie.rating,
+                                    runtime = movie.runtime,
+                                    traktId = traktId,
+                                    tmdbId = movie.ids.tmdb,
+                                    imdbId = movie.ids.imdb,
+                                    updatedAt = System.currentTimeMillis()
+                                )
+                                pageEntities.add(entity)
+                                watchlistCount++
+                            }
+                        }
+                        if (pageEntities.isNotEmpty()) dao.insertItems(pageEntities)
+                        if (watchlistMovies.size < PAGE_SIZE) hasMoreMovieWatchlist = false
+                        else movieWatchlistPage++
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Watchlist sync encountered issue: ${e.message}")
                 }
             }
 
-            // ──────────────────────────────────────────────
-            // 6. ATOMIC LOCAL PERSISTENCE
-            // ──────────────────────────────────────────────
-            updateProgress("Saving changes to local library...", 0.95f)
-            if (enrichedMap.isNotEmpty()) {
-                dao.insertItems(enrichedMap.values.toList())
-            }
+            // Sync successfully finished - clear checkpoints
+            authManager.clearSyncCheckpoint()
 
+            val totalItems = showsCount + moviesCount + ratingsCount + watchlistCount
             val summary = TraktSyncSummary(
                 moviesSynced = moviesCount,
                 showsSynced = showsCount,
                 ratingsSynced = ratingsCount,
                 watchlistSynced = watchlistCount,
-                totalItems = enrichedMap.size
+                totalItems = totalItems
             )
 
             authManager.setLastSyncTimestamp(System.currentTimeMillis())
             authManager.setLastSyncSummary(summary.message)
 
-            _syncStatus.value = TraktSyncStatus.Success(enrichedMap.size, summary.message)
+            _syncStatus.value = TraktSyncStatus.Success(totalItems, summary.message)
 
             if (isBackground) {
                 TraktNotificationHelper.showCompleteNotification(
@@ -653,19 +702,302 @@ object TraktSyncEngine {
     }
 
     // ==========================================
-    // OUTBOUND MUTATIONS (COBALT -> TRAKT)
+    // ON-DEMAND DEEP ENRICHMENT (LAZY LOADING)
     // ==========================================
 
-    suspend fun markMovieWatched(context: Context, item: SavedItem, isWatched: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
-        val authManager = TraktAuthManager.getInstance(context)
-        if (!authManager.hasValidToken()) return@withContext Result.failure(IllegalStateException("Not connected to Trakt"))
+    /**
+     * Enriches a single TV show or Movie with deep metadata (cast, episode stills, ratings breakdown,
+     * stream providers) on-demand when the user views the Media Detail Screen.
+     * Caches all data locally so it is only fetched once per item.
+     */
+    suspend fun enrichShowDeepDetails(context: Context, item: SavedItem): SavedItem = withContext(Dispatchers.IO) {
+        val tmdbId = item.tmdbId
+        val traktId = item.traktId
+        val isTv = item.mediaType?.lowercase() == "tv" || item.mediaType?.lowercase() == "tv show"
 
-        val traktId = item.traktId ?: 0L
+        val prefs = context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE)
+        val tmdbKey = prefs.getString("tmdb_api_key", null)?.takeIf { it.isNotBlank() } ?: DEFAULT_TMDB_API_KEY
+        val db = AppDatabase.getDatabase(context)
+        val dao = db.savedItemDao()
+
+        var progress = item.showProgress ?: TvShowProgress()
+        var updated = false
+        var currentBackdrop = item.backdropUrl
+        var currentThumbnail = item.thumbnailPath
+        var richWatchProviders = item.richWatchProviders.toMutableList()
+
+        // 1. Fetch Trakt Ratings distribution & Stats (if Trakt item)
+        if (traktId != null && traktId > 0 && isTv && progress.ratingDistribution.isEmpty()) {
+            val slug = item.content.substringAfterLast("/").takeIf { it.isNotBlank() } ?: traktId.toString()
+            try {
+                val ratingsRes = TraktClient.apiService.getShowRatings(slug)
+                val statsRes = TraktClient.apiService.getShowStats(slug)
+                val seasonsRes = TraktClient.apiService.getShowSeasons(slug)
+
+                val seasonQuality = seasonsRes.filter { it.number > 0 && it.rating != null }.map {
+                    SeasonQualityPoint(seasonNumber = it.number, ratingPercent = (it.rating!! * 10).toInt())
+                }.sortedBy { it.seasonNumber }
+
+                progress = progress.copy(
+                    ratingDistribution = ratingsRes.distribution ?: emptyMap(),
+                    traktRatingPercent = (ratingsRes.rating * 10).toInt(),
+                    traktVotes = ratingsRes.votes,
+                    plays = statsRes.plays,
+                    watchers = statsRes.watchers,
+                    listsCount = statsRes.lists,
+                    favoritesCount = statsRes.favorited,
+                    seasonRatings = if (seasonQuality.isNotEmpty()) seasonQuality else progress.seasonRatings
+                )
+                updated = true
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed lazy Trakt stats fetch for ${item.title}: ${e.message}")
+            }
+        }
+
+        // 2. Fetch TMDb Credits (Actors / Cast)
+        if (tmdbId != null && tmdbId > 0 && progress.cast.isEmpty()) {
+            try {
+                val credits = if (isTv) {
+                    com.example.data.remote.MediaApiClient.tmdbApiService.getTvCredits(tmdbId, tmdbKey)
+                } else {
+                    com.example.data.remote.MediaApiClient.tmdbApiService.getMovieCredits(tmdbId, tmdbKey)
+                }
+
+                val castMembers = credits.cast?.take(20)?.map { c ->
+                    MediaCastMember(
+                        name = c.name ?: "Unknown",
+                        character = c.character,
+                        profileUrl = c.profilePath?.let { "https://image.tmdb.org/t/p/w185$it" },
+                        order = c.order
+                    )
+                } ?: emptyList()
+
+                if (castMembers.isNotEmpty()) {
+                    progress = progress.copy(cast = castMembers)
+                    updated = true
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed lazy TMDb credits fetch for ${item.title}: ${e.message}")
+            }
+        }
+
+        // 3. Fetch Season 1 Episodes with Still Images & Runtimes (for TV shows)
+        if (tmdbId != null && tmdbId > 0 && isTv) {
+            val needsEpisodeDetails = progress.seasons.any { s -> s.episodes.any { it.stillPath == null || it.title == null } }
+            if (needsEpisodeDetails || progress.seasons.isEmpty()) {
+                try {
+                    val updatedSeasons = progress.seasons.toMutableList()
+                    val targetSeasonNumber = progress.lastWatchedSeason ?: 1
+
+                    val seasonDetails = com.example.data.remote.MediaApiClient.tmdbApiService.getTvSeasonDetails(
+                        id = tmdbId,
+                        seasonNumber = targetSeasonNumber,
+                        apiKey = tmdbKey
+                    )
+
+                    val existingSeasonIdx = updatedSeasons.indexOfFirst { it.seasonNumber == targetSeasonNumber }
+                    val existingSeason = if (existingSeasonIdx >= 0) updatedSeasons[existingSeasonIdx] else null
+
+                    val enrichedEpisodes = seasonDetails.episodes?.map { tmdbEp ->
+                        val wasWatched = existingSeason?.episodes?.find { it.episodeNumber == tmdbEp.episodeNumber }?.isWatched ?: false
+                        TvEpisodeProgress(
+                            episodeNumber = tmdbEp.episodeNumber,
+                            seasonNumber = targetSeasonNumber,
+                            title = tmdbEp.name,
+                            overview = tmdbEp.overview,
+                            isWatched = wasWatched,
+                            stillPath = tmdbEp.stillPath?.let { "https://image.tmdb.org/t/p/w300$it" },
+                            runtimeMinutes = tmdbEp.runtime,
+                            airDate = tmdbEp.airDate,
+                            rating = tmdbEp.voteAverage
+                        )
+                    } ?: emptyList()
+
+                    if (enrichedEpisodes.isNotEmpty()) {
+                        val newSeason = TvSeasonProgress(
+                            seasonNumber = targetSeasonNumber,
+                            title = seasonDetails.name ?: "Season $targetSeasonNumber",
+                            totalEpisodes = enrichedEpisodes.size,
+                            watchedEpisodes = enrichedEpisodes.count { it.isWatched },
+                            episodes = enrichedEpisodes
+                        )
+                        if (existingSeasonIdx >= 0) {
+                            updatedSeasons[existingSeasonIdx] = newSeason
+                        } else {
+                            updatedSeasons.add(newSeason)
+                        }
+                        progress = progress.copy(seasons = updatedSeasons.sortedBy { it.seasonNumber })
+                        updated = true
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed lazy TMDb season details fetch for ${item.title}: ${e.message}")
+                }
+            }
+        }
+
+        // 4. Fetch Watch Providers & Backdrop if missing
+        if (tmdbId != null && tmdbId > 0 && (currentBackdrop.isNullOrBlank() || richWatchProviders.isEmpty())) {
+            try {
+                val details = if (isTv) {
+                    com.example.data.remote.MediaApiClient.tmdbApiService.getTvDetails(tmdbId, tmdbKey)
+                } else {
+                    com.example.data.remote.MediaApiClient.tmdbApiService.getMovieDetails(tmdbId, tmdbKey)
+                }
+
+                if (currentBackdrop.isNullOrBlank() && details.backdropPath != null) {
+                    currentBackdrop = "https://image.tmdb.org/t/p/w780${details.backdropPath}"
+                    updated = true
+                }
+                if (currentThumbnail.isNullOrBlank() && details.posterPath != null) {
+                    currentThumbnail = "https://image.tmdb.org/t/p/w500${details.posterPath}"
+                    updated = true
+                }
+
+                val countryMap = details.watchProviders?.results
+                val countryData = countryMap?.get("US") ?: countryMap?.values?.firstOrNull()
+                val fetchedProviders = mutableListOf<MediaWatchProvider>()
+
+                countryData?.flatrate?.forEach { p ->
+                    p.providerName?.let {
+                        fetchedProviders.add(MediaWatchProvider(name = it, type = "Stream", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
+                    }
+                }
+                countryData?.buy?.forEach { p ->
+                    p.providerName?.let {
+                        fetchedProviders.add(MediaWatchProvider(name = it, type = "Buy", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
+                    }
+                }
+
+                if (fetchedProviders.isNotEmpty() && richWatchProviders.isEmpty()) {
+                    richWatchProviders = fetchedProviders
+                    updated = true
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed lazy TMDb provider fetch for ${item.title}: ${e.message}")
+            }
+        }
+
+        if (updated) {
+            val enrichedItem = item.copy(
+                thumbnailPath = currentThumbnail,
+                backdropUrl = currentBackdrop,
+                richWatchProviders = richWatchProviders,
+                watchProviders = richWatchProviders.map { it.name },
+                showProgress = progress
+            )
+            val entity = dao.getItemById(item.id)
+            if (entity != null) {
+                dao.insertItem(
+                    entity.copy(
+                        thumbnailPath = currentThumbnail,
+                        backdropUrl = currentBackdrop,
+                        watchProvidersJson = MediaWatchProvider.listToJson(richWatchProviders),
+                        showProgressJson = progress.toJson(),
+                        updatedAt = System.currentTimeMillis()
+                    )
+                )
+            }
+            return@withContext enrichedItem
+        }
+
+        return@withContext item
+    }
+
+    // ==========================================
+    // OUTBOUND MUTATIONS (TWO-WAY SYNC)
+    // ==========================================
+
+    private suspend fun throttleWrite() {
+        writeMutex.withLock {
+            val now = System.currentTimeMillis()
+            val elapsed = now - lastWriteTimestamp
+            if (elapsed < 1100L) {
+                kotlinx.coroutines.delay(1100L - elapsed)
+            }
+            lastWriteTimestamp = System.currentTimeMillis()
+        }
+    }
+
+    /**
+     * Toggles watch state for a single TV episode and pushes the mutation to Trakt.
+     */
+    suspend fun markEpisodeWatched(
+        context: Context,
+        item: SavedItem,
+        seasonNumber: Int,
+        episodeNumber: Int,
+        isWatched: Boolean
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        val authManager = TraktAuthManager.getInstance(context)
+        val db = AppDatabase.getDatabase(context)
+        val dao = db.savedItemDao()
+
+        // 1. Update local database atomically
+        val currentProgress = item.showProgress ?: TvShowProgress()
+        val updatedSeasons = currentProgress.seasons.map { s ->
+            if (s.seasonNumber == seasonNumber) {
+                val updatedEps = s.episodes.map { ep ->
+                    if (ep.episodeNumber == episodeNumber) {
+                        ep.copy(isWatched = isWatched, lastWatchedAt = if (isWatched) System.currentTimeMillis() else null)
+                    } else ep
+                }
+                s.copy(
+                    episodes = updatedEps,
+                    watchedEpisodes = updatedEps.count { it.isWatched }
+                )
+            } else s
+        }
+
+        val totalWatched = updatedSeasons.sumOf { it.watchedEpisodes }
+        val isComplete = currentProgress.totalAired > 0 && totalWatched >= currentProgress.totalAired
+
+        val newProgress = currentProgress.copy(
+            seasons = updatedSeasons,
+            totalWatched = totalWatched,
+            lastWatchedSeason = if (isWatched) seasonNumber else currentProgress.lastWatchedSeason,
+            lastWatchedEpisode = if (isWatched) episodeNumber else currentProgress.lastWatchedEpisode,
+            completed = isComplete
+        )
+
+        val entity = dao.getItemById(item.id)
+        if (entity != null) {
+            dao.insertItem(
+                entity.copy(
+                    watchStatus = if (isComplete) "Completed" else if (totalWatched > 0) "Watching" else "Plan to Watch",
+                    showProgressJson = newProgress.toJson(),
+                    lastWatchedAt = if (isWatched) System.currentTimeMillis() else entity.lastWatchedAt,
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
+        }
+
+        // 2. Outbound sync to Trakt with rate limiting
+        if (!authManager.hasValidToken()) return@withContext Result.success(Unit)
+
+        throttleWrite()
+        val nowIso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }.format(Date())
+
         val payload = TraktSyncPayload(
-            movies = listOf(
-                TraktSyncItemPayload(
-                    ids = TraktIds(trakt = traktId, tmdb = item.tmdbId, imdb = item.imdbId),
-                    watched_at = if (isWatched) SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).format(Date()) else null
+            shows = listOf(
+                TraktSyncShowPayload(
+                    ids = TraktIds(
+                        trakt = item.traktId ?: 0L,
+                        tmdb = item.tmdbId,
+                        imdb = item.imdbId
+                    ),
+                    seasons = listOf(
+                        TraktSyncSeasonPayload(
+                            number = seasonNumber,
+                            episodes = listOf(
+                                TraktSyncEpisodePayload(
+                                    number = episodeNumber,
+                                    watched_at = if (isWatched) nowIso else null
+                                )
+                            )
+                        )
+                    )
                 )
             )
         )
@@ -678,15 +1010,76 @@ object TraktSyncEngine {
             }
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to update movie watch history on Trakt: ${e.message}")
+            Log.e(TAG, "Failed outbound episode watch sync: ${e.message}", e)
             Result.failure(e)
         }
     }
 
+    /**
+     * Toggles watch state for an entire Movie and pushes to Trakt.
+     */
+    suspend fun markMovieWatched(context: Context, item: SavedItem, isWatched: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
+        val authManager = TraktAuthManager.getInstance(context)
+        val db = AppDatabase.getDatabase(context)
+        val dao = db.savedItemDao()
+
+        val entity = dao.getItemById(item.id)
+        if (entity != null) {
+            dao.insertItem(
+                entity.copy(
+                    watchStatus = if (isWatched) "Completed" else "Plan to Watch",
+                    lastWatchedAt = if (isWatched) System.currentTimeMillis() else null,
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
+        }
+
+        if (!authManager.hasValidToken()) return@withContext Result.success(Unit)
+
+        throttleWrite()
+        val nowIso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }.format(Date())
+
+        val traktId = item.traktId ?: 0L
+        val payload = TraktSyncPayload(
+            movies = listOf(
+                TraktSyncItemPayload(
+                    ids = TraktIds(trakt = traktId, tmdb = item.tmdbId, imdb = item.imdbId),
+                    watched_at = if (isWatched) nowIso else null
+                )
+            )
+        )
+
+        try {
+            if (isWatched) {
+                TraktClient.apiService.addToHistory(payload)
+            } else {
+                TraktClient.apiService.removeFromHistory(payload)
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed outbound movie watch sync: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Rates an item (1 to 10) and pushes the rating to Trakt.
+     */
     suspend fun rateItem(context: Context, item: SavedItem, rating: Int): Result<Unit> = withContext(Dispatchers.IO) {
         val authManager = TraktAuthManager.getInstance(context)
-        if (!authManager.hasValidToken()) return@withContext Result.failure(IllegalStateException("Not connected to Trakt"))
+        val db = AppDatabase.getDatabase(context)
+        val dao = db.savedItemDao()
 
+        val entity = dao.getItemById(item.id)
+        if (entity != null) {
+            dao.insertItem(entity.copy(userRating = if (rating > 0) rating else null, updatedAt = System.currentTimeMillis()))
+        }
+
+        if (!authManager.hasValidToken()) return@withContext Result.success(Unit)
+
+        throttleWrite()
         val traktId = item.traktId ?: 0L
         val isMovie = item.mediaType?.lowercase() == "movie"
 
@@ -702,7 +1095,7 @@ object TraktSyncEngine {
         } else {
             TraktSyncPayload(
                 shows = listOf(
-                    TraktSyncItemPayload(
+                    TraktSyncShowPayload(
                         ids = TraktIds(trakt = traktId, tmdb = item.tmdbId, imdb = item.imdbId),
                         rating = rating
                     )
@@ -718,7 +1111,50 @@ object TraktSyncEngine {
             }
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to update rating on Trakt: ${e.message}")
+            Log.e(TAG, "Failed outbound rating sync: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Toggles watchlist status and pushes mutation to Trakt.
+     */
+    suspend fun toggleWatchlist(context: Context, item: SavedItem, inWatchlist: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
+        val authManager = TraktAuthManager.getInstance(context)
+        val db = AppDatabase.getDatabase(context)
+        val dao = db.savedItemDao()
+
+        val entity = dao.getItemById(item.id)
+        if (entity != null) {
+            val currentStatus = if (inWatchlist) "Plan to Watch" else if (entity.watchStatus == "Plan to Watch") null else entity.watchStatus
+            dao.insertItem(entity.copy(watchStatus = currentStatus, updatedAt = System.currentTimeMillis()))
+        }
+
+        if (!authManager.hasValidToken()) return@withContext Result.success(Unit)
+
+        throttleWrite()
+        val traktId = item.traktId ?: 0L
+        val isMovie = item.mediaType?.lowercase() == "movie"
+
+        val payload = if (isMovie) {
+            TraktSyncPayload(
+                movies = listOf(TraktSyncItemPayload(ids = TraktIds(trakt = traktId, tmdb = item.tmdbId, imdb = item.imdbId)))
+            )
+        } else {
+            TraktSyncPayload(
+                shows = listOf(TraktSyncShowPayload(ids = TraktIds(trakt = traktId, tmdb = item.tmdbId, imdb = item.imdbId)))
+            )
+        }
+
+        try {
+            if (inWatchlist) {
+                TraktClient.apiService.addToWatchlist(payload)
+            } else {
+                TraktClient.apiService.removeFromWatchlist(payload)
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed outbound watchlist sync: ${e.message}", e)
             Result.failure(e)
         }
     }

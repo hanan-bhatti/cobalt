@@ -470,6 +470,7 @@ class CobaltRepository(private val context: Context) {
         var mediaType = item.mediaType
         var genres = item.genres
         var watchProviders = item.watchProviders
+        var richWatchProviders = item.richWatchProviders
         var trailerUrl = item.trailerUrl
         var backdropUrl = item.backdropUrl
         var rating = item.rating
@@ -480,21 +481,40 @@ class CobaltRepository(private val context: Context) {
         var status = item.status
         var productionCompanies = item.productionCompanies
         var thumbnailPath = item.thumbnailPath
+        var tmdbId: Int? = item.tmdbId
 
         var updated = false
 
-        if (item.id.startsWith("tmdb_") || item.mediaType?.lowercase() == "movie" || item.mediaType?.lowercase() == "tv" || item.tmdbId != null) {
-            val tmdbId = item.tmdbId ?: item.id.substringAfterLast("_").toIntOrNull()
+        if (item.id.startsWith("tmdb_") || item.mediaType?.lowercase() == "movie" || item.mediaType?.lowercase() == "tv" || item.tmdbId != null || item.traktId != null) {
+            if (tmdbId == null) {
+                tmdbId = item.id.substringAfterLast("_").toIntOrNull()
+            }
             val apiKey = getTmdbApiKey()
 
-            if (tmdbId != null && apiKey.isNotBlank()) {
-                try {
-                    val isTv = item.mediaType?.lowercase() == "tv" || item.id.startsWith("tmdb_tv_")
-                    val details = if (isTv) {
-                        MediaApiClient.tmdbApiService.getTvDetails(tmdbId, apiKey)
-                    } else {
-                        MediaApiClient.tmdbApiService.getMovieDetails(tmdbId, apiKey)
+            if (apiKey.isNotBlank()) {
+                if (tmdbId == null && item.title.isNotBlank()) {
+                    try {
+                        val searchResp = withTimeoutOrNull(4000L) {
+                            MediaApiClient.tmdbApiService.searchMulti(query = item.title, apiKey = apiKey)
+                        }
+                        val matched = searchResp?.results?.firstOrNull { it.mediaType == "tv" || it.mediaType == "movie" }
+                        if (matched != null) {
+                            tmdbId = matched.id
+                            updated = true
+                        }
+                    } catch (e: Exception) {
+                        Log.w("CobaltRepo", "TMDb search fallback failed: ${e.message}")
                     }
+                }
+
+                if (tmdbId != null) {
+                    try {
+                        val isTv = item.mediaType?.lowercase() == "tv" || item.id.startsWith("tmdb_tv_")
+                        val details = if (isTv) {
+                            MediaApiClient.tmdbApiService.getTvDetails(tmdbId, apiKey)
+                        } else {
+                            MediaApiClient.tmdbApiService.getMovieDetails(tmdbId, apiKey)
+                        }
 
                     if (thumbnailPath.isNullOrBlank() && details.posterPath != null) {
                         thumbnailPath = "https://image.tmdb.org/t/p/w500${details.posterPath}"
@@ -564,18 +584,30 @@ class CobaltRepository(private val context: Context) {
                         }
                     }
 
-                    if (watchProviders.isEmpty()) {
-                        val providerList = mutableListOf<String>()
+                    if (richWatchProviders.isEmpty()) {
+                        val richList = mutableListOf<com.example.data.model.MediaWatchProvider>()
                         val countryMap = details.watchProviders?.results
                         val countryData = countryMap?.get("US") ?: countryMap?.values?.firstOrNull()
 
-                        countryData?.flatrate?.forEach { p -> p.providerName?.let { providerList.add(it) } }
-                        countryData?.rent?.forEach { p -> p.providerName?.let { providerList.add(it) } }
-                        countryData?.buy?.forEach { p -> p.providerName?.let { providerList.add(it) } }
+                        countryData?.flatrate?.forEach { p ->
+                            p.providerName?.let {
+                                richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Stream", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
+                            }
+                        }
+                        countryData?.rent?.forEach { p ->
+                            p.providerName?.let {
+                                richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Rent", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
+                            }
+                        }
+                        countryData?.buy?.forEach { p ->
+                            p.providerName?.let {
+                                richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Buy", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
+                            }
+                        }
 
-                        val fetchedProviders = providerList.filter { it.isNotBlank() }.distinct()
-                        if (fetchedProviders.isNotEmpty()) {
-                            watchProviders = fetchedProviders
+                        if (richList.isNotEmpty()) {
+                            richWatchProviders = richList
+                            watchProviders = richList.map { it.name }
                             updated = true
                         }
                     }
@@ -583,7 +615,8 @@ class CobaltRepository(private val context: Context) {
                     Log.e("CobaltRepo", "Failed to enrich TMDb media item: ${e.message}")
                 }
             }
-        } else if (item.id.startsWith("jikan_") || item.mediaType?.lowercase() == "anime") {
+        }
+    } else if (item.id.startsWith("jikan_") || item.mediaType?.lowercase() == "anime") {
             val malId = item.id.substringAfterLast("_").toIntOrNull()
             if (malId != null && watchProviders.isEmpty()) {
                 try {
@@ -605,6 +638,7 @@ class CobaltRepository(private val context: Context) {
                 mediaType = mediaType,
                 genres = genres,
                 watchProviders = watchProviders,
+                richWatchProviders = richWatchProviders,
                 trailerUrl = trailerUrl,
                 backdropUrl = backdropUrl,
                 rating = rating,
@@ -613,7 +647,9 @@ class CobaltRepository(private val context: Context) {
                 budget = budget,
                 revenue = revenue,
                 status = status,
-                productionCompanies = productionCompanies
+                productionCompanies = productionCompanies,
+                showProgress = item.showProgress,
+                tmdbId = tmdbId ?: item.tmdbId
             )
             if (saveToDb) {
                 savedItemDao.insertItem(newItem.toEntity())

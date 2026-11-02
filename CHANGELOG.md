@@ -4,6 +4,64 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.3] - 2026-10-30
+
+### Added
+- **Adaptive Smart Folder Ranking Engine (`FolderRankingEngine.kt`):**
+  - Lightweight on-device scoring algorithm that ranks folders by recency of use, assignment frequency, content-type affinity, and keyword matching against capture title/content.
+  - Supports both cold-start (alphabetical) and warm-start (ranked) modes, enabled via a new user setting.
+  - Suggested folders are indicated by a subtle **accent border glow** (1.5dp primary-tinted border + soft background tint) — replaces the old `✦` badge entirely.
+- **Elastic Fuzzy Search Engine (`ElasticFuzzySearchEngine.kt`):**
+  - Full-content search across titles, descriptions, notes, extracted text, links, folder names, and media metadata.
+  - Multi-strategy ranking: exact match → prefix match → fuzzy (Levenshtein) → token overlap, with score-weighted results.
+  - Handles typos gracefully; filters by content type and folder.
+- **Archive & Organization Settings Screen (`ArchiveOrganizationSettingsScreen.kt`):**
+  - New standalone settings page under Settings → Archive & Organization.
+  - Toggle for Smart Folder Ranking (adaptive suggestions & sorting).
+  - Toggle between Classic Category Piles Grid and GitHub-Style Activity Heatmap on the Profile page.
+  - Privacy notice: all ranking and heatmap data is computed locally with zero cloud tracking.
+- **GitHub-Style Activity Heatmap (`KnowledgeHeatmap.kt`):**
+  - 52-week scrollable contribution grid showing daily capture intensity with streaks and active day counts.
+  - Switchable from Profile page via Archive & Organization settings.
+- **Gemini AI Usage Screen (`GeminiUsageScreen.kt`):**
+  - Dedicated sub-screen under Settings showing token usage, API call counts, OCR vs Voice task breakdown, token distribution bar (prompt vs response), and 7-day interactive activity chart.
+  - Interactive vertical bar chart: tap any day to inspect token count; yesterday auto-selected when non-zero.
+  - Auto-recovery logic in `GeminiUsageTracker` backfills daily buckets from stored totals for data already captured before the tracker tracked per-day keys.
+- **Gemini Usage Tracker (`GeminiUsageTracker.kt`):**
+  - SharedPreferences-backed per-day token tracking keyed by `day_yyyy-MM-dd`.
+  - Scans all stored `day_*` keys on load for full historical coverage; recovers missing daily data from `lastUsedTimestamp` automatically.
+- **Move-to-Folder Dialog Redesign (`MoveToFolderDialog.kt`):**
+  - Sleek bottom-sheet dialog with correct folder colors, folder icons, usage counts, and ranking-aware ordering.
+  - Supports multi-select and single-select modes.
+- **Zero-Lag Share Sheet Save (`QuickShareActivity.kt`):**
+  - Instant save-and-close on share-sheet trigger; background enrichment (link metadata, OCR) continues after sheet dismissal.
+- **Custom Vector Icons:**
+  - Added `ic_custom_ai_brain.xml`, `ic_custom_api_chip.xml`, `ic_custom_organization.xml`.
+- **Media & TMDb Activity Line Graph (`MovieApiKeyScreen.kt`):**
+  - Replaced verbose "Library Distribution" bar and technical spec badges with a clean, interactive Canvas line graph.
+  - 24H / 7D / 30D range selector; smooth cubic Bézier curve with gradient fill; touch-to-scrub for per-point detail.
+
+### Changed & Improved
+- **Folder Screen Empty State:** Uses `ic_custom_folder` (closed folder) instead of `ic_custom_folder_open` for the custom-folders empty-state illustration.
+- **Profile Settings Reorganisation:**
+  - Moved "Archive & Organization" into its own top-level settings category with a dedicated `ic_custom_organization` icon.
+  - Updated Intelligence category icon to `ic_custom_ai_brain`.
+- **Gemini Usage Screen UI Polish:**
+  - Metric cards now display `in / out` token split in the subtitle line, removing a separate "Token Breakdown" section.
+  - Task rows simplified: subtitle stripped, icons tightened.
+  - Reset button demoted to a quiet `TextButton` at the bottom.
+  - Model name displayed in human-friendly form (e.g. "Gemini Flash Lite" instead of raw API slug).
+- **Side Dock Wallpaper-Aware Theme:**
+  - Side Dock now reacts to system wallpaper/theme changes without requiring a toggle or app restart.
+- **Foreground Service Type Fix (Android 12+):**
+  - `CobaltSideDockService` manifest entry now correctly declares `foregroundServiceType="specialUse"` matching the runtime `startForeground(FOREGROUND_SERVICE_TYPE_SPECIAL_USE)` call, resolving the `IllegalArgumentException: foregroundServiceType 0x00000001 is not a subset` crash on API 32+ devices.
+- **Side Dock Handle Color:**
+  - Handle now uses the app dynamic primary colour instead of a hardcoded blue.
+
+### Fixed
+- **Yesterday showing 0 tokens:** `GeminiUsageTracker.loadFromPrefs()` now indexes daily map by raw `yyyy-MM-dd` key (matching what `recordUsage` writes) in addition to the display label, so existing stored values surface correctly.
+- **Archive & Organization description text:** Removed stale `✦ indicator` reference; now reads "accent border glow".
+
 ## [2.2.2] - 2026-10-27
 
 ### Added

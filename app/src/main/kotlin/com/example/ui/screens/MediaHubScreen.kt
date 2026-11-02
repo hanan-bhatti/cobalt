@@ -79,6 +79,10 @@ fun MediaHubScreen(
     modifier: Modifier = Modifier
 ) {
     val isSyncing by viewModel.isSyncing.collectAsState()
+    val traktSyncStatus by com.example.data.remote.trakt.TraktSyncEngine.syncStatus.collectAsState()
+    val isTraktSyncing = traktSyncStatus is com.example.data.remote.trakt.TraktSyncStatus.Syncing
+    val isOverallRefreshing = isSyncing || isTraktSyncing
+
     val pullToRefreshState = rememberPullToRefreshState()
     val context = LocalContext.current
     val hazeState = remember { HazeState() }
@@ -180,7 +184,7 @@ fun MediaHubScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         PullToRefreshBox(
-            isRefreshing = isSyncing,
+            isRefreshing = isOverallRefreshing,
             onRefresh = {
                 viewModel.syncData()
                 com.example.util.TraktSyncWorker.enqueueOneTimeSync(context)
@@ -193,7 +197,7 @@ fun MediaHubScreen(
             indicator = {
                 PullToRefreshDefaults.LoadingIndicator(
                     state = pullToRefreshState,
-                    isRefreshing = isSyncing,
+                    isRefreshing = isOverallRefreshing,
                     modifier = Modifier.align(Alignment.TopCenter)
                 )
             }
@@ -289,9 +293,42 @@ fun MediaHubContent(
         }
     }
 
+    val traktSyncStatus by com.example.data.remote.trakt.TraktSyncEngine.syncStatus.collectAsState()
+    val isTraktSyncing = traktSyncStatus is com.example.data.remote.trakt.TraktSyncStatus.Syncing
+
     Column(
         modifier = modifier.fillMaxSize()
     ) {
+        // Active Trakt Sync Banner
+        androidx.compose.animation.AnimatedVisibility(visible = isTraktSyncing) {
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    val msg = (traktSyncStatus as? com.example.data.remote.trakt.TraktSyncStatus.Syncing)?.message ?: "Syncing with Trakt.tv..."
+                    Text(
+                        text = msg,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
         // Status Filter Row (Horizontal scroll)
         Text(
             text = "Status Filter",

@@ -121,12 +121,51 @@ object AppVersionManager {
      */
     val releaseHistory: List<ReleaseNote> = listOf(
         ReleaseNote(
+            versionName = "2.2.3",
+            versionCode = 19,
+            releaseDate = "October 30, 2026",
+            tag = AppVersionTag.STABLE,
+            isCurrent = true,
+            isLatest = true,
+            highlights = listOf(
+                "Smart Folder Ranking & Adaptive Suggestions",
+                "Elastic Fuzzy Search Engine",
+                "Gemini AI Usage Tracker & Interactive Chart",
+                "Media Activity Line Graph & UI Polish"
+            ),
+            features = listOf(
+                "Lightweight on-device FolderRankingEngine — scores folders by recency, frequency, content-type affinity, and keyword match",
+                "Suggested folders shown with a subtle accent border glow instead of the old ✦ badge",
+                "ElasticFuzzySearchEngine with multi-strategy scoring: exact → prefix → Levenshtein → token overlap",
+                "Archive & Organization settings screen with Smart Ranking toggle and Profile archive style selector",
+                "GitHub-Style 52-week Activity Heatmap switchable from settings",
+                "Gemini AI Usage Screen with per-day token history, task breakdown, and interactive 7-day bar chart",
+                "GeminiUsageTracker auto-recovery: backfills missing daily buckets from stored totals",
+                "Redesigned Move-to-Folder dialog with correct colors, icons, usage counts, and ranked ordering",
+                "Zero-lag share sheet save via QuickShareActivity — closes instantly, enrichment runs in background",
+                "Media & TMDb Activity line graph (24H / 7D / 30D) with touch-to-scrub replaces verbose spec badges"
+            ),
+            improvements = listOf(
+                "Side Dock now reacts to wallpaper/theme changes without toggle or app restart",
+                "Side Dock handle now uses app dynamic primary colour instead of hardcoded blue",
+                "Gemini Usage Screen redesigned: combined metric cards, simplified task rows, quiet reset button",
+                "Model name shown in human-friendly form (e.g. Gemini Flash Lite)",
+                "Profile Settings reorganised with dedicated Archive & Organization category and ai_brain icon",
+                "Folders empty-state uses closed folder icon"
+            ),
+            bugFixes = listOf(
+                "Fixed crash on Android 12+ (API 32): CobaltSideDockService foregroundServiceType mismatch (0x00000001 vs 0x40000000)",
+                "Fixed yesterday token count showing 0 — GeminiUsageTracker now indexes daily map by yyyy-MM-dd key matching stored data",
+                "Removed stale ✦ indicator reference from Archive & Organization settings description"
+            )
+        ),
+        ReleaseNote(
             versionName = "2.2.2",
             versionCode = 18,
             releaseDate = "October 27, 2026",
             tag = AppVersionTag.STABLE,
-            isCurrent = true,
-            isLatest = true,
+            isCurrent = false,
+            isLatest = false,
             highlights = listOf(
                 "Capture Screen & Audio Redesign",
                 "Dedicated Delete in Edit Mode",

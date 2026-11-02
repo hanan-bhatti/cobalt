@@ -491,6 +491,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             val enriched = repository.enrichMediaItemDetails(item, saveToDb)
             if (!saveToDb) {
                 _activeCaptureItem.value = enriched
+            } else if (_activeDetailItem.value?.id == item.id) {
+                _activeDetailItem.value = enriched
             }
         }
     }

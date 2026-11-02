@@ -65,22 +65,40 @@ interface TraktApiService {
     suspend fun getLastActivities(): TraktLastActivitiesResponse
 
     @GET("sync/watched/movies?extended=full")
-    suspend fun getWatchedMovies(): List<TraktWatchedMovieItem>
+    suspend fun getWatchedMovies(
+        @Query("page") page: Int? = null,
+        @Query("limit") limit: Int? = null
+    ): List<TraktWatchedMovieItem>
 
     @GET("sync/watched/shows?extended=full")
-    suspend fun getWatchedShows(): List<TraktWatchedShowItem>
+    suspend fun getWatchedShows(
+        @Query("page") page: Int? = null,
+        @Query("limit") limit: Int? = null
+    ): List<TraktWatchedShowItem>
 
     @GET("sync/watchlist/movies?extended=full")
-    suspend fun getWatchlistMovies(): List<TraktWatchlistItem>
+    suspend fun getWatchlistMovies(
+        @Query("page") page: Int? = null,
+        @Query("limit") limit: Int? = null
+    ): List<TraktWatchlistItem>
 
     @GET("sync/watchlist/shows?extended=full")
-    suspend fun getWatchlistShows(): List<TraktWatchlistItem>
+    suspend fun getWatchlistShows(
+        @Query("page") page: Int? = null,
+        @Query("limit") limit: Int? = null
+    ): List<TraktWatchlistItem>
 
     @GET("sync/ratings/movies")
-    suspend fun getMovieRatings(): List<TraktRatingItem>
+    suspend fun getMovieRatings(
+        @Query("page") page: Int? = null,
+        @Query("limit") limit: Int? = null
+    ): List<TraktRatingItem>
 
     @GET("sync/ratings/shows")
-    suspend fun getShowRatings(): List<TraktRatingItem>
+    suspend fun getShowRatings(
+        @Query("page") page: Int? = null,
+        @Query("limit") limit: Int? = null
+    ): List<TraktRatingItem>
 
     // ==========================================
     // 4. SYNC OUTBOUND (MUTATIONS)
@@ -139,4 +157,15 @@ interface TraktApiService {
     suspend fun getShowSeasons(
         @retrofit2.http.Path("id") id: String
     ): List<TraktSeasonFullItem>
+
+    @GET("shows/{id}/seasons/{season}?extended=full")
+    suspend fun getShowSeasonEpisodes(
+        @retrofit2.http.Path("id") id: String,
+        @retrofit2.http.Path("season") season: Int
+    ): List<TraktSeasonEpisodeItem>
+
+    @GET("shows/{id}/people")
+    suspend fun getShowPeople(
+        @retrofit2.http.Path("id") id: String
+    ): TraktCastResponse
 }

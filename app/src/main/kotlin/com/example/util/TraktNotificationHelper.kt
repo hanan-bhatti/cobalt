@@ -39,10 +39,10 @@ object TraktNotificationHelper {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "Trakt.tv Sync",
-                NotificationManager.IMPORTANCE_LOW
+                NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = "Background synchronization of movies, TV shows, and watch progress"
-                setShowBadge(false)
+                setShowBadge(true)
             }
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
             manager?.createNotificationChannel(channel)
