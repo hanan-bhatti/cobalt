@@ -58,6 +58,8 @@ android {
       signingConfig = signingConfigs.findByName("release")
     }
     debug {
+      applicationIdSuffix = ".debug"
+      manifestPlaceholders["appName"] = "Cobalt Debug"
       signingConfig = signingConfigs.findByName("debugConfig")
     }
   }
