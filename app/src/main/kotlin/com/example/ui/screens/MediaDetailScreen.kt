@@ -1174,7 +1174,7 @@ fun YouTubeTrailerPlayer(
                                     YouTubePlayerBridge(
                                         onReady = { isLoading = false },
                                         onError = { errorCode ->
-                                            android.util.Log.w("YouTubeTrailerPlayer", "YouTube embed error: $errorCode")
+                                            com.example.util.SafeLogger.w("YouTubeTrailerPlayer", "YouTube embed error: $errorCode")
                                             hasPlaybackError = true
                                             isLoading = false
                                         }

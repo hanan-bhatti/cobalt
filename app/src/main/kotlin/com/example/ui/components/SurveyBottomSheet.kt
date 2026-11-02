@@ -859,7 +859,7 @@ fun SurveyBottomSheet(
                                             prefs.edit().putBoolean("survey_submitted", true).apply()
                                             com.example.util.HapticManager.performSuccess(context)
                                         } catch (e: Exception) {
-                                            android.util.Log.e("SurveyBottomSheet", "Survey error: ${e.message}", e)
+                                            com.example.util.SafeLogger.e("SurveyBottomSheet", "Survey error: ${e.message}", e)
                                             submitSuccess = true
                                         } finally {
                                             isSubmitting = false
@@ -916,7 +916,7 @@ fun SurveyBottomSheet(
                                             prefs.edit().putBoolean("survey_submitted", true).apply()
                                             com.example.util.HapticManager.performSuccess(context)
                                         } catch (e: Exception) {
-                                            android.util.Log.e("SurveyBottomSheet", "Survey error: ${e.message}", e)
+                                            com.example.util.SafeLogger.e("SurveyBottomSheet", "Survey error: ${e.message}", e)
                                             submitSuccess = true
                                         } finally {
                                             isSubmitting = false
@@ -1010,7 +1010,7 @@ fun SurveyBottomSheet(
                                                 prefs.edit().putBoolean("survey_submitted", true).apply()
                                                 com.example.util.HapticManager.performSuccess(context)
                                             } catch (e: Exception) {
-                                                android.util.Log.e("SurveyBottomSheet", "Survey export error: ${e.message}", e)
+                                                com.example.util.SafeLogger.e("SurveyBottomSheet", "Survey export error: ${e.message}", e)
                                                 submitSuccess = true
                                             } finally {
                                                 isSubmitting = false

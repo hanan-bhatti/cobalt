@@ -20,7 +20,7 @@ package com.example.ui.components
 
 import android.media.MediaPlayer
 import android.net.Uri
-import android.util.Log
+import com.example.util.SafeLogger as Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*

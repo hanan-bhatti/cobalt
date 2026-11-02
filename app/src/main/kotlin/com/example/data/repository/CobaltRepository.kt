@@ -21,7 +21,7 @@ package com.example.data.repository
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.Base64
-import android.util.Log
+import com.example.util.SafeLogger as Log
 import com.example.BuildConfig
 import com.example.data.local.AppDatabase
 import com.example.data.local.CustomFolderEntity

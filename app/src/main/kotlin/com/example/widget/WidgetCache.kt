@@ -19,7 +19,7 @@
 package com.example.widget
 
 import android.content.Context
-import android.util.Log
+import com.example.util.SafeLogger as Log
 import com.example.data.model.SavedItem
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types

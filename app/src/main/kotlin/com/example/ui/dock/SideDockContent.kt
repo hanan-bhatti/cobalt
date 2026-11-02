@@ -476,7 +476,7 @@ fun SideDockContent(
                             WidgetUpdater.update(context)
                         }
                     } catch (e: Exception) {
-                        android.util.Log.e("CobaltSideDock", "Metadata extraction failed: ${e.message}")
+                        com.example.util.SafeLogger.e("CobaltSideDock", "Metadata extraction failed: ${e.message}")
                     }
                 }
                 } catch (cancel: CancellationException) { throw cancel }

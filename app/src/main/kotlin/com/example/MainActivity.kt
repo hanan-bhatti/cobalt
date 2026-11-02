@@ -218,7 +218,7 @@ class MainActivity : ComponentActivity() {
                     startService(serviceIntent)
                 }
             } catch (e: Exception) {
-                android.util.Log.e("Cobalt", "Failed to start Cobalt SideDock service: ${e.message}", e)
+                com.example.util.SafeLogger.e("Cobalt", "Failed to start Cobalt SideDock service: ${e.message}", e)
             }
         }
 

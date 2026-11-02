@@ -26,7 +26,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.ContextWrapper
 import android.content.pm.PackageManager
-import android.util.Log
+import com.example.util.SafeLogger as Log
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult

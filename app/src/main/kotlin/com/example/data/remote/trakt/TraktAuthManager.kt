@@ -19,7 +19,7 @@
 package com.example.data.remote.trakt
 
 import android.content.Context
-import android.util.Log
+import com.example.util.SafeLogger as Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

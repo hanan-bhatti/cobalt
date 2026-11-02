@@ -69,7 +69,7 @@ class AdaptiveReminderWorker(
                 )
             }
         } catch (e: Exception) {
-            android.util.Log.e("AdaptiveReminderWorker", "Error selecting or showing reminder: ${e.message}")
+            com.example.util.SafeLogger.e("AdaptiveReminderWorker", "Error selecting or showing reminder: ${e.message}")
         }
 
         return Result.success()

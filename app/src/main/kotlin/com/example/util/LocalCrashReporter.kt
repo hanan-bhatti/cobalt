@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.util.Log
+import com.example.util.SafeLogger as Log
 import androidx.core.content.FileProvider
 import com.example.BuildConfig
 import java.io.File

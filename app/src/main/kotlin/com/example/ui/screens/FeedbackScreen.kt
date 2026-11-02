@@ -666,7 +666,7 @@ private fun ExpressiveBugReportContent(
                                     submitSuccess = true
                                     com.example.util.HapticManager.performSuccess(context)
                                 } catch (e: Exception) {
-                                    android.util.Log.e("FeedbackScreen", "Bug report error: ${e.message}", e)
+                                    com.example.util.SafeLogger.e("FeedbackScreen", "Bug report error: ${e.message}", e)
                                     submitSuccess = true
                                 } finally {
                                     isSubmitting = false
@@ -728,7 +728,7 @@ private fun ExpressiveBugReportContent(
                                     submitSuccess = true
                                     com.example.util.HapticManager.performSuccess(context)
                                 } catch (e: Exception) {
-                                    android.util.Log.e("FeedbackScreen", "Bug report error: ${e.message}", e)
+                                    com.example.util.SafeLogger.e("FeedbackScreen", "Bug report error: ${e.message}", e)
                                     submitSuccess = true
                                 } finally {
                                     isSubmitting = false
@@ -784,7 +784,7 @@ private fun ExpressiveBugReportContent(
                                     submitSuccess = true
                                     com.example.util.HapticManager.performSuccess(context)
                                 } catch (e: Exception) {
-                                    android.util.Log.e("FeedbackScreen", "Bug report error: ${e.message}", e)
+                                    com.example.util.SafeLogger.e("FeedbackScreen", "Bug report error: ${e.message}", e)
                                     submitSuccess = true
                                 } finally {
                                     isSubmitting = false
@@ -1138,7 +1138,7 @@ private fun ExpressiveFeatureRequestContent(
                                     submitSuccess = true
                                     com.example.util.HapticManager.performSuccess(context)
                                 } catch (e: Exception) {
-                                    android.util.Log.e("FeedbackScreen", "Feature request error: ${e.message}", e)
+                                    com.example.util.SafeLogger.e("FeedbackScreen", "Feature request error: ${e.message}", e)
                                     submitSuccess = true
                                 } finally {
                                     isSubmitting = false
@@ -1202,7 +1202,7 @@ private fun ExpressiveFeatureRequestContent(
                                     submitSuccess = true
                                     com.example.util.HapticManager.performSuccess(context)
                                 } catch (e: Exception) {
-                                    android.util.Log.e("FeedbackScreen", "Feature request error: ${e.message}", e)
+                                    com.example.util.SafeLogger.e("FeedbackScreen", "Feature request error: ${e.message}", e)
                                     submitSuccess = true
                                 } finally {
                                     isSubmitting = false
@@ -1260,7 +1260,7 @@ private fun ExpressiveFeatureRequestContent(
                                     submitSuccess = true
                                     com.example.util.HapticManager.performSuccess(context)
                                 } catch (e: Exception) {
-                                    android.util.Log.e("FeedbackScreen", "Feature request error: ${e.message}", e)
+                                    com.example.util.SafeLogger.e("FeedbackScreen", "Feature request error: ${e.message}", e)
                                     submitSuccess = true
                                 } finally {
                                     isSubmitting = false

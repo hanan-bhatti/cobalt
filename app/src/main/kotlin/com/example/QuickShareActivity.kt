@@ -23,7 +23,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
+import com.example.util.SafeLogger as Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.core.content.IntentCompat

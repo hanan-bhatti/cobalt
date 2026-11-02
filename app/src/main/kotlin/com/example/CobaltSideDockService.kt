@@ -220,7 +220,7 @@ class CobaltSideDockService : Service() {
                 wallpaperManager.addOnColorsChangedListener(listener, mainHandler)
                 wallpaperColorsListener = listener
             } catch (e: Exception) {
-                android.util.Log.w("CobaltSideDock", "Could not register OnColorsChangedListener: ${e.message}")
+                com.example.util.SafeLogger.w("CobaltSideDock", "Could not register OnColorsChangedListener: ${e.message}")
             }
         }
 
@@ -240,7 +240,7 @@ class CobaltSideDockService : Service() {
                 startForeground(NOTIFICATION_ID, buildNotification())
             }
         } catch (e: Exception) {
-            android.util.Log.e("CobaltSideDock", "Failed to start foreground: ${e.message}", e)
+            com.example.util.SafeLogger.e("CobaltSideDock", "Failed to start foreground: ${e.message}", e)
         }
     }
 
@@ -705,7 +705,7 @@ class CobaltSideDockService : Service() {
         try {
             windowManager.addView(rootLayout, fullScreenParams)
         } catch (e: Exception) {
-            android.util.Log.e("CobaltSideDock", "Failed to add dock window: ${e.message}", e)
+            com.example.util.SafeLogger.e("CobaltSideDock", "Failed to add dock window: ${e.message}", e)
             closeDock()
         }
     }
@@ -782,7 +782,7 @@ class CobaltSideDockService : Service() {
                     startService(restartIntent)
                 }
             } catch (e: Exception) {
-                android.util.Log.e("CobaltSideDock", "Failed to restart service: ${e.message}", e)
+                com.example.util.SafeLogger.e("CobaltSideDock", "Failed to restart service: ${e.message}", e)
             }
         }
     }

@@ -191,7 +191,7 @@ object CobaltCustomTabsLauncher {
             customTabsIntent.launchUrl(context, uri)
 
         } catch (e: Exception) {
-            android.util.Log.w(TAG, "Chrome Custom Tabs failed to launch, falling back to ACTION_VIEW: ${e.message}")
+            com.example.util.SafeLogger.w(TAG, "Chrome Custom Tabs failed to launch, falling back to ACTION_VIEW: ${e.message}")
             fallbackToStandardBrowser(context, uri)
         }
     }
@@ -249,7 +249,7 @@ object CobaltCustomTabsLauncher {
             drawable.draw(canvas)
             bitmap
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "Failed to render vector drawable to bitmap: ${e.message}")
+            com.example.util.SafeLogger.e(TAG, "Failed to render vector drawable to bitmap: ${e.message}")
             null
         }
     }

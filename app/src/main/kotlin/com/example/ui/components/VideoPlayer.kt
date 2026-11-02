@@ -21,7 +21,7 @@ package com.example.ui.components
 import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.util.Log
+import com.example.util.SafeLogger as Log
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn

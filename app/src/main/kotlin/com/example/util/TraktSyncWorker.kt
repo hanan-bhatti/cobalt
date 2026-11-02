@@ -19,7 +19,7 @@
 package com.example.util
 
 import android.content.Context
-import android.util.Log
+import com.example.util.SafeLogger as Log
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker

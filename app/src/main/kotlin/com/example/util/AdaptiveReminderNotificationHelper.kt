@@ -102,10 +102,10 @@ object AdaptiveReminderNotificationHelper {
             AdaptiveReminderStore(context).recordReminderDispatched(item.id, item.folders)
             return true
         } catch (e: SecurityException) {
-            android.util.Log.w("CobaltReminder", "Missing POST_NOTIFICATIONS permission: ${e.message}")
+            com.example.util.SafeLogger.w("CobaltReminder", "Missing POST_NOTIFICATIONS permission: ${e.message}")
             return false
         } catch (e: Exception) {
-            android.util.Log.e("CobaltReminder", "Failed to dispatch reminder notification: ${e.message}")
+            com.example.util.SafeLogger.e("CobaltReminder", "Failed to dispatch reminder notification: ${e.message}")
             return false
         }
     }

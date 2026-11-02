@@ -222,7 +222,7 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                 startService(serviceIntent)
             }
         } catch (e: Exception) {
-            android.util.Log.e("OcrCaptureActivity", "Failed to start capture service: ${e.message}", e)
+            com.example.util.SafeLogger.e("OcrCaptureActivity", "Failed to start capture service: ${e.message}", e)
         }
     }
 

@@ -19,7 +19,7 @@
 package com.example.data.remote.trakt
 
 import android.content.Context
-import android.util.Log
+import com.example.util.SafeLogger as Log
 import com.example.data.local.AppDatabase
 import com.example.data.local.SavedItemEntity
 import com.example.data.model.MediaCastMember

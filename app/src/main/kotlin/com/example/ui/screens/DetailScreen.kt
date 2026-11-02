@@ -249,7 +249,7 @@ fun DetailScreen(
                     }
                     .onGloballyPositioned { coordinates ->
                         val pos = coordinates.positionInRoot()
-                        android.util.Log.d("CobaltAnim", "Detail TopBar: alpha=$barsAlpha, pos=(${pos.x}, ${pos.y}), size=${coordinates.size}")
+                        com.example.util.SafeLogger.d("CobaltAnim", "Detail TopBar: alpha=$barsAlpha, pos=(${pos.x}, ${pos.y}), size=${coordinates.size}")
                     }
             ) {
                 TopAppBar(
@@ -305,7 +305,7 @@ fun DetailScreen(
                     }
                     .onGloballyPositioned { coordinates ->
                         val pos = coordinates.positionInRoot()
-                        android.util.Log.d("CobaltAnim", "Detail BottomBar (Edit Item): alpha=$barsAlpha, pos=(${pos.x}, ${pos.y}), size=${coordinates.size}")
+                        com.example.util.SafeLogger.d("CobaltAnim", "Detail BottomBar (Edit Item): alpha=$barsAlpha, pos=(${pos.x}, ${pos.y}), size=${coordinates.size}")
                     }
             ) {
                 val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
@@ -389,7 +389,7 @@ fun DetailScreen(
                 )
                 .onGloballyPositioned { coordinates ->
                     val pos = coordinates.positionInRoot()
-                    android.util.Log.d("CobaltAnim", "Detail Card Morph: pos=(${pos.x}, ${pos.y}), size=${coordinates.size}, itemId=${item.id}")
+                    com.example.util.SafeLogger.d("CobaltAnim", "Detail Card Morph: pos=(${pos.x}, ${pos.y}), size=${coordinates.size}, itemId=${item.id}")
                 },
             color = MaterialTheme.colorScheme.background
         ) {

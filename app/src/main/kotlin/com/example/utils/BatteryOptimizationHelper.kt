@@ -11,7 +11,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
-import android.util.Log
+import com.example.util.SafeLogger as Log
 
 object BatteryOptimizationHelper {
     private const val TAG = "BatteryOptHelper"

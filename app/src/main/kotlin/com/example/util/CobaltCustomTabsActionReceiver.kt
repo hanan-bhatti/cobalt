@@ -118,7 +118,7 @@ class CobaltCustomTabsActionReceiver : BroadcastReceiver() {
                                 }
                             }
                         } catch (e: Exception) {
-                            android.util.Log.e("CobaltCustomTabs", "Failed to update favorite item: ${e.message}", e)
+                            com.example.util.SafeLogger.e("CobaltCustomTabs", "Failed to update favorite item: ${e.message}", e)
                         }
                     }
                 } else if (!url.isNullOrBlank()) {
