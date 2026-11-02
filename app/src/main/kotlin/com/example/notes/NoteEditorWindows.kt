@@ -3,6 +3,10 @@ package com.example.notes
 object NoteEditorWindows {
     const val MAX_CHARACTERS = 512
     const val MAX_LINES = 24
+    const val SECTION_INPUT_CHARACTERS = 2048
+    const val SECTION_INPUT_LINES = 48
+    fun sectionNeedsStreaming(text: String): Boolean = text.length > SECTION_INPUT_CHARACTERS ||
+        text.asSequence().filter { it == '\n' }.take(SECTION_INPUT_LINES).count() >= SECTION_INPUT_LINES
     data class Window(val start: Int, val end: Int, val text: String)
 
     fun requiresWindow(text: String): Boolean =
@@ -18,11 +22,12 @@ object NoteEditorWindows {
         return Window(start, end, text.substring(start, end))
     }
 
-    fun utf8Bytes(text: String, checkCancelled: () -> Unit = {}): Long {
+    fun utf8Bytes(text: CharSequence, checkCancelled: () -> Unit = {}): Long {
         var index = 0
         var bytes = 0L
+        var nextCancellationCheck = 0
         while (index < text.length) {
-            if (index % 4096 == 0) checkCancelled()
+            if (index >= nextCancellationCheck) { checkCancelled(); nextCancellationCheck = index + 4096 }
             val char = text[index]
             when {
                 char.code < 0x80 -> bytes++

@@ -28,6 +28,14 @@ class NoteSizePolicyTest {
         }
     }
 
+    @Test fun editingOversizedOriginalNeverRequiresTruncationButCannotGrowIt() {
+        assertTrue(NoteSizePolicy.acceptsEdit(55_000_000, 1))
+        assertFalse(NoteSizePolicy.acceptsEdit(55_000_001, 1))
+        assertTrue(NoteSizePolicy.acceptsEdit(60_000_000, 60_000_000))
+        assertTrue(NoteSizePolicy.acceptsEdit(59_000_000, 60_000_000))
+        assertFalse(NoteSizePolicy.acceptsEdit(60_000_001, 60_000_000))
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun negativeSizeIsRejected() { NoteSizePolicy.tier(-1) }
 }

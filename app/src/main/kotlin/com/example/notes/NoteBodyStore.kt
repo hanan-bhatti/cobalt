@@ -68,7 +68,7 @@ class PrivateMarkdownStore(context: Context) : NoteBodyStore {
                     if (count == 0) continue
                     bytes += count
                     if (!allowOversize && bytes > NoteSizePolicy.IMPORT_MAX_BYTES) {
-                        throw IOException("Note exceeds 55 MB. Split it into multiple notes.")
+                        throw NoteSizeExceededException()
                     }
                     output.write(buffer, 0, count)
                     digest.update(buffer, 0, count)
@@ -179,4 +179,16 @@ class TextUtf8InputStream(private val text: CharSequence) : InputStream() {
         position += count
         return count
     }
+}
+
+/** A non-copying UTF-16 slice; the encoder materializes only its 1024-character chunks. */
+class NoteTextSlice(private val text: CharSequence, private val start: Int, private val end: Int) : CharSequence {
+    init { require(start in 0..end && end <= text.length) }
+    override val length get() = end - start
+    override fun get(index: Int): Char { require(index in 0 until length); return text[start + index] }
+    override fun subSequence(startIndex: Int, endIndex: Int): CharSequence {
+        require(startIndex in 0..endIndex && endIndex <= length)
+        return NoteTextSlice(text, start + startIndex, start + endIndex)
+    }
+    override fun toString() = buildString(length) { for (index in start until end) append(text[index]) }
 }
