@@ -1,5 +1,11 @@
 ## Unreleased — single application cleanup
 
+- Prepare note content from a small prefix instead of parsing the full document
+  before display. Add bounded parsed-block/page caches, nearby-content prefetch
+  and static skeleton loading. Timing and memory budgets remain unmeasured.
+- Reuse existing note-action icons and the standard settings navigation engine
+  for recovery, including predictive back, depth and shared-axis transitions.
+
 - Align migration, recovery and storage-error pages with Appearance settings,
   including saved themes, shared headers and back motion. Simplify migration
   actions, use counted All/Large filters, single-line note titles and size badges,

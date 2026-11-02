@@ -58,7 +58,7 @@ Supplied reference copies, kept as ignored local evidence:
 
 - `NoteStorageUi.kt`: appearance-aware standalone theme without the normal
   ViewModel/credential initialization; shared settings layout, native size units,
-  predictive-back surface and folder-style context menus.
+  folder-style context menus and the same NavHost/ScreenWrapper motion as Settings.
 - `CollapsibleCommonTopBar.kt`: render its existing actions slot and reserve title
   space for actions while collapsing, preserving its current typography/geometry.
 - `NoteMigrationScreen.kt`: compact ready/running/completed/error states, a single
@@ -69,8 +69,8 @@ Supplied reference copies, kept as ignored local evidence:
   recovery store. Safe mode remains independent of the normal ViewModel.
 - `MainActivity.kt`: use saved themes for startup/recovery and the redesigned
   storage-preparation error page.
-- Added `ic_custom_note_export.xml`, a native vector matching the app's 1.5dp
-  rounded outline strokes. Existing eye/delete assets are reused. No dependencies,
+- Reuse the shared export, delete, more, text and conversion/sync assets.
+  Duplicate note-action icons have been removed. No dependencies,
   networking, application ID, signing or database migration logic changes.
 
 Checks actually run: `git diff --check`, new vector XML parsing, Python syntax
