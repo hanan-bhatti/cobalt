@@ -245,6 +245,10 @@ class CobaltSideDockService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (com.example.notes.StartupCrashGuard.isSafeMode || com.example.notes.NoteMigrationManager.shouldPauseBackground(this)) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         ensureForeground()
 
         if (!com.example.utils.PermissionUtils.hasOverlayPermission(this)) {

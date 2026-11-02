@@ -137,6 +137,11 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (com.example.notes.StartupCrashGuard.isSafeMode || com.example.notes.NoteMigrationManager.shouldPauseBackground(this)) {
+            startActivity(android.content.Intent(this, MainActivity::class.java))
+            finish()
+            return
+        }
         mediaProjectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
 
         // Set ScreenCaptureService callback

@@ -18,6 +18,8 @@
 
 package com.example
 
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -138,6 +140,48 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        setContent {
+            com.example.ui.theme.MyApplicationTheme {
+                androidx.compose.material3.Surface(Modifier.fillMaxSize()) {
+                    androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
+                        androidx.compose.material3.CircularProgressIndicator()
+                    }
+                }
+            }
+        }
+        lifecycleScope.launch {
+            val needed = com.example.notes.NoteMigrationManager.needsStartupMigration(applicationContext)
+            if (needed) {
+                setContent {
+                    com.example.ui.theme.MyApplicationTheme {
+                        com.example.ui.screens.NoteMigrationScreen(
+                            startup = true,
+                            onDone = { startAppropriateApp() },
+                            onBack = { finish() },
+                            onRecovery = { showRecovery() }
+                        )
+                    }
+                }
+            } else startAppropriateApp()
+        }
+    }
+
+    private fun showRecovery() {
+        setContent {
+            com.example.ui.theme.MyApplicationTheme {
+                com.example.ui.screens.NoteRecoveryScreen(onExitSafeMode = {
+                    com.example.notes.StartupCrashGuard.leaveSafeMode()
+                    recreate()
+                })
+            }
+        }
+    }
+
+    private fun startAppropriateApp() {
+        if (com.example.notes.StartupCrashGuard.isSafeMode) showRecovery() else startNormalApp()
+    }
+
+    private fun startNormalApp() {
         pendingNavDestination.value = intent?.getStringExtra("NAVIGATE_TO")
 
         // Force widget update on app start to overcome OEM background restrictions
@@ -819,6 +863,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        if (com.example.notes.StartupCrashGuard.isSafeMode || com.example.notes.NoteMigrationManager.shouldPauseBackground(this)) return
         handleIntent(intent)
         pendingNavDestination.value = intent.getStringExtra("NAVIGATE_TO")
     }

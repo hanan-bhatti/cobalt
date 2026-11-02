@@ -13,8 +13,19 @@ import coil.decode.VideoFrameDecoder
 class CobaltApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
-        // Initialize local crash reporter
+        if (BuildConfig.DEBUG) {
+            android.os.StrictMode.setThreadPolicy(
+                android.os.StrictMode.ThreadPolicy.Builder()
+                    .detectDiskReads()
+                    .detectDiskWrites()
+                    .detectNetwork()
+                    .penaltyLog()
+                    .build()
+            )
+        }
+        // Install local reporting first so the startup guard chains to it.
         com.example.util.LocalCrashReporter.init(this)
+        com.example.notes.StartupCrashGuard.install(this)
     }
 
     override fun newImageLoader(): ImageLoader {

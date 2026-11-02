@@ -35,6 +35,7 @@ class AdaptiveReminderWorker(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
+        if ((com.example.notes.StartupCrashGuard.shouldPause(applicationContext) || com.example.notes.NoteMigrationManager.shouldPauseBackground(applicationContext))) return Result.success()
         val store = AdaptiveReminderStore(applicationContext)
         if (!store.isRemindersEnabled) {
             return Result.success()
@@ -78,6 +79,7 @@ class AdaptiveReminderWorker(
         const val WORK_NAME = "cobalt_adaptive_reminder_worker"
 
         fun schedule(context: Context) {
+            if ((com.example.notes.StartupCrashGuard.shouldPause(context) || com.example.notes.NoteMigrationManager.shouldPauseBackground(context))) return
             val store = AdaptiveReminderStore(context)
             if (!store.isRemindersEnabled) return
 

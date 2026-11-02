@@ -95,6 +95,12 @@ class RecentItemsWidget : GlanceAppWidget() {
     )
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        if ((com.example.notes.StartupCrashGuard.shouldPause(context) || com.example.notes.NoteMigrationManager.shouldPauseBackground(context))) {
+            provideContent {
+                androidx.glance.text.Text("Open Cobalt to finish note migration or recovery.")
+            }
+            return
+        }
         val cachedItems = try {
             WidgetCache.getCachedItems(context)
         } catch (e: Throwable) {

@@ -75,6 +75,7 @@ class AdaptiveReminderStore(context: Context) {
      * Updates item open count, last open timestamp, and folder attention.
      */
     fun recordItemOpened(item: SavedItem, fromNotification: Boolean = false) {
+        if (com.example.notes.StartupCrashGuard.isSafeMode) return
         val now = System.currentTimeMillis()
         val editor = prefs.edit()
 
@@ -124,6 +125,7 @@ class AdaptiveReminderStore(context: Context) {
      * Record when a reminder notification was opened via deep link.
      */
     fun recordNotificationOpened(itemId: String) {
+        if (com.example.notes.StartupCrashGuard.isSafeMode) return
         val editor = prefs.edit()
         val currentOpened = prefs.getInt(KEY_TOTAL_OPENED, 0)
         editor.putInt(KEY_TOTAL_OPENED, currentOpened + 1)
@@ -139,6 +141,7 @@ class AdaptiveReminderStore(context: Context) {
      * Record when a reminder was dispatched to the system tray.
      */
     fun recordReminderDispatched(itemId: String, folders: List<String>) {
+        if (com.example.notes.StartupCrashGuard.isSafeMode) return
         val now = System.currentTimeMillis()
         val editor = prefs.edit()
 

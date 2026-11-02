@@ -51,6 +51,11 @@ class QuickShareActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (com.example.notes.StartupCrashGuard.isSafeMode || com.example.notes.NoteMigrationManager.shouldPauseBackground(this)) {
+            startActivity(Intent(intent).setClass(this, MainActivity::class.java))
+            finish()
+            return
+        }
 
         val intent = intent
         val action = intent?.action
@@ -234,19 +239,22 @@ class QuickShareActivity : ComponentActivity() {
 
     private fun persistAndNotify(message: String, entity: SavedItemEntity) {
         val appContext = applicationContext
-        Toast.makeText(appContext, message, Toast.LENGTH_SHORT).show()
-
-        // Insert instantly on IO pool
+        Toast.makeText(appContext, "Saving…", Toast.LENGTH_SHORT).show()
         activityScope.launch {
             try {
-                AppDatabase.getDatabase(appContext).savedItemDao().insertItem(entity)
-            } catch (e: Exception) {
-                Log.e("QuickShare", "Failed to insert shared item: ${e.message}")
+                com.example.notes.NotePersistence(appContext).save(entity.toDomainModel(bodyLoaded = true))
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(appContext, message, Toast.LENGTH_SHORT).show()
+                    finish()
+                }
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(appContext, "Could not save this capture. Please share it again.", Toast.LENGTH_LONG).show()
+                    finish()
+                }
             }
         }
-
-        // Close share sheet immediately without lag
-        finish()
     }
 
     private data class ParsedMetadata(val title: String?, val description: String?, val imageUrl: String?)

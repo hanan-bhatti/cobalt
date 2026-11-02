@@ -43,6 +43,7 @@ class TraktSyncWorker(
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
+        if ((com.example.notes.StartupCrashGuard.shouldPause(applicationContext) || com.example.notes.NoteMigrationManager.shouldPauseBackground(applicationContext))) return Result.success()
         val authManager = TraktAuthManager.getInstance(applicationContext)
         if (!authManager.hasValidToken()) {
             return Result.success()
@@ -71,6 +72,7 @@ class TraktSyncWorker(
         const val PERIODIC_WORK_NAME = "cobalt_trakt_sync_periodic"
 
         fun enqueueOneTimeSync(context: Context) {
+            if ((com.example.notes.StartupCrashGuard.shouldPause(context) || com.example.notes.NoteMigrationManager.shouldPauseBackground(context))) return
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
@@ -88,6 +90,7 @@ class TraktSyncWorker(
         }
 
         fun schedulePeriodicSync(context: Context, repeatHours: Long = 24) {
+            if ((com.example.notes.StartupCrashGuard.shouldPause(context) || com.example.notes.NoteMigrationManager.shouldPauseBackground(context))) return
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
