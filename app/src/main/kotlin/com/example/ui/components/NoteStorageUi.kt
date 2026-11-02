@@ -154,3 +154,26 @@ fun NoteContextAction(title: String, iconRes: Int, destructive: Boolean = false,
             textColor = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
             leadingIconColor = tint))
 }
+
+/** Same NavHost engine and forward/pop transitions as the main settings navigation. */
+@Composable
+fun NoteStorageNavHost(navController: androidx.navigation.NavHostController, startDestination: String,
+    builder: androidx.navigation.NavGraphBuilder.() -> Unit) {
+    androidx.navigation.compose.NavHost(navController = navController, startDestination = startDestination,
+        enterTransition = { com.example.ui.navigation.aospSharedAxisEnter() },
+        exitTransition = { com.example.ui.navigation.aospSharedAxisExit() },
+        popEnterTransition = { com.example.ui.navigation.aospSharedAxisPopEnter() },
+        popExitTransition = { com.example.ui.navigation.aospSharedAxisPopExit() }, builder = builder)
+}
+
+/** Shared depth/dim/corner treatment; reads only the blur preference, never the normal ViewModel. */
+@Composable
+fun NoteStorageRoute(navController: androidx.navigation.NavHostController,
+    scope: androidx.compose.animation.AnimatedVisibilityScope, content: @Composable () -> Unit) {
+    val context = LocalContext.current
+    val prefs = remember(context) { context.getSharedPreferences("cobalt_settings", Context.MODE_PRIVATE) }
+    val forceDisable = remember(prefs) { prefs.getBoolean("force_disable_blur", false) }
+    val capable = remember(context) { com.example.utils.DevicePerformance.isDeviceCapableOfBlur(context) }
+    ScreenWrapper(navController = navController, disableBlur = forceDisable || !capable,
+        animatedVisibilityScope = scope, content = content)
+}

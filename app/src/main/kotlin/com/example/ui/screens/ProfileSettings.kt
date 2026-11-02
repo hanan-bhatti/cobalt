@@ -169,7 +169,7 @@ enum class SettingsCategory(
     DATA_MIGRATION(
         title = "Data Migration",
         subtitle = "Markdown storage, conversion results, and recovery",
-        iconRes = R.drawable.ic_custom_archive
+        iconRes = R.drawable.ic_custom_sync
     ),
     SYSTEM_HEALTH(
         title = "System & Background Health",

@@ -2,12 +2,6 @@ package com.example.ui.screens
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.combinedClickable
@@ -18,8 +12,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -44,17 +36,26 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 
 /** Recovery shares settings visuals without constructing the normal ViewModel or a Markdown tree. */
 @Composable
-fun NoteRecoveryScreen(onExitSafeMode: () -> Unit, safeMode: Boolean = StartupCrashGuard.isSafeMode) {
+fun NoteRecoveryScreen(onExitSafeMode: () -> Unit, safeMode: Boolean = StartupCrashGuard.isSafeMode,
+    navigationBack: Boolean = false) {
     val context = LocalContext.current
     val reader = remember { LegacyNoteRecovery(context) }
     val scope = rememberCoroutineScope()
     var notes by remember { mutableStateOf<List<RecoveryNote>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     val recoveryListState = rememberLazyListState()
-    var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
+    val navigation = rememberNavController()
+    val activeEntry by navigation.currentBackStackEntryAsState()
+    val selectedId = activeEntry?.arguments?.getString("noteId")
+    fun openNote(id: String) { navigation.navigate("plain/" + android.net.Uri.encode(id)) { launchSingleTop = true } }
     var largeOnly by rememberSaveable { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -101,11 +102,10 @@ fun NoteRecoveryScreen(onExitSafeMode: () -> Unit, safeMode: Boolean = StartupCr
         exporter.launch("${name.ifBlank { "note" }}.md")
     }
     fun back() {
-        if (selectedId != null) selectedId = null
+        if (selectedId != null) navigation.popBackStack()
         else if (safeMode) confirmExit = true
         else onExitSafeMode()
     }
-    val selected = notes.firstOrNull { it.id == selectedId }
     val largeNotes = remember(notes) { notes.filter { it.byteLength >= NoteSizePolicy.TIER_A_MAX_BYTES } }
     val filtered = if (largeOnly) largeNotes else notes
     val exportStatus: @Composable () -> Unit = {
@@ -123,69 +123,80 @@ fun NoteRecoveryScreen(onExitSafeMode: () -> Unit, safeMode: Boolean = StartupCr
             }
         }
     }
-    NoteBackSurface(enabled = !confirmExit && deleteId == null, onBack = ::back) {
-        AnimatedContent(targetState = selected?.id, label = "recoveryNote", transitionSpec = {
-            (fadeIn(tween(200)) + slideInHorizontally(tween(240)) { if (targetState != null) it / 10 else -it / 10 }) togetherWith
-                (fadeOut(tween(140)) + slideOutHorizontally(tween(240)) { if (targetState != null) -it / 10 else it / 10 })
-        }) { targetId ->
-            val displayed = notes.firstOrNull { it.id == targetId }
-            if (displayed != null) {
-                val listState = rememberLazyListState()
-                val bar = rememberCollapsibleTopBarState(listState, maxHeight = 160.dp)
-                val height = with(LocalDensity.current) { bar.heightPx.toDp() }
-                Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).nestedScroll(bar.nestedScrollConnection)) {
-                    NoteBodyPlainText(reader, displayed, Modifier.fillMaxSize(), listState = listState,
-                        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = height + 12.dp,
-                            bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 24.dp),
-                        header = {
-                            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
-                                    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        Text(displayed.title.ifBlank { "Untitled note" }, style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
-                                        RecoveryNoteSize(displayed.byteLength)
-                                    }
-                                }
-                                exportStatus()
-                                message?.let { NoteStorageNotice("Recovery", it) }
+    val plainBody: @Composable (RecoveryNote) -> Unit = { displayed ->
+        val listState = rememberLazyListState()
+        val bar = rememberCollapsibleTopBarState(listState, maxHeight = 160.dp)
+        val height = with(LocalDensity.current) { bar.heightPx.toDp() }
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).nestedScroll(bar.nestedScrollConnection)) {
+            NoteBodyPlainText(reader, displayed, Modifier.fillMaxSize(), listState = listState,
+                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = height + 12.dp,
+                    bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 24.dp),
+                header = {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+                            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(displayed.title.ifBlank { "Untitled note" }, style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+                                RecoveryNoteSize(displayed.byteLength)
                             }
-                        })
-                    CollapsibleCommonTopBar("Plain text", bar.collapseFraction, height, ::back,
-                        subtitle = "Read without Markdown formatting", actions = {
-                            RecoveryNoteMenu(displayed, busy, onExport = { export(displayed) }, onDelete = { deleteId = displayed.id })
-                        })
-                }
-            } else NoteSettingsPage("Note Recovery", "Read, export or recover your notes", ::back, itemSpacing = 2.dp, listState = recoveryListState) {
-                item {
-                    Column(Modifier.padding(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        if (safeMode) NoteStorageNotice("Safe mode is on", "Background activity is paused while you recover your notes.")
-                        val allLabel = "All (${notes.size})"
-                        val largeLabel = "Large (${largeNotes.size})"
-                        ExpressiveSegmentedChoiceItem(title = "Show notes", options = listOf(allLabel, largeLabel),
-                            selectedOption = if (largeOnly) largeLabel else allLabel,
-                            subtitle = "Large notes are ${formatNoteSize(context, NoteSizePolicy.TIER_A_MAX_BYTES)} or more.",
-                            onOptionSelected = { option ->
-                                val next = option == largeLabel
-                                if (next != largeOnly) {
-                                    largeOnly = next
-                                    scope.launch { recoveryListState.animateScrollToItem(0) }
-                                }
-                            })
+                        }
                         exportStatus()
                         message?.let { NoteStorageNotice("Recovery", it) }
-                        SettingsSubsectionHeader(title = if (largeOnly) "Large notes" else "All notes",
-                            description = if (largeOnly) "Showing ${filtered.size} of ${notes.size} notes · ${formatNoteSize(context, NoteSizePolicy.TIER_A_MAX_BYTES)} or larger"
-                                else "${notes.size} notes · tap to read, hold for actions")
                     }
+                })
+            CollapsibleCommonTopBar("Plain text", bar.collapseFraction, height, ::back,
+                subtitle = "Read without Markdown formatting", actions = {
+                    RecoveryNoteMenu(displayed, busy, onExport = { export(displayed) }, onDelete = { deleteId = displayed.id })
+                })
+        }
+    }
+    val listBody: @Composable () -> Unit = {
+        NoteSettingsPage("Note Recovery", "Read, export or recover your notes", ::back, itemSpacing = 2.dp, listState = recoveryListState) {
+            item {
+                Column(Modifier.padding(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (safeMode) NoteStorageNotice("Safe mode is on", "Background activity is paused while you recover your notes.")
+                    val allLabel = "All (${notes.size})"
+                    val largeLabel = "Large (${largeNotes.size})"
+                    ExpressiveSegmentedChoiceItem(title = "Show notes", options = listOf(allLabel, largeLabel),
+                        selectedOption = if (largeOnly) largeLabel else allLabel,
+                        subtitle = "Large notes are ${formatNoteSize(context, NoteSizePolicy.TIER_A_MAX_BYTES)} or more.",
+                        onOptionSelected = { option ->
+                            val next = option == largeLabel
+                            if (next != largeOnly) {
+                                largeOnly = next
+                                scope.launch { recoveryListState.animateScrollToItem(0) }
+                            }
+                        })
+                    exportStatus()
+                    message?.let { NoteStorageNotice("Recovery", it) }
+                    SettingsSubsectionHeader(title = if (largeOnly) "Large notes" else "All notes",
+                        description = if (largeOnly) "Showing ${filtered.size} of ${notes.size} notes · ${formatNoteSize(context, NoteSizePolicy.TIER_A_MAX_BYTES)} or larger"
+                            else "${notes.size} notes · tap to read, hold for actions")
                 }
-                if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) }
-                if (!loading && filtered.isEmpty()) item {
-                    NoteStorageNotice(if (largeOnly) "No large notes" else "No notes to recover",
-                        if (largeOnly) "Choose All to see your other notes." else "Your note list will appear here when it is available.")
-                }
-                itemsIndexed(filtered, key = { _, note -> note.id }) { index, note ->
-                    RecoveryNoteCard(note, index, filtered.size, busy,
-                        onRead = { selectedId = note.id }, onExport = { export(note) }, onDelete = { deleteId = note.id })
+            }
+            if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) }
+            if (!loading && filtered.isEmpty()) item {
+                NoteStorageNotice(if (largeOnly) "No large notes" else "No notes to recover",
+                    if (largeOnly) "Choose All to see your other notes." else "Your note list will appear here when it is available.")
+            }
+            itemsIndexed(filtered, key = { _, note -> note.id }) { index, note ->
+                RecoveryNoteCard(note, index, filtered.size, busy,
+                    onRead = { openNote(note.id) }, onExport = { export(note) }, onDelete = { deleteId = note.id })
+            }
+        }
+    }
+    NoteBackSurface(enabled = !navigationBack && selectedId == null && !confirmExit && deleteId == null, onBack = ::back) {
+        NoteStorageNavHost(navigation, "notes") {
+            composable("notes") {
+                NoteStorageRoute(navigation, this) { listBody() }
+            }
+            composable("plain/{noteId}", arguments = listOf(navArgument("noteId") { type = NavType.StringType })) { entry ->
+                NoteStorageRoute(navigation, this) {
+                    val displayed = notes.firstOrNull { it.id == entry.arguments?.getString("noteId") }
+                    if (displayed != null) plainBody(displayed)
+                    else NoteSettingsPage("Plain text", "Your saved note", ::back) {
+                        item { Text(if (loading) "Loading your note…" else "This note is no longer available.") }
+                    }
                 }
             }
         }
@@ -195,7 +206,7 @@ fun NoteRecoveryScreen(onExitSafeMode: () -> Unit, safeMode: Boolean = StartupCr
         confirmButtonText = "Delete note", onConfirm = {
             deleteId = null; busy = true
             scope.launch {
-                try { reader.delete(id); if (selectedId == id) selectedId = null }
+                try { reader.delete(id); if (selectedId == id) navigation.popBackStack() }
                 catch (cancel: CancellationException) { throw cancel }
                 catch (_: Exception) { message = "Could not delete this note." }
                 finally { busy = false }
@@ -210,9 +221,9 @@ fun NoteRecoveryScreen(onExitSafeMode: () -> Unit, safeMode: Boolean = StartupCr
 private fun RecoveryNoteMenu(note: RecoveryNote, busy: Boolean, onExport: () -> Unit, onDelete: () -> Unit) {
     var expanded by remember(note.id) { mutableStateOf(false) }
     Box {
-        IconButton(onClick = { expanded = true }, enabled = !busy) { Icon(Icons.Default.MoreVert, "Options for ${note.title}") }
+        IconButton(onClick = { expanded = true }, enabled = !busy) { Icon(painterResource(R.drawable.ic_custom_more_vert), "Options for ${note.title}") }
         NoteContextMenu(expanded, onDismiss = { expanded = false }) {
-            NoteContextAction("Export Markdown", R.drawable.ic_custom_note_export) { expanded = false; onExport() }
+            NoteContextAction("Export Markdown", R.drawable.ic_custom_export) { expanded = false; onExport() }
             NoteContextAction("Delete note", R.drawable.ic_custom_delete, destructive = true) { expanded = false; onDelete() }
         }
     }
@@ -234,10 +245,10 @@ private fun RecoveryNoteCard(note: RecoveryNote, index: Int, total: Int, busy: B
                 RecoveryNoteSize(note.byteLength)
             }
             Box {
-                IconButton(onClick = { menu = true }, enabled = !busy) { Icon(Icons.Default.MoreVert, "Options for ${note.title}") }
+                IconButton(onClick = { menu = true }, enabled = !busy) { Icon(painterResource(R.drawable.ic_custom_more_vert), "Options for ${note.title}") }
                 NoteContextMenu(menu, onDismiss = { menu = false }) {
-                    NoteContextAction("Read plain text", R.drawable.ic_custom_eye) { menu = false; onRead() }
-                    NoteContextAction("Export Markdown", R.drawable.ic_custom_note_export) { menu = false; onExport() }
+                    NoteContextAction("Read plain text", R.drawable.ic_custom_text) { menu = false; onRead() }
+                    NoteContextAction("Export Markdown", R.drawable.ic_custom_export) { menu = false; onExport() }
                     NoteContextAction("Delete note", R.drawable.ic_custom_delete, destructive = true) { menu = false; onDelete() }
                 }
             }
