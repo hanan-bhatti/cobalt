@@ -160,7 +160,8 @@ fun NoteRecoveryScreen(onExitSafeMode: () -> Unit) {
 }
 
 @Composable
-internal fun NoteBodyPlainText(reader: LegacyNoteRecovery, note: RecoveryNote, modifier: Modifier, jumpByte: Long = 0) {
+internal fun NoteBodyPlainText(reader: LegacyNoteRecovery, note: RecoveryNote, modifier: Modifier, jumpByte: Long = 0,
+    header: (@Composable () -> Unit)? = null) {
     val fontScale = LocalDensity.current.fontScale
     BoxWithConstraints(modifier) {
         // A block remains roughly one viewport high even for text consisting only of newlines.
@@ -168,11 +169,13 @@ internal fun NoteBodyPlainText(reader: LegacyNoteRecovery, note: RecoveryNote, m
         val count = if (note.byteLength == 0L) 0 else (note.byteLength - 1) / chunkBytes + 1
         val listState = androidx.compose.foundation.lazy.rememberLazyListState()
         LaunchedEffect(jumpByte, chunkBytes, count) {
-            if (count in 1..Int.MAX_VALUE.toLong()) listState.scrollToItem((jumpByte / chunkBytes).coerceIn(0, count - 1).toInt())
+            if (count in 1..Int.MAX_VALUE.toLong()) listState.scrollToItem(if (jumpByte == 0L) 0 else
+                (jumpByte / chunkBytes).coerceIn(0, count - 1).toInt() + if (header == null) 0 else 1)
         }
         if (count > Int.MAX_VALUE) {
             Text("This note is too large for recovery display. Use Export to preserve the complete body.")
         } else LazyColumn(Modifier.fillMaxSize(), state = listState) {
+            if (header != null) item { header(); Spacer(Modifier.height(28.dp)) }
             items(count.toInt(), key = { it }) { index ->
                 val chunk by produceState<String?>(null, note.id, index, chunkBytes) {
                     try { value = reader.displayChunk(note, index, chunkBytes) }

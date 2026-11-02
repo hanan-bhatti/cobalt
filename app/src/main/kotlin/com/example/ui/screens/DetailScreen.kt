@@ -141,12 +141,6 @@ fun DetailScreen(
         return
     }
 
-    if (com.example.notes.NotePersistence.isNote(item) &&
-        (!item.bodyLoaded || item.bodyMissing || item.byteLength >= com.example.notes.NoteSizePolicy.MARKDOWN_BLOCK_CHARACTERS ||
-            item.content.count { it == '\n' } >= com.example.notes.NoteSizePolicy.MARKDOWN_BLOCK_LINES)) {
-        FileNoteScreen(item, viewModel, onClose)
-        return
-    }
 
     LaunchedEffect(item.id) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -238,175 +232,7 @@ fun DetailScreen(
         label = "detailBarsOffsetY"
     )
 
-    Scaffold(
-        topBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer {
-                        alpha = barsAlpha
-                        translationY = -barsOffsetY.toPx()
-                    }
-                    .onGloballyPositioned { coordinates ->
-                        val pos = coordinates.positionInRoot()
-                        com.example.util.SafeLogger.d("CobaltAnim", "Detail TopBar: alpha=$barsAlpha, pos=(${pos.x}, ${pos.y}), size=${coordinates.size}")
-                    }
-            ) {
-                TopAppBar(
-                    title = { },
-                    navigationIcon = {
-                        IconButton(onClick = onClose, modifier = Modifier.bounceClick().testTag("detail_back_button")) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_close),
-                                contentDescription = "Close",
-                                tint = MaterialTheme.colorScheme.onBackground,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    },
-                    actions = {
-                        IconButton(
-                            onClick = { showDeleteConfirm = true },
-                            modifier = Modifier.bounceClick().testTag("detail_delete_button")
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_delete),
-                                contentDescription = "Delete item",
-                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                        IconButton(
-                            onClick = {
-                                viewModel.shareItem(item, context)
-                            },
-                            modifier = Modifier.bounceClick().testTag("detail_share_button")
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_share),
-                                contentDescription = "Share item",
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background
-                    )
-                )
-            }
-        },
-        bottomBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer {
-                        alpha = barsAlpha
-                        translationY = barsOffsetY.toPx()
-                    }
-                    .onGloballyPositioned { coordinates ->
-                        val pos = coordinates.positionInRoot()
-                        com.example.util.SafeLogger.d("CobaltAnim", "Detail BottomBar (Edit Item): alpha=$barsAlpha, pos=(${pos.x}, ${pos.y}), size=${coordinates.size}")
-                    }
-            ) {
-                val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
-                val barModifier = if (useBlur) {
-                    Modifier
-                        .fillMaxWidth()
-                        .hazeEffect(state = localHazeState, style = HazeStyle(
-                            backgroundColor = MaterialTheme.colorScheme.background,
-                            tint = HazeTint(MaterialTheme.colorScheme.background.copy(alpha = blurOpacity)),
-                            blurRadius = blurRadius.dp,
-                            noiseFactor = 0.02f
-                        ))
-                } else {
-                    Modifier.fillMaxWidth()
-                }
-                Surface(
-                    modifier = barModifier,
-                    tonalElevation = 0.dp,
-                    color = if (useBlur) Color.Transparent else MaterialTheme.colorScheme.background.copy(alpha = 0.92f),
-                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 24.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(
-                            onClick = {
-                                viewModel.shareItem(item, context)
-                            },
-                            modifier = Modifier.bounceClick().testTag("detail_bottom_share_button")
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_share),
-                                contentDescription = "Share",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-
-                        Button(
-                            onClick = { onEdit(item) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(start = 24.dp)
-                                .height(48.dp)
-                                .bounceClick()
-                                .testTag("detail_bottom_edit_button"),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = folderColor,
-                                contentColor = Color.White
-                            )
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_edit),
-                                contentDescription = "Edit",
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Edit Item", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.background,
-        modifier = modifier.fillMaxSize()
-    ) { innerPadding ->
-        Surface(
-            modifier = Modifier
-                .fillMaxSize()
-                .maybeSharedBounds(
-                    sharedTransitionScope = sharedTransitionScope,
-                    animatedVisibilityScope = animatedVisibilityScope,
-                    key = "card_${item.id}",
-                    clipShape = RoundedCornerShape(0.dp)
-                )
-                .onGloballyPositioned { coordinates ->
-                    val pos = coordinates.positionInRoot()
-                    com.example.util.SafeLogger.d("CobaltAnim", "Detail Card Morph: pos=(${pos.x}, ${pos.y}), size=${coordinates.size}, itemId=${item.id}")
-                },
-            color = MaterialTheme.colorScheme.background
-        ) {
-            var showFullscreenImage by remember { mutableStateOf(false) }
-            SelectionContainer {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .hazeSource(state = localHazeState)
-                            .verticalScroll(scrollState)
-                            .padding(
-                                top = innerPadding.calculateTopPadding(),
-                                bottom = innerPadding.calculateBottomPadding()
-                            )
-                            .padding(horizontal = 24.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(28.dp)
-                    ) {
+    val detailHeader: @Composable () -> Unit = {
             // HEADER SECTION (Only for non-MEDIA types; MEDIA items use redesigned MediaDetailSection hero header)
             if (item.type != SavedItemType.MEDIA) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -539,6 +365,189 @@ fun DetailScreen(
                     }
                 }
             }
+
+    }
+    var plainNote by remember(item.id) { mutableStateOf(item.type == SavedItemType.CODE || item.byteLength >= com.example.notes.NoteSizePolicy.TIER_B_MAX_BYTES) }
+    var noteJump by remember(item.id) { mutableLongStateOf(0) }
+
+    Scaffold(
+        topBar = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        alpha = barsAlpha
+                        translationY = -barsOffsetY.toPx()
+                    }
+                    .onGloballyPositioned { coordinates ->
+                        val pos = coordinates.positionInRoot()
+                        com.example.util.SafeLogger.d("CobaltAnim", "Detail TopBar: alpha=$barsAlpha, pos=(${pos.x}, ${pos.y}), size=${coordinates.size}")
+                    }
+            ) {
+                TopAppBar(
+                    title = { },
+                    navigationIcon = {
+                        IconButton(onClick = onClose, modifier = Modifier.bounceClick().testTag("detail_back_button")) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_close),
+                                contentDescription = "Close",
+                                tint = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    },
+                    actions = {
+                        if (com.example.notes.NotePersistence.isNote(item)) NoteDetailActions(item, viewModel,
+                            plainNote, onPlainChange = { plainNote = it }, onJump = { noteJump = it })
+
+                        IconButton(
+                            onClick = { showDeleteConfirm = true },
+                            modifier = Modifier.bounceClick().testTag("detail_delete_button")
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_delete),
+                                contentDescription = "Delete item",
+                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                viewModel.shareItem(item, context)
+                            },
+                            modifier = Modifier.bounceClick().testTag("detail_share_button")
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_share),
+                                contentDescription = "Share item",
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background
+                    )
+                )
+            }
+        },
+        bottomBar = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        alpha = barsAlpha
+                        translationY = barsOffsetY.toPx()
+                    }
+                    .onGloballyPositioned { coordinates ->
+                        val pos = coordinates.positionInRoot()
+                        com.example.util.SafeLogger.d("CobaltAnim", "Detail BottomBar (Edit Item): alpha=$barsAlpha, pos=(${pos.x}, ${pos.y}), size=${coordinates.size}")
+                    }
+            ) {
+                val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
+                val barModifier = if (useBlur) {
+                    Modifier
+                        .fillMaxWidth()
+                        .hazeEffect(state = localHazeState, style = HazeStyle(
+                            backgroundColor = MaterialTheme.colorScheme.background,
+                            tint = HazeTint(MaterialTheme.colorScheme.background.copy(alpha = blurOpacity)),
+                            blurRadius = blurRadius.dp,
+                            noiseFactor = 0.02f
+                        ))
+                } else {
+                    Modifier.fillMaxWidth()
+                }
+                Surface(
+                    modifier = barModifier,
+                    tonalElevation = 0.dp,
+                    color = if (useBlur) Color.Transparent else MaterialTheme.colorScheme.background.copy(alpha = 0.92f),
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 24.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = {
+                                viewModel.shareItem(item, context)
+                            },
+                            modifier = Modifier.bounceClick().testTag("detail_bottom_share_button")
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_share),
+                                contentDescription = "Share",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        Button(
+                            onClick = { onEdit(item) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(start = 24.dp)
+                                .height(48.dp)
+                                .bounceClick()
+                                .testTag("detail_bottom_edit_button"),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = folderColor,
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_edit),
+                                contentDescription = "Edit",
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Edit Item", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+        modifier = modifier.fillMaxSize()
+    ) { innerPadding ->
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .maybeSharedBounds(
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    key = "card_${item.id}",
+                    clipShape = RoundedCornerShape(0.dp)
+                )
+                .onGloballyPositioned { coordinates ->
+                    val pos = coordinates.positionInRoot()
+                    com.example.util.SafeLogger.d("CobaltAnim", "Detail Card Morph: pos=(${pos.x}, ${pos.y}), size=${coordinates.size}, itemId=${item.id}")
+                },
+            color = MaterialTheme.colorScheme.background
+        ) {
+            var showFullscreenImage by remember { mutableStateOf(false) }
+            if (com.example.notes.NotePersistence.isNote(item)) {
+                UnifiedNoteBody(item, viewModel, plainNote, noteJump,
+                    Modifier.fillMaxSize().hazeSource(localHazeState)
+                        .padding(top = innerPadding.calculateTopPadding(), bottom = innerPadding.calculateBottomPadding())
+                        .padding(horizontal = 24.dp, vertical = 8.dp), header = detailHeader)
+            } else SelectionContainer {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .hazeSource(state = localHazeState)
+                            .verticalScroll(scrollState)
+                            .padding(
+                                top = innerPadding.calculateTopPadding(),
+                                bottom = innerPadding.calculateBottomPadding()
+                            )
+                            .padding(horizontal = 24.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(28.dp)
+                    ) {
+            detailHeader()
 
             // VISUAL MEDIA
             if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO) {

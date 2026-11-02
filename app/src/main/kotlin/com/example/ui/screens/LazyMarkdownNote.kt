@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.dp
 import com.example.notes.*
 import com.example.ui.components.MarkdownText
 import kotlinx.coroutines.Dispatchers
@@ -19,7 +20,8 @@ import kotlinx.coroutines.withContext
 /** A bounded reader. Oversized structural blocks retain literal text rather than partial Markdown. */
 @Composable
 fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modifier: Modifier,
-    onBlockChange: ((Long, Long, String) -> Unit)? = null) {
+    onBlockChange: ((Long, Long, String) -> Unit)? = null,
+    header: (@Composable () -> Unit)? = null) {
     val context = LocalContext.current
     val store = remember { PrivateMarkdownStore(context) }
     val fontScale = LocalDensity.current.fontScale
@@ -50,9 +52,7 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
             } } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
             catch (_: Exception) { failure = true; value = emptyList() }
         }
-        val current = blocks
-        if (current == null) { CircularProgressIndicator(); return@BoxWithConstraints }
-        if (failure) { Text("This note could not be rendered. Use plain-text mode or Export; its body is retained."); return@BoxWithConstraints }
+        val current = blocks.orEmpty()
         val state = rememberLazyListState()
         LaunchedEffect(jumpByte, current) {
             if (current.isNotEmpty()) {
@@ -61,10 +61,14 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
                     block.start > jumpByte -> 1
                     else -> 0
                 } }
-                state.scrollToItem(if (match >= 0) match else (-match - 1).coerceIn(0, current.lastIndex))
+                val index = if (match >= 0) match else (-match - 1).coerceIn(0, current.lastIndex)
+                state.scrollToItem(if (jumpByte == 0L) 0 else index + if (header == null) 0 else 1)
             }
         }
         LazyColumn(Modifier.fillMaxSize(), state = state) {
+            if (header != null) item(key = "note_header") { header(); Spacer(Modifier.height(28.dp)) }
+            if (blocks == null) item { CircularProgressIndicator() }
+            if (failure) item { Text("This note could not be rendered. Use plain-text mode or Export; its body is retained.") }
             items(current.size, key = { current[it].start }) { index ->
                 val block = current[index]
                 val text by produceState<String?>(null, id, hash, block.start) {

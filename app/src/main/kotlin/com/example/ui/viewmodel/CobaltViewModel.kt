@@ -44,6 +44,11 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
     private val context = application.applicationContext
     private val repository = CobaltRepository(context)
+    private val fileEditor = com.example.notes.FileEditorSession(context, viewModelScope)
+    val fileEditorState = fileEditor.state
+    fun editFileWindow(text: String) = fileEditor.edit(text)
+    fun focusFileWindow(start: Long, end: Long, hash: String) = fileEditor.focus(start, end, hash)
+    fun flushFileEditor() { viewModelScope.launch { fileEditor.flushJournal() } }
     val settingsRepository = com.example.data.repository.SettingsRepository(context)
 
     /** Returns true when the device has an active internet-capable network. */
@@ -723,6 +728,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun cancelCapture() {
+        fileEditor.close()
         noteTextRevision++
         noteTextJob?.cancel()
         _noteInputBusy.value = false
@@ -753,6 +759,10 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             _metadataError.value = null
 
             if (mimeType == null) return@launch
+            if (mediaUri != null && (com.example.notes.TextFiles.accepts(null, mimeType) || mimeType == "application/octet-stream")) {
+                importMarkdown(mediaUri)
+                return@launch
+            }
 
             when {
                 // 1. Text Shared
@@ -1284,11 +1294,16 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun startEditItem(item: SavedItem) {
-        if (com.example.notes.NotePersistence.isNote(item) && !item.bodyLoaded) {
+        if (com.example.notes.NotePersistence.isNote(item) && (!item.bodyLoaded || com.example.notes.NoteEditorWindows.requiresWindow(item.content))) {
             viewModelScope.launch {
                 val loaded = repository.getItemForOpen(item.id)
-                if (loaded != null && loaded.bodyLoaded && !loaded.bodyMissing) startEditItem(loaded)
-                else showToast("Open this note and use Edit sections for large-note editing.")
+                if (loaded != null && loaded.bodyLoaded && !loaded.bodyMissing && !com.example.notes.NoteEditorWindows.requiresWindow(loaded.content)) startEditItem(loaded)
+                else if (loaded != null && !loaded.bodyMissing) {
+                    _capturedBitmap.value = null; pendingMediaBytes = null
+                    editOriginalId = loaded.id; _isEditingItem.value = true
+                    _activeCaptureItem.value = loaded.copy(content = "", bodyLoaded = false)
+                    fileEditor.open(loaded)
+                } else showToast("The body is unavailable. Original and recovery data are retained.")
             }
             return
         }
@@ -1423,21 +1438,13 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         markdownImportJob = viewModelScope.launch {
             try {
                 val saved = withContext(Dispatchers.IO) {
-                    val name = context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),
-                        null, null, null)?.use { cursor ->
-                        if (cursor.moveToFirst()) cursor.getString(0)?.take(160)?.removeSuffix(".md") else null
-                    } ?: "Imported note"
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        val prepared = com.example.notes.NoteImport.prepare(input, name)
-                        prepared.body.use { body ->
-                            com.example.notes.NotePersistence(context).importMarkdown(prepared.note, body) { bytes ->
-                                _markdownImport.value = MarkdownImportState(running = true, bytes = bytes)
-                            }
-                        }
-                    } ?: throw java.io.IOException("Cannot open selected document")
+                    com.example.notes.TextFileImporter(context).importFile(uri) { bytes ->
+                        _markdownImport.value = MarkdownImportState(running = true, bytes = bytes)
+                    }
                 }
                 val warning = if (com.example.notes.NoteSizePolicy.needsWarning(saved.byteLength)) " Above 50 MB; large-file mode is recommended." else ""
-                _markdownImport.value = MarkdownImportState(bytes = saved.byteLength, message = "Markdown imported.$warning")
+                _markdownImport.value = MarkdownImportState(bytes = saved.byteLength, message = "Text document imported.$warning")
+                showDetailItem(saved)
                 com.example.widget.WidgetUpdater.update(context)
             } catch (cancel: kotlinx.coroutines.CancellationException) {
                 _markdownImport.value = MarkdownImportState(message = "Import cancelled. The source document was not changed.")
@@ -1446,6 +1453,25 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 _markdownImport.value = MarkdownImportState(canSplit = error is com.example.notes.NoteSizeExceededException,
                     message = "Import failed. New notes must be at most 55 MB; split larger files. The source document was not changed.")
             }
+        }
+    }
+
+    fun importSharedTextFiles(uris: List<Uri>) {
+        if (markdownImportJob?.isActive == true) { showToast("An import is already running. Please retry afterwards."); return }
+        if (uris.size > 100) { showToast("Share at most 100 text documents. Nothing was imported."); return }
+        markdownImportJob = viewModelScope.launch {
+            var saved = 0
+            var failed = 0
+            for (uri in uris.distinct()) {
+                try {
+                    val item = com.example.notes.TextFileImporter(context).importFile(uri)
+                    saved++
+                    if (uris.size == 1) showDetailItem(item)
+                } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+                catch (_: Exception) { failed++ }
+            }
+            com.example.widget.WidgetUpdater.update(context)
+            showToast("$saved text document(s) imported; $failed unavailable or unsupported. Originals retained.")
         }
     }
 
@@ -1459,7 +1485,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             var bytesSaved = 0L
             try {
                 withContext(Dispatchers.IO) {
-                    context.contentResolver.openInputStream(uri)?.use { input ->
+                    context.contentResolver.openInputStream(uri)?.use { raw ->
+                        com.example.notes.TextFiles.openUtf8(raw).use { input ->
                         val prepared = com.example.notes.NoteImport.prepare(input, "Imported note")
                         prepared.body.use { body ->
                             val parts = com.example.notes.Utf8NoteParts(body)
@@ -1476,6 +1503,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                                 partsSaved++
                                 bytesSaved += saved.byteLength
                             }
+                        }
                         }
                     } ?: throw java.io.IOException("Cannot read source document")
                 }
@@ -1620,27 +1648,11 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 if (!com.example.notes.NoteSizePolicy.acceptsEdit(plan.byteLength, source.byteLength)) {
                     throw java.io.IOException("Note exceeds 55 MB. Split the paste or import smaller Markdown files.")
                 }
-                if (com.example.notes.NotePersistence.isNote(source) && plan.byteLength >= com.example.notes.NoteSizePolicy.TIER_A_MAX_BYTES) {
-                    val saved = withContext(Dispatchers.IO) {
-                        val cancellation = kotlin.coroutines.coroutineContext
-                        plan.openStream().use { input ->
-                            com.example.notes.NotePersistence(context).saveStream(source.copy(updatedAt = System.currentTimeMillis()), input) {
-                                cancellation.ensureActive()
-                                if (revision != noteTextRevision || _activeCaptureItem.value?.id != id) {
-                                    throw kotlinx.coroutines.CancellationException("Note closed or replaced")
-                                }
-                            }
-                        }
-                    }
+                if (com.example.notes.NotePersistence.isNote(source)) {
+                    plan.openStream().use { input -> fileEditor.stage(source, input) }
                     if (revision == noteTextRevision && _activeCaptureItem.value?.id == id) {
                         saveAfterNoteInput = false
-                        captureDrafts.remove(source.type)
-                        _activeCaptureItem.value = null
-                        _isEditingItem.value = false
-                        editOriginalId = null
-                        _activeDetailItem.value = saved
-                        com.example.widget.WidgetUpdater.update(context)
-                        showToast("Saved in large-note mode. Continue editing sections without loading the whole note.")
+                        _activeCaptureItem.value = source.copy(content = "", bodyLoaded = false)
                     }
                 } else {
                     val text = withContext(Dispatchers.Default) { source.content.replaceRange(start, end, replacement) }
@@ -1686,6 +1698,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun switchActiveCaptureType(type: SavedItemType) {
+        if (fileEditorState.value.id != null || _noteInputBusy.value) return
         val currentItem = _activeCaptureItem.value ?: return
         if (currentItem.type == type) return
 
@@ -1745,11 +1758,13 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun saveActiveItem() {
+        if (_isSaving.value) return
         if (_noteInputBusy.value) { saveAfterNoteInput = true; return }
 
         val item = _activeCaptureItem.value ?: return
+        if (fileEditorState.value.id == item.id && fileEditorState.value.busy) return
+        _isSaving.value = true
         viewModelScope.launch {
-            _isSaving.value = true
             _saveProgress.value = 0f
             try {
                 var finalItem = item
@@ -1767,9 +1782,14 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     }
                 }
                 val isEdit = allItems.value.any { it.id == finalItem.id } || editOriginalId != null
-                val persisted = repository.saveItem(finalItem, pendingMediaBytes) { progress ->
-                    _saveProgress.value = progress
-                }
+                val persisted = if (fileEditorState.value.id == finalItem.id) {
+                    val original = finalItem
+                    val saved = fileEditor.save(finalItem)
+                    if (original.contentHash != null) noteGenerationHistory(original.id).record(
+                        com.example.notes.NoteGeneration(original.contentHash, original.byteLength, original.preview),
+                        com.example.notes.NoteGeneration(saved.contentHash!!, saved.byteLength, saved.preview))
+                    saved
+                } else repository.saveItem(finalItem, pendingMediaBytes) { progress -> _saveProgress.value = progress }
 
                 if (editOriginalId != null && editOriginalId != finalItem.id) {
                     val oldItem = allItems.value.find { it.id == editOriginalId }
@@ -1789,7 +1809,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 showToast(if (isEdit) "Item updated successfully." else "Item saved successfully.")
                 if (!isEdit) checkProactiveSurvey()
             } catch (e: Exception) {
-                Log.e("CobaltVM", "Failed to save item: ${e.message}")
+                showToast("Could not save. Your draft is retained; keep the editor open and retry.")
             } finally {
                 _isSaving.value = false
                 _saveProgress.value = null

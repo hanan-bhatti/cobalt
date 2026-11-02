@@ -97,6 +97,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalDensity
@@ -472,38 +473,12 @@ fun TextCapturePage(
     modifier: Modifier = Modifier
 ) {
     var showNewFolderCreator by remember { mutableStateOf(false) }
-    val importState by viewModel.markdownImport.collectAsState()
-    var confirmSplitImport by remember { mutableStateOf(false) }
-    val markdownPicker = androidx.activity.compose.rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
-    ) { uri -> if (uri != null) viewModel.importMarkdown(uri) }
-    if (confirmSplitImport) AlertDialog(onDismissRequest = { confirmSplitImport = false },
-        title = { Text("Split into Markdown notes?") },
-        text = { Text("Create parts of at most 50 MB without changing the source. UTF-8 characters stay intact. A part may begin inside a paragraph or code fence. Completed parts are kept if you cancel.") },
-        confirmButton = { TextButton(onClick = { confirmSplitImport = false; viewModel.splitMarkdownImport() }) { Text("Split into notes") } },
-        dismissButton = { TextButton(onClick = { confirmSplitImport = false }) { Text("Cancel") } })
+    val file by viewModel.fileEditorState.collectAsState()
+    val fileEditing = file.id == item.id
+    val fieldFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
 
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        val minContentHeight = maxHeight
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = minContentHeight)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 10.dp)
-                .padding(bottom = bottomPadding + 24.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { markdownPicker.launch(arrayOf("text/*", "application/octet-stream")) },
-                    enabled = !importState.running) { Text("Import .md file") }
-                if (importState.running) TextButton(onClick = viewModel::cancelMarkdownImport) { Text("Cancel import") }
-            }
-            if (importState.running) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                Text("Importing ${importState.bytes} bytes…", style = MaterialTheme.typography.bodySmall)
-            }
-            importState.message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-            if (importState.canSplit && !importState.running) TextButton(onClick = { confirmSplitImport = true }) { Text("Split into notes") }
+    val noteHeader: @Composable () -> Unit = {
             // 1. Clean borderless Title input
             BasicTextField(
                 value = item.title,
@@ -559,22 +534,22 @@ fun TextCapturePage(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 3. Content Field or Preview
+    }
+    val noteEditor: @Composable () -> Unit = {
+        LaunchedEffect(file.window.start, file.busy, file.generation?.hash, isPreviewMode) {
+            if (fileEditing && !file.busy && file.generation != null && !isPreviewMode) {
+                fieldFocus.requestFocus()
+                keyboard?.show()
+            }
+        }
+            // The body is frameless. Its value is a bounded editor window.
+            if (fileEditing && file.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+            if (fileEditing) file.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             if (!isPreviewMode) {
-                if (com.example.notes.NoteEditorWindows.requiresWindow(item.content)) {
-                    RichTextEditor(
-                        value = item.content,
-                        onValueChange = { viewModel.prepareNoteWindow(item.id, 0, item.content.length, it) },
-                        documentKey = item.id,
-                        isProcessing = viewModel.noteInputBusy.collectAsState().value,
-                        onWindowChange = { start, end, text -> viewModel.prepareNoteWindow(item.id, start, end, text) },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                } else {
                     if (viewModel.noteInputBusy.collectAsState().value) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     BasicTextField(
                     value = textContent,
-                    enabled = !viewModel.noteInputBusy.collectAsState().value,
+                    enabled = !viewModel.noteInputBusy.collectAsState().value && (!fileEditing || (!file.busy && file.generation != null)),
                     onValueChange = onTextContentChange,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         fontSize = 16.sp,
@@ -598,10 +573,10 @@ fun TextCapturePage(
                     visualTransformation = MarkdownVisualTransformation(),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .defaultMinSize(minHeight = 180.dp)
+                        .defaultMinSize(minHeight = if (fileEditing) 24.dp else 180.dp)
+                        .then(if (fileEditing) Modifier.focusRequester(fieldFocus) else Modifier)
                         .testTag("capture_content_input")
                 )
-                }
             } else {
                 Box(
                     modifier = Modifier
@@ -609,7 +584,7 @@ fun TextCapturePage(
                         .defaultMinSize(minHeight = 180.dp)
                         .padding(vertical = 4.dp)
                 ) {
-                    if (item.content.isBlank()) {
+                    if (textContent.text.isBlank()) {
                         Text(
                             text = "Nothing to preview yet. Start typing in Edit mode!",
                             style = MaterialTheme.typography.bodyMedium,
@@ -617,15 +592,12 @@ fun TextCapturePage(
                         )
                     } else {
                         Column {
-                            if (com.example.notes.NoteEditorWindows.requiresWindow(item.content)) Text("Preview shows the first section. Save to read the complete note.", style = MaterialTheme.typography.labelSmall)
+                            if (fileEditing) Text("Preview of the focused text. Save to read the formatted note.", style = MaterialTheme.typography.labelSmall)
                             MarkdownText(
-                            markdown = com.example.notes.NoteEditorWindows.at(item.content, 0).text,
+                            markdown = textContent.text,
                             color = MaterialTheme.colorScheme.onSurface,
                             onMarkdownChange = { updated ->
-                                if (com.example.notes.NoteEditorWindows.requiresWindow(item.content)) {
-                                    val window = com.example.notes.NoteEditorWindows.at(item.content, 0)
-                                    viewModel.prepareNoteWindow(item.id, window.start, window.end, updated)
-                                } else onTextContentChange(TextFieldValue(text = updated, selection = TextRange(updated.length)))
+                                onTextContentChange(TextFieldValue(updated, TextRange(updated.length)))
                             }
                         )
                         }
@@ -633,10 +605,12 @@ fun TextCapturePage(
                 }
             }
 
+    }
+    val noteFooter: @Composable () -> Unit = {
             // Only show folders and info line when keyboard is not open
             if (!isKeyboardOpen) {
                 // Push footer down if content is short
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(8.dp))
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Inline Folder Creator if opened
@@ -681,6 +655,17 @@ fun TextCapturePage(
                     modifier = Modifier.padding(top = 8.dp, start = 4.dp, bottom = 4.dp)
                 )
             }
+    }
+    if (fileEditing) {
+        ContinuousNoteEditor(viewModel, modifier.fillMaxSize().padding(horizontal = 20.dp)
+            .padding(top = 10.dp, bottom = bottomPadding + 24.dp), noteHeader, noteEditor, noteFooter)
+    } else BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val minContentHeight = maxHeight
+        Column(Modifier.fillMaxWidth().heightIn(min = minContentHeight).verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 10.dp).padding(bottom = bottomPadding + 24.dp)) {
+            noteHeader()
+            noteEditor()
+            noteFooter()
         }
     }
 }
@@ -787,16 +772,6 @@ fun AudioCapturePage(
 
             // 3. Transcription Notes / Markdown Preview
             if (!isPreviewMode) {
-                if (com.example.notes.NoteEditorWindows.requiresWindow(item.content)) {
-                    RichTextEditor(
-                        value = item.content,
-                        onValueChange = { viewModel.prepareNoteWindow(item.id, 0, item.content.length, it) },
-                        documentKey = item.id,
-                        isProcessing = viewModel.noteInputBusy.collectAsState().value,
-                        onWindowChange = { start, end, text -> viewModel.prepareNoteWindow(item.id, start, end, text) },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                } else {
                     if (viewModel.noteInputBusy.collectAsState().value) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     BasicTextField(
                     value = textContent,
@@ -827,7 +802,6 @@ fun AudioCapturePage(
                         .defaultMinSize(minHeight = 140.dp)
                         .testTag("capture_content_input")
                 )
-                }
             } else {
                 Box(
                     modifier = Modifier
@@ -843,7 +817,7 @@ fun AudioCapturePage(
                         )
                     } else {
                         Column {
-                            if (com.example.notes.NoteEditorWindows.requiresWindow(item.content)) Text("Preview shows the first section. Save to read the complete note.", style = MaterialTheme.typography.labelSmall)
+                            if (com.example.notes.NoteEditorWindows.requiresWindow(item.content)) Text("Preview of the first part. Save to read the complete text.", style = MaterialTheme.typography.labelSmall)
                             MarkdownText(
                             markdown = com.example.notes.NoteEditorWindows.at(item.content, 0).text,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -1565,13 +1539,34 @@ fun CaptureScreen(
     val imeBottom = imeInsets.getBottom(density)
     val isKeyboardOpen = imeBottom > 0
 
-    var textContent by remember(item.id) {
-        mutableStateOf(TextFieldValue(text = item.content, selection = TextRange(item.content.length)))
+    val fileEditor by viewModel.fileEditorState.collectAsState()
+    val inputBusy by viewModel.noteInputBusy.collectAsState()
+    val fileEditing = fileEditor.id == item.id
+    var windowStart by remember(item.id) { mutableIntStateOf(0) }
+    val normalWindow = remember(item.content, windowStart) { com.example.notes.NoteEditorWindows.at(item.content, windowStart) }
+    val visibleText = if (fileEditing) fileEditor.text else normalWindow.text
+    var textContent by remember(item.id) { mutableStateOf(TextFieldValue(visibleText, TextRange(visibleText.length))) }
+    LaunchedEffect(visibleText, normalWindow.start, fileEditor.window.start) {
+        if (textContent.text != visibleText) textContent = TextFieldValue(visibleText, TextRange(visibleText.length))
     }
-    LaunchedEffect(item.content) {
-        if (textContent.text != item.content) {
-            textContent = textContent.copy(text = item.content)
+    fun applyEditorText(updated: TextFieldValue) {
+        if (fileEditing) {
+            if (!com.example.notes.NoteEditorWindows.sectionNeedsStreaming(updated.text)) textContent = updated
+            viewModel.editFileWindow(updated.text)
+        } else if (com.example.notes.NoteEditorWindows.requiresWindow(item.content) || com.example.notes.NoteEditorWindows.requiresWindow(updated.text)) {
+            viewModel.prepareNoteWindow(item.id, normalWindow.start, normalWindow.end, updated.text)
+        } else {
+            textContent = updated
+            viewModel.updateActiveCaptureItem { it.copy(content = updated.text, bodyLoaded = true) }
         }
+    }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, item.id) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE || event == androidx.lifecycle.Lifecycle.Event.ON_STOP) viewModel.flushFileEditor()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer); viewModel.flushFileEditor() }
     }
     var isPreviewMode by remember { mutableStateOf(false) }
     val isEditingItem by viewModel.isEditingItem.collectAsState()
@@ -1682,7 +1677,7 @@ fun CaptureScreen(
                                 ),
                                 modifier = Modifier
                                     .bounceClick()
-                                    .clickable {
+                                    .clickable(enabled = !fileEditing && !inputBusy) {
                                         coroutineScope.launch {
                                             pagerState.animateScrollToPage(index)
                                         }
@@ -1741,7 +1736,7 @@ fun CaptureScreen(
                                     .width(dotWidth)
                                     .clip(RoundedCornerShape(2.5.dp))
                                     .background(dotColor)
-                                    .clickable {
+                                    .clickable(enabled = !fileEditing && !inputBusy) {
                                         coroutineScope.launch { pagerState.animateScrollToPage(index) }
                                         viewModel.switchActiveCaptureType(categoryType)
                                     }
@@ -1753,7 +1748,7 @@ fun CaptureScreen(
         },
         bottomBar = {
             if (isKeyboardOpen) {
-                if (item.type == SavedItemType.TEXT || item.type == SavedItemType.AUDIO) {
+                if (item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE || item.type == SavedItemType.AUDIO) {
                     val toolbarModifier = if (useBlur) {
                         Modifier
                             .fillMaxWidth()
@@ -1789,10 +1784,7 @@ fun CaptureScreen(
                             )
                             MarkdownAccessoryToolbar(
                                 textFieldValue = textContent,
-                                onApplyFormat = { updated ->
-                                    textContent = updated
-                                    viewModel.updateActiveCaptureItem { it.copy(content = updated.text) }
-                                },
+                                onApplyFormat = ::applyEditorText,
                                 isPreviewMode = isPreviewMode,
                                 onTogglePreview = { isPreviewMode = !isPreviewMode },
                                 modifier = Modifier.fillMaxWidth()
@@ -1882,7 +1874,7 @@ fun CaptureScreen(
                         // Save Button: right under the right thumb!
                         Button(
                             onClick = handleSaveClick,
-                            enabled = !isSavingActive,
+                            enabled = !isSavingActive && !inputBusy && (!fileEditing || !fileEditor.busy),
                             shape = RoundedCornerShape(20.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = if (isSavingActive) primaryColor.copy(alpha = 0.35f) else primaryColor,
@@ -1949,14 +1941,14 @@ fun CaptureScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(top = innerPadding.calculateTopPadding()),
-                userScrollEnabled = true,
+                userScrollEnabled = !fileEditing,
                 verticalAlignment = Alignment.Top
             ) { pageIndex ->
                 val pageType = SavedItemType.entries[pageIndex]
                 val (pageIconRes, pageCategoryColor) = getCategoryMeta(pageType)
                 var showNewFolderCreator by remember { mutableStateOf(false) }
 
-                if (pageType == SavedItemType.TEXT) {
+                if (pageType == SavedItemType.TEXT || pageType == SavedItemType.CODE) {
                     TextCapturePage(
                         item = item,
                         viewModel = viewModel,
@@ -1964,14 +1956,7 @@ fun CaptureScreen(
                         folderMap = folderMap,
                         pageCategoryColor = pageCategoryColor,
                         textContent = textContent,
-                        onTextContentChange = { updated ->
-                            if (com.example.notes.NoteEditorWindows.requiresWindow(updated.text)) {
-                                viewModel.prepareNoteWindow(item.id, 0, item.content.length, updated.text)
-                            } else {
-                                textContent = updated
-                                viewModel.updateActiveCaptureItem { it.copy(content = updated.text) }
-                            }
-                        },
+                        onTextContentChange = ::applyEditorText,
                         isPreviewMode = isPreviewMode,
                         onTogglePreview = { isPreviewMode = !isPreviewMode },
                         clipboardRawText = clipboardRawText,
@@ -1988,14 +1973,7 @@ fun CaptureScreen(
                         folderMap = folderMap,
                         pageCategoryColor = pageCategoryColor,
                         textContent = textContent,
-                        onTextContentChange = { updated ->
-                            if (com.example.notes.NoteEditorWindows.requiresWindow(updated.text)) {
-                                viewModel.prepareNoteWindow(item.id, 0, item.content.length, updated.text)
-                            } else {
-                                textContent = updated
-                                viewModel.updateActiveCaptureItem { it.copy(content = updated.text) }
-                            }
-                        },
+                        onTextContentChange = ::applyEditorText,
                         isPreviewMode = isPreviewMode,
                         onTogglePreview = { isPreviewMode = !isPreviewMode },
                         isOcrLoading = isOcrLoading,

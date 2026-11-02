@@ -923,7 +923,10 @@ class MainActivity : ComponentActivity() {
         val action = intent.action
         val type = intent.type
 
-        if (Intent.ACTION_SEND == action && type != null) {
+        if (action in listOf(Intent.ACTION_SEND, Intent.ACTION_SEND_MULTIPLE, Intent.ACTION_VIEW) &&
+            com.example.notes.TextFileIntents.isTextFile(intent, type)) {
+            viewModel.importSharedTextFiles(com.example.notes.TextFileIntents.uris(intent))
+        } else if (Intent.ACTION_SEND == action && type != null) {
             val textContent = intent.getStringExtra(Intent.EXTRA_TEXT)
             val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)
             val mediaUri = androidx.core.content.IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
