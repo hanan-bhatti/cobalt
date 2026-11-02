@@ -1,5 +1,12 @@
 ## Unreleased — single application cleanup
 
+- Add bounded lazy Markdown blocks with plain-text fallback, section recovery,
+  saved-generation undo/redo, line-range copy and lifecycle journal flushing.
+- Restrict FileProvider to explicit export caches; protect integration credentials
+  with Android Keystore and add an optional Recents/screenshot privacy control.
+- Redact interpolated application logs; add recovery/write-fault/UI test sources
+  and a pull-request debug build/unit-test/lint workflow.
+
 - Consolidate Android sources and build configuration into one Cobalt application.
 - Remove discontinued cloud distribution, backend deployment sources, analytics
   wrappers and cloud account/storage screens. Retain local email crash reporting.

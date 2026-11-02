@@ -1,5 +1,45 @@
 # Security Policy
 
+## Local-data threat model
+
+Text/code note bodies, recovery drafts and journals live in app-private internal
+storage. Room retains metadata, short previews and file references. Android
+sandboxing is not encryption: root, a compromised OS, a debuggable build or access
+to an unlocked device may expose this data. Notes are currently plaintext. An
+encrypted vault is future work and should implement the `NoteBodyStore` interface,
+including streaming/range semantics, rather than bypassing it.
+
+Android automatic backup and device transfer are disabled. Reinstallation/device
+loss will lose app-private data unless the user explicitly exports it. Markdown
+export/share is an explicit action. FileProvider grants are restricted to generated
+share, feedback and crash-report cache directories; the notes directory is not
+exposed. Crash reports are stored locally and sent only after the user launches
+the email chooser. No automatic crash upload or analytics SDK is installed.
+
+Gemini/TMDB keys and Trakt OAuth tokens use AES-256-GCM with an Android Keystore
+key and per-write random IVs. The preference namespace/key is authenticated as
+associated data. Existing plaintext credentials are replaced only after an
+encrypted/decrypted round-trip succeeds. On key loss or authentication failure,
+ciphertext is retained and integrations require credential re-entry. This does
+not protect against a compromised running app and is not note-body encryption.
+See [Android cryptography guidance](https://developer.android.com/privacy-and-security/cryptography)
+and [Android Keystore](https://developer.android.com/privacy-and-security/keystore).
+The deprecated AndroidX security-crypto API is not introduced; no dependency was
+added for this implementation.
+
+The application logger discards supplied log messages and throwable details,
+preventing note/URL/token interpolation from reaching logcat. Debug informational
+events are disabled in release. This reduces log detail; local user-reviewed
+crash reports remain the explicit diagnostic channel.
+
+Settings → Appearance → Hide content in Recents enables `FLAG_SECURE`. It also
+blocks screenshots/recording of the app. It is off by default. This is a platform
+privacy control, not a defence against root or a compromised OS.
+
+Device verification, release/R8 smoke testing and the API/low-RAM matrix remain
+required before release certification. Do not treat a debug APK as a security
+audit or performance certification.
+
 ## Supported Versions
 
 Since this project is in an early public beta, only the latest published release receives security updates. There is no long-term support (LTS) policy at this stage.
