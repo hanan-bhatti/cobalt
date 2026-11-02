@@ -104,4 +104,18 @@ class MarkdownStorageTest {
         assertEquals("INLINE", withContext(Dispatchers.IO) { database.savedItemDao().getNoteBodyMetadata(id)!!.bodyLocation })
         assertEquals(original, withContext(Dispatchers.IO) { LegacyBodyInputStream(database.savedItemDao(), id).bufferedReader().use { it.readText() } })
     }
+
+    @Test fun faultsAtEveryAtomicStageKeepTheCommittedBody() = runBlocking {
+        withContext(Dispatchers.IO) {
+            for (stage in PrivateMarkdownStore.WriteStage.entries) {
+                val saved = persistence.save(note("Original $stage"))
+                val faulty = PrivateMarkdownStore(context) { current -> if (current == stage) throw IOException("Injected write failure") }
+                assertTrue(runCatching {
+                    NotePersistence(context, database, faulty).save(saved.copy(content = "Replacement $stage", bodyLoaded = true))
+                }.isFailure)
+                assertEquals(saved.contentHash, database.savedItemDao().getNoteBodyMetadata(saved.id)!!.contentHash)
+                assertTrue(store.verify(saved.id, saved.contentHash!!, saved.byteLength))
+            }
+        }
+    }
 }

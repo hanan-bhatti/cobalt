@@ -52,7 +52,7 @@ interface SavedItemDao {
     @Query("UPDATE saved_items SET content = '', bodyLocation = 'FILE', contentHash = :hash, byteLength = :bytes, sizeBytes = :bytes, preview = :preview, formatVersion = 1, bodyMissing = 0, updatedAt = :changedAt WHERE id = :id AND updatedAt = :expectedUpdatedAt")
     fun commitFileBody(id: String, hash: String, bytes: Long, preview: String, expectedUpdatedAt: Long, changedAt: Long = expectedUpdatedAt): Int
 
-    @Query("UPDATE saved_items SET bodyMissing = :missing WHERE id = :id")
+    @Query("UPDATE saved_items SET bodyMissing = :missing WHERE id = :id AND bodyMissing != :missing")
     fun markBodyMissing(id: String, missing: Boolean)
 
     @Query("DELETE FROM note_search WHERE noteId = :id")

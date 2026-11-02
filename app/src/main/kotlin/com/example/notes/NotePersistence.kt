@@ -82,7 +82,7 @@ class NotePersistence(
             index(item.id, ref.hash)
         }
         runCatching { store.committed(item.id, ref.hash) }
-        previous?.contentHash?.takeIf { it != ref.hash }?.let { hash -> runCatching { store.delete(item.id, hash) } }
+        // Retain generations for undo and interrupted-edit recovery; reconciliation never guesses which to delete.
         return saved
     }
 
@@ -96,6 +96,20 @@ class NotePersistence(
 
     companion object {
         fun isNote(item: SavedItem) = item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE
+    }
+
+    suspend fun restoreGeneration(id: String, expectedHash: String, target: NoteGeneration): SavedItem = withContext(Dispatchers.IO) {
+        NoteWriteLock.mutex.withLock {
+            val metadata = dao.getItemById(id) ?: throw IOException("Note was deleted; recovery file retained")
+            check(metadata.contentHash == expectedHash) { "Note changed; reopen before undo" }
+            check(store.verify(id, target.hash, target.bytes)) { "Undo generation unavailable; saved note retained" }
+            database.withTransaction {
+                check(dao.commitFileBody(id, target.hash, target.bytes, target.preview, metadata.updatedAt,
+                    maxOf(System.currentTimeMillis(), metadata.updatedAt + 1)) == 1)
+                index(id, target.hash)
+            }
+            dao.getItemById(id)!!.toDomainModel()
+        }
     }
 
     private suspend fun index(id: String, hash: String) {
@@ -194,10 +208,7 @@ class NotePersistence(
                 index(item.id, ref.hash)
             }
             runCatching { store.committed(item.id, ref.hash) }
-            old?.contentHash?.takeIf { it != ref.hash }?.let { previous ->
-                // Failure to tidy an old generation must never report a committed save as failed.
-                runCatching { store.delete(item.id, previous) }
-            }
+
             saved
         }
     }
@@ -269,7 +280,7 @@ class NotePersistence(
                     index(id, ref.hash)
                 }
                 runCatching { store.committed(id, ref.hash) }
-                runCatching { if (hash != ref.hash) store.delete(id, hash) }
+                // Previous verified generation remains available for undo.
                 dao.getItemById(id)!!.toDomainModel()
             }
         }

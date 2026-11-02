@@ -23,7 +23,8 @@ interface NoteBodyStore {
 
 data class NoteBodyRef(val hash: String, val bytes: Long, val preview: String)
 
-class PrivateMarkdownStore(context: Context) : NoteBodyStore {
+class PrivateMarkdownStore(context: Context, private val checkpoint: (WriteStage) -> Unit = {}) : NoteBodyStore {
+    enum class WriteStage { JOURNAL_SYNCED, CHUNK_WRITTEN, DATA_SYNCED, RENAMED, VERIFIED }
     private val root = File(context.applicationContext.filesDir, "notes")
     private fun key(id: String) = sha256(id.toByteArray(Charsets.UTF_8))
     private fun directory(id: String) = File(root, key(id))
@@ -56,6 +57,7 @@ class PrivateMarkdownStore(context: Context) : NoteBodyStore {
         val journal = File(dir, "$token.journal")
         FileOutputStream(journal).use { it.write("WRITING\n$token.tmp\n".toByteArray()); it.fd.sync() }
         syncDirectory(dir)
+        checkpoint(WriteStage.JOURNAL_SYNCED)
         try {
             val digest = MessageDigest.getInstance("SHA-256")
             val prefix = ByteArrayOutputStream(4096)
@@ -74,8 +76,10 @@ class PrivateMarkdownStore(context: Context) : NoteBodyStore {
                     digest.update(buffer, 0, count)
                     if (prefix.size() < 4096) prefix.write(buffer, 0, minOf(count, 4096 - prefix.size()))
                     progress(bytes)
+                    checkpoint(WriteStage.CHUNK_WRITTEN)
                 }
                 output.fd.sync()
+                checkpoint(WriteStage.DATA_SYNCED)
             }
             val hash = digest.digest().hex()
             val destination = file(id, hash)
@@ -85,11 +89,13 @@ class PrivateMarkdownStore(context: Context) : NoteBodyStore {
             } else {
                 Os.rename(temp.absolutePath, destination.absolutePath)
                 syncDirectory(dir)
+                checkpoint(WriteStage.RENAMED)
             }
             if (!verify(id, hash, bytes)) throw IOException("Markdown verification failed; original retained")
             // This durable journal is removed only after Room commits the new reference.
             FileOutputStream(journal).use { it.write("VERIFIED\n$hash\n$bytes\n".toByteArray()); it.fd.sync() }
             syncDirectory(dir)
+            checkpoint(WriteStage.VERIFIED)
             val preview = prefix.toByteArray().toString(Charsets.UTF_8)
                 .replace(Regex("[\\r\\n\\t]+"), " ").replace("\u0000", "")
                 .replace(Regex("^\\s*[#>*-]+\\s*"), "").take(NoteSizePolicy.PREVIEW_CHARACTERS)
@@ -108,11 +114,12 @@ class PrivateMarkdownStore(context: Context) : NoteBodyStore {
 
     /** Called after the DB commit; journals never authorize changing a DB reference. */
     override fun committed(id: String, hash: String) {
+        var changed = false
         directory(id).listFiles()?.filter { it.extension == "journal" }?.forEach { journal ->
             val lines = journal.readLines()
-            if (lines.getOrNull(0) == "VERIFIED" && lines.getOrNull(1) == hash) journal.delete()
+            if (lines.getOrNull(0) == "VERIFIED" && lines.getOrNull(1) == hash && journal.delete()) changed = true
         }
-        syncDirectory(directory(id))
+        if (changed) syncDirectory(directory(id))
     }
 
     override fun delete(id: String, hash: String) {
