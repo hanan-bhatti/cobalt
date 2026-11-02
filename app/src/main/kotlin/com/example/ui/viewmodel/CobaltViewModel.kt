@@ -24,31 +24,20 @@ import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.util.Log
-import androidx.credentials.CredentialManager
-import androidx.credentials.GetCredentialRequest
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
-import com.example.data.model.DeviceSession
 import com.example.data.repository.CobaltRepository
 import com.example.data.remote.MediaSearchResultItem
 import com.example.widget.WidgetUpdater
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.tasks.await
 import java.io.File
 import java.io.FileOutputStream
-import java.io.InputStream
 import java.util.UUID
-import com.example.utils.AnalyticsHelper
-import com.example.utils.AnalyticsEvents
 
 class CobaltViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -74,6 +63,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
     fun checkForAppUpdatesOnStartup() {
         viewModelScope.launch {
+            if (!settingsRepository.isAutoUpdateCheckEnabled.value) return@launch
             if (!isNetworkAvailable()) return@launch
             when (val result = com.example.util.AppVersionManager.checkOnlineUpdates()) {
                 is com.example.util.UpdateCheckResult.UpdateAvailable -> {
@@ -136,7 +126,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     fun checkProactiveSurvey() {
         val count = prefs.getInt("saved_items_count", 0) + 1
         prefs.edit().putInt("saved_items_count", count).apply()
-        
+
         val surveySubmitted = prefs.getBoolean("survey_submitted", false)
         val lastDismissed = prefs.getLong("survey_last_dismissed", 0L)
         val now = System.currentTimeMillis()
@@ -187,10 +177,10 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     val allItems: StateFlow<List<SavedItem>> = repository.getAllItemsFlow()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    val customFolders: StateFlow<List<String>> = repository.getAllFoldersFlow()
+    val customFolders: StateFlow<List<String>> = repository.getAllFoldersFlow().map { folders -> folders.filter { it != "Archive" } }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    val customFolderEntities: StateFlow<List<com.example.data.local.CustomFolderEntity>> = repository.getAllFolderEntitiesFlow()
+    val customFolderEntities: StateFlow<List<com.example.data.local.CustomFolderEntity>> = repository.getAllFolderEntitiesFlow().map { folders -> folders.filter { it.name != "Archive" } }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     private val _selectedFolder = MutableStateFlow("All")
@@ -204,22 +194,24 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         allItems,
         _selectedFolder
     ) { items, folder ->
+        val isItemArchived: (SavedItem) -> Boolean = { it.isArchived }
         if (folder != "All") {
             val systemCategory = SavedItemType.entries.find { it.displayName == folder }
             if (systemCategory != null) {
-                // System folder filter (e.g. Images, Links, Text, etc.) - hide archived
-                items.filter { it.type == systemCategory && !it.isArchived }
+                // System folder filter - hide archived
+                items.filter { it.type == systemCategory && !isItemArchived(it) }
             } else {
                 if (folder == "Archive") {
-                    items.filter { it.isArchived }
+                    // Show ONLY archived items
+                    items.filter { isItemArchived(it) }
                 } else {
-                    // Custom folder filter (e.g. "Work" or "Archive")
-                    items.filter { it.folders.contains(folder) && !it.isArchived }
+                    // Custom folder filter
+                    items.filter { it.folders.contains(folder) && !isItemArchived(it) }
                 }
             }
         } else {
             // Hide archived items from "All" main feed
-            items.filter { !it.isArchived }
+            items.filter { !isItemArchived(it) }
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
@@ -269,17 +261,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         _selectedItemIds.value = emptySet()
     }
 
-    fun startCloudMediaDownload(context: android.content.Context, resumeInterrupted: Boolean = false, retryFailed: Boolean = false) {
-        val serviceIntent = android.content.Intent(context, com.example.service.DataDownloadService::class.java).apply {
-            if (resumeInterrupted) putExtra("resume_interrupted", true)
-            if (retryFailed) putExtra("retry_failed", true)
-        }
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            context.startForegroundService(serviceIntent)
-        } else {
-            context.startService(serviceIntent)
-        }
-    }
+
 
     fun selectAll(itemIds: List<String>) {
         _selectedItemIds.value = itemIds.toSet()
@@ -293,7 +275,6 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             val itemsToDelete = allItems.value.filter { selectedIds.contains(it.id) }
             itemsToDelete.forEach { item ->
                 repository.deleteItem(item)
-                AnalyticsHelper.logNoteDeleted(context, item.id, item.type.name)
             }
             clearSelection()
         }
@@ -359,7 +340,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
     fun showDetailItem(item: com.example.data.model.SavedItem) {
         _activeDetailItem.value = item
-        
+
         val isMedia = item.type == com.example.data.model.SavedItemType.IMAGE || item.type == com.example.data.model.SavedItemType.VIDEO || item.type == com.example.data.model.SavedItemType.AUDIO
         val hasRemoteContent = !item.content.isNullOrBlank() && (item.content.startsWith("http://") || item.content.startsWith("https://"))
         if (isMedia && hasRemoteContent) {
@@ -568,41 +549,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         postFeedback(message, severity)
     }
 
-    fun syncData() {
-        if (_isSyncing.value) return
-
-        if (!isNetworkAvailable()) {
-            showToast("No internet connection. Please check your network and try again.")
-            return
-        }
-
-        _isSyncing.value = true
-
-        viewModelScope.launch {
-            val auth = repository.firebaseAuth
-            if (auth?.currentUser == null) {
-                kotlinx.coroutines.delay(500)
-                showToast("Please sign in to sync your data.")
-                _isSyncing.value = false
-                return@launch
-            }
-
-            try {
-                // Background operations to restore and sync
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    repository.restoreUserDataFromCloud()
-                    repository.updateDeviceSession()
-                    triggerBackgroundSync()
-                }
-                showToast("Data synced successfully.")
-            } catch (e: Exception) {
-                android.util.Log.e("CobaltVM", "Sync failed: ${e.message}")
-                showToast("Failed to sync data: ${e.localizedMessage}")
-            } finally {
-                _isSyncing.value = false
-            }
-        }
-    }
+    fun syncData() = Unit
 
     private val _extractedLinksToReview = MutableStateFlow<List<ExtractedLinkReview>>(emptyList())
     val extractedLinksToReview: StateFlow<List<ExtractedLinkReview>> = _extractedLinksToReview.asStateFlow()
@@ -700,7 +647,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    // Temporary storage of media bytes to upload to Storage upon saving
+    // Temporary bytes for the active capture (pending local save)
     private var pendingMediaBytes: ByteArray? = null
 
     // ----------------------------------------------------
@@ -719,84 +666,16 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     private val _isInitialLoading = MutableStateFlow(true)
     val isInitialLoading: StateFlow<Boolean> = _isInitialLoading.asStateFlow()
 
-    private val _isSyncing = MutableStateFlow(false)
-    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
 
-    val maxStorageBytes = 512L * 1024 * 1024 // 512 MB default
 
-    /** Only IMAGE, VIDEO, and AUDIO count toward the cloud storage quota. Text, links, and code are always free. */
-    private fun SavedItem.isMediaType() =
-        type == SavedItemType.IMAGE || type == SavedItemType.VIDEO || type == SavedItemType.AUDIO
+    val isSyncing: StateFlow<Boolean> = MutableStateFlow(false).asStateFlow()
 
-    /** Best-effort size in bytes for a media item. Returns 0 for non-media (free) or unavailable items. */
-    private fun SavedItem.mediaQuotaBytes(): Long {
-        if (!isMediaType() || isUnavailable) return 0L
-        // If we stored the size during upload/backup, use it directly
-        if (sizeBytes > 0L) return sizeBytes
-        // Otherwise try reading the local file (will be 0 on a new device after cloud restore)
-        val localPath = (thumbnailPath ?: content).takeIf { it.startsWith("/") }
-        if (localPath != null) {
-            val file = java.io.File(localPath)
-            if (file.exists()) return file.length()
-        }
-        return 0L
-    }
 
-    val cloudUsedStorageBytes: StateFlow<Long> = allItems.map { items: List<com.example.data.model.SavedItem> ->
-        items.filter { it.isBackedUp && !it.isUnavailable && it.isMediaType() }.sumOf { it.mediaQuotaBytes() }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, 0L)
 
-    private val _selectedForBackupIds = MutableStateFlow<Set<String>>(emptySet())
-    val selectedForBackupIds: StateFlow<Set<String>> = _selectedForBackupIds.asStateFlow()
 
-    fun toggleBackupSelection(itemId: String) {
-        _selectedForBackupIds.update { current ->
-            if (current.contains(itemId)) current - itemId else current + itemId
-        }
-    }
 
-    fun clearBackupSelection() {
-        _selectedForBackupIds.value = emptySet()
-    }
 
-    fun selectItemsForBackup(ids: List<String>) {
-        _selectedForBackupIds.update { current ->
-            current + ids
-        }
-    }
 
-    fun deselectItemsForBackup(ids: List<String>) {
-        _selectedForBackupIds.update { current ->
-            current - ids.toSet()
-        }
-    }
-
-    fun backupSelectedItems() {
-        val ids = _selectedForBackupIds.value.toList()
-        if (ids.isEmpty()) return
-        
-        val context = getApplication<Application>().applicationContext
-        val intent = android.content.Intent(context, com.example.service.DataUploadService::class.java).apply {
-            action = com.example.service.DataUploadService.ACTION_START_BACKUP
-            putStringArrayListExtra(com.example.service.DataUploadService.EXTRA_ITEM_IDS, java.util.ArrayList(ids))
-        }
-        androidx.core.content.ContextCompat.startForegroundService(context, intent)
-        clearBackupSelection()
-    }
-
-    fun removeBackupItems(ids: List<String>) {
-        if (ids.isEmpty()) return
-        viewModelScope.launch {
-            _isSyncing.value = true
-            try {
-                repository.removeBackup(ids)
-            } catch (e: Exception) {
-                postFeedback("Remove backup failed: ${e.message}", com.example.util.FeedbackSeverity.ERROR)
-            } finally {
-                _isSyncing.value = false
-            }
-        }
-    }
 
     val usedStorageBytes: StateFlow<Long> = allItems.map { items: List<com.example.data.model.SavedItem> ->
         var total = 0L
@@ -816,79 +695,14 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }.stateIn(viewModelScope, SharingStarted.Lazily, 0L)
 
 
-    private val _authError = MutableStateFlow<String?>(null)
-    val authError: StateFlow<String?> = _authError.asStateFlow()
 
-    private val _authLoading = MutableStateFlow(false)
-    val authLoading: StateFlow<Boolean> = _authLoading.asStateFlow()
 
-    private val _authSuccess = MutableStateFlow<String?>(null)
-    val authSuccess: StateFlow<String?> = _authSuccess.asStateFlow()
-
-    private val _emailLinkSent = MutableStateFlow(false)
-    val emailLinkSent: StateFlow<Boolean> = _emailLinkSent.asStateFlow()
-
-    private val _pendingEmailLink = MutableStateFlow<String?>(null)
-    val pendingEmailLink: StateFlow<String?> = _pendingEmailLink.asStateFlow()
-
-    private val _pendingPasswordResetCode = MutableStateFlow<String?>(null)
-    val pendingPasswordResetCode: StateFlow<String?> = _pendingPasswordResetCode.asStateFlow()
 
     private val prefs = context.getSharedPreferences("cobalt_prefs", android.content.Context.MODE_PRIVATE)
 
-    val isFirebaseAvailable: Boolean = repository.firebaseAuth != null
 
     init {
-        // Safe Firebase Auth State listener
-        val auth = repository.firebaseAuth
-        if (auth != null) {
-            val user = auth.currentUser
-            _userEmail.value = user?.email
-            _userName.value = user?.displayName
-            _userPhotoUrl.value = user?.photoUrl?.toString()
-
-            if (user != null) {
-                _isInitialLoading.value = false
-                viewModelScope.launch {
-                    try {
-                        repository.restoreUserDataFromCloud()
-                        repository.updateDeviceSession()
-                        repository.syncUnsyncedItems()
-                    } catch (e: Exception) {
-                        Log.e("CobaltVM", "Initial auto-sync error: ${e.message}", e)
-                        postFeedback("Background sync failed — showing offline data", com.example.util.FeedbackSeverity.WARNING)
-                    }
-                }
-            } else {
-                _isInitialLoading.value = false
-            }
-
-            auth.addAuthStateListener { firebaseAuth ->
-                val updatedUser = firebaseAuth.currentUser
-                _userEmail.value = updatedUser?.email
-                _userName.value = updatedUser?.displayName
-                _userPhotoUrl.value = updatedUser?.photoUrl?.toString()
-                if (updatedUser != null) {
-                    _isInitialLoading.value = false
-                    viewModelScope.launch {
-                        try {
-                            repository.restoreUserDataFromCloud()
-                            repository.updateDeviceSession()
-                            repository.syncUnsyncedItems()
-                        } catch (e: Exception) {
-                            Log.e("CobaltVM", "Initial auto-sync error: ${e.message}", e)
-                            postFeedback("Background sync failed — showing offline data", com.example.util.FeedbackSeverity.WARNING)
-                        }
-                    }
-                }
-            }
-        } else {
-            // Read simulated login if Firebase is not available
-            _userEmail.value = prefs.getString("simulated_email", null)
-            _userName.value = prefs.getString("simulated_name", null)
-            _userPhotoUrl.value = prefs.getString("simulated_photo", null)
-            _isInitialLoading.value = false
-        }
+        _isInitialLoading.value = false
 
         // Auto-fetch models when API key is available or updated
         viewModelScope.launch {
@@ -915,371 +729,6 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     // ----------------------------------------------------
     // AUTH ACTIONS
     // ----------------------------------------------------
-
-    fun signUp(email: String, password: String) {
-        _authSuccess.value = null
-        if (email.isBlank() || password.isBlank()) {
-            _authError.value = "Email and password cannot be empty."
-            return
-        }
-        val auth = repository.firebaseAuth
-        if (auth == null) {
-            _authError.value = null
-            prefs.edit().putString("simulated_email", email).apply()
-            _userEmail.value = email
-            showToast("Successfully registered and logged in as $email.")
-            return
-        }
-        if (!isNetworkAvailable()) {
-            _authError.value = "No internet connection. Please check your network and try again."
-            return
-        }
-        _authError.value = null
-        _authLoading.value = true
-        auth.createUserWithEmailAndPassword(email, password)
-            .addOnSuccessListener {
-                val userMail = it.user?.email ?: email
-                _userEmail.value = userMail
-                viewModelScope.launch {
-                    try {
-                        repository.restoreUserDataFromCloud()
-                        repository.updateDeviceSession()
-                        triggerBackgroundSync()
-                        showToast("Successfully registered and synced as $userMail.")
-                    } catch (e: Exception) {
-                        Log.e("CobaltVM", "Post sign-up sync failed: ${e.message}")
-                    } finally {
-                        _authLoading.value = false
-                    }
-                }
-            }
-            .addOnFailureListener {
-                _authLoading.value = false
-                _authError.value = it.localizedMessage ?: "Sign up failed."
-            }
-    }
-
-    fun signIn(email: String, password: String) {
-        _authSuccess.value = null
-        if (email.isBlank() || password.isBlank()) {
-            _authError.value = "Email and password cannot be empty."
-            return
-        }
-        val auth = repository.firebaseAuth
-        if (auth == null) {
-            _authError.value = null
-            prefs.edit().putString("simulated_email", email).apply()
-            _userEmail.value = email
-            AnalyticsHelper.logSignInSuccess(context, "Simulated")
-            showToast("Successfully logged in as $email.")
-            return
-        }
-        if (!isNetworkAvailable()) {
-            _authError.value = "No internet connection. Please check your network and try again."
-            return
-        }
-        _authError.value = null
-        _authLoading.value = true
-        auth.signInWithEmailAndPassword(email, password)
-            .addOnSuccessListener {
-                val userMail = it.user?.email ?: email
-                _userEmail.value = userMail
-                AnalyticsHelper.logSignInSuccess(context, "Email/Password")
-                viewModelScope.launch {
-                    try {
-                        repository.restoreUserDataFromCloud()
-                        repository.updateDeviceSession()
-                        triggerBackgroundSync()
-                        showToast("Successfully logged in and synced as $userMail.")
-                    } catch (e: Exception) {
-                        Log.e("CobaltVM", "Post sign-in sync failed: ${e.message}")
-                    } finally {
-                        _authLoading.value = false
-                    }
-                }
-            }
-            .addOnFailureListener {
-                _authLoading.value = false
-                val errorMsg = it.localizedMessage ?: "Sign in failed."
-                _authError.value = errorMsg
-                AnalyticsHelper.logSignInFailed(context, "Email/Password", errorMsg)
-            }
-    }
-
-    fun signInWithGoogle(activityContext: android.content.Context, onCompletion: (Boolean) -> Unit) {
-        val auth = repository.firebaseAuth
-        if (auth == null) {
-            _authError.value = "Authentication not initialized."
-            onCompletion(false)
-            return
-        }
-        if (!isNetworkAvailable()) {
-            _authError.value = "No internet connection. Please check your network and try again."
-            onCompletion(false)
-            return
-        }
-        _authError.value = null
-        _authLoading.value = true
-
-        viewModelScope.launch {
-            try {
-                val credentialManager = CredentialManager.create(activityContext)
-
-                val clientId = activityContext.getString(com.example.R.string.default_web_client_id)
-
-                val googleIdOption = GetGoogleIdOption.Builder()
-                    .setFilterByAuthorizedAccounts(false)
-                    .setServerClientId(clientId)
-                    .setAutoSelectEnabled(true)
-                    .build()
-
-                val request = GetCredentialRequest.Builder()
-                    .addCredentialOption(googleIdOption)
-                    .build()
-
-                val result = credentialManager.getCredential(activityContext, request)
-                val credential = result.credential
-
-                if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
-                    val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
-                    val authCredential = GoogleAuthProvider.getCredential(googleIdTokenCredential.idToken, null)
-                    val authResult = auth.signInWithCredential(authCredential).await()
-                    val userMail = authResult.user?.email ?: "Google User"
-                    _userEmail.value = userMail
-                    AnalyticsHelper.logSignInSuccess(context, "Google")
-                    repository.restoreUserDataFromCloud()
-                    repository.updateDeviceSession()
-                    triggerBackgroundSync()
-                    showToast("Successfully logged in and synced as $userMail.")
-                    onCompletion(true)
-                } else {
-                    val errorMsg = "Unexpected credential type: ${credential.type}"
-                    _authError.value = errorMsg
-                    AnalyticsHelper.logSignInFailed(context, "Google", errorMsg)
-                    onCompletion(false)
-                }
-            } catch (e: Exception) {
-                Log.e("CobaltVM", "Google Sign-In failed: ${e.message}")
-                val msg = e.localizedMessage ?: ""
-                _authError.value = "Google Sign-In failed: $msg"
-                AnalyticsHelper.logSignInFailed(context, "Google", e.localizedMessage ?: "Google Sign-In failed")
-                onCompletion(false)
-            } finally {
-                _authLoading.value = false
-            }
-        }
-    }
-
-    fun signOut() {
-        val auth = repository.firebaseAuth
-        if (auth != null) {
-            auth.signOut()
-        } else {
-            prefs.edit().remove("simulated_email").apply()
-        }
-        _userEmail.value = null
-    }
-
-    fun deleteAccountAndEraseAll(onResult: (Boolean, String?) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val auth = repository.firebaseAuth
-                val user = auth?.currentUser
-                if (user != null) {
-                    val uid = user.uid
-                    // Trigger backend Cloud Functions cleanup by deleting user document
-                    try {
-                        repository.firestore?.collection("users")?.document(uid)?.delete()?.await()
-                    } catch (e: Exception) {
-                        Log.w("CobaltVM", "Could not delete user Firestore doc: ${e.message}")
-                    }
-                    // Delete Auth account
-                    user.delete().await()
-                }
-                repository.wipeLocalData()
-                prefs.edit().clear().apply()
-                _userEmail.value = null
-                onResult(true, null)
-            } catch (e: Exception) {
-                Log.e("CobaltVM", "Failed to delete account and erase data", e)
-                onResult(false, e.localizedMessage ?: "Failed to delete account.")
-            }
-        }
-    }
-
-    fun sendSignInLink(email: String) {
-        _authSuccess.value = null
-        if (email.isBlank()) {
-            _authError.value = "Email address cannot be empty."
-            return
-        }
-        val auth = repository.firebaseAuth
-        if (auth == null) {
-            _authError.value = null
-            prefs.edit().putString("simulated_email", email).apply()
-            _userEmail.value = email
-            _emailLinkSent.value = true
-            return
-        }
-        _authError.value = null
-        _authLoading.value = true
-
-        val actionCodeSettings = com.google.firebase.auth.ActionCodeSettings.newBuilder()
-            .setUrl("https://cobalt-11.firebaseapp.com/signin")
-            .setHandleCodeInApp(true)
-            .setAndroidPackageName(
-                "com.hanan_bhatti.cobalt",
-                true, // installIfNotAvailable
-                "24"  // minimumVersion
-            )
-            .build()
-
-        auth.sendSignInLinkToEmail(email, actionCodeSettings)
-            .addOnSuccessListener {
-                _authLoading.value = false
-                prefs.edit().putString("email_link_address", email).apply()
-                _emailLinkSent.value = true
-                _authSuccess.value = "Sign-in link sent to $email! Please click the link in your email to sign in."
-            }
-            .addOnFailureListener {
-                _authLoading.value = false
-                _authError.value = it.localizedMessage ?: "Failed to send sign-in link."
-            }
-    }
-
-    fun sendPasswordResetEmail(email: String) {
-        _authSuccess.value = null
-        if (email.isBlank()) {
-            _authError.value = "Please enter your email address to request a password reset."
-            return
-        }
-        _authError.value = null
-        val auth = repository.firebaseAuth
-        if (auth == null) {
-            _authSuccess.value = "(Sandbox Simulation) Password reset link sent to $email."
-            return
-        }
-        _authLoading.value = true
-
-        val actionCodeSettings = com.google.firebase.auth.ActionCodeSettings.newBuilder()
-            .setUrl("https://cobalt-11.firebaseapp.com/resetpassword")
-            .setHandleCodeInApp(true)
-            .setAndroidPackageName(
-                "com.hanan_bhatti.cobalt",
-                true, // installIfNotAvailable
-                "24"  // minimumVersion
-            )
-            .build()
-
-        auth.sendPasswordResetEmail(email, actionCodeSettings)
-            .addOnSuccessListener {
-                _authLoading.value = false
-                _authSuccess.value = "Password reset email sent to $email! Please check your inbox."
-            }
-            .addOnFailureListener {
-                _authLoading.value = false
-                _authError.value = it.localizedMessage ?: "Failed to send password reset email."
-            }
-    }
-
-    fun handleDeepLink(linkStr: String) {
-        val auth = repository.firebaseAuth
-        if (auth == null) {
-            val email = prefs.getString("email_link_address", "sandbox.user@example.com") ?: "sandbox.user@example.com"
-            _userEmail.value = email
-            return
-        }
-        if (auth.isSignInWithEmailLink(linkStr)) {
-            val storedEmail = prefs.getString("email_link_address", null)
-            if (!storedEmail.isNullOrBlank()) {
-                completeEmailLinkSignIn(storedEmail, linkStr)
-            } else {
-                _pendingEmailLink.value = linkStr
-                _authError.value = "Please confirm the email address you used to request the sign-in link."
-            }
-        } else if (linkStr.contains("/resetpassword")) {
-            val uri = android.net.Uri.parse(linkStr)
-            val oobCode = uri.getQueryParameter("oobCode")
-            if (oobCode != null) {
-                _authLoading.value = true
-                _authError.value = null
-                auth.verifyPasswordResetCode(oobCode)
-                    .addOnSuccessListener {
-                        _authLoading.value = false
-                        _pendingPasswordResetCode.value = oobCode
-                    }
-                    .addOnFailureListener {
-                        _authLoading.value = false
-                        _authError.value = it.localizedMessage ?: "Invalid or expired password reset link."
-                    }
-            } else {
-                _authError.value = "Missing password reset code."
-            }
-        }
-    }
-
-    fun setAuthError(error: String?) {
-        _authError.value = error
-    }
-
-    fun resetPasswordWithCode(oobCode: String, newPassword: String) {
-        if (newPassword.isBlank()) {
-            _authError.value = "Password cannot be empty."
-            return
-        }
-        val auth = repository.firebaseAuth ?: return
-        _authError.value = null
-        _authLoading.value = true
-        auth.confirmPasswordReset(oobCode, newPassword)
-            .addOnSuccessListener {
-                _authLoading.value = false
-                _pendingPasswordResetCode.value = null
-                _authSuccess.value = "Your password has been successfully reset! You can now log in with your new password."
-            }
-            .addOnFailureListener {
-                _authLoading.value = false
-                _authError.value = it.localizedMessage ?: "Failed to reset password."
-            }
-    }
-
-    fun completeEmailLinkSignIn(email: String, emailLink: String) {
-        if (email.isBlank()) {
-            _authError.value = "Email address cannot be empty."
-            return
-        }
-        val auth = repository.firebaseAuth ?: return
-        _authError.value = null
-        _authLoading.value = true
-
-        auth.signInWithEmailLink(email, emailLink)
-            .addOnSuccessListener { result ->
-                val userMail = result.user?.email ?: email
-                _userEmail.value = userMail
-                _pendingEmailLink.value = null
-                prefs.edit().remove("email_link_address").apply()
-                _emailLinkSent.value = false
-                viewModelScope.launch {
-                    try {
-                        repository.restoreUserDataFromCloud()
-                        repository.updateDeviceSession()
-                        triggerBackgroundSync()
-                        showToast("Successfully logged in and synced as $userMail.")
-                    } catch (e: Exception) {
-                        Log.e("CobaltVM", "Post link sign-in sync failed: ${e.message}")
-                    } finally {
-                        _authLoading.value = false
-                    }
-                }
-            }
-            .addOnFailureListener {
-                _authLoading.value = false
-                _authError.value = it.localizedMessage ?: "Failed to sign in with link."
-            }
-    }
-
-    fun resetEmailLinkSent() {
-        _emailLinkSent.value = false
-    }
 
     // ----------------------------------------------------
     // CAPTURE FLOW
@@ -1598,7 +1047,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
         viewModelScope.launch {
             try {
-                // Use Coil to load the image robustly. This handles content://, file://, raw paths, and http:// / https:// (Firebase links)
+                // Use Coil to load the image robustly. This handles content://, file://, raw paths, and http:// / https:// (remote media)
                 val loader = coil.Coil.imageLoader(context)
                 val request = coil.request.ImageRequest.Builder(context)
                     .data(uri)
@@ -1781,9 +1230,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                         Log.e("CobaltVM", "Background link metadata fetch failed: ${e.message}")
                     }
 
-                    // Sync to Firestore in background
                     try {
-                        triggerBackgroundSync()
                     } catch (e: Exception) {
                         Log.e("CobaltVM", "Background sync failed: ${e.message}")
                     }
@@ -2012,17 +1459,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     timestamp = System.currentTimeMillis()
                 )
                 val savedItem = repository.saveItem(newItem, null)
-                AnalyticsHelper.logNoteCreated(context, savedItem.id, savedItem.type.name)
                 showToast("Item saved successfully.")
-
-                // Sync to Firestore and Storage in background
-                launch(kotlinx.coroutines.Dispatchers.IO) {
-                    try {
-                        triggerBackgroundSync()
-                    } catch (e: Exception) {
-                        Log.e("CobaltVM", "Background sync failed: ${e.message}")
-                    }
-                }
 
                 if (type == SavedItemType.LINK && content.isNotBlank()) {
                     launch(kotlinx.coroutines.Dispatchers.IO) {
@@ -2093,40 +1530,24 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 repository.saveItem(finalItem, pendingMediaBytes) { progress ->
                     _saveProgress.value = progress
                 }
-                
+
                 if (editOriginalId != null && editOriginalId != finalItem.id) {
-                    // ID was changed (e.g., selected a different movie), delete the old one
                     val oldItem = allItems.value.find { it.id == editOriginalId }
                     if (oldItem != null) {
                         repository.deleteItem(oldItem)
                     }
                 }
-                
-                if (isEdit) {
-                    AnalyticsHelper.logNoteEdited(context, finalItem.id, finalItem.type.name)
-                } else {
-                    AnalyticsHelper.logNoteCreated(context, finalItem.id, finalItem.type.name)
-                }
-                
+
                 if (_activeDetailItem.value?.id == finalItem.id || _activeDetailItem.value?.id == editOriginalId) {
                     _activeDetailItem.value = finalItem
                 }
-                
+
                 _saveProgress.value = 1.0f
                 kotlinx.coroutines.delay(200) // slight delay to show 100% progress state
                 cancelCapture()
                 editOriginalId = null
                 showToast(if (isEdit) "Item updated successfully." else "Item saved successfully.")
                 if (!isEdit) checkProactiveSurvey()
-
-                // Sync to Firestore and Storage in background
-                launch(kotlinx.coroutines.Dispatchers.IO) {
-                    try {
-                        triggerBackgroundSync()
-                    } catch (e: Exception) {
-                        Log.e("CobaltVM", "Background sync failed: ${e.message}")
-                    }
-                }
             } catch (e: Exception) {
                 Log.e("CobaltVM", "Failed to save item: ${e.message}")
             } finally {
@@ -2140,7 +1561,6 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             repository.deleteItem(item)
             _lastDeletedItemForUndo.value = item
-            AnalyticsHelper.logNoteDeleted(context, item.id, item.type.name)
         }
     }
 
@@ -2148,10 +1568,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         _lastDeletedItemForUndo.value = null
         viewModelScope.launch {
             repository.saveItem(item)
-            // Sync to Firebase in the background if configured
-            launch(kotlinx.coroutines.Dispatchers.IO) {
+                        launch(kotlinx.coroutines.Dispatchers.IO) {
                 try {
-                    triggerBackgroundSync()
                 } catch (e: Exception) {
                     Log.e("CobaltVM", "Background sync failed: ${e.message}")
                 }
@@ -2179,21 +1597,18 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         if (name.isBlank()) return
         viewModelScope.launch {
             repository.addCustomFolder(name.trim(), colorHex, iconName, isPinned)
-            triggerBackgroundSync()
         }
     }
 
     fun deleteFolder(name: String) {
         viewModelScope.launch {
             repository.deleteCustomFolder(name)
-            triggerBackgroundSync()
         }
     }
 
     fun updateFolder(folder: com.example.data.local.CustomFolderEntity) {
         viewModelScope.launch {
             repository.updateCustomFolder(folder)
-            triggerBackgroundSync()
         }
     }
 
@@ -2201,7 +1616,6 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         if (newName.isBlank() || oldName == newName) return
         viewModelScope.launch {
             repository.renameCustomFolder(oldName, newName.trim())
-            triggerBackgroundSync()
             showToast("Folder renamed to '${newName.trim()}' successfully.")
         }
     }
@@ -2223,10 +1637,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         }
         viewModelScope.launch {
             repository.saveItem(item, null)
-            AnalyticsHelper.logNoteEdited(context, item.id, item.type.name)
             launch(kotlinx.coroutines.Dispatchers.IO) {
                 try {
-                    triggerBackgroundSync()
                 } catch (e: Exception) {
                     Log.e("CobaltVM", "Background sync failed: ${e.message}")
                 }
@@ -2250,23 +1662,10 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     // PRIVATE STORAGE HELPERS
     // ----------------------------------------------------
 
-    private fun readUriBytes(uri: Uri): ByteArray? {
-        return try {
-            val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
-            val byteBuffer = java.io.ByteArrayOutputStream()
-            val bufferSize = 1024
-            val buffer = ByteArray(bufferSize)
-            var len: Int
-            if (inputStream != null) {
-                while (inputStream.read(buffer).also { len = it } != -1) {
-                    byteBuffer.write(buffer, 0, len)
-                }
-            }
-            byteBuffer.toByteArray()
-        } catch (e: Exception) {
-            Log.e("CobaltVM", "Failed to read URI bytes: ${e.message}")
-            null
-        }
+    private fun readUriBytes(uri: Uri): ByteArray? = try {
+        context.contentResolver.openInputStream(uri)?.readBytes()
+    } catch (e: Exception) {
+        Log.e("CobaltVM", "Failed to read URI bytes: ${e.message}"); null
     }
 
     private val synonymGroups = listOf(
@@ -2423,24 +1822,6 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         return totalScore
     }
 
-    private val _devices = MutableStateFlow<List<DeviceSession>>(emptyList())
-    val devices: StateFlow<List<DeviceSession>> = _devices.asStateFlow()
-
-    private val _isDevicesLoading = MutableStateFlow(false)
-    val isDevicesLoading: StateFlow<Boolean> = _isDevicesLoading.asStateFlow()
-
-    fun loadDeviceSessions() {
-        viewModelScope.launch {
-            _isDevicesLoading.value = true
-            try {
-                _devices.value = repository.getAllDeviceSessions()
-            } catch (e: Exception) {
-                Log.e("CobaltVM", "Failed to load device sessions: ${e.message}")
-            } finally {
-                _isDevicesLoading.value = false
-            }
-        }
-    }
 
     private val _shareDownloadProgress = MutableStateFlow<Float?>(null)
     val shareDownloadProgress: StateFlow<Float?> = _shareDownloadProgress.asStateFlow()
@@ -2448,7 +1829,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     fun shareItem(item: com.example.data.model.SavedItem, context: android.content.Context) {
         val isMedia = item.type == com.example.data.model.SavedItemType.IMAGE || item.type == com.example.data.model.SavedItemType.VIDEO || item.type == com.example.data.model.SavedItemType.AUDIO
         val localPath = if (item.type == com.example.data.model.SavedItemType.AUDIO) item.thumbnailPath else item.content
-        
+
         if (isMedia && !localPath.isNullOrBlank() && (localPath.startsWith("http://") || localPath.startsWith("https://"))) {
             // Need to download it first
             viewModelScope.launch(Dispatchers.IO) {
@@ -2462,7 +1843,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     }
                     val fileName = "share_${item.id}.$extension"
                     val destFile = java.io.File(destDir, fileName)
-                    
+
                     if (!destFile.exists()) {
                         val request = okhttp3.Request.Builder().url(localPath).build()
                         val client = okhttp3.OkHttpClient()
@@ -2487,12 +1868,12 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                         }
                     }
                     _shareDownloadProgress.value = null
-                    
+
                     // Now share it
                     shareLocalFile(destFile, item, context)
                 } catch (e: Exception) {
                     _shareDownloadProgress.value = null
-                    postFeedback("Failed to download media for sharing: ${e.message}", com.example.util.FeedbackSeverity.ERROR)
+                    showToast("Failed to download media for sharing: ${e.message}")
                     shareAsText(item, context)
                 }
             }
@@ -2547,8 +1928,6 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     ): Boolean {
         return com.example.util.FeedbackSubmissionManager.submitBugReport(
             context, title, description, steps, attachmentUriStr, userEmail, userId, deviceModel, osVersion, appVersion,
-            uploadCloudAttachment = { uri -> repository.uploadFeedbackAttachment(uri) },
-            submitToCloud = { coll, payload -> repository.submitFeedbackToCloud(coll, payload) }
         )
     }
 
@@ -2558,7 +1937,6 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     ): Boolean {
         return com.example.util.FeedbackSubmissionManager.submitFeatureRequest(
             context, title, problemStatement, proposedSolution, priority, userConsent, userEmail, userId, deviceModel, osVersion, appVersion,
-            submitToCloud = { coll, payload -> repository.submitFeedbackToCloud(coll, payload) }
         )
     }
 
@@ -2569,27 +1947,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     ): Boolean {
         return com.example.util.FeedbackSubmissionManager.submitSurvey(
             context, reaction, favoriteFeatures, desiredImprovements, npsScore, customFeedback, almostQuitReason, userEmail, userId, deviceModel, osVersion, appVersion,
-            submitToCloud = { coll, payload -> repository.submitFeedbackToCloud(coll, payload) }
         )
-    }
-
-    private fun triggerBackgroundSync() {
-        try {
-            val context = getApplication<android.app.Application>().applicationContext
-            val intent = android.content.Intent(context, com.example.service.DataUploadService::class.java).apply {
-                action = com.example.service.DataUploadService.ACTION_START_SYNC
-            }
-            androidx.core.content.ContextCompat.startForegroundService(context, intent)
-        } catch (e: Exception) {
-            Log.e("CobaltVM", "Failed to start background sync service: ${e.message}", e)
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    repository.syncUnsyncedItems()
-                } catch (err: Exception) {
-                    Log.e("CobaltVM", "Fallback sync error: ${err.message}", err)
-                }
-            }
-        }
     }
 }
 

@@ -66,14 +66,12 @@ import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.data.repository.CobaltRepository
 import com.example.ui.theme.*
-import com.example.utils.AnalyticsHelper
 
 class RecentItemsWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = RecentItemsWidget()
 
     override fun onEnabled(context: Context) {
         super.onEnabled(context)
-        AnalyticsHelper.logWidgetAdded(context)
     }
 
     override fun onUpdate(context: Context, appWidgetManager: android.appwidget.AppWidgetManager, appWidgetIds: IntArray) {
@@ -187,16 +185,6 @@ fun RecentItemsHeader(isFromCache: Boolean, isTimeout: Boolean) {
     val context = LocalContext.current
 
     val userName = try {
-        val clazz = Class.forName("com.google.firebase.auth.FirebaseAuth")
-        val instance = clazz.getMethod("getInstance").invoke(null)
-        val user = clazz.getMethod("getCurrentUser").invoke(instance)
-        val displayName = user?.javaClass?.getMethod("getDisplayName")?.invoke(user) as? String
-        val email = user?.javaClass?.getMethod("getEmail")?.invoke(user) as? String
-        displayName?.trim()?.ifBlank { null }
-            ?: email?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
-    } catch (e: Throwable) {
-        null
-    } ?: try {
         val prefs = context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE)
         prefs.getString("simulated_name", null)?.trim()?.ifBlank { null }
             ?: prefs.getString("simulated_email", null)?.substringBefore("@")?.replaceFirstChar { it.uppercase() }

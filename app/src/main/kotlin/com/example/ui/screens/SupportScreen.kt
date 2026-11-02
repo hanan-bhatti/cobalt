@@ -183,7 +183,7 @@ private fun ExpressiveHelpCenterContent(
     val expandedItems = remember { mutableStateMapOf<Int, Boolean>() }
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE) }
-    
+
     val helpfulFeedback = remember {
         val map = mutableStateMapOf<String, Boolean>()
         // Load initial state
@@ -241,7 +241,7 @@ private fun ExpressiveHelpCenterContent(
             ExpressiveFaqItem(
                 "sync",
                 "Is my data stored locally or on a remote server?",
-                "Cobalt is offline-first. All your notes, folders, and extracted content are stored locally in an SQLite Room database on your device. Cobalt collects zero telemetry or analytics. In the Play flavor, optional cloud synchronization with Firebase is available when signed in."
+                "Cobalt is offline-first. All your notes, folders, and extracted content are stored locally in an SQLite Room database on your device. Cobalt collects zero telemetry or analytics. Optional user-configured integrations are documented in NETWORK.md."
             ),
             ExpressiveFaqItem(
                 "sync",

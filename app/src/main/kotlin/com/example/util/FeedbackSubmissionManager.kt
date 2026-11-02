@@ -33,11 +33,9 @@ object FeedbackSubmissionManager {
         deviceModel: String,
         osVersion: String,
         appVersion: String,
-        uploadCloudAttachment: suspend (Uri) -> String?,
-        submitToCloud: suspend (String, Map<String, Any?>) -> Boolean
     ): Boolean = withContext(Dispatchers.IO) {
         var finalAttachmentUrl = ""
-        
+
         if (!attachmentUriStr.isNullOrBlank()) {
             val uri = Uri.parse(attachmentUriStr)
             try {
@@ -46,9 +44,9 @@ object FeedbackSubmissionManager {
                 if (fileSize > 25 * 1024 * 1024) {
                     throw Exception("Attachment exceeds 25MB limit.")
                 }
-                finalAttachmentUrl = uploadCloudAttachment(uri) ?: ""
+                finalAttachmentUrl = uri.toString()
             } catch (e: Exception) {
-                throw Exception("Failed to upload attachment: ${e.message}")
+                throw Exception("Failed to read attachment: ${e.message}")
             }
         }
 
@@ -68,16 +66,7 @@ object FeedbackSubmissionManager {
         )
 
         saveLocally(context, "bug_reports.json", payload)
-        
-        val cloudSuccess = try {
-            submitToCloud("bug_reports", payload)
-        } catch (e: Exception) {
-            Log.w("FeedbackManager", "Failed to submit bug report to cloud: ${e.message}")
-            false
-        }
-        if (!cloudSuccess) {
-            Log.w("FeedbackManager", "Bug report saved locally; cloud submission was unsuccessful.")
-        }
+
         return@withContext true
     }
 
@@ -93,7 +82,6 @@ object FeedbackSubmissionManager {
         deviceModel: String,
         osVersion: String,
         appVersion: String,
-        submitToCloud: suspend (String, Map<String, Any?>) -> Boolean
     ): Boolean = withContext(Dispatchers.IO) {
         val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
         val payload = mapOf(
@@ -112,15 +100,6 @@ object FeedbackSubmissionManager {
         )
 
         saveLocally(context, "feature_requests.json", payload)
-        val cloudSuccess = try {
-            submitToCloud("feature_requests", payload)
-        } catch (e: Exception) {
-            Log.w("FeedbackManager", "Failed to submit feature request to cloud: ${e.message}")
-            false
-        }
-        if (!cloudSuccess) {
-            Log.w("FeedbackManager", "Feature request saved locally; cloud submission was unsuccessful.")
-        }
         return@withContext true
     }
 
@@ -137,7 +116,6 @@ object FeedbackSubmissionManager {
         deviceModel: String,
         osVersion: String,
         appVersion: String,
-        submitToCloud: suspend (String, Map<String, Any?>) -> Boolean
     ): Boolean = withContext(Dispatchers.IO) {
         val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
         val payload = mapOf(
@@ -157,15 +135,6 @@ object FeedbackSubmissionManager {
         )
 
         saveLocally(context, "surveys.json", payload)
-        val cloudSuccess = try {
-            submitToCloud("surveys", payload)
-        } catch (e: Exception) {
-            Log.w("FeedbackManager", "Failed to submit survey to cloud: ${e.message}")
-            false
-        }
-        if (!cloudSuccess) {
-            Log.w("FeedbackManager", "Survey saved locally; cloud submission was unsuccessful.")
-        }
         return@withContext true
     }
 
@@ -250,13 +219,13 @@ object FeedbackSubmissionManager {
 
         return """
             ## 🐛 Cobalt Bug Report: $title
-            
+
             ### 📝 Description
             $description
-            
+
             ### 🔄 Steps to Reproduce
             $stepsText
-            
+
             ### 📱 Environment & Device Info
             | Parameter | Value |
             | :--- | :--- |
@@ -265,7 +234,7 @@ object FeedbackSubmissionManager {
             | **Android OS** | $osVersion |
             | **Reporter Email** | ${if (userEmail.isNotBlank()) userEmail else "_Not specified_"} |
             | **Submission Time** | ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())} |
-            
+
             ---
             _Generated automatically by Cobalt Knowledge Archive_
         """.trimIndent()
@@ -286,16 +255,16 @@ object FeedbackSubmissionManager {
     ): String {
         return """
             ## 💡 Cobalt Feature Request: $title
-            
+
             ### 🎯 Motivation & Problem Statement
             $problemStatement
-            
+
             ### 🚀 Proposed Solution
             $proposedSolution
-            
+
             ### ⚡ Priority Level
             **$priority**
-            
+
             ### 📱 Environment & Submitter Info
             | Parameter | Value |
             | :--- | :--- |
@@ -304,7 +273,7 @@ object FeedbackSubmissionManager {
             | **Android OS** | $osVersion |
             | **Requester Email** | ${if (userEmail.isNotBlank()) userEmail else "_Not specified_"} |
             | **Submission Time** | ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())} |
-            
+
             ---
             _Generated automatically by Cobalt Knowledge Archive_
         """.trimIndent()
@@ -332,23 +301,23 @@ object FeedbackSubmissionManager {
 
         return """
             ## 🌟 Cobalt v2.x Experience Survey Response
-            
+
             ### 📊 Overall Sentiment & Recommendation
             - **Sentiment Rating:** $reaction
             - **Recommendation Score (NPS):** **$npsScore / 10**
-            
+
             ### ❤️ Favorite Features Used Most
             $favs
-            
+
             ### ⚠️ What Almost Made You Quit / Biggest Frustration
             > $frustration
-            
+
             ### 🛠️ Most Desired Improvements / Wishlist
             $imps
-            
+
             ### 💬 User Feedback & Ideas
             > $comments
-            
+
             ### 📱 Device & Version Telemetry
             | Parameter | Value |
             | :--- | :--- |
@@ -357,7 +326,7 @@ object FeedbackSubmissionManager {
             | **Android OS** | $osVersion |
             | **Respondent** | ${if (userEmail.isNotBlank()) userEmail else "Anonymous User"} |
             | **Date** | ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())} |
-            
+
             ---
             _Thank you for contributing to Cobalt Knowledge Archive!_
         """.trimIndent()
@@ -450,7 +419,7 @@ object FeedbackSubmissionManager {
 
     /**
      * Exports or shares feedback/survey as a Markdown file via the Android share sheet.
-     * Enables FOSS users to save to Downloads, Google Drive, or share via Telegram/Messaging apps.
+     * Enables users to save to Downloads, Google Drive, or share via Telegram/Messaging apps.
      */
     fun shareOrExportFeedback(
         context: Context,

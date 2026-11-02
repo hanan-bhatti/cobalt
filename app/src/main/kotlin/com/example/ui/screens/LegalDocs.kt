@@ -22,31 +22,20 @@ object LegalDocs {
     val privacyPolicy = """
         **Privacy Policy**
 
-        Last updated: 22 July 2026
+        Cobalt stores notes locally. It has no analytics SDK or automatic crash upload.
+        Crash reports are stored locally. Selecting Send opens an email chooser;
+        your email application sends the report only when you choose to send it.
+        Reports contain exception details and may contain sensitive values in exception messages.
 
-        **1. Data storage**
-        Cobalt stores your data locally on your device by default. If you turn on cloud sync, your data is stored using Firebase. Nothing leaves your device unless you enable sync yourself.
+        Optional Gemini requests send the selected input to Google using your API key.
+        Media features contact TMDB, Jikan and OMDb; Trakt connects only when configured.
+        Saved links and remote media can contact the websites that host them.
+        GitHub release checks are controlled in Release & Updates settings.
+        See NETWORK.md in the source repository for the connection inventory and limitations.
 
-        **2. AI features**
-        The OCR and smart-organization features send your images or notes to the Gemini API for processing. Google does not use this data to train its models.
-
-        **3. Third-party integrations**
-        If you enable the Movie & TV Integration by entering your TMDb API key, the app queries the TMDb API to search and retrieve movie and TV show metadata (such as titles, overviews, ratings, and streaming provider details). These requests are governed by TMDb's privacy policy. Anime metadata is queried via the public Jikan API.
-
-        **4. Analytics**
-        Cobalt uses Firebase Analytics to understand how the app is used, things like which screens are opened, whether a note was created, edited, or deleted, whether a search happened, and whether sign-in succeeded. This helps identify bugs and prioritize what to improve. We do not send the content of your notes or your search text, only that an action occurred. Firebase Analytics also collects standard device and usage data (device model, OS version, country, session length) automatically, as governed by Google's privacy policy.
-
-        **5. Crash reporting**
-        Cobalt uses Firebase Crashlytics to detect and diagnose app crashes. If the app crashes, technical details (stack trace, device model, OS version, app version) are sent to help fix the bug. No note content is included in crash reports.
-
-        **6. Third-party services**
-        Firebase handles authentication, database storage, analytics, and crash reporting. Google's privacy policy covers whatever is processed or stored on their servers.
-
-        **7. Open source**
-        Cobalt is free, open-source software licensed under AGPL-3.0-or-later. You can read every line of code, verify these claims yourself, or fork it, at [github.com/hanan-bhatti/cobalt](https://github.com/hanan-bhatti/cobalt).
-
-        **8. Deleting your data**
-        Delete your account from the settings panel and your remote data is erased.
+        Local backups and sharing are explicit user actions. Android system backup
+        currently remains governed by the application backup settings.
+        Uninstalling the app can remove local data. Export anything you need to keep.
     """.trimIndent()
 
     val termsOfConditions = """
@@ -67,13 +56,13 @@ object LegalDocs {
         Don't use the app to store illegal content or abuse the AI/API integrations it relies on.
 
         **5. Uptime**
-        Cloud sync, analytics, crash reporting, and AI/integration features depend on third-party services (Firebase, Gemini, TMDb, Jikan), so they're provided as-is. Interruptions can happen and aren't guaranteed against.
+        Optional AI and media integrations depend on third-party services (Gemini, TMDb, Jikan, Trakt), so they're provided as-is. Interruptions can happen and aren't guaranteed against.
 
         **6. License**
         The app is licensed under AGPL-3.0-or-later. Source code, issues, and license text are all at [github.com/hanan-bhatti/cobalt](https://github.com/hanan-bhatti/cobalt).
 
         **7. Termination**
-        Accounts that abuse the service or violate these terms can be suspended.
+        You are responsible for complying with the terms of services you choose to contact.
     """.trimIndent()
 
     val faq = """

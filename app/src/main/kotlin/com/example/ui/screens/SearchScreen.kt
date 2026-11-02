@@ -57,7 +57,6 @@ import coil.compose.AsyncImage
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.data.model.getBestImagePath
-import com.example.utils.AnalyticsHelper
 import com.example.ui.viewmodel.CobaltViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -131,13 +130,12 @@ fun SearchScreen(
                     ),
                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { 
+                    keyboardActions = KeyboardActions(onSearch = {
                         if (searchQuery.isNotBlank()) {
                             addQueryToHistory(prefs, searchQuery)
                             historyList = getSearchHistory(prefs)
-                            AnalyticsHelper.logSearchPerformed(context)
                         }
-                        focusManager.clearFocus() 
+                        focusManager.clearFocus()
                     }),
                     modifier = Modifier
                         .weight(1f)
@@ -189,9 +187,9 @@ fun SearchScreen(
                         }
                     }
                 )
-                
+
                 Spacer(modifier = Modifier.width(16.dp))
-                
+
                 Text(
                     text = "Cancel",
                     color = MaterialTheme.colorScheme.primary,
@@ -275,7 +273,6 @@ fun SearchScreen(
                                     .clickable {
                                         viewModel.setSearchQuery(query)
                                         focusManager.clearFocus()
-                                        AnalyticsHelper.logSearchPerformed(context)
                                     }
                                     .padding(horizontal = 16.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -310,7 +307,7 @@ fun SearchScreen(
                             )
                         }
                     }
-                    
+
                     item {
                         Row(
                             modifier = Modifier
@@ -588,7 +585,7 @@ fun SearchItemRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            
+
             val subtitle = when (item.type) {
                 SavedItemType.LINK -> {
                     try {
@@ -599,7 +596,7 @@ fun SearchItemRow(
                 }
                 else -> item.content
             }
-            
+
             if (subtitle.isNotBlank()) {
                 Text(
                     text = subtitle.replace("\n", " "),
@@ -609,9 +606,9 @@ fun SearchItemRow(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(2.dp))
-            
+
             // Meta info (Type • Date)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -631,7 +628,7 @@ fun SearchItemRow(
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.width(8.dp))
 
         // Right Arrow
@@ -649,7 +646,7 @@ fun formatRelativeTime(timestamp: Long): String {
     val diff = now - timestamp
     val days = TimeUnit.MILLISECONDS.toDays(diff)
     val hours = TimeUnit.MILLISECONDS.toHours(diff)
-    
+
     return when {
         days == 0L && hours == 0L -> "Just now"
         days == 0L -> "${hours}h ago"

@@ -44,7 +44,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.util.FossCrashReporter
+import com.example.util.LocalCrashReporter
 
 /**
  * Material 3 Expressive Crash Report Dialog shown on app startup after an unexpected crash.

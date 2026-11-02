@@ -1439,86 +1439,7 @@ fun CaptureScreen(
     val customFolders by viewModel.customFolders.collectAsState()
     val extractedLinks by viewModel.extractedLinksToReview.collectAsState()
 
-    val prefs = remember { context.getSharedPreferences("cobalt_prefs", android.content.Context.MODE_PRIVATE) }
-    var showPermissionRationale by remember { mutableStateOf(false) }
-    var dontAskAgainBackupNotifs by remember { mutableStateOf(false) }
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        viewModel.saveActiveItem()
-    }
-
-    val handleSaveClick = {
-        val dontAskAgain = prefs.getBoolean("dont_ask_backup_notifications", false)
-        if (com.example.BuildConfig.FLAVOR != "foss" && !dontAskAgain && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val status = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
-            if (status != PackageManager.PERMISSION_GRANTED) {
-                showPermissionRationale = true
-            } else {
-                viewModel.saveActiveItem()
-            }
-        } else {
-            viewModel.saveActiveItem()
-        }
-    }
-
-    if (showPermissionRationale) {
-        AlertDialog(
-            onDismissRequest = {
-                if (dontAskAgainBackupNotifs) {
-                    prefs.edit().putBoolean("dont_ask_backup_notifications", true).apply()
-                }
-                showPermissionRationale = false
-                viewModel.saveActiveItem()
-            },
-            title = { Text("Backup Notifications") },
-            text = {
-                Column {
-                    Text("Allow Cobalt to send notifications so you can see live progress of your background backups and know when they complete.")
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { dontAskAgainBackupNotifs = !dontAskAgainBackupNotifs }
-                            .padding(vertical = 4.dp)
-                    ) {
-                        Checkbox(
-                            checked = dontAskAgainBackupNotifs,
-                            onCheckedChange = { dontAskAgainBackupNotifs = it }
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Don't ask again",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (dontAskAgainBackupNotifs) {
-                        prefs.edit().putBoolean("dont_ask_backup_notifications", true).apply()
-                    }
-                    showPermissionRationale = false
-                    launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }) {
-                    Text("Allow")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    if (dontAskAgainBackupNotifs) {
-                        prefs.edit().putBoolean("dont_ask_backup_notifications", true).apply()
-                    }
-                    showPermissionRationale = false
-                    viewModel.saveActiveItem()
-                }) {
-                    Text("No thanks")
-                }
-            }
-        )
-    }
+    val handleSaveClick = { viewModel.saveActiveItem() }
 
     LaunchedEffect(ocrError) {
         ocrError?.let {
@@ -2091,7 +2012,7 @@ fun CaptureScreen(
             if (pageType == SavedItemType.IMAGE || pageType == SavedItemType.VIDEO) {
                 var isDrawMode by remember { mutableStateOf(false) }
                 val mediaUrl = item.content
-                
+
                 // Show Media file picker buttons
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
@@ -2127,7 +2048,7 @@ fun CaptureScreen(
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    
+
                     if (mediaUrl.isNotBlank() || capturedBitmap != null) {
                         IconButton(
                             onClick = {

@@ -9,16 +9,12 @@ import android.app.Application
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.decode.VideoFrameDecoder
-import com.google.firebase.FirebaseApp
 
 class CobaltApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
-        try {
-            FirebaseApp.initializeApp(this)
-        } catch (e: Exception) {
-            android.util.Log.w("CobaltApp", "FirebaseApp initialization skipped: ${e.message}")
-        }
+        // Initialize local crash reporter
+        com.example.util.LocalCrashReporter.init(this)
     }
 
     override fun newImageLoader(): ImageLoader {

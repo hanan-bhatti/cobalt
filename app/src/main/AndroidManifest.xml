@@ -13,11 +13,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
-    
-    <!-- Custom OEM Auto-Start / Auto-Launch Permissions -->
-    <uses-permission android:name="com.oppo.permission.safe.autostart" />
-    <uses-permission android:name="com.vivo.permission.safe.autostart" />
-    <uses-permission android:name="com.miui.securitycenter.permission.CLONE_APP_AUTORUN" />
+
 
     <!-- Chrome Custom Tabs and Browser Query Intent Filters (API 30+) -->
     <queries>
@@ -58,14 +54,6 @@
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
 
-            <!-- Deep link intent filter for Firebase Email Link Auth -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="cobalt-11.firebaseapp.com" android:pathPrefix="/" />
-                <data android:scheme="https" android:host="cobalt-11.web.app" android:pathPrefix="/" />
-            </intent-filter>
         </activity>
 
         <!-- Zero-lag instant share receiver -->
@@ -127,7 +115,7 @@
         <activity
             android:name=".OcrCaptureActivity"
             android:theme="@style/Theme.MyApplication.Transparent"
-            android:exported="true"
+            android:exported="false"
             android:launchMode="singleTask"
             android:taskAffinity=".ocr_capture"
             android:excludeFromRecents="true" />

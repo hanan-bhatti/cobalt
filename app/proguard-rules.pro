@@ -23,7 +23,7 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
-# Keep models for Firestore and Room
+# Keep Room and serialized integration models
 -keep class com.example.data.model.** { *; }
 -keep class com.example.data.local.** { *; }
 
@@ -35,18 +35,4 @@
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
 -keep class kotlin.reflect.jvm.internal.** { *; }
-
-# Ignore missing Firebase classes during R8 minification for FOSS build
--dontwarn com.google.firebase.**
-
-# Preserve Firebase Auth methods accessed via reflection in Play builds
--keep class com.google.firebase.auth.FirebaseAuth {
-    public static com.google.firebase.auth.FirebaseAuth getInstance();
-    public com.google.firebase.auth.FirebaseUser getCurrentUser();
-}
--keep class com.google.firebase.auth.FirebaseUser {
-    public java.lang.String getEmail();
-    public java.lang.String getUid();
-    public boolean isAnonymous();
-}
 

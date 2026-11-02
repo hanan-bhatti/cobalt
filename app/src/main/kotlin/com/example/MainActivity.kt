@@ -70,8 +70,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.example.ui.screens.SettingsCategory
-import com.example.ui.screens.ProfileScreen
-import com.example.ui.screens.AuthScreen
+import com.example.ui.screens.ProfileMainContent
 import com.example.ui.screens.CaptureScreen
 import com.example.ui.screens.DetailScreen
 import com.example.ui.screens.HomeScreen
@@ -199,7 +198,7 @@ class MainActivity : ComponentActivity() {
                     val activeCaptureItem by viewModel.activeCaptureItem.collectAsState()
                     val activeDetailItem by viewModel.activeDetailItem.collectAsState()
                     val availableUpdate by viewModel.availableUpdate.collectAsState()
-                    var pendingCrashReport by remember { mutableStateOf(com.example.util.FossCrashReporter.getPendingCrashReport(context)) }
+                    var pendingCrashReport by remember { mutableStateOf(com.example.util.LocalCrashReporter.getPendingCrashReport(context)) }
 
                 BackHandler(enabled = activeCaptureItem != null) {
                     viewModel.cancelCapture()
@@ -222,12 +221,12 @@ class MainActivity : ComponentActivity() {
                     com.example.ui.components.ExpressiveCrashReportDialog(
                         crashReportText = pendingCrashReport!!,
                         onDismiss = {
-                            com.example.util.FossCrashReporter.clearCrashReport(context)
+                            com.example.util.LocalCrashReporter.clearCrashReport(context)
                             pendingCrashReport = null
                         },
                         onSendEmail = {
-                            com.example.util.FossCrashReporter.sendCrashReportEmail(context, pendingCrashReport!!)
-                            com.example.util.FossCrashReporter.clearCrashReport(context)
+                            com.example.util.LocalCrashReporter.sendCrashReportEmail(context, pendingCrashReport!!)
+                            com.example.util.LocalCrashReporter.clearCrashReport(context)
                             pendingCrashReport = null
                         }
                     )
@@ -263,7 +262,6 @@ class MainActivity : ComponentActivity() {
                 androidx.compose.runtime.DisposableEffect(navController) {
                     val listener = androidx.navigation.NavController.OnDestinationChangedListener { _, destination, _ ->
                         val route = destination.route ?: return@OnDestinationChangedListener
-                        logScreenView(context, route)
                         if (!route.startsWith("detail") && viewModel.activeDetailItem.value != null) {
                             viewModel.closeDetailItem()
                         }
@@ -278,14 +276,12 @@ class MainActivity : ComponentActivity() {
 
                 LaunchedEffect(activeCaptureItem) {
                     if (activeCaptureItem != null) {
-                        logScreenView(context, "note_editor")
                     }
                 }
 
                 LaunchedEffect(activeDetailItem) {
                     val item = activeDetailItem
                     if (item != null) {
-                        logScreenView(context, "note_detail")
                         if (navController.currentDestination?.route?.startsWith("detail") != true) {
                             navController.navigate("detail/${item.id}")
                         }
@@ -454,12 +450,10 @@ class MainActivity : ComponentActivity() {
                                     }
                                     composable("profile") {
                                         ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
-                                            ProfileScreen(
+                                            ProfileMainContent(
                                                 viewModel = viewModel,
                                                 onNavigateBack = { navController.popBackStack() },
-                                                onNavigateToAuth = { if (viewModel.isFirebaseAvailable) navController.navigate("auth") },
                                                 onNavigateToLegal = { route -> navController.navigate(route) },
-                                                onNavigateToManageStorage = { if (viewModel.isFirebaseAvailable) navController.navigate("manage_storage") },
                                                 onNavigateToCategory = { category ->
                                                     viewModel.setFolderFilter(category)
                                                     navController.navigate("home") {
@@ -467,7 +461,6 @@ class MainActivity : ComponentActivity() {
                                                     }
                                                 },
                                                 onNavigateToSettings = { navController.navigate("settings") },
-                                                onNavigateToDevices = { navController.navigate("devices") },
                                                 onNavigateToMovieApiKey = { navController.navigate("movie_api_key") },
                                                 onNavigateToTraktSync = { navController.navigate("trakt_sync_settings") }
                                             )
@@ -542,14 +535,7 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
                                     }
-                                    composable("devices") {
-                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
-                                            com.example.ui.screens.DevicesScreen(
-                                                viewModel = viewModel,
-                                                onNavigateBack = { navController.popBackStack() }
-                                            )
-                                        }
-                                    }
+
                                     composable("movie_api_key") {
                                         ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
                                             com.example.ui.screens.MovieApiKeyScreen(
@@ -590,15 +576,7 @@ class MainActivity : ComponentActivity() {
                                              )
                                         }
                                     }
-                                    composable("auth") {
-                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
-                                            AuthScreen(
-                                                viewModel = viewModel,
-                                                onNavigateBack = { navController.popBackStack() },
-                                                onNavigateToLegal = { route -> navController.navigate(route) }
-                                            )
-                                        }
-                                    }
+
                                     composable("privacy") {
                                         ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
                                             com.example.ui.screens.LegalScreen(
@@ -629,14 +607,7 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
                                     }
-                                    composable("manage_storage") {
-                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
-                                            com.example.ui.screens.ManageStorageScreen(
-                                                onNavigateBack = { navController.popBackStack() },
-                                                viewModel = viewModel
-                                            )
-                                        }
-                                    }
+
                                     composable("release_updates") {
                                         ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
                                             com.example.ui.screens.ReleaseUpdatesScreen(
@@ -775,17 +746,14 @@ class MainActivity : ComponentActivity() {
                         // Floating CustomBottomBar Overlay
                         val routesWithBottomBar = listOf("home", "search", "folders", "profile", "media_hub")
                         if (currentRoute in routesWithBottomBar && activeCaptureItem == null && activeDetailItem == null) {
-                            val isFoss = BuildConfig.FLAVOR == "foss"
                             val items = listOf(
                                 BottomBarItem("home", R.drawable.ic_nav_home_outline, "Home", selectedIconResId = R.drawable.ic_nav_home_bold),
                                 BottomBarItem("search", R.drawable.ic_nav_search_outline, "Search", selectedIconResId = R.drawable.ic_nav_search_bold),
                                 BottomBarItem("media_hub", R.drawable.ic_nav_media_outline, "Media", selectedIconResId = R.drawable.ic_nav_media_bold),
                                 BottomBarItem("folders", R.drawable.ic_nav_folders_outline, "Folders", selectedIconResId = R.drawable.ic_nav_folders_bold),
-                                if (isFoss) {
+
                                     BottomBarItem("profile", R.drawable.ic_nav_settings_outline, "Settings", selectedIconResId = R.drawable.ic_nav_settings_bold)
-                                } else {
-                                    BottomBarItem("profile", R.drawable.ic_nav_profile_outline, "Profile", selectedIconResId = R.drawable.ic_nav_profile_bold)
-                                }
+
                             )
                             val navInsets = androidx.compose.foundation.layout.WindowInsets.navigationBars
                             val bottomPadding = navInsets.asPaddingValues().calculateBottomPadding()
@@ -889,7 +857,6 @@ class MainActivity : ComponentActivity() {
                     val itemId = linkStr.substringAfter("cobalt://item/")
                     viewModel.openItemById(itemId)
                 } else {
-                    viewModel.handleDeepLink(linkStr)
                 }
             }
         } else if ("com.example.ACTION_QUICK_TEXT" == action) {
@@ -910,19 +877,5 @@ class MainActivity : ComponentActivity() {
             }
             startActivity(ocrIntent)
         }
-    }
-}
-
-private fun logScreenView(context: android.content.Context, screenName: String) {
-    try {
-        val clazz = Class.forName("com.google.firebase.analytics.FirebaseAnalytics")
-        val instance = clazz.getMethod("getInstance", android.content.Context::class.java).invoke(null, context)
-        val bundle = android.os.Bundle().apply {
-            putString("screen_name", screenName)
-            putString("screen_class", "MainActivity")
-        }
-        clazz.getMethod("logEvent", String::class.java, android.os.Bundle::class.java).invoke(instance, "screen_view", bundle)
-    } catch (e: Throwable) {
-        // Analytics unavailable or disabled in FOSS build
     }
 }

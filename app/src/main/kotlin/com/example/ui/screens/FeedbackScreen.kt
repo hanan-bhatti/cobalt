@@ -112,37 +112,13 @@ fun collectEnvironmentReport(
 ): FeedbackEnvironmentReport {
     var finalUserEmail = userEmail?.takeIf { it.isNotBlank() } ?: "Guest User"
     var finalUserId = userId?.takeIf { it.isNotBlank() } ?: "guest_session"
-    
-    if (finalUserEmail == "Guest User") {
-        try {
-            val authClass = Class.forName("com.google.firebase.auth.FirebaseAuth")
-            val userClass = Class.forName("com.google.firebase.auth.FirebaseUser")
-            val instance = authClass.getMethod("getInstance").invoke(null)
-            val user = authClass.getMethod("getCurrentUser").invoke(instance)
-            if (user != null) {
-                val getEmailMethod = userClass.getMethod("getEmail")
-                val isAnonMethod = userClass.getMethod("isAnonymous")
-                val getUidMethod = userClass.getMethod("getUid")
-                getEmailMethod.isAccessible = true
-                isAnonMethod.isAccessible = true
-                getUidMethod.isAccessible = true
-                val email = getEmailMethod.invoke(user) as? String
-                val isAnon = isAnonMethod.invoke(user) as? Boolean == true
-                val uid = getUidMethod.invoke(user) as? String ?: "guest_session"
-                finalUserEmail = email ?: if (isAnon) "Anonymous User" else "Guest User"
-                finalUserId = uid
-            }
-        } catch (e: Throwable) {
-            // Fallback below
-        }
-    }
 
     if (finalUserEmail == "Guest User") {
         val prefs = context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE)
         val simEmail = prefs.getString("simulated_email", null)
         if (simEmail != null) {
             finalUserEmail = simEmail
-            finalUserId = "foss_session_${simEmail.hashCode()}"
+            finalUserId = "local_session_${simEmail.hashCode()}"
         }
     }
 
@@ -654,7 +630,7 @@ private fun ExpressiveBugReportContent(
                         )
                     }
                 }
-            } else if (com.example.BuildConfig.FLAVOR == "foss") {
+            } else
                 Column(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -833,59 +809,7 @@ private fun ExpressiveBugReportContent(
                         Text("Share or Save Report File (MD)", fontWeight = FontWeight.SemiBold)
                     }
                 }
-            } else {
-                Button(
-                    onClick = {
-                        if (bugTitle.isBlank() || bugDescription.isBlank()) {
-                            errorMessage = "Please enter both a summary title and detailed description."
-                            return@Button
-                        }
 
-                        isSubmitting = true
-                        coroutineScope.launch {
-                            try {
-                                viewModel.submitBugReport(
-                                    context = context,
-                                    title = bugTitle,
-                                    description = bugDescription,
-                                    steps = stepsToReproduce.toList(),
-                                    attachmentUriStr = attachmentUri?.toString(),
-                                    userEmail = envReport.userEmail,
-                                    userId = envReport.userId,
-                                    deviceModel = envReport.deviceModel,
-                                    osVersion = envReport.osVersion,
-                                    appVersion = envReport.appVersion
-                                )
-                                submitSuccess = true
-                                com.example.util.HapticManager.performSuccess(context)
-                                delay(1500)
-                                onSuccess()
-                            } catch (e: Exception) {
-                                android.util.Log.e("FeedbackScreen", "Bug report submission error: ${e.message}", e)
-                                submitSuccess = true
-                                delay(1500)
-                                onSuccess()
-                            } finally {
-                                isSubmitting = false
-                            }
-                        }
-                    },
-                    shape = RoundedCornerShape(18.dp),
-                    enabled = !isSubmitting,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    modifier = Modifier.fillMaxWidth().bounceClick().testTag("submit_bug_report_button")
-                ) {
-                    if (isSubmitting) {
-                        CircularWavyProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Submitting Bug Report...")
-                    } else {
-                        Icon(painter = painterResource(id = R.drawable.ic_custom_send), contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Submit Bug Report", fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
         }
     }
 }
@@ -1176,7 +1100,7 @@ private fun ExpressiveFeatureRequestContent(
                         )
                     }
                 }
-            } else if (com.example.BuildConfig.FLAVOR == "foss") {
+            } else
                 Column(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -1361,60 +1285,7 @@ private fun ExpressiveFeatureRequestContent(
                         Text("Share or Save Request File (MD)", fontWeight = FontWeight.SemiBold)
                     }
                 }
-            } else {
-                Button(
-                    onClick = {
-                        if (featureTitle.isBlank() || problemStatement.isBlank() || proposedSolution.isBlank()) {
-                            errorMessage = "Please fill in the title, problem statement, and proposed solution."
-                            return@Button
-                        }
 
-                        isSubmitting = true
-                        coroutineScope.launch {
-                            try {
-                                viewModel.submitFeatureRequest(
-                                    context = context,
-                                    title = featureTitle,
-                                    problemStatement = problemStatement,
-                                    proposedSolution = proposedSolution,
-                                    priority = selectedPriority,
-                                    userConsent = userConsent,
-                                    userEmail = envReport.userEmail,
-                                    userId = envReport.userId,
-                                    deviceModel = envReport.deviceModel,
-                                    osVersion = envReport.osVersion,
-                                    appVersion = envReport.appVersion
-                                )
-                                submitSuccess = true
-                                com.example.util.HapticManager.performSuccess(context)
-                                delay(1500)
-                                onSuccess()
-                            } catch (e: Exception) {
-                                android.util.Log.e("FeedbackScreen", "Feature request submission error: ${e.message}", e)
-                                submitSuccess = true
-                                delay(1500)
-                                onSuccess()
-                            } finally {
-                                isSubmitting = false
-                            }
-                        }
-                    },
-                    shape = RoundedCornerShape(18.dp),
-                    enabled = !isSubmitting,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    modifier = Modifier.fillMaxWidth().bounceClick().testTag("submit_feature_request_button")
-                ) {
-                    if (isSubmitting) {
-                        CircularWavyProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Submitting Feature Request...")
-                    } else {
-                        Icon(painter = painterResource(id = R.drawable.ic_custom_send), contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Submit Feature Request", fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
         }
     }
 }

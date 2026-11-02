@@ -66,7 +66,7 @@ data class TraktSyncSummary(
 object TraktSyncEngine {
 
     private const val TAG = "TraktSyncEngine"
-    const val DEFAULT_TMDB_API_KEY = "712732e6f259631c21129a94a273a7bb"
+    const val DEFAULT_TMDB_API_KEY = ""
     private const val PAGE_SIZE = 100
 
     private const val STEP_SHOWS = "SHOWS"

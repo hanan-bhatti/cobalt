@@ -536,7 +536,7 @@ private fun resolveLocalOrRemotePath(context: Context, videoUri: String, itemId:
         }
     }
 
-    // 3. Fallback to passed videoUri (e.g. Firebase Storage HTTPS URL)
+    // 3. Fallback to passed videoUri (e.g. remote HTTPS URL)
     return videoUri
 }
 
@@ -545,8 +545,8 @@ private fun resolveLocalOrRemotePath(context: Context, videoUri: String, itemId:
  * Only extracts synchronously for local files or content URIs to prevent NetworkOnMainThreadException.
  */
 private fun extractExactAspectRatio(context: Context, uriString: String): Float? {
-    val isLocal = uriString.startsWith("/") || 
-                  uriString.startsWith("file://") || 
+    val isLocal = uriString.startsWith("/") ||
+                  uriString.startsWith("file://") ||
                   uriString.startsWith("content://")
     if (!isLocal) return null
 

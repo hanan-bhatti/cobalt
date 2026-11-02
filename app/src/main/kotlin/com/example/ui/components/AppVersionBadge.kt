@@ -45,14 +45,13 @@ fun AppVersionBadge(
 ) {
     val containerColor = tag.containerColor()
     val contentColor = tag.contentColor()
-    
+
     // For frameless, we use the tag's intrinsic contentColor to ensure it matches the actual version channel.
     val finalContentColor = contentColor
 
     val displayText = buildString {
         append(if (versionName != null) "${tag.label} $versionName" else tag.label)
-        // Don't append FOSS if it's a frameless badge (used as a superscript)
-        if (!isFrameless && com.example.BuildConfig.FLAVOR == "foss") {
+        if (!isFrameless && true) {
             append(" • FOSS")
         }
     }

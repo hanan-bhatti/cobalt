@@ -63,7 +63,6 @@ import android.Manifest
 import android.content.Intent
 import android.os.Build
 import android.content.Context
-import com.example.service.DataDownloadManager
 import com.example.ui.theme.SuccessGreen
 import com.example.ui.theme.toThemeColor
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -89,16 +88,13 @@ import androidx.compose.foundation.text.KeyboardActions
 fun ProfileMainContent(
     viewModel: CobaltViewModel,
     onNavigateBack: () -> Unit,
-    onNavigateToAuth: () -> Unit,
     onNavigateToLegal: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
-    onNavigateToDevices: () -> Unit,
     onNavigateToMovieApiKey: () -> Unit = {},
     onNavigateToTraktSync: () -> Unit = {},
-    onNavigateToManageStorage: () -> Unit,
     onNavigateToCategory: (String) -> Unit = {}
 ) {
-    val isFirebaseAvailable = viewModel.isFirebaseAvailable
+
     val userEmail by viewModel.userEmail.collectAsState()
     val userName by viewModel.userName.collectAsState()
     val userPhotoUrl by viewModel.userPhotoUrl.collectAsState()
@@ -106,9 +102,6 @@ fun ProfileMainContent(
     val usedStorageBytes by viewModel.usedStorageBytes.collectAsState()
     val tmdbApiKey by viewModel.tmdbApiKey.collectAsState()
     var showSurveySheet by remember { mutableStateOf(false) }
-    var showDeleteAccountDialog by remember { mutableStateOf(false) }
-    var deleteConfirmChecked by remember { mutableStateOf(false) }
-    var isDeletingAccount by remember { mutableStateOf(false) }
 
     val totalItems = allItems.size
     val totalLinks = allItems.count { it.type == SavedItemType.LINK }
@@ -123,35 +116,8 @@ fun ProfileMainContent(
     val profileArchiveStyle by viewModel.settingsRepository.profileArchiveStyle.collectAsState()
 
     val context = LocalContext.current
-    val downloadProgress by DataDownloadManager.progress.collectAsState()
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        viewModel.startCloudMediaDownload(context)
-    }
-
-    val hasCloudMedia = remember(allItems) {
-        allItems.any { item ->
-            val url = if (item.type == SavedItemType.AUDIO) item.thumbnailPath ?: "" else item.content
-            val hasWebUrl = url.startsWith("http://") || url.startsWith("https://")
-            val isMedia = item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO
-            isMedia && hasWebUrl
-        }
-    }
-
-    var showSignOutConfirmDialog by remember { mutableStateOf(false) }
-    var showSignOutOnlyConfirmDialog by remember { mutableStateOf(false) }
-
     val prefs = remember { context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE) }
     val isContributor = remember(showSurveySheet) { prefs.getBoolean("survey_submitted", false) }
-    var showInterruptedBackupDialog by remember {
-        mutableStateOf(
-            prefs.getBoolean("interrupted_backup_in_progress", false) &&
-            !DataDownloadManager.progress.value.isDownloading
-        )
-    }
-
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     val pullToRefreshState = rememberPullToRefreshState()
@@ -177,7 +143,7 @@ fun ProfileMainContent(
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                painter = painterResource(id = if (com.example.BuildConfig.FLAVOR == "foss") R.drawable.ic_nav_settings_outline else R.drawable.ic_nav_profile_outline),
+                                painter = painterResource(id = R.drawable.ic_nav_settings_outline),
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(24.dp)
@@ -185,13 +151,13 @@ fun ProfileMainContent(
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = if (com.example.BuildConfig.FLAVOR == "foss") "Settings" else "Profile",
+                                    text = "Settings",
                                     fontSize = 24.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onBackground
                                 )
                                 Text(
-                                    text = if (com.example.BuildConfig.FLAVOR == "foss") "SETTINGS" else "SETTINGS, STORAGE & DEVICES",
+                                    text = "SETTINGS",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.secondary,
@@ -217,325 +183,8 @@ fun ProfileMainContent(
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
             // DOWNLOAD PROGRESS
-            if (downloadProgress.isDownloading) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
-                    ),
-                    shape = RoundedCornerShape(20.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "Archiving Media Files...",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            Text(
-                                text = "${downloadProgress.downloadedFiles}/${downloadProgress.totalFiles}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        }
 
-                        val progressVal = if (downloadProgress.totalBytes > 0) {
-                            downloadProgress.downloadedBytes.toFloat() / downloadProgress.totalBytes.toFloat()
-                        } else {
-                            0.0f
-                        }
 
-                        LinearProgressIndicator(
-                            progress = { progressVal.coerceIn(0.0f, 1.0f) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(RoundedCornerShape(4.dp)),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-
-                        if (downloadProgress.currentFileName.isNotEmpty()) {
-                            Text(
-                                text = "File: ${downloadProgress.currentFileName}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
-                                maxLines = 1
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            val speedMb = downloadProgress.speedBytesPerSec / (1024f * 1024f)
-                            val speedText = if (speedMb >= 0.1f) {
-                                String.format(Locale.US, "%.1f MB/s", speedMb)
-                            } else {
-                                String.format(Locale.US, "%.1f KB/s", downloadProgress.speedBytesPerSec / 1024f)
-                            }
-
-                            Text(
-                                text = "Speed: $speedText",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-
-                            val etaText = if (downloadProgress.estRemainingSeconds >= 0) {
-                                if (downloadProgress.estRemainingSeconds >= 60) {
-                                    "${downloadProgress.estRemainingSeconds / 60}m ${downloadProgress.estRemainingSeconds % 60}s remaining"
-                                } else {
-                                    "${downloadProgress.estRemainingSeconds}s remaining"
-                                }
-                            } else {
-                                "Estimating time..."
-                            }
-
-                            Text(
-                                text = etaText,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        }
-
-                        Text(
-                            text = "Downloaded ${formatStorageSize(downloadProgress.downloadedBytes)} / ${formatStorageSize(downloadProgress.totalBytes)}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                        )
-                    }
-                }
-            }
-            if (com.example.BuildConfig.FLAVOR != "foss") {
-            // HEADER
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                if (!isFirebaseAvailable) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(72.dp)
-                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_nav_profile_outline),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(48.dp)
-                            )
-                        }
-                        Text(
-                            text = userEmail ?: "Cobalt",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Local Knowledge Archive",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                        if (isContributor) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.EmojiEvents,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                    Text(
-                                        text = "Cobalt Contributor",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
-                            }
-                        }
-                    }
-                } else if (userEmail == null) {
-                    // Signed out
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(72.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_nav_profile_outline),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(48.dp)
-                            )
-                        }
-                        Text(
-                            text = "Guest",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Sign in to sync captures across all your devices",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                        Button(
-                            onClick = onNavigateToAuth,
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("Sign in to backup", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                } else {
-                    // Signed in
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Avatar
-                            Box(
-                                modifier = Modifier
-                                    .size(64.dp)
-                                    .background(MaterialTheme.colorScheme.onSurface, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (!userPhotoUrl.isNullOrBlank()) {
-                                    AsyncImage(
-                                        model = userPhotoUrl,
-                                        contentDescription = "Profile Picture",
-                                        modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                } else {
-                                    val initials = userEmail!!.substringBefore("@").take(1).uppercase()
-                                    Text(text = initials, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.width(16.dp))
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = userName ?: userEmail!!.substringBefore("@").replaceFirstChar { it.uppercase() },
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = userEmail ?: "",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    val indicatorColor = if (isSyncing) MaterialTheme.colorScheme.primary else SuccessGreen
-                                    val syncText = if (isSyncing) "Syncing..." else "Synced"
-                                    Box(modifier = Modifier.size(8.dp).background(indicatorColor, CircleShape))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(syncText, style = MaterialTheme.typography.bodySmall, color = indicatorColor, fontWeight = FontWeight.Medium)
-
-                                    if (isContributor) {
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Surface(
-                                            color = MaterialTheme.colorScheme.primaryContainer,
-                                            shape = RoundedCornerShape(8.dp)
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.EmojiEvents,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(12.dp)
-                                                )
-                                                Text(
-                                                    text = "Contributor",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                    fontSize = 10.sp
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Sign Out Button
-                        OutlinedButton(
-                            onClick = {
-                                showSignOutConfirmDialog = true
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(44.dp)
-                                .bounceClick(),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
-                            ),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_logout),
-                                contentDescription = "Sign Out",
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Sign Out", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-            }
 
             // YOUR ARCHIVE
             SectionContainer(title = "YOUR ARCHIVE") {
@@ -683,18 +332,7 @@ fun ProfileMainContent(
                     leadingIconRes = R.drawable.ic_nav_settings_outline,
                     onClick = onNavigateToSettings
                 )
-                if (isFirebaseAvailable) {
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                    ClickableRow(
-                        title = "Connected Devices",
-                        subtitle = "Active sessions and cross-device sync",
-                        leadingIconRes = R.drawable.ic_custom_devices,
-                        onClick = onNavigateToDevices
-                    )
-                }
+
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
                     modifier = Modifier.padding(horizontal = 16.dp)
@@ -722,190 +360,7 @@ fun ProfileMainContent(
                 )
             }
 
-            if (com.example.BuildConfig.FLAVOR != "foss") {
-            // STORAGE SECTION
-            SectionContainer(title = "STORAGE & BACKUPS") {
-                Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-                    if (isFirebaseAvailable) {
-                        val cloudUsedStorageBytes by viewModel.cloudUsedStorageBytes.collectAsState()
-                        val maxStorageBytes = 512f * 1024f * 1024f
 
-                        // Calculate fractions
-                        val cloudFraction = (cloudUsedStorageBytes.toFloat() / maxStorageBytes).coerceIn(0f, 1f)
-                        val localOnlyBytes = (usedStorageBytes - cloudUsedStorageBytes).coerceAtLeast(0L)
-                        val localFraction = (localOnlyBytes.toFloat() / maxStorageBytes).coerceIn(0f, 1f - cloudFraction)
-                        val freeFraction = (1f - cloudFraction - localFraction).coerceAtLeast(0f)
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Storage Space",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "${formatStorageSize(usedStorageBytes.coerceAtLeast(cloudUsedStorageBytes))} of 512 MB",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(16.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                        ) {
-                            Row(modifier = Modifier.fillMaxSize()) {
-                                if (cloudFraction > 0.001f) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxHeight()
-                                            .weight(cloudFraction)
-                                            .background(CategoryLink)
-                                    )
-                                }
-                                if (localFraction > 0.001f) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxHeight()
-                                            .weight(localFraction)
-                                            .background(CategoryCode)
-                                    )
-                                }
-                                if (freeFraction > 0.001f) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxHeight()
-                                            .weight(freeFraction)
-                                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(10.dp)
-                                            .clip(CircleShape)
-                                            .background(CategoryLink)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "Cloud Backup",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                                Text(
-                                    text = formatStorageSize(cloudUsedStorageBytes),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(10.dp)
-                                            .clip(CircleShape)
-                                            .background(CategoryCode)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "Local Only",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                                Text(
-                                    text = formatStorageSize(localOnlyBytes),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        if (userEmail == null) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(text = "Sign in to back up your content to the cloud.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
-                        }
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        Button(
-                            onClick = onNavigateToManageStorage,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .bounceClick()
-                                .height(50.dp),
-                            shape = MaterialTheme.shapes.large,
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                        ) {
-                            Text("Manage Storage", color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
-                        }
-                    } else {
-                        // FOSS Pure Local Storage Display
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Local Storage",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "${formatStorageSize(usedStorageBytes)} used",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(12.dp)
-                                .clip(CircleShape)
-                                .background(CategoryCode)
-                        )
-                    }
-                }
-            }
-
-            }
             // 1. HELP & COMMUNITY
             SectionContainer(title = "HELP & COMMUNITY") {
                 Column {
@@ -970,38 +425,7 @@ fun ProfileMainContent(
                 }
             }
 
-            if (isFirebaseAvailable) {
-                // 4. ACCOUNT & DATA SECURITY (Hidden deep at bottom)
-                SectionContainer(title = "ACCOUNT & DATA SECURITY") {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = "Permanently delete your account and erase all local notes, media, and cloud records.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
 
-                        OutlinedButton(
-                            onClick = { showDeleteAccountDialog = true },
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
-                            ),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .bounceClick()
-                                .testTag("delete_account_button")
-                        ) {
-                            Icon(imageVector = Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Delete Account & Erase All Data", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
 
             if (showSurveySheet) {
                 com.example.ui.components.SurveyBottomSheet(
@@ -1046,325 +470,15 @@ fun ProfileMainContent(
         }
 
         // Delete Account Confirmation Dialog
-        if (showDeleteAccountDialog) {
-            AlertDialog(
-                onDismissRequest = { showDeleteAccountDialog = false },
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(imageVector = Icons.Default.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                        Text("Delete Account & Erase Data?", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
-                    }
-                },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(
-                            text = "This action is PERMANENT and CANNOT be undone. All your archived notes, links, OCR images, voice memos, and cloud records will be permanently erased.",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.clickable { deleteConfirmChecked = !deleteConfirmChecked }
-                        ) {
-                            Checkbox(
-                                checked = deleteConfirmChecked,
-                                onCheckedChange = { deleteConfirmChecked = it },
-                                colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.error)
-                            )
-                            Text(
-                                text = "I understand that all my data will be permanently wiped.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            isDeletingAccount = true
-                            viewModel.deleteAccountAndEraseAll { success, errorMsg ->
-                                isDeletingAccount = false
-                                showDeleteAccountDialog = false
-                                if (!success && errorMsg != null) {
-                                    Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
-                                } else {
-                                    Toast.makeText(context, "Account and all data erased.", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        },
-                        enabled = deleteConfirmChecked && !isDeletingAccount,
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        if (isDeletingAccount) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                color = MaterialTheme.colorScheme.onError,
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Erasing...", fontWeight = FontWeight.Bold)
-                        } else {
-                            Text("Permanently Delete", fontWeight = FontWeight.Bold)
-                        }
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = { showDeleteAccountDialog = false },
-                        enabled = !isDeletingAccount
-                    ) {
-                        Text("Cancel")
-                    }
-                }
-            )
-        }
 
-        if (showSignOutConfirmDialog) {
-            AlertDialog(
-                onDismissRequest = { showSignOutConfirmDialog = false },
-                title = { Text("Sign Out") },
-                text = {
-                    if (hasCloudMedia) {
-                        Text("Would you like to download a backup of your cloud-synced photos, videos, and audios before signing out? This will save them to your device Storage. If you choose not to download, your cloud-synced media will remain in the cloud and can be accessed when you sign back in.")
-                    } else {
-                        Text("Are you sure you want to sign out?")
-                    }
-                },
-                confirmButton = {
-                    if (hasCloudMedia) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Button(
-                                onClick = {
-                                    showSignOutConfirmDialog = false
-                                    // Start Service
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                        val permissionCheck = androidx.core.content.ContextCompat.checkSelfPermission(
-                                            context,
-                                            Manifest.permission.POST_NOTIFICATIONS
-                                        )
-                                        val dontAskAgain = prefs.getBoolean("dont_ask_backup_notifications", false)
-                                        if (permissionCheck == android.content.pm.PackageManager.PERMISSION_GRANTED || dontAskAgain) {
-                                            viewModel.startCloudMediaDownload(context)
-                                        } else {
-                                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                        }
-                                    } else {
-                                        viewModel.startCloudMediaDownload(context)
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                            ) {
-                                Text("Download Backup & Sign Out")
-                            }
-                            OutlinedButton(
-                                onClick = {
-                                    showSignOutConfirmDialog = false
-                                    showSignOutOnlyConfirmDialog = true
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Sign Out Only (No Backup)")
-                            }
-                        }
-                    } else {
-                        Button(
-                            onClick = {
-                                showSignOutConfirmDialog = false
-                                viewModel.signOut()
-                                onNavigateToAuth()
-                            }
-                        ) {
-                            Text("Sign Out")
-                        }
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showSignOutConfirmDialog = false }) {
-                        Text("Cancel")
-                    }
-                }
-            )
-        }
 
-        if (showSignOutOnlyConfirmDialog) {
-            AlertDialog(
-                onDismissRequest = { showSignOutOnlyConfirmDialog = false },
-                title = { Text("Confirm Sign Out without Backup") },
-                text = {
-                    Text("Your cloud-synced photos, videos, and audio will not be accessible on this device until you sign back in online. Local copies of that media will not be created. Are you sure you want to sign out without downloading a backup?")
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            showSignOutOnlyConfirmDialog = false
-                            viewModel.signOut()
-                            onNavigateToAuth()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text("Sign Out Anyway")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showSignOutOnlyConfirmDialog = false }) {
-                        Text("Cancel")
-                    }
-                }
-            )
-        }
 
-        if (showInterruptedBackupDialog) {
-            AlertDialog(
-                onDismissRequest = { showInterruptedBackupDialog = false },
-                title = { Text("Backup Interrupted") },
-                text = {
-                    Text("Your last backup attempt was interrupted. Would you like to retry downloading the remaining media files now?")
-                },
-                confirmButton = {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Button(
-                            onClick = {
-                                showInterruptedBackupDialog = false
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    val permissionCheck = androidx.core.content.ContextCompat.checkSelfPermission(
-                                        context,
-                                        Manifest.permission.POST_NOTIFICATIONS
-                                    )
-                                    val dontAskAgain = prefs.getBoolean("dont_ask_backup_notifications", false)
-                                    if (permissionCheck == android.content.pm.PackageManager.PERMISSION_GRANTED || dontAskAgain) {
-                                        viewModel.startCloudMediaDownload(context, resumeInterrupted = true)
-                                    } else {
-                                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    }
-                                } else {
-                                    viewModel.startCloudMediaDownload(context, resumeInterrupted = true)
-                                }
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Retry Backup")
-                        }
-                        OutlinedButton(
-                            onClick = {
-                                showInterruptedBackupDialog = false
-                                prefs.edit().apply {
-                                    putBoolean("interrupted_backup_in_progress", false)
-                                    putStringSet("interrupted_backup_all_ids", emptySet())
-                                    putStringSet("interrupted_backup_completed_ids", emptySet())
-                                    putStringSet("interrupted_backup_failed_ids", emptySet())
-                                    apply()
-                                }
-                                viewModel.signOut()
-                                onNavigateToAuth()
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Sign Out Anyway")
-                        }
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = {
-                            prefs.edit().putBoolean("interrupted_backup_in_progress", false).apply()
-                            showInterruptedBackupDialog = false
-                        }
-                    ) {
-                        Text("Cancel")
-                    }
-                }
-            )
-        }
 
-        if (downloadProgress.failedItems.isNotEmpty()) {
-            val failedCount = downloadProgress.failedItems.size
-            val totalCount = downloadProgress.totalFiles
-            val succeededCount = downloadProgress.downloadedFiles
-            val titlesList = downloadProgress.failedItems.map { it.title }.joinToString(", ")
-            val truncatedTitles = if (titlesList.length > 150) titlesList.take(150) + "..." else titlesList
 
-            AlertDialog(
-                onDismissRequest = { /* Cannot dismiss by tapping outside */ },
-                title = { Text("Backup Completed with Failures") },
-                text = {
-                    Text("$succeededCount of $totalCount items backed up locally. $failedCount failed:\n\n$truncatedTitles\n\nWould you like to retry the failed items, or sign out anyway?")
-                },
-                confirmButton = {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Button(
-                            onClick = {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    val permissionCheck = androidx.core.content.ContextCompat.checkSelfPermission(
-                                        context,
-                                        Manifest.permission.POST_NOTIFICATIONS
-                                    )
-                                    val dontAskAgain = prefs.getBoolean("dont_ask_backup_notifications", false)
-                                    if (permissionCheck == android.content.pm.PackageManager.PERMISSION_GRANTED || dontAskAgain) {
-                                        viewModel.startCloudMediaDownload(context, retryFailed = true)
-                                    } else {
-                                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    }
-                                } else {
-                                    viewModel.startCloudMediaDownload(context, retryFailed = true)
-                                }
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Retry Failed")
-                        }
-                        OutlinedButton(
-                            onClick = {
-                                prefs.edit().apply {
-                                    putBoolean("interrupted_backup_in_progress", false)
-                                    putStringSet("interrupted_backup_all_ids", emptySet())
-                                    putStringSet("interrupted_backup_completed_ids", emptySet())
-                                    putStringSet("interrupted_backup_failed_ids", emptySet())
-                                    apply()
-                                }
-                                DataDownloadManager.reset()
-                                viewModel.signOut()
-                                onNavigateToAuth()
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("Sign Out Anyway")
-                        }
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = {
-                            prefs.edit().apply {
-                                putBoolean("interrupted_backup_in_progress", false)
-                                putStringSet("interrupted_backup_all_ids", emptySet())
-                                putStringSet("interrupted_backup_completed_ids", emptySet())
-                                putStringSet("interrupted_backup_failed_ids", emptySet())
-                                apply()
-                            }
-                            DataDownloadManager.reset()
-                        }
-                    ) {
-                        Text("Cancel Sign Out")
-                    }
-                }
-            )
-        }
+
+
+
+
         }
     }
 }

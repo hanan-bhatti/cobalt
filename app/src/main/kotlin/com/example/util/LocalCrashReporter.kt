@@ -15,11 +15,11 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * FOSS Uncaught Exception Handler and Crash Reporting Engine.
+ * Local Uncaught Exception Handler and Crash Reporting Engine.
  * Automatically intercepts uncaught app crashes, saves stack trace to a local text file,
  * and allows users to report crashes to hannanbhatti2006@gmail.com on next app startup.
  */
-object FossCrashReporter {
+object LocalCrashReporter {
 
     private const val CRASH_FILE_NAME = "latest_crash_report.txt"
     const val CRASH_EMAIL = "hannanbhatti2006@gmail.com"
@@ -33,7 +33,7 @@ object FossCrashReporter {
             try {
                 saveCrashToFile(context.applicationContext, thread, throwable)
             } catch (e: Throwable) {
-                Log.e("FossCrashReporter", "Failed to save crash log: ${e.message}", e)
+                Log.e("LocalCrashReporter", "Failed to save crash log: ${e.message}", e)
             }
             defaultHandler?.uncaughtException(thread, throwable)
         }
@@ -48,7 +48,7 @@ object FossCrashReporter {
 
         val reportText = buildString {
             appendLine("==================================================")
-            appendLine("COBALT FOSS CRASH REPORT")
+            appendLine("COBALT CRASH REPORT")
             appendLine("==================================================")
             appendLine("App Version    : ${BuildConfig.VERSION_NAME} (Build #${BuildConfig.VERSION_CODE})")
             appendLine("Device Model   : ${Build.MANUFACTURER.uppercase()} ${Build.MODEL}")
@@ -89,7 +89,7 @@ object FossCrashReporter {
                 file.delete()
             }
         } catch (e: Exception) {
-            Log.e("FossCrashReporter", "Failed to clear crash report file: ${e.message}")
+            Log.e("LocalCrashReporter", "Failed to clear crash report file: ${e.message}")
         }
     }
 
@@ -114,7 +114,7 @@ object FossCrashReporter {
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
                 putExtra(Intent.EXTRA_EMAIL, arrayOf(CRASH_EMAIL))
-                putExtra(Intent.EXTRA_SUBJECT, "Cobalt FOSS Crash Report - v${BuildConfig.VERSION_NAME}")
+                putExtra(Intent.EXTRA_SUBJECT, "Cobalt Crash Report - v${BuildConfig.VERSION_NAME}")
                 putExtra(Intent.EXTRA_TEXT, reportText)
                 if (uri != null) {
                     putExtra(Intent.EXTRA_STREAM, uri)
@@ -125,7 +125,7 @@ object FossCrashReporter {
             chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(chooser)
         } catch (e: Exception) {
-            Log.e("FossCrashReporter", "Failed to launch email chooser: ${e.message}", e)
+            Log.e("LocalCrashReporter", "Failed to launch email chooser: ${e.message}", e)
         }
     }
 }

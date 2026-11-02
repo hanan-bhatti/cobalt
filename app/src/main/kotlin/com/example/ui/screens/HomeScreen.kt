@@ -351,7 +351,7 @@ fun HomeScreen(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Text(
-                                    text = if (com.example.BuildConfig.FLAVOR == "foss") "Cobalt FOSS" else "Cobalt",
+                                    text = "Cobalt",
                                     fontSize = 28.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = FontFamily.SansSerif,
@@ -917,8 +917,8 @@ fun HomeScreen(
     // Add Custom Folder Dialog
     com.example.ui.components.FolderBottomSheet(
         isVisible = showAddFolderDialog,
-        onDismiss = { 
-            showAddFolderDialog = false 
+        onDismiss = {
+            showAddFolderDialog = false
             newFolderName = ""
         },
         initialFolder = null,

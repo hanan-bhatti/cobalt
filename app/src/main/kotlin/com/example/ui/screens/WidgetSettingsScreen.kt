@@ -423,17 +423,7 @@ private fun RecentItemsCustomizationSection(
         filtered.take(maxItems)
     }
 
-    val userName = remember {
-        try {
-            val clazz = Class.forName("com.google.firebase.auth.FirebaseAuth")
-            val instance = clazz.getMethod("getInstance").invoke(null)
-            val user = clazz.getMethod("getCurrentUser").invoke(instance)
-            val displayName = user?.javaClass?.getMethod("getDisplayName")?.invoke(user) as? String
-            val email = user?.javaClass?.getMethod("getEmail")?.invoke(user) as? String
-            displayName?.trim()?.ifBlank { null }
-                ?: email?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
-        } catch (e: Throwable) { null } ?: "User"
-    }
+    val userName = remember { "User" }
 
     val greeting = remember {
         val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)

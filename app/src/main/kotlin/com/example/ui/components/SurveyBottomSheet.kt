@@ -126,7 +126,7 @@ fun SurveyBottomSheet(
 
     var currentStep by remember { mutableIntStateOf(1) } // 1 or 2
     var selectedReaction by remember { mutableStateOf<SurveyReaction?>(null) }
-    
+
     // Non-biased lists: start with 0 selected so user actively chooses
     val favoriteFeatures = remember { mutableStateListOf<String>() }
     val desiredImprovements = remember { mutableStateListOf<String>() }
@@ -372,7 +372,7 @@ fun SurveyBottomSheet(
                                     )
                                 }
 
-                                if (com.example.BuildConfig.FLAVOR == "foss") {
+
                                     OutlinedButton(
                                         onClick = {
                                             com.example.util.FeedbackSubmissionManager.shareOrExportFeedback(
@@ -404,7 +404,7 @@ fun SurveyBottomSheet(
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                     }
-                                }
+
                             }
 
                             Button(
@@ -829,7 +829,7 @@ fun SurveyBottomSheet(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     // Submit Action Area
-                    if (com.example.BuildConfig.FLAVOR == "foss") {
+
                         Column(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
@@ -1045,84 +1045,7 @@ fun SurveyBottomSheet(
                                 }
                             }
                         }
-                    } else {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Button(
-                                onClick = {
-                                    isSubmitting = true
-                                    coroutineScope.launch {
-                                        try {
-                                            viewModel.submitSurvey(
-                                                context = context,
-                                                reaction = selectedReaction?.label ?: "Loving It",
-                                                favoriteFeatures = favoriteFeatures.toList(),
-                                                desiredImprovements = desiredImprovements.toList(),
-                                                npsScore = npsScore,
-                                                customFeedback = customFeedback,
-                                                almostQuitReason = almostQuitReason,
-                                                userEmail = activeUserEmail,
-                                                userId = envReport.userId,
-                                                deviceModel = envReport.deviceModel,
-                                                osVersion = envReport.osVersion,
-                                                appVersion = envReport.appVersion
-                                            )
-                                            submitSuccess = true
-                                            prefs.edit().putBoolean("survey_submitted", true).apply()
-                                            com.example.util.HapticManager.performSuccess(context)
-                                        } catch (e: Exception) {
-                                            android.util.Log.e("SurveyBottomSheet", "Survey submission failed: ${e.message}", e)
-                                            submitSuccess = true
-                                        } finally {
-                                            isSubmitting = false
-                                        }
-                                    }
-                                },
-                                shape = RoundedCornerShape(16.dp),
-                                enabled = !isSubmitting,
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                modifier = Modifier.fillMaxWidth().bounceClick().testTag("submit_survey_button")
-                            ) {
-                                if (isSubmitting) {
-                                    CircularWavyProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Submitting Survey...")
-                                } else {
-                                    Icon(painter = painterResource(id = R.drawable.ic_custom_send), contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Submit Survey", fontWeight = FontWeight.Bold)
-                                }
-                            }
 
-                            OutlinedButton(
-                                onClick = {
-                                    com.example.util.FeedbackSubmissionManager.copyToClipboard(context, "Cobalt Survey", currentMarkdownPreview)
-                                    android.widget.Toast.makeText(context, "Survey Markdown copied to clipboard!", android.widget.Toast.LENGTH_SHORT).show()
-                                    prefs.edit().putBoolean("survey_submitted", true).apply()
-                                    submitSuccess = true
-                                    com.example.util.HapticManager.performSuccess(context)
-                                },
-                                shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                    contentColor = MaterialTheme.colorScheme.onSurface
-                                ),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
-                                modifier = Modifier.fillMaxWidth().bounceClick()
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_copy),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Copy Markdown to Clipboard", fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                    }
                 }
             }
         }

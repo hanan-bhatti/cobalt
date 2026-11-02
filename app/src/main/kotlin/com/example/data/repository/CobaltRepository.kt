@@ -37,7 +37,6 @@ import com.example.data.remote.GenerationConfig
 import com.example.data.remote.ResponseSchema
 import com.example.data.remote.MediaApiClient
 import com.example.data.remote.MediaSearchResultItem
-// FOSS build: no Firebase imports
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
@@ -364,7 +363,7 @@ class CobaltRepository(private val context: Context) {
     private val prefs = context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE)
 
     companion object {
-        const val DEFAULT_TMDB_API_KEY = "712732e6f259631c21129a94a273a7bb"
+        const val DEFAULT_TMDB_API_KEY = ""
     }
 
     fun getTmdbApiKey(): String {
@@ -968,7 +967,7 @@ class CobaltRepository(private val context: Context) {
             } else {
                 item.copy(content = destFile.absolutePath, thumbnailPath = destFile.absolutePath)
             }
-            
+
             saveItemLocallyOnly(updatedItem)
             return@withContext updatedItem
         } catch (e: Exception) {
@@ -977,23 +976,13 @@ class CobaltRepository(private val context: Context) {
         }
     }
 
-    suspend fun uploadFeedbackAttachment(uri: android.net.Uri): String? = withContext(Dispatchers.IO) {
-        // Not supported in FOSS build
-        null
-    }
 
-    suspend fun backupSelectedItems(itemIds: List<String>, onProgress: ((com.example.sync.BackupSyncManager.SyncProgress) -> Unit)? = null) {
-        // No-op for FOSS
-    }
 
-    suspend fun syncUnsyncedItems(onProgress: ((com.example.sync.BackupSyncManager.SyncProgress) -> Unit)? = null) {
-        // No-op for FOSS
-    }
 
-    suspend fun submitFeedbackToCloud(collection: String, payload: Map<String, Any?>): Boolean = withContext(Dispatchers.IO) {
-        // Not supported in FOSS build, handled locally by saveLocally()
-        true // Return true so it doesn't fail the operation, as saving locally is the intended behavior for FOSS
-    }
+
+
+
+
 
     suspend fun wipeLocalData() = withContext(Dispatchers.IO) {
         try {

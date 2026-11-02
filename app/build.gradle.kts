@@ -6,14 +6,6 @@ plugins {
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.roborazzi)
-  alias(libs.plugins.google.services) apply false
-}
-
-val isFossBuild = gradle.startParameter.taskNames.isNotEmpty() &&
-    gradle.startParameter.taskNames.all { it.contains("foss", ignoreCase = true) }
-
-if (!isFossBuild) {
-  apply(plugin = "com.google.gms.google-services")
 }
 
 android {
@@ -27,19 +19,9 @@ android {
     versionCode = 19
     versionName = "2.2.3"
 
-    testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-  }
+    manifestPlaceholders["appName"] = "Cobalt"
 
-  flavorDimensions += "distribution"
-  productFlavors {
-    create("foss") {
-      dimension = "distribution"
-      manifestPlaceholders["appName"] = "Cobalt"
-    }
-    create("play") {
-      dimension = "distribution"
-      manifestPlaceholders["appName"] = "Cobalt"
-    }
+    testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
   signingConfigs {
@@ -110,17 +92,6 @@ tasks.withType<KotlinCompile>().configureEach {
 }
 
 
-// Disable Google Services tasks targeting the FOSS flavor
-tasks.matching {
-  val name = it.name
-  name.contains("GoogleServices", ignoreCase = true) &&
-  name.contains("Foss", ignoreCase = true)
-}.configureEach {
-  enabled = false
-}
-
-// Some unused dependencies are commented out below instead of being removed.
-// This makes it easy to add them back in the future if needed.
 dependencies {
   implementation(libs.jsoup)
   implementation(libs.commonmark)
@@ -128,23 +99,8 @@ dependencies {
   implementation(libs.commonmark.tables)
   implementation(libs.androidx.browser)
   implementation(platform(libs.androidx.compose.bom))
-  "playImplementation"(platform(libs.firebase.bom))
-  "playImplementation"(libs.firebase.ai)
-  // Uncomment to use Firestore:
-  "playImplementation"(libs.firebase.firestore)
-  "playImplementation"("com.google.firebase:firebase-storage")
 
-  // Firebase Auth with Google Sign-In requires all of the following to be uncommented together.
   // If you are using Firebase Auth with other providers (e.g. Email/Password), you may only need
-  // firebase-auth.
-  "playImplementation"(libs.firebase.auth)
-  "playImplementation"(libs.firebase.analytics)
-  // "playImplementation"(libs.firebase.crashlytics)
-  // "playImplementation"(libs.firebase.perf)
-  "playImplementation"(libs.androidx.credentials)
-  "playImplementation"(libs.androidx.credentials.play.services)
-  "playImplementation"(libs.googleid)
-  "playImplementation"(libs.firebase.appcheck.recaptcha)
   // implementation(libs.accompanist.permissions)
   implementation(libs.androidx.activity.compose)
   // implementation(libs.androidx.camera.camera2)
@@ -174,7 +130,6 @@ dependencies {
   implementation(libs.logging.interceptor)
   implementation(libs.moshi.kotlin)
   implementation(libs.okhttp)
-  // implementation(libs.play.services.location)
   implementation(libs.retrofit)
   implementation(libs.androidx.media3.exoplayer)
   implementation(libs.androidx.media3.ui)

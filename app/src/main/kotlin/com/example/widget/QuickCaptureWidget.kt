@@ -45,7 +45,6 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.size
 import com.example.MainActivity
 import com.example.R
-import com.example.utils.AnalyticsHelper
 
 import androidx.compose.ui.graphics.Color
 import androidx.glance.unit.ColorProvider
@@ -62,7 +61,6 @@ class QuickCaptureWidgetReceiver : GlanceAppWidgetReceiver() {
 
     override fun onEnabled(context: Context) {
         super.onEnabled(context)
-        AnalyticsHelper.logWidgetAdded(context)
     }
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
