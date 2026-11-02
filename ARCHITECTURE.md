@@ -54,13 +54,32 @@ tables/lists/fences within the budget retain normal rendering. Cross-block
 reference-link definitions and full formatting of oversized structures are not
 implemented; plain-text mode remains available.
 
-At 5 MB and above, the reader uses bounded plain-text windows. Section editing
-uses native Compose inputs for IME/selection inside the active window. A piece
-table streams original/append fragments on save; operation history and generation
-references support undo. Find/current-match replacement, outline, jump-to-line and
-copying an explicit line range work without reading the whole body into a String.
-Clipboard copies are limited to 100,000 characters; export handles larger ranges.
-Drag selection across virtualized blocks is not supported.
+At 5 MB and above, the reader uses bounded plain-text ranges. All note sizes use
+one original DetailScreen, with Find, Outline, export and saved-edit undo/redo in
+its overflow menu. Capture retains the original title, folders and frameless body;
+formatting controls appear only with the keyboard. Its file-backed body is one
+LazyColumn of bounded ranges, with a native Compose field in the focused range.
+There are no page/section navigation controls. Tapping another visible range
+stages the previous edit privately, then focuses the tapped range. This is a
+scrolling block editor, not a complete custom virtual text layout: drag selection,
+IME composition and cursor navigation across range boundaries remain unsupported.
+Text may wrap at a hard range boundary inside an unusually long logical line.
+
+The file editor journals its focused range and immutable staged generation.
+Switching focus does not change the database body reference. Save streams a piece
+table result through the verified writer with a concurrent-version check; an error
+retains the original and staged files. Pause/stop flush the range journal. Cancel
+closes the surface but retains the draft for the next edit of the same generation.
+A conflicting saved version prevents draft application; automatic reconciliation
+never promotes or deletes that conflicting generation.
+
+Import is available in Add, not Capture. SEND, SEND_MULTIPLE and content-provider
+VIEW intents can receive Markdown, MDX, plain text, common structured text and
+source files. The importer checks MIME/name, rejects known binary extensions,
+strictly decodes UTF-8 or BOM-labelled UTF-16 and streams normalized UTF-8 into
+private storage. MDX/HTML/JavaScript are inert document text. Multi-file shares are
+processed sequentially (at most 100 documents per action); source files are never
+modified. No network request or dependency was added for these paths.
 
 ## Validation
 

@@ -60,6 +60,12 @@ With Cobalt, you never need to leave your current task to save a thought or extr
 
 Cobalt has one Android application, distributed through GitHub and F-Droid.
 Notes are local. Optional integrations use your own credentials; see [NETWORK.md](NETWORK.md).
+
+Use **Add → Import text** for Markdown, MDX, TXT and other supported text documents.
+You can also send files to Cobalt through Android Share or Open with. MDX is stored
+as inert text; it does not execute JavaScript. Large notes use the original detail
+screen and a frameless scrolling capture body; native selection currently stays
+within the focused text range.
 Crash reports are saved locally and shared through an email chooser only on request.
 
 
@@ -91,8 +97,8 @@ Crash reports are saved locally and shared through an email chooser only on requ
 ### ⚡ Cobalt SideDock (100% Jetpack Compose)
 * **Decoupled Two-Window System**: The idle handle lives at the screen edge occupying a razor-thin window (`thickness + 16dp`), consuming **0% CPU and zero rendering cycles** when resting.
 * **Fluid 60fps / 90fps / 120fps Animations**: When triggered, the dock animates using GPU RenderThread transforms (`Modifier.graphicsLayer`). Zero window layout resizing Binder transactions occur during animation, eliminating all stutter and dropped frames even on budget chipsets.
-* **Inline Quick Note Scratchpad**: Write down thoughts instantly without opening the app; notes are saved directly to Room with automatic home widget updates.
-* **Live Recent Items & Tool Shortcuts**: One-tap access to your 4 latest items, OCR screen capture, link bookmarking, and instant media search.
+* **Inline Quick Note Scratchpad**: Write down thoughts instantly without opening the app; note bodies are saved as private Markdown files, with Room metadata and automatic home widget updates.
+* **Live Recent Items & Tool Shortcuts**: A bounded list of up to 15 recent items with two-line previews, OCR screen capture, link bookmarking, and instant media search.
 * **Smart Gesture Controls**: Swipe inward to expand, swipe toward the edge to dismiss, or long-press and drag to reposition the handle vertically along the display.
 
 ### 🔍 Gemini AI OCR & Region Marking
@@ -157,7 +163,7 @@ Cobalt uses only the permissions required to deliver its capture and background 
 | `RECORD_AUDIO` | Runtime | Captures voice memos for speech-to-text transcription. |
 | `INTERNET` | Normal | Communicates with the Gemini API and fetches link preview metadata. |
 | `ACCESS_NETWORK_STATE` | Normal | Checks network connectivity to optimize API requests and conserve battery. |
-| `POST_NOTIFICATIONS` | Runtime | Displays ongoing status notifications for active screen capture or sync jobs. |
+| `POST_NOTIFICATIONS` | Runtime | Displays ongoing status notifications for active screen capture and user-enabled reminders. |
 | `RECEIVE_BOOT_COMPLETED` | Normal | Restores the SideDock handle and glance widget updates upon device reboot. |
 
 ---

@@ -1,89 +1,95 @@
 # Device-test build report — 2026-11-02
 
-This report distinguishes source implementation, build results and device results.
-It does not certify a release before the device checks pass.
+This checkpoint covers the original-screen note redesign and text-file receiving.
+It is a debug device-test artifact, not a production-release certification.
 
-## Current validation
+## Changes and commits
 
-- Host SQL recovery/migration checks: passed in this session.
-- `git diff --check`: passed before the debug build.
-- Debug APK: **passed**, 18m 57s, one worker and a 1536 MiB Gradle Java heap cap.
-- Targeted note unit tests: **32 passed, 0 failures, 0 errors**, final run 1m 38s.
-- Instrumented/Compose/security test source compilation: **passed**, 3m 4s.
-- Instrumented/Compose/security test execution: not run on a device.
-- Release/R8, lint, benchmarks and emulator matrix: not run in this session.
-- New dependencies: none.
+- `e62f326`: strict streaming text-file import/receiving. MD, MDX, TXT, common
+  structured-text/source extensions, text MIME types, content-provider VIEW and
+  sequential SEND_MULTIPLE handling. UTF-8 and BOM-labelled UTF-16 are decoded
+  strictly; malformed input fails without modifying the source. MDX is inert.
+- `bb3f1d9`: private capture journals and explicit Save; edits stage immutable
+  generations without changing the saved body. Restore preserves the exact edited
+  byte range. Existing oversized bodies can be saved within their size allowance.
+  Closing during a file flush cannot reopen cancelled capture state.
+- `dee1dce`: original DetailScreen for all notes, frameless Capture body, formatting
+  toolbar only while the keyboard is open, scrolling file-backed editing without
+  section buttons, and Add-menu import instead of an editor import button.
+- Dependencies added: none. Application ID/signing configuration unchanged.
 
-An initial debug-build attempt failed after 4m 9s on two Compose-context errors
-in a size-warning label. These were corrected. The following attempt passed
-Kotlin compilation and progressed to D8 dependency processing; final outcome is
-recorded below when complete. A thread inspection showed active D8 work rather
-than a blocked compiler. An older verified idle Gradle daemon was stopped to
-reduce memory use; the active daemon and heap cap were left unchanged.
+## Actual verification
 
-Clipboard constraints were checked against Android's documentation: Binder uses
-a shared, limited transaction buffer, so no universal multi-MB text clipboard
-capacity is promised. Large documents use SAF streams instead. See
-[TransactionTooLargeException](https://developer.android.com/reference/android/os/TransactionTooLargeException)
-and [copy/paste with content URIs](https://developer.android.com/develop/ui/views/touch-and-input/copy-paste).
+All Gradle commands used one worker, no parallel tasks and a 1536 MiB Gradle Java
+heap cap. Kotlin compilation runs in-process; unit-test forks have a 512 MiB cap.
+These are configured limits, not measured app memory or total host RAM.
 
-The configured heap cap is not a measured peak heap or total system RAM figure.
-Unit-test forks are restricted to one with a 512 MiB heap cap. No emulator runs
-alongside these commands.
+- Initial redesign build: failed in **7m 6s** on an audio-preview label referencing
+  note-only state. Corrected.
+- Debug build plus targeted note tests: **passed in 9m 49s**.
+- New instrumented test source compilation: **passed in 3m 35s**. Added two isolated
+  filesystem/database cases for capture-journal restore and explicit-save behavior.
+- Refreshed debug build plus targeted note tests after the cancellation fix:
+  **passed in 13m 47s**. XML totals: **36 tests, 0 failures, 0 errors, 0 skipped**.
+- `git diff --check`: passed.
+- Instrumented/Compose tests: **not executed**. No emulator was started.
+- Release/R8, lint, benchmarks and API/device matrix: **not run in this pass**.
+- Existing unrelated screenshot-test deprecation, Gradle and native-access warnings
+  remain. No performance acceptance target is claimed from compilation/unit tests.
 
-## Installable artifact and checks
+Verification command:
 
-- APK: `app/build/outputs/apk/debug/app-debug.apk`, 30,830,066 bytes.
-- Package: `com.hanan_bhatti.cobalt.debug`; label: **Cobalt Debug**.
-- Version: 2.2.3 (19). Installs separately from the production app/data.
-- SHA-256: `45c41f7106527ce30900bdef3b55d5284128263d8663f355e96d7579e00f5d13`.
-- `apksigner verify --print-certs`: passed (debug signing certificate).
-- Compiled manifest: `allowBackup=false`; private FileProvider authority uses the
-  debug package. `debuggable=true` is expected for this test artifact. Release
-  build configuration explicitly sets `isDebuggable=false`; no release APK was
-  built/validated in this run.
-- Scanned all 14 DEX files for Firebase, Google Play Services and BillingClient
-  class-descriptor prefixes: none found. This is a binary signature scan, not an
-  independent review of every transitive dependency's licence.
+```sh
+./gradlew :app:assembleDebug :app:testDebugUnitTest --tests 'com.example.notes.*' \
+  --max-workers=1 --no-parallel --console=plain \
+  '-Dorg.gradle.jvmargs=-Xmx1536m -XX:MaxMetaspaceSize=512m -XX:TieredStopAtLevel=1 -Dfile.encoding=UTF-8'
+```
 
-The first targeted test run had one failure caused by Robolectric's unsupported
-directory-fsync shadow. The export/import unit test now uses a stream fixture;
-real filesystem fsync/write-fault tests remain instrumented tests. The entire
-32-test note suite then passed. Existing unrelated screenshot-test deprecation
-and native-library/Gradle warnings remain; they are not recorded as new test
-passes or resolved quality checks.
+Local logs: `app/build/notes-redesign-build.log`,
+`app/build/notes-redesign-verification.log`,
+`app/build/notes-redesign-device-test-compile.log`,
+`app/build/notes-redesign-final-verification.log`.
 
-This artifact is ready for **device testing**, not production-release certification.
-The device checklist, release/R8 validation, lint and measured performance remain
-outstanding. Oversized Markdown structures deliberately fall back to literal
-text; cross-block reference definitions and drag selection across virtualized
-blocks are not claimed. Use explicit line-range copy and plain-text/export modes.
+## Current artifact
 
-## Device acceptance checklist
+- `app/build/outputs/apk/debug/app-debug.apk`: **30,814,238 bytes**.
+- Package `com.hanan_bhatti.cobalt.debug`, label **Cobalt Debug**, version **2.2.3 (19)**.
+  This installs alongside production and does not access its private notes.
+- SHA-256: `b471b36312ca5a3a313c628c3b3f6abed8c493a14b83ae20ca30b17e25758877`.
+- `apksigner verify --print-certs`: passed with the debug certificate.
+- All **14 DEX files** scanned: no Firebase, Google Play Services or BillingClient
+  class-descriptor prefixes. This is a binary signature scan, not a complete
+  transitive-license audit.
 
-Use the debug package for the first test; it cannot access the release package's
-notes. Preserve the release data until an update/migration test is explicitly
-planned. Fixtures are generated individually by `scripts/generate_note_fixture.py`.
+## Known limits and device checks
 
-1. Import 1k/3k/5k/10k link fixtures, the 100k-character and 50k-line fixtures.
-2. Paste into normal capture, Quick Note and Side Dock; verify progress and body
-   equality after save/reopen. Check that multi-line share text remains complete.
-3. Test ordinary Markdown, long fenced code, tables/lists, checkboxes, link taps,
-   plain-text mode, find/replace, heading/line jumps and cross-section copy.
-4. Edit, undo/redo, rotate and use split-screen with the keyboard visible. Background
-   the editor and kill/reopen the debug process; recover the journaled draft.
-5. On a disposable v8 fixture database, test migration, cancellation/retry and
-   missing-body handling. Confirm the original survives every failed conversion.
-6. Test disk-full/write faults, export cancellation and concurrent edit/delete.
-7. Import 5/50/54/56 MB fixtures one at a time. Verify tolerance warnings, refusal
-   above 55 MB, explicit splitting and preservation of the original source.
-8. Simulate two uncaught startup exceptions; verify safe mode skips normal workers
-   and opens recovery. Normal process termination must not increment the counter.
-9. Confirm Side Dock shows two lines and only 15 recent items; compare Home/folder
-   titles, counts, tags, reminders, suggestions and heatmap against existing data.
-10. Verify explicit share/email grants expose only export cache paths. Exercise
-    credential migration, re-authentication after key loss and Recents privacy.
+The body looks like one frameless scrolling surface. Internally it is a lazy list
+of bounded ranges with a native input in the focused range. Tap another part to
+focus it. Native selection, IME composition and cursor movement currently stay
+within that range; cross-range editing is not fully seamless. A hard boundary
+inside a very long logical line may affect wrapping. This is not the finished
+custom large-file editor. The former separate-screen line-copy/jump/replace UI
+has not been carried into the simplified interface; Find, Outline, plain-text
+reading, export and saved-edit undo/redo are in Detail's overflow menu.
 
-API 29, 31/32, 34, 36, low-RAM and high-density profiles, an R8 APK smoke test,
-Macrobenchmark timings/jank, typing latency and heap measurements remain required
-before the original release/performance acceptance criteria can be claimed.
+Large Markdown structures fall back to literal bounded fragments; cross-block
+reference definitions remain unsupported. Pause/stop journals a file edit; Cancel
+retains its draft. A conflicting saved version prevents automatic draft application;
+conflicting generations are retained, and a dedicated recovery action for those
+capture drafts is still outstanding.
+
+Before release, exercise:
+
+1. Import/open/share MD, MDX, TXT, UTF-16 and malformed/binary documents from real
+   file providers, including multiple shares and a share during first migration.
+2. Import 1k/3k/5k/10k links, 100k characters, 50k lines and 5/50/54/56 MB fixtures
+   using `scripts/generate_note_fixture.py`; verify full content after save/reopen.
+3. Paste, scroll, focus a different range, format, save, cancel/reopen, rotate,
+   background/kill/reopen and use split-screen with the keyboard visible.
+4. Validate v8 migration, missing files, disk-full/write faults, cancellation,
+   concurrent edits/deletes, export/import round trips and startup safe mode.
+5. Confirm Home, folders, Side Dock's 15 items/two-line previews, widget, reminders,
+   suggestions and heatmap use bounded metadata and retain their existing behavior.
+6. Run instrumented/Compose tests, release/R8 smoke tests, lint and the API 29,
+   31/32, 34, 36, low-RAM and high-density matrix. Measure typing latency, scrolling
+   jank, open times and heap before claiming the original performance budgets.

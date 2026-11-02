@@ -1,7 +1,17 @@
 ## Unreleased — single application cleanup
 
+- Integrate large-note reading into the original detail screen; place advanced
+  note actions in its overflow menu instead of a separate large-note interface.
+- Restore frameless capture editing and keyboard-only formatting controls.
+  Large-note editing scrolls through lazily loaded text with no section buttons;
+  native selection currently remains within the focused text range.
+- Move document import from Capture to the global Add menu. Receive/open Markdown,
+  MDX, TXT and other supported text documents from content providers, including
+  sequential multi-file shares; strictly decode UTF-8/BOM-labelled UTF-16.
+- Journal capture edits privately and commit the saved note only on Save.
+
 - Add bounded lazy Markdown blocks with plain-text fallback, section recovery,
-  saved-generation undo/redo, line-range copy and lifecycle journal flushing.
+  saved-generation undo/redo and lifecycle journal flushing.
 - Restrict FileProvider to explicit export caches; protect integration credentials
   with Android Keystore and add an optional Recents/screenshot privacy control.
 - Redact interpolated application logs; add recovery/write-fault/UI test sources
@@ -17,7 +27,7 @@
 - In development: private Markdown body files for every text/code note, verified
   resumable conversion, a one-time migration prompt and a Data Migration results/retry page.
 - In development: body-free list queries, startup crash recovery and bounded
-  plain-text reading/section editing for large notes. Android verification is pending.
+  lazy reading and frameless range editing for large notes. Device validation is pending.
 - Preserve quick-note drafts when saving fails and stream complete Markdown when sharing notes.
 
 # Changelog
