@@ -21,6 +21,7 @@ PACKAGE = 'com.hanan_bhatti.cobalt.debug'
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--serial', default='emulator-5554')
+    p.add_argument('--no-launch', action='store_true', help='Keep the one-time prompt unacknowledged for the next APK launch')
     args = p.parse_args()
     if not args.serial.startswith('emulator-'):
         raise ValueError('Only the explicitly selected emulator may be seeded')
@@ -44,6 +45,7 @@ def main():
     backup.write_bytes(adb('exec-out', 'run-as', PACKAGE, 'tar', '-cf', '-', 'databases', 'shared_prefs'))
     os.chmod(backup, 0o600)
     remote = '/data/local/tmp/cobalt-legacy-note-seeder.dex'
+    adb('shell', 'rm', '-f', remote)  # Remove only this harness's previous read-only DEX.
     adb('push', str(dex), remote)
     adb('shell', 'chmod', '444', remote)
     result = adb('shell', 'run-as', PACKAGE, 'env', f'CLASSPATH={remote}',
@@ -55,7 +57,7 @@ def main():
     assert data['count'] == 60
     assert min(n['bytes'] for n in data['notes']) == 1000
     assert max(n['bytes'] for n in data['notes']) == 2000000
-    launch = adb('shell', 'am', 'start', '-W', '-n', f'{PACKAGE}/com.example.MainActivity')
+    launch = b'' if args.no_launch else adb('shell', 'am', 'start', '-W', '-n', f'{PACKAGE}/com.example.MainActivity')
     print(result.decode().strip())
     print(json.dumps(dict(backup=str(backup), manifest=str(folder/'manifest.json'),
                          launch=launch.decode().strip(), schema_upgrade_test=False)))
