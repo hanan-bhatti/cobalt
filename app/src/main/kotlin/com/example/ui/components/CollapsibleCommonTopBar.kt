@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -24,6 +25,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -33,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.platform.LocalDensity
@@ -141,6 +146,8 @@ fun CollapsibleCommonTopBar(
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     val clampedFraction = collapseFraction.coerceIn(0f, 1f)
+    var actionWidthPx by remember { mutableIntStateOf(0) }
+    val actionPadding = with(LocalDensity.current) { if (actionWidthPx > 0) actionWidthPx.toDp() + 24.dp else 20.dp }
     val titleScale = lerp(1.22f, 0.82f, clampedFraction)
     val titlePaddingStart = lerp(20.dp, 68.dp, clampedFraction)
     val titleVerticalBias = lerp(0.85f, 0.0f, clampedFraction)
@@ -167,7 +174,7 @@ fun CollapsibleCommonTopBar(
                     .fillMaxSize()
                     .padding(
                         start = titlePaddingStart,
-                        end = 20.dp,
+                        end = lerp(20.dp, actionPadding, clampedFraction),
                         bottom = lerp(18.dp, 0.dp, clampedFraction)
                     ),
                 contentAlignment = BiasAlignment(horizontalBias = -1f, verticalBias = titleVerticalBias)
@@ -198,6 +205,13 @@ fun CollapsibleCommonTopBar(
                     }
                 }
             }
+
+            Row(
+                modifier = Modifier.align(Alignment.TopEnd).height(64.dp).padding(end = 12.dp)
+                    .onSizeChanged { actionWidthPx = it.width },
+                verticalAlignment = Alignment.CenterVertically,
+                content = actions
+            )
 
             // Top-left Navigation Icon (Back Button)
             Box(

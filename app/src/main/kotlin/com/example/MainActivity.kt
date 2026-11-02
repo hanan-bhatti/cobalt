@@ -144,7 +144,7 @@ class MainActivity : ComponentActivity() {
         }
         enableEdgeToEdge()
         setContent {
-            com.example.ui.theme.MyApplicationTheme {
+            com.example.ui.components.NoteStorageTheme {
                 androidx.compose.material3.Surface(Modifier.fillMaxSize()) {
                     androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) {
                         androidx.compose.material3.CircularProgressIndicator()
@@ -162,26 +162,21 @@ class MainActivity : ComponentActivity() {
             } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
             catch (_: Exception) {
                 setContent {
-                    com.example.ui.theme.MyApplicationTheme {
-                        androidx.compose.material3.Surface(Modifier.fillMaxSize()) {
-                            androidx.compose.foundation.layout.Column(Modifier.padding(24.dp)) {
-                                androidx.compose.material3.Text("Cobalt could not prepare note storage. Your notes have not been deleted.")
-                                androidx.compose.material3.TextButton(onClick = { recreate() }) { androidx.compose.material3.Text("Retry") }
-                                androidx.compose.material3.TextButton(onClick = { showRecovery() }) { androidx.compose.material3.Text("Open recovery") }
-                            }
-                        }
+                    com.example.ui.components.NoteStorageTheme {
+                        com.example.ui.screens.NoteStorageErrorScreen(
+                            onRetry = { recreate() }, onRecovery = { showRecovery() }, onBack = { finish() }
+                        )
                     }
                 }
                 return@launch
             }
             if (needed) {
                 setContent {
-                    com.example.ui.theme.MyApplicationTheme {
+                    com.example.ui.components.NoteStorageTheme {
                         com.example.ui.screens.NoteMigrationScreen(
                             startup = true,
                             onDone = { startAppropriateApp() },
-                            onBack = { finish() },
-                            onRecovery = { showRecovery() }
+                            onBack = { finish() }
                         )
                     }
                 }
@@ -196,7 +191,7 @@ class MainActivity : ComponentActivity() {
 
     private fun showRecovery() {
         setContent {
-            com.example.ui.theme.MyApplicationTheme {
+            com.example.ui.components.NoteStorageTheme {
                 com.example.ui.screens.NoteRecoveryScreen(onExitSafeMode = {
                     com.example.notes.StartupCrashGuard.leaveSafeMode()
                     recreate()
