@@ -57,12 +57,14 @@ Existing oversized content always remains accessible in plain large-file mode.
 Use a streaming SAF import for multi-MB files. Clipboard limits need separate
 verification; do not promise that Android can carry a 50 MB clipboard payload.
 
-The planned piece table and incremental UTF-8 line index sit behind NoteBodyStore.
-They are not implemented in this checkpoint. The current large-note fallback
-uses lazy byte windows, a bounded page cache and streaming section replacement.
-It displays plain text without link decoration. Small notes retain the existing
-Markdown renderer. Editor choice and cross-block Markdown semantics still require
-the Phase 4 options review.
+The implementation now includes a byte-source piece table, sparse incremental
+UTF-8 line index, bounded section inputs and recovery journals. The reader uses
+lazy complete Markdown blocks below 5 MB, with literal bounded fragments for
+oversized structures, and plain-text windows for larger files. Link decoration
+is capped across the note. Small notes retain the existing renderer with
+background parsing and input/depth guards. See ARCHITECTURE.md for the implemented
+trade-offs and docs/notes-device-test-report.md for actual validation; cross-block
+reference definitions and drag selection across virtualized blocks remain limitations.
 
 The implemented search uses the existing Room/SQLite FTS4 support with the first
 32 KiB of each file plus its title. This requires no new dependency. It does not

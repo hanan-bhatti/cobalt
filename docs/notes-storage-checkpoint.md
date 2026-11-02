@@ -1,5 +1,11 @@
 # Markdown storage checkpoint — 2026-11-02
 
+**Latest verified status:** a signed, isolated debug APK built successfully;
+32 targeted note unit tests passed; instrumented test sources compiled. See
+[device-test report](notes-device-test-report.md) for the artifact/checksum,
+actual command results and remaining device/release/performance checks. Older
+checkpoint text below is retained as implementation history, not current status.
+
 ## Latest source status
 
 Feature expansion is stopped pending compilation. Since the initial checkpoint,

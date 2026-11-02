@@ -7,9 +7,10 @@ It does not certify a release before the device checks pass.
 
 - Host SQL recovery/migration checks: passed in this session.
 - `git diff --check`: passed before the debug build.
-- Debug APK: build running with one worker and a 1536 MiB Gradle Java heap cap.
-- Targeted note unit tests: pending the debug build.
-- Instrumented/Compose/security tests: source added; not run on a device.
+- Debug APK: **passed**, 18m 57s, one worker and a 1536 MiB Gradle Java heap cap.
+- Targeted note unit tests: **32 passed, 0 failures, 0 errors**, final run 1m 38s.
+- Instrumented/Compose/security test source compilation: **passed**, 3m 4s.
+- Instrumented/Compose/security test execution: not run on a device.
 - Release/R8, lint, benchmarks and emulator matrix: not run in this session.
 - New dependencies: none.
 
@@ -29,6 +30,34 @@ and [copy/paste with content URIs](https://developer.android.com/develop/ui/view
 The configured heap cap is not a measured peak heap or total system RAM figure.
 Unit-test forks are restricted to one with a 512 MiB heap cap. No emulator runs
 alongside these commands.
+
+## Installable artifact and checks
+
+- APK: `app/build/outputs/apk/debug/app-debug.apk`, 30,830,066 bytes.
+- Package: `com.hanan_bhatti.cobalt.debug`; label: **Cobalt Debug**.
+- Version: 2.2.3 (19). Installs separately from the production app/data.
+- SHA-256: `45c41f7106527ce30900bdef3b55d5284128263d8663f355e96d7579e00f5d13`.
+- `apksigner verify --print-certs`: passed (debug signing certificate).
+- Compiled manifest: `allowBackup=false`; private FileProvider authority uses the
+  debug package. `debuggable=true` is expected for this test artifact. Release
+  build configuration explicitly sets `isDebuggable=false`; no release APK was
+  built/validated in this run.
+- Scanned all 14 DEX files for Firebase, Google Play Services and BillingClient
+  class-descriptor prefixes: none found. This is a binary signature scan, not an
+  independent review of every transitive dependency's licence.
+
+The first targeted test run had one failure caused by Robolectric's unsupported
+directory-fsync shadow. The export/import unit test now uses a stream fixture;
+real filesystem fsync/write-fault tests remain instrumented tests. The entire
+32-test note suite then passed. Existing unrelated screenshot-test deprecation
+and native-library/Gradle warnings remain; they are not recorded as new test
+passes or resolved quality checks.
+
+This artifact is ready for **device testing**, not production-release certification.
+The device checklist, release/R8 validation, lint and measured performance remain
+outstanding. Oversized Markdown structures deliberately fall back to literal
+text; cross-block reference definitions and drag selection across virtualized
+blocks are not claimed. Use explicit line-range copy and plain-text/export modes.
 
 ## Device acceptance checklist
 
