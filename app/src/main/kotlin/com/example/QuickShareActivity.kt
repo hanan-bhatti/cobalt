@@ -57,9 +57,9 @@ class QuickShareActivity : ComponentActivity() {
 
         val intent = intent
         val action = intent?.action
-        val type = intent?.type
+        val type = intent?.type ?: intent?.data?.let { contentResolver.getType(it) } ?: "application/octet-stream"
 
-        if ((Intent.ACTION_SEND == action || Intent.ACTION_SEND_MULTIPLE == action) && type != null) {
+        if ((Intent.ACTION_SEND == action || Intent.ACTION_SEND_MULTIPLE == action || Intent.ACTION_VIEW == action)) {
             activityScope.launch { handleQuickShare(intent, type) }
         } else {
             finish()
@@ -74,6 +74,32 @@ class QuickShareActivity : ComponentActivity() {
 
         val id = UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
+
+        val streams = com.example.notes.TextFileIntents.uris(intent)
+        val isTextFileIntent = com.example.notes.TextFileIntents.isTextFile(intent, mimeType)
+        if (streams.isNotEmpty() && isTextFileIntent) {
+            if (streams.size > 100) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(appContext, "Share at most 100 text files at a time. Nothing was imported.", Toast.LENGTH_LONG).show()
+                    finish()
+                }
+                return
+            }
+            var saved = 0
+            var failed = 0
+            for (uri in streams.distinct()) {
+                try { com.example.notes.TextFileImporter(appContext).importFile(uri); saved++ }
+                catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+                catch (_: Exception) { failed++ }
+            }
+            withContext(Dispatchers.Main) {
+                com.example.widget.WidgetUpdater.update(appContext)
+                Toast.makeText(appContext, "$saved text document(s) imported" +
+                    if (failed > 0) "; $failed unavailable, unsupported or above 55 MB. Originals retained." else ".", Toast.LENGTH_LONG).show()
+                finish()
+            }
+            return
+        }
 
         when {
             // 1. Text or URL Shared

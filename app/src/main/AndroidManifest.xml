@@ -68,7 +68,58 @@
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="text/plain" />
+                <data android:mimeType="text/*" />
+                <data android:mimeType="application/json" />
+                <data android:mimeType="application/ld+json" />
+                <data android:mimeType="application/x-ndjson" />
+                <data android:mimeType="application/xml" />
+                <data android:mimeType="application/xhtml+xml" />
+                <data android:mimeType="application/yaml" />
+                <data android:mimeType="application/x-yaml" />
+                <data android:mimeType="application/toml" />
+                <data android:mimeType="application/javascript" />
+                <data android:mimeType="application/sql" />
+                <data android:mimeType="application/mdx" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+
+            <!-- Batch text-file shares are processed sequentially. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/*" />
+                <data android:mimeType="application/json" />
+                <data android:mimeType="application/ld+json" />
+                <data android:mimeType="application/x-ndjson" />
+                <data android:mimeType="application/xml" />
+                <data android:mimeType="application/xhtml+xml" />
+                <data android:mimeType="application/yaml" />
+                <data android:mimeType="application/x-yaml" />
+                <data android:mimeType="application/toml" />
+                <data android:mimeType="application/javascript" />
+                <data android:mimeType="application/sql" />
+                <data android:mimeType="application/mdx" />
+                <data android:mimeType="application/octet-stream" />
+            </intent-filter>
+
+            <!-- Open text documents directly from a content provider. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:mimeType="text/*" />
+                <data android:mimeType="application/json" />
+                <data android:mimeType="application/ld+json" />
+                <data android:mimeType="application/x-ndjson" />
+                <data android:mimeType="application/xml" />
+                <data android:mimeType="application/xhtml+xml" />
+                <data android:mimeType="application/yaml" />
+                <data android:mimeType="application/x-yaml" />
+                <data android:mimeType="application/toml" />
+                <data android:mimeType="application/javascript" />
+                <data android:mimeType="application/sql" />
+                <data android:mimeType="application/mdx" />
+                <data android:mimeType="application/octet-stream" />
             </intent-filter>
 
             <!-- Support shared photos, screenshot image files -->
