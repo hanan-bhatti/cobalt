@@ -98,7 +98,10 @@ object LocalCrashReporter {
      */
     fun sendCrashReportEmail(context: Context, reportText: String) {
         try {
-            val file = File(context.filesDir, CRASH_FILE_NAME)
+            val source = File(context.filesDir, CRASH_FILE_NAME)
+            val directory = File(context.cacheDir, "crash_reports").also { it.mkdirs() }
+            val file = File(directory, "crash_report.txt")
+            if (source.exists()) source.copyTo(file, overwrite = true)
             val uri: Uri? = if (file.exists()) {
                 try {
                     FileProvider.getUriForFile(

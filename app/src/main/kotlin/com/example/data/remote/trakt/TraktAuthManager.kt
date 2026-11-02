@@ -51,6 +51,7 @@ sealed class TraktDeviceAuthState {
 class TraktAuthManager(private val context: Context) {
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val secrets = com.example.util.SecretPreferences(prefs, PREFS_NAME)
     private val authScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var pollingJob: Job? = null
 
@@ -69,11 +70,11 @@ class TraktAuthManager(private val context: Context) {
     private val _deviceAuthState = MutableStateFlow<TraktDeviceAuthState>(TraktDeviceAuthState.Idle)
     val deviceAuthState: StateFlow<TraktDeviceAuthState> = _deviceAuthState.asStateFlow()
 
-    fun getAccessToken(): String? = prefs.getString(KEY_ACCESS_TOKEN, null)
-    fun getRefreshToken(): String? = prefs.getString(KEY_REFRESH_TOKEN, null)
+    fun getAccessToken(): String? = secrets.get(KEY_ACCESS_TOKEN)
+    fun getRefreshToken(): String? = secrets.get(KEY_REFRESH_TOKEN)
 
     fun hasValidToken(): Boolean {
-        val token = prefs.getString(KEY_ACCESS_TOKEN, null)
+        val token = secrets.get(KEY_ACCESS_TOKEN)
         return !token.isNullOrBlank()
     }
 
@@ -338,11 +339,8 @@ class TraktAuthManager(private val context: Context) {
 
     fun saveTokens(token: TraktTokenResponse) {
         val expiresAt = System.currentTimeMillis() + (token.expires_in * 1000L)
-        prefs.edit()
-            .putString(KEY_ACCESS_TOKEN, token.access_token)
-            .putString(KEY_REFRESH_TOKEN, token.refresh_token)
-            .putLong(KEY_EXPIRES_AT, expiresAt)
-            .apply()
+        secrets.putAll(mapOf(KEY_ACCESS_TOKEN to token.access_token, KEY_REFRESH_TOKEN to token.refresh_token))
+        prefs.edit().putLong(KEY_EXPIRES_AT, expiresAt).apply()
 
         _isConnected.value = true
     }
@@ -372,7 +370,7 @@ class TraktAuthManager(private val context: Context) {
     suspend fun refreshAccessTokenIfNeeded(): String? = withContext(Dispatchers.IO) {
         val expiresAt = prefs.getLong(KEY_EXPIRES_AT, 0L)
         val now = System.currentTimeMillis()
-        val currentAccessToken = prefs.getString(KEY_ACCESS_TOKEN, null)
+        val currentAccessToken = secrets.get(KEY_ACCESS_TOKEN)
 
         // Refresh if within 2 days of expiration or already expired
         val twoDaysMs = 2 * 24 * 60 * 60 * 1000L
@@ -380,7 +378,7 @@ class TraktAuthManager(private val context: Context) {
             return@withContext currentAccessToken
         }
 
-        val refreshToken = prefs.getString(KEY_REFRESH_TOKEN, null) ?: return@withContext null
+        val refreshToken = secrets.get(KEY_REFRESH_TOKEN) ?: return@withContext null
 
         try {
             val response = TraktClient.apiService.refreshToken(

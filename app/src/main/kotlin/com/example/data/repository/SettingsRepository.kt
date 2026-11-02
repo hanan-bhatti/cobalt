@@ -27,7 +27,14 @@ import kotlinx.coroutines.flow.asStateFlow
 class SettingsRepository(private val context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("cobalt_settings", Context.MODE_PRIVATE)
 
-    private val _geminiApiKey = MutableStateFlow(prefs.getString(KEY_GEMINI_API_KEY, "") ?: "")
+    private val secrets = com.example.util.SecretPreferences(prefs, "cobalt_settings")
+    private val _hideRecents = MutableStateFlow(prefs.getBoolean("hide_recents", false))
+    val hideRecents = _hideRecents.asStateFlow()
+    fun setHideRecents(enabled: Boolean) {
+        prefs.edit().putBoolean("hide_recents", enabled).apply()
+        _hideRecents.value = enabled
+    }
+    private val _geminiApiKey = MutableStateFlow(secrets.get(KEY_GEMINI_API_KEY) ?: "")
     val geminiApiKey: StateFlow<String> = _geminiApiKey.asStateFlow()
 
     private val _selectedModel =
@@ -134,8 +141,12 @@ class SettingsRepository(private val context: Context) {
     }
 
     fun setGeminiApiKey(key: String) {
-        prefs.edit().putString(KEY_GEMINI_API_KEY, key).apply()
-        _geminiApiKey.value = key
+        try {
+            secrets.putAll(mapOf(KEY_GEMINI_API_KEY to key))
+            _geminiApiKey.value = key
+        } catch (_: Exception) {
+            android.widget.Toast.makeText(context, "Could not protect the key. Previous value retained; retry.", android.widget.Toast.LENGTH_LONG).show()
+        }
     }
 
     fun setSelectedModel(model: String) {
@@ -335,7 +346,8 @@ class SettingsRepository(private val context: Context) {
 
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
-            KEY_GEMINI_API_KEY -> _geminiApiKey.value = prefs.getString(KEY_GEMINI_API_KEY, "") ?: ""
+            "hide_recents" -> _hideRecents.value = prefs.getBoolean("hide_recents", false)
+            KEY_GEMINI_API_KEY -> _geminiApiKey.value = secrets.get(KEY_GEMINI_API_KEY) ?: ""
             KEY_SELECTED_MODEL -> _selectedModel.value =
                 prefs.getString(KEY_SELECTED_MODEL, "") ?: ""
             KEY_SELECTED_AUDIO_MODEL -> _selectedAudioModel.value =

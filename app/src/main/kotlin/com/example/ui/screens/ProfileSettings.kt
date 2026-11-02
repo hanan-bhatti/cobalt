@@ -495,6 +495,13 @@ fun SettingsCategoryDetailScreen(
                 // ==========================================
                 SettingsCategory.APPEARANCE -> {
                     item {
+                        val hidden by viewModel.settingsRepository.hideRecents.collectAsState()
+                        ExpressiveSettingsSwitchItem(title = "Hide content in Recents",
+                            subtitle = "Also blocks screenshots and screen recording while Cobalt is open",
+                            checked = hidden, onCheckedChange = viewModel.settingsRepository::setHideRecents,
+                            shape = RoundedCornerShape(20.dp))
+                    }
+                    item {
                         SettingsSubsectionHeader(
                             title = "Theme & Color Palette",
                             description = "Choose app visual mode and wallpaper dynamic color extraction.",

@@ -271,11 +271,11 @@ class CobaltRepository(private val context: Context) {
     }
 
     fun getTmdbApiKey(): String {
-        return prefs.getString("tmdb_api_key", null)?.takeIf { it.isNotBlank() } ?: DEFAULT_TMDB_API_KEY
+        return com.example.util.SecretPreferences(prefs, "cobalt_prefs").get("tmdb_api_key")?.takeIf { it.isNotBlank() } ?: DEFAULT_TMDB_API_KEY
     }
 
     fun setTmdbApiKey(key: String) {
-        prefs.edit().putString("tmdb_api_key", key).apply()
+        com.example.util.SecretPreferences(prefs, "cobalt_prefs").putAll(mapOf("tmdb_api_key" to key))
     }
 
     suspend fun searchMedia(query: String): List<MediaSearchResultItem> = withContext(Dispatchers.IO) {

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <files-path name="internal_files" path="." />
-    <cache-path name="internal_cache" path="." />
-    <external-path name="external_files" path="." />
+    <cache-path name="explicit_shares" path="shares/" />
+    <cache-path name="feedback_export" path="feedback_export/" />
+    <cache-path name="crash_report_export" path="crash_reports/" />
 </paths>
