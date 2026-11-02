@@ -56,6 +56,44 @@ class NotePersistence(
 ) {
     private val dao = database.savedItemDao()
 
+    /** Caller holds NoteWriteLock; imports never materialize the body in a String. */
+    internal suspend fun importLocked(item: SavedItem, input: InputStream, allowOversize: Boolean = false,
+        progress: (Long) -> Unit = {}, replaceExisting: Boolean = false): SavedItem {
+        require(isNote(item))
+        val cancellation = currentCoroutineContext()
+        val previous = dao.getNoteBodyMetadata(item.id)
+        if (replaceExisting) {
+            check(previous?.contentHash == item.contentHash) { "Note changed or was deleted; original retained" }
+        }
+        val ref = store.writeAtomic(item.id, input, allowOversize) {
+            cancellation.ensureActive(); progress(it)
+        }
+        if (previous != null && !replaceExisting) {
+            check(previous.bodyLocation == "FILE" && previous.contentHash == ref.hash) {
+                "Import identifier conflicts with an existing note; original retained"
+            }
+            return dao.getItemById(item.id)!!.toDomainModel()
+        }
+        cancellation.ensureActive()
+        val saved = item.copy(content = "", bodyLoaded = false, bodyLocation = "FILE", contentHash = ref.hash,
+            byteLength = ref.bytes, sizeBytes = ref.bytes, preview = ref.preview, formatVersion = 1, bodyMissing = false)
+        database.withTransaction {
+            dao.insertItem(SavedItemEntity.fromDomainModel(saved))
+            index(item.id, ref.hash)
+        }
+        runCatching { store.committed(item.id, ref.hash) }
+        previous?.contentHash?.takeIf { it != ref.hash }?.let { hash -> runCatching { store.delete(item.id, hash) } }
+        return saved
+    }
+
+    suspend fun importMarkdown(item: SavedItem, input: InputStream, progress: (Long) -> Unit = {}): SavedItem =
+        withContext(Dispatchers.IO) { NoteWriteLock.mutex.withLock { importLocked(item, input, progress = progress) } }
+
+    suspend fun saveStream(item: SavedItem, input: InputStream, progress: (Long) -> Unit = {}): SavedItem =
+        withContext(Dispatchers.IO) { NoteWriteLock.mutex.withLock {
+            importLocked(item, input, progress = progress, replaceExisting = true)
+        } }
+
     companion object {
         fun isNote(item: SavedItem) = item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE
     }
@@ -140,6 +178,9 @@ class NotePersistence(
                 throw IOException("This note changed in another editor. Reopen it before saving.")
             }
             val cancellation = currentCoroutineContext()
+            check(NoteSizePolicy.acceptsEdit(NoteEditorWindows.utf8Bytes(item.content) { cancellation.ensureActive() }, old?.byteLength ?: 0)) {
+                "Note exceeds 55 MB. Existing oversized notes may be edited without increasing their size."
+            }
             val ref = TextUtf8InputStream(item.content).use { input ->
                 store.writeAtomic(item.id, input, allowOversize = (old?.byteLength ?: 0) > NoteSizePolicy.IMPORT_MAX_BYTES) {
                     cancellation.ensureActive(); progress(it)
@@ -196,58 +237,35 @@ class NotePersistence(
     }
 
     suspend fun window(id: String, hash: String, start: Long): EditableNoteWindow = withContext(Dispatchers.IO) {
-        val bytes = store.readRange(id, hash, start, 2052)
-        var end = minOf(2048, bytes.size)
+        val bytes = store.readRange(id, hash, start, NoteEditorWindows.MAX_CHARACTERS + 4)
+        var end = minOf(NoteEditorWindows.MAX_CHARACTERS, bytes.size)
         while (end > 0 && end < bytes.size && (bytes[end].toInt() and 0xC0) == 0x80) end--
         var lines = 0
         for (i in 0 until end) if (bytes[i] == '\n'.code.toByte() && ++lines >= 24) { end = i + 1; break }
         EditableNoteWindow(start, start + end, String(bytes, 0, end, Charsets.UTF_8))
     }
 
-    suspend fun replaceWindow(id: String, hash: String, window: EditableNoteWindow, replacement: String): SavedItem =
+    suspend fun replaceWindow(id: String, hash: String, window: EditableNoteWindow, replacement: NoteByteSource): SavedItem =
         withContext(Dispatchers.IO) {
             NoteWriteLock.mutex.withLock {
                 val current = dao.getNoteBodyMetadata(id) ?: throw IOException("Note is missing")
                 check(current.contentHash == hash) { "Note changed; reload this section before saving" }
                 require(window.start >= 0 && window.end in window.start..current.byteLength)
+                val table = PieceTable(FileNoteByteSource(store, id, hash, current.byteLength))
+                table.replace(window.start, window.end, replacement)
+                check(NoteSizePolicy.acceptsEdit(table.size, current.byteLength)) {
+                    "Note exceeds 55 MB. Split it before adding more content."
+                }
                 val cancellation = currentCoroutineContext()
-                val ref = store.open(id, hash).use { original ->
-                    store.writeAtomic(id, object : InputStream() {
-                        var offset = 0L
-                        var patch: InputStream? = null
-                        var replaced = false
-                        override fun read(): Int {
-                            val one = ByteArray(1)
-                            return if (read(one, 0, 1) < 0) -1 else one[0].toInt() and 0xff
-                        }
-                        override fun read(b: ByteArray, off: Int, len: Int): Int {
-                            if (len == 0) return 0
-                            if (offset < window.start) {
-                                val count = original.read(b, off, minOf(len.toLong(), window.start - offset).toInt())
-                                if (count < 0) throw EOFException()
-                                offset += count; return count
-                            }
-                            if (!replaced) {
-                                while (offset < window.end) {
-                                    val skipped = original.skip(window.end - offset)
-                                    if (skipped <= 0) throw EOFException()
-                                    offset += skipped
-                                }
-                                patch = TextUtf8InputStream(replacement)
-                                replaced = true
-                            }
-                            patch?.let {
-                                val count = it.read(b, off, len)
-                                if (count >= 0) return count
-                                it.close(); patch = null
-                            }
-                            return original.read(b, off, len)
-                        }
-                    }, current.byteLength > NoteSizePolicy.IMPORT_MAX_BYTES) { cancellation.ensureActive() }
+                val ref = table.openStream().use { input ->
+                    store.writeAtomic(id, input, current.byteLength > NoteSizePolicy.IMPORT_MAX_BYTES) {
+                        cancellation.ensureActive()
+                    }
                 }
                 cancellation.ensureActive()
                 database.withTransaction {
-                    check(dao.commitFileBody(id, ref.hash, ref.bytes, ref.preview, current.updatedAt, maxOf(System.currentTimeMillis(), current.updatedAt + 1)) == 1)
+                    check(dao.commitFileBody(id, ref.hash, ref.bytes, ref.preview, current.updatedAt,
+                        maxOf(System.currentTimeMillis(), current.updatedAt + 1)) == 1)
                     index(id, ref.hash)
                 }
                 runCatching { store.committed(id, ref.hash) }

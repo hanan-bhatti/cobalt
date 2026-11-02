@@ -15,7 +15,7 @@ object NoteExport {
         val date = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.ROOT).apply {
             timeZone = TimeZone.getTimeZone("UTC")
         }
-        val frontmatter = "---\ntitle: ${JSONObject.quote(note.title)}\ntags: [${note.folders.joinToString(", ") { JSONObject.quote(it) }}]\ncreated: ${JSONObject.quote(date.format(java.util.Date(note.timestamp)))}\nupdated: ${JSONObject.quote(date.format(java.util.Date(note.updatedAt)))}\n---\n"
+        val frontmatter = "---\ncobalt_format: 1\ntitle: ${JSONObject.quote(note.title)}\ntags: [${note.folders.joinToString(", ") { JSONObject.quote(it) }}]\ncreated: ${JSONObject.quote(date.format(java.util.Date(note.timestamp)))}\nupdated: ${JSONObject.quote(date.format(java.util.Date(note.updatedAt)))}\n---\n"
         output.write(frontmatter.toByteArray(Charsets.UTF_8))
         val digest = java.security.MessageDigest.getInstance("SHA-256")
         var bytes = 0L
