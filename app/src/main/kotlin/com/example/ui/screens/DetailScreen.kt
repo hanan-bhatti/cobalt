@@ -142,7 +142,8 @@ fun DetailScreen(
     }
 
     if (com.example.notes.NotePersistence.isNote(item) &&
-        (!item.bodyLoaded || item.bodyMissing || item.byteLength >= 8192 || item.content.count { it == '\n' } > 96)) {
+        (!item.bodyLoaded || item.bodyMissing || item.byteLength >= com.example.notes.NoteSizePolicy.MARKDOWN_BLOCK_CHARACTERS ||
+            item.content.count { it == '\n' } >= com.example.notes.NoteSizePolicy.MARKDOWN_BLOCK_LINES)) {
         FileNoteScreen(item, viewModel, onClose)
         return
     }

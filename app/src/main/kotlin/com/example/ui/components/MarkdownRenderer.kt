@@ -36,6 +36,11 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.unit.Dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.example.notes.NoteSizePolicy
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -130,16 +135,20 @@ fun MarkdownText(
 
     val context = LocalContext.current
     val isDark = isSystemInDarkTheme()
-    val parser = remember {
-        val extensions = listOf(
-            StrikethroughExtension.create(),
-            TablesExtension.create()
-        )
-        Parser.builder()
-            .extensions(extensions)
-            .build()
+    if (markdown.length > NoteSizePolicy.MARKDOWN_BLOCK_CHARACTERS ||
+        markdown.asSequence().filter { it == '\n' }.take(NoteSizePolicy.MARKDOWN_BLOCK_LINES).count() >= NoteSizePolicy.MARKDOWN_BLOCK_LINES) {
+        Text("This Markdown needs large-note mode. Open the note to read or export its complete body.", modifier = modifier, color = color)
+        return
     }
-    val document = remember(markdown) { parser.parse(markdown) }
+    val parsed by produceState<SafeMarkdownDocument?>(null, markdown) {
+        value = withContext(Dispatchers.Default) { parseSafeMarkdown(markdown) }
+    }
+    val document = parsed?.node
+    if (parsed == null) { Text("Rendering Markdown…", modifier = modifier, color = color); return }
+    if (document == null) {
+        Text(markdown, modifier = modifier, color = color, maxLines = minOf(maxLines, NoteSizePolicy.MARKDOWN_BLOCK_LINES))
+        return
+    }
     val primaryColor = MaterialTheme.colorScheme.primary
     val taskCounter = remember(markdown) { AtomicInteger(0) }
     taskCounter.set(0)
@@ -161,6 +170,25 @@ fun MarkdownText(
             taskCounter = taskCounter
         )
     }
+}
+
+private data class SafeMarkdownDocument(val node: Node?)
+
+/** Bounded parser input plus iterative depth/link checks before recursive Compose rendering. */
+private fun parseSafeMarkdown(markdown: String): SafeMarkdownDocument {
+    val parser = Parser.builder().extensions(listOf(StrikethroughExtension.create(), TablesExtension.create())).build()
+    val document = parser.parse(markdown)
+    val pending = ArrayDeque<Pair<Node, Int>>()
+    pending.addLast(document to 0)
+    var links = 0
+    while (pending.isNotEmpty()) {
+        val (node, depth) = pending.removeLast()
+        if (depth > NoteSizePolicy.MARKDOWN_MAX_DEPTH) return SafeMarkdownDocument(null)
+        if ((node is Link || node is Image) && ++links > NoteSizePolicy.DECORATED_LINK_LIMIT) return SafeMarkdownDocument(null)
+        var child = node.firstChild
+        while (child != null) { pending.addLast(child to depth + 1); child = child.next }
+    }
+    return SafeMarkdownDocument(document)
 }
 
 @Composable
