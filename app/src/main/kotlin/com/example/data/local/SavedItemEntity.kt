@@ -19,6 +19,7 @@
 package com.example.data.local
 
 import androidx.room.Entity
+import androidx.room.ColumnInfo
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
@@ -75,9 +76,15 @@ data class SavedItemEntity(
     val imdbId: String? = null,
     val userRating: Int? = null,
     val lastWatchedAt: Long? = null,
-    val showProgressJson: String? = null
+    val showProgressJson: String? = null,
+    @ColumnInfo(defaultValue = "'INLINE'") val bodyLocation: String = "INLINE",
+    @ColumnInfo(defaultValue = "NULL") val contentHash: String? = null,
+    @ColumnInfo(defaultValue = "0") val byteLength: Long = 0,
+    @ColumnInfo(defaultValue = "0") val formatVersion: Int = 0,
+    @ColumnInfo(defaultValue = "''") val preview: String = "",
+    @ColumnInfo(defaultValue = "0") val bodyMissing: Boolean = false
 ) {
-    fun toDomainModel(): com.example.data.model.SavedItem {
+    fun toDomainModel(bodyLoaded: Boolean = false): com.example.data.model.SavedItem {
         val foldersList = try {
             foldersJson.removeSurrounding("[", "]")
                 .split(",")
@@ -108,7 +115,7 @@ data class SavedItemEntity(
             }
         }
         val itemType = try {
-            com.example.data.model.SavedItemType.valueOf(type)
+            com.example.data.model.SavedItemType.valueOf(type.uppercase(java.util.Locale.ROOT))
         } catch (_: Exception) {
             com.example.data.model.SavedItemType.TEXT
         }
@@ -161,7 +168,10 @@ data class SavedItemEntity(
             imdbId = imdbId,
             userRating = userRating,
             lastWatchedAt = lastWatchedAt,
-            showProgress = com.example.data.model.TvShowProgress.fromJson(showProgressJson)
+            showProgress = com.example.data.model.TvShowProgress.fromJson(showProgressJson),
+            bodyLocation = bodyLocation, contentHash = contentHash, byteLength = byteLength,
+            formatVersion = formatVersion, preview = preview, bodyMissing = bodyMissing,
+            bodyLoaded = bodyLoaded || itemType !in listOf(com.example.data.model.SavedItemType.TEXT, com.example.data.model.SavedItemType.CODE)
         )
     }
 
@@ -171,7 +181,7 @@ data class SavedItemEntity(
                 id = item.id,
                 type = item.type.name,
                 title = item.title,
-                content = item.content,
+                content = if (item.bodyLocation == "FILE" && item.type in listOf(com.example.data.model.SavedItemType.TEXT, com.example.data.model.SavedItemType.CODE)) "" else item.content,
                 timestamp = item.timestamp,
                 foldersJson = "[${item.folders.joinToString(",") { "\"$it\"" }}]",
                 extractedText = item.extractedText,
@@ -211,7 +221,10 @@ data class SavedItemEntity(
                 imdbId = item.imdbId,
                 userRating = item.userRating,
                 lastWatchedAt = item.lastWatchedAt,
-                showProgressJson = item.showProgress?.toJson()
+                showProgressJson = item.showProgress?.toJson(),
+                bodyLocation = item.bodyLocation, contentHash = item.contentHash,
+                byteLength = item.byteLength, formatVersion = item.formatVersion,
+                preview = item.preview, bodyMissing = item.bodyMissing
             )
         }
     }

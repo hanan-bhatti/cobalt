@@ -37,6 +37,8 @@ import com.example.data.remote.GenerationConfig
 import com.example.data.remote.ResponseSchema
 import com.example.data.remote.MediaApiClient
 import com.example.data.remote.MediaSearchResultItem
+import androidx.room.withTransaction
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
@@ -230,118 +232,20 @@ class CobaltRepository(private val context: Context) {
     // DOMAIN <-> ENTITY MAPPING HELPERS
     // ----------------------------------------------------
 
-    private fun SavedItemEntity.toDomain(): SavedItem {
-        val foldersList = try {
-            foldersJson.removeSurrounding("[", "]")
-                .split(",")
-                .map { it.trim().removeSurrounding("\"") }
-                .filter { it.isNotEmpty() }
-        } catch (e: Exception) {
-            emptyList()
-        }
-        val genresList = try {
-            genresJson.removeSurrounding("[", "]")
-                .split(",")
-                .map { it.trim().removeSurrounding("\"") }
-                .filter { it.isNotEmpty() }
-        } catch (e: Exception) {
-            emptyList()
-        }
-        val watchProvidersList = try {
-            watchProvidersJson.removeSurrounding("[", "]")
-                .split(",")
-                .map { it.trim().removeSurrounding("\"") }
-                .filter { it.isNotEmpty() }
-        } catch (e: Exception) {
-            emptyList()
-        }
-        val itemType = try { SavedItemType.valueOf(type) } catch (e: Exception) { SavedItemType.TEXT }
-        val isMedia = itemType == SavedItemType.IMAGE || itemType == SavedItemType.VIDEO || itemType == SavedItemType.AUDIO
-        return SavedItem(
-            id = id,
-            type = itemType,
-            title = title,
-            content = content,
-            timestamp = timestamp,
-            folders = foldersList,
-            extractedText = extractedText,
-            thumbnailPath = thumbnailPath,
-            orderIndex = orderIndex,
-            isSynced = isSynced,
-            linkTitle = linkTitle,
-            linkDescription = linkDescription,
-            linkImage = linkImage,
-            isBackedUp = isBackedUp,
-            sizeBytes = sizeBytes,
-            isPendingBackup = isPendingBackup,
-            isUnavailable = if (isMedia) isUnavailable else false,
-            mediaType = mediaType,
-            watchStatus = watchStatus,
-            genres = genresList,
-            watchProviders = watchProvidersList,
-            trailerUrl = trailerUrl,
-            backdropUrl = backdropUrl,
-            releaseYear = releaseYear,
-            rating = rating,
-            runtime = runtime,
-            tagline = tagline,
-            budget = budget,
-            revenue = revenue,
-            status = status,
-            productionCompanies = try {
-                productionCompaniesJson.removeSurrounding("[", "]")
-                    .split(",")
-                    .map { it.trim().removeSurrounding("\"") }
-                    .filter { it.isNotEmpty() }
-            } catch (e: Exception) { emptyList() },
-            isArchived = isArchived,
-            updatedAt = updatedAt,
-            isDeleted = isDeleted
-        )
+    private fun SavedItemEntity.toDomain(): SavedItem = toDomainModel()
+
+    private fun SavedItem.toEntity(): SavedItemEntity = SavedItemEntity.fromDomainModel(this)
+
+    private val notePersistence by lazy { com.example.notes.NotePersistence(context) }
+
+    suspend fun searchNoteFiles(query: String): List<SavedItem> = withContext(Dispatchers.IO) {
+        val terms = Regex("[\\p{L}\\p{N}_]+").findAll(query).map { it.value.take(64) }.take(12).toList()
+        if (terms.isEmpty()) return@withContext emptyList()
+        val match = terms.joinToString(" AND ") { "\"$it\"*" }
+        savedItemDao.searchNoteFiles(match).map { it.toDomainModel() }
     }
 
-    private fun SavedItem.toEntity(): SavedItemEntity {
-        val foldersJsonStr = "[" + folders.joinToString(",") { "\"$it\"" } + "]"
-        val genresJsonStr = "[" + genres.joinToString(",") { "\"$it\"" } + "]"
-        val watchProvidersJsonStr = "[" + watchProviders.joinToString(",") { "\"$it\"" } + "]"
-        val isMedia = type == SavedItemType.IMAGE || type == SavedItemType.VIDEO || type == SavedItemType.AUDIO
-        return SavedItemEntity(
-            id = id,
-            type = type.name,
-            title = title,
-            content = content,
-            timestamp = timestamp,
-            foldersJson = foldersJsonStr,
-            extractedText = extractedText,
-            thumbnailPath = thumbnailPath,
-            orderIndex = orderIndex,
-            isSynced = isSynced,
-            linkTitle = linkTitle,
-            linkDescription = linkDescription,
-            linkImage = linkImage,
-            isBackedUp = isBackedUp,
-            sizeBytes = sizeBytes,
-            isPendingBackup = isPendingBackup,
-            isUnavailable = if (isMedia) isUnavailable else false,
-            mediaType = mediaType,
-            watchStatus = watchStatus,
-            genresJson = genresJsonStr,
-            watchProvidersJson = watchProvidersJsonStr,
-            trailerUrl = trailerUrl,
-            backdropUrl = backdropUrl,
-            releaseYear = releaseYear,
-            rating = rating,
-            runtime = runtime,
-            tagline = tagline,
-            budget = budget,
-            revenue = revenue,
-            status = status,
-            productionCompaniesJson = "[" + productionCompanies.joinToString(",") { "\"$it\"" } + "]",
-            isArchived = isArchived,
-            updatedAt = updatedAt,
-            isDeleted = isDeleted
-        )
-    }
+    suspend fun getItemForOpen(id: String): SavedItem? = notePersistence.load(id)
 
     fun readFileBytes(filePath: String): ByteArray? {
         return try {
@@ -648,7 +552,7 @@ class CobaltRepository(private val context: Context) {
                 tmdbId = tmdbId ?: item.tmdbId
             )
             if (saveToDb) {
-                savedItemDao.insertItem(newItem.toEntity())
+                notePersistence.save(newItem)
             }
             return@withContext newItem
         }
@@ -658,13 +562,12 @@ class CobaltRepository(private val context: Context) {
 
     suspend fun updateItems(items: List<SavedItem>) = withContext(kotlinx.coroutines.Dispatchers.IO) {
         items.forEach {
-            savedItemDao.insertItem(it.toEntity())
+            notePersistence.save(it)
         }
     }
     suspend fun saveItemLocallyOnly(item: SavedItem) = withContext(Dispatchers.IO) {
         val updatedItem = item.copy(timestamp = System.currentTimeMillis())
-        savedItemDao.insertItem(updatedItem.toEntity())
-        updatedItem
+        notePersistence.save(updatedItem)
     }
 
     suspend fun saveItem(item: SavedItem, mediaBytes: ByteArray? = null, onProgress: (Float) -> Unit = {}): SavedItem = withContext(Dispatchers.IO) {
@@ -672,16 +575,23 @@ class CobaltRepository(private val context: Context) {
             mediaBytes != null -> mediaBytes.size.toLong()
             (item.thumbnailPath ?: item.content).startsWith("/") -> java.io.File(item.thumbnailPath ?: item.content).length()
             item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO -> item.sizeBytes
+            com.example.notes.NotePersistence.isNote(item) -> item.byteLength
             else -> item.content.toByteArray().size.toLong()
         }
         val finalItem = item.copy(sizeBytes = itemSize, timestamp = if (item.timestamp == 0L) System.currentTimeMillis() else item.timestamp, updatedAt = System.currentTimeMillis())
-        savedItemDao.insertItem(finalItem.toEntity())
+        val saved = notePersistence.save(finalItem)
         com.example.widget.WidgetUpdater.update(context)
-        finalItem
+        saved
     }
 
     suspend fun deleteItem(item: SavedItem) = withContext(Dispatchers.IO) {
-        savedItemDao.deleteItem(item.toEntity())
+        com.example.notes.NoteWriteLock.mutex.withLock {
+            db.withTransaction {
+                savedItemDao.deleteItem(item.toEntity())
+                savedItemDao.deleteNoteSearch(item.id)
+            }
+            // Keep the verified generation available for the existing Undo action.
+        }
         com.example.widget.WidgetUpdater.update(context)
     }
 
@@ -732,7 +642,7 @@ class CobaltRepository(private val context: Context) {
             }
         }
         if (itemsToUpdate.isNotEmpty()) {
-            savedItemDao.insertItems(itemsToUpdate)
+            itemsToUpdate.forEach { notePersistence.save(it.toDomainModel()) }
         }
 
         // 3. Delete old folder

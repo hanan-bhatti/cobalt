@@ -25,7 +25,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [SavedItemEntity::class, CustomFolderEntity::class], version = 8, exportSchema = false)
+@Database(entities = [SavedItemEntity::class, CustomFolderEntity::class, NoteSearchEntity::class], version = 9, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun savedItemDao(): SavedItemDao
     abstract fun customFolderDao(): CustomFolderDao
@@ -56,6 +56,18 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE saved_items ADD COLUMN bodyLocation TEXT NOT NULL DEFAULT 'INLINE'")
+                db.execSQL("ALTER TABLE saved_items ADD COLUMN contentHash TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE saved_items ADD COLUMN byteLength INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE saved_items ADD COLUMN formatVersion INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE saved_items ADD COLUMN preview TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE saved_items ADD COLUMN bodyMissing INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("CREATE VIRTUAL TABLE IF NOT EXISTS `note_search` USING FTS4(`noteId` TEXT NOT NULL, `title` TEXT NOT NULL, `bodyPrefix` TEXT NOT NULL, tokenize=unicode61)")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -63,8 +75,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "cobalt_db"
                 )
-                .addMigrations(MIGRATION_6_7, MIGRATION_7_8)
-                .fallbackToDestructiveMigration(true)
+                .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                 .build()
                 INSTANCE = instance
                 instance

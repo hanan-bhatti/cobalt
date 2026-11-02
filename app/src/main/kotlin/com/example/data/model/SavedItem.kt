@@ -75,7 +75,14 @@ data class SavedItem(
     val imdbId: String? = null,
     val userRating: Int? = null,
     val lastWatchedAt: Long? = null,
-    val showProgress: TvShowProgress? = null
+    val showProgress: TvShowProgress? = null,
+    val bodyLocation: String = "INLINE",
+    val contentHash: String? = null,
+    val byteLength: Long = 0,
+    val formatVersion: Int = 0,
+    val preview: String = "",
+    val bodyMissing: Boolean = false,
+    val bodyLoaded: Boolean = true
 )
 
 fun SavedItem.getBestImagePath(): String? {
