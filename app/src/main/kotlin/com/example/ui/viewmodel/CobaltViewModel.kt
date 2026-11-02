@@ -33,6 +33,7 @@ import com.example.data.remote.MediaSearchResultItem
 import com.example.widget.WidgetUpdater
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -1132,12 +1133,14 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
+    private var extractedLinkSaveJob: kotlinx.coroutines.Job? = null
+
     fun confirmAndSaveExtractedLinks(selectedFolders: List<String> = emptyList()) {
+        if (extractedLinkSaveJob?.isActive == true) return
         val linksToSave = _extractedLinksToReview.value.filter { it.isSelected && it.url.isNotBlank() }
-        _extractedLinksToReview.value = emptyList() // Clear review list
-        linksToSave.forEach { reviewItem ->
-            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        extractedLinkSaveJob = viewModelScope.launch(Dispatchers.IO) {
+            for (reviewItem in linksToSave) {
+                kotlin.coroutines.coroutineContext.ensureActive()
                 try {
                     val newId = java.util.UUID.randomUUID().toString()
                     val foldersToUse = selectedFolders
@@ -1154,6 +1157,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
                     // 1. Save IMMEDIATELY to DB so it appears instantly
                     val savedItem = repository.saveItem(initialItem, null)
+                    _extractedLinksToReview.update { items -> items.filterNot { it.id == reviewItem.id } }
                     withContext(Dispatchers.Main) {
                         com.example.widget.WidgetUpdater.update(context)
                     }
@@ -1177,16 +1181,15 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                                 com.example.widget.WidgetUpdater.update(context)
                             }
                         }
-                    } catch (e: Exception) {
-                        Log.e("CobaltVM", "Background link metadata fetch failed: ${e.message}")
+                    } catch (cancel: kotlinx.coroutines.CancellationException) {
+                        throw cancel
+                    } catch (_: Exception) {
+                        // The durable link remains available without optional metadata.
                     }
-
-                    try {
-                    } catch (e: Exception) {
-                        Log.e("CobaltVM", "Background sync failed: ${e.message}")
-                    }
-                } catch (e: Exception) {
-                    Log.e("CobaltVM", "Failed to save confirmed extracted link: ${e.message}")
+                } catch (cancel: kotlinx.coroutines.CancellationException) {
+                    throw cancel
+                } catch (_: Exception) {
+                    showToast("Could not save a selected link. It remains in the review list for retry.")
                 }
             }
         }
