@@ -203,6 +203,8 @@ fun SideDockContent(
     var dockInputMode by remember { mutableStateOf(DockInputMode.NOTE) }
     var noteText by remember { mutableStateOf("") }
     var linkText by remember { mutableStateOf("") }
+    var pendingDockNote by remember { mutableStateOf<String?>(null) }
+    var dockSaving by remember { mutableStateOf(false) }
     val inputFocusRequester = remember { FocusRequester() }
 
     var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
@@ -251,7 +253,7 @@ fun SideDockContent(
         try {
             val entry = clipboard.getClipEntry()
             val text = entry?.clipData?.let { data ->
-                if (data.itemCount > 0) data.getItemAt(0).text?.toString()?.trim().orEmpty() else ""
+                if (data.itemCount > 0) data.getItemAt(0).text?.toString().orEmpty() else ""
             } ?: ""
             clipboardText = text
         } catch (_: Exception) {
@@ -266,12 +268,9 @@ fun SideDockContent(
     }
     val hasClipboardUrl = clipboardUrl != null
 
-    // Live Recent items from Room Database Flow (expanded to first 15 recent items)
-    val allItems by repository.getAllItemsFlow().collectAsState(initial = emptyList())
+    // Room limits both result count and note preview length; no full-note IO or client sorting.
+    val recentItems by repository.getRecentDockItemsFlow().collectAsState(initial = emptyList())
     val allFolderEntities by repository.getAllFolderEntitiesFlow().collectAsState(initial = emptyList())
-    val recentItems = remember(allItems) {
-        allItems.sortedByDescending { it.timestamp }.take(15)
-    }
 
     // Geometry & Dynamic Morphing Bounds
     val screenWidth = configuration.screenWidthDp.dp
@@ -405,8 +404,31 @@ fun SideDockContent(
         fraction = p.coerceIn(0f, 1f)
     )
 
+    fun saveDockNote(content: String) {
+        if (dockSaving || content.isEmpty()) return
+        pendingDockNote = content
+        dockSaving = true
+        coroutineScope.launch {
+            try {
+                kotlinx.coroutines.withContext(Dispatchers.IO) {
+                    val title = content.take(200).lineSequence().firstOrNull { it.isNotBlank() }?.trim()?.take(40) ?: "Quick Note"
+                    repository.saveItem(SavedItem(title = title, content = content, type = SavedItemType.TEXT))
+                }
+                pendingDockNote = null
+                noteText = ""
+                WidgetUpdater.update(context)
+                Toast.makeText(context, "Note saved", Toast.LENGTH_SHORT).show()
+                keyboardController?.hide()
+            } catch (cancel: CancellationException) { throw cancel }
+            catch (_: Exception) {
+                Toast.makeText(context, "Could not save. Retry before closing the Dock. Use file import/split above 55 MB.", Toast.LENGTH_LONG).show()
+            } finally { dockSaving = false }
+        }
+    }
+
     // Unified submit handler for Note and Link modes
     fun submitInput() {
+        if (dockSaving) return
         if (dockInputMode == DockInputMode.LINK) {
             val rawUrl = linkText.trim()
             if (rawUrl.isBlank()) return
@@ -421,7 +443,9 @@ fun SideDockContent(
                 cleanUrl
             }
 
+            dockSaving = true
             coroutineScope.launch {
+                try {
                 val newItem = SavedItem(
                     title = hostName,
                     content = cleanUrl,
@@ -455,29 +479,12 @@ fun SideDockContent(
                         android.util.Log.e("CobaltSideDock", "Metadata extraction failed: ${e.message}")
                     }
                 }
+                } catch (cancel: CancellationException) { throw cancel }
+                catch (_: Exception) { Toast.makeText(context, "Could not save the link. Input retained; retry.", Toast.LENGTH_LONG).show() }
+                finally { dockSaving = false }
             }
         } else {
-            val content = noteText.trim()
-            if (content.isBlank()) return
-            coroutineScope.launch {
-                val lines = content.lines().filter { it.isNotBlank() }
-                val title = if (lines.isNotEmpty()) {
-                    val first = lines.first().trim()
-                    if (first.length > 40) first.take(40) + "..." else first
-                } else {
-                    "Quick Note"
-                }
-                val newItem = SavedItem(
-                    title = title,
-                    content = content,
-                    type = SavedItemType.TEXT
-                )
-                repository.saveItem(newItem)
-                WidgetUpdater.update(context)
-                Toast.makeText(context, "✓ Note saved", Toast.LENGTH_SHORT).show()
-                noteText = ""
-                keyboardController?.hide()
-            }
+            saveDockNote(pendingDockNote ?: noteText)
         }
     }
 
@@ -697,6 +704,8 @@ fun SideDockContent(
                                         .fillMaxWidth()
                                         .padding(horizontal = 10.dp, vertical = 7.dp)
                                 ) {
+                                if (dockSaving) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                if (pendingDockNote != null && !dockSaving) Text("A paste is waiting to save. Tap Save before closing.", style = MaterialTheme.typography.labelSmall)
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         verticalAlignment = Alignment.CenterVertically
@@ -737,12 +746,13 @@ fun SideDockContent(
                                             }
                                             BasicTextField(
                                                 value = currentText,
+                                                enabled = !dockSaving && pendingDockNote == null,
                                                 onValueChange = { newText ->
-                                                    if (dockInputMode == DockInputMode.LINK) {
-                                                        linkText = newText
-                                                    } else {
-                                                        noteText = newText
-                                                    }
+                                                    if (com.example.notes.NoteEditorWindows.requiresWindow(newText)) {
+                                                        dockInputMode = DockInputMode.NOTE
+                                                        saveDockNote(newText)
+                                                    } else if (dockInputMode == DockInputMode.LINK) linkText = newText
+                                                    else noteText = newText
                                                 },
                                                 modifier = Modifier
                                                     .fillMaxWidth()
@@ -853,7 +863,7 @@ fun SideDockContent(
                                         Spacer(modifier = Modifier.width(4.dp))
 
                                         // Send Button
-                                        val isSendable = if (dockInputMode == DockInputMode.LINK) linkText.isNotBlank() else noteText.isNotBlank()
+                                        val isSendable = !dockSaving && (if (dockInputMode == DockInputMode.LINK) linkText.isNotBlank() else pendingDockNote != null || noteText.isNotEmpty())
                                         IconButton(
                                             onClick = {
                                                 submitInput()
@@ -1350,17 +1360,23 @@ private fun DockItemDetailContent(
     val copyContent = {
         val textToCopy = when {
             item.type == SavedItemType.LINK -> item.content
+            item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE -> item.preview.ifEmpty { item.content }.take(com.example.notes.NoteSizePolicy.PREVIEW_CHARACTERS)
             !item.extractedText.isNullOrBlank() -> item.extractedText
             else -> item.content
         }
         coroutineScope.launch {
-            val clipData = ClipData.newPlainText("Copied content", textToCopy)
+            val clipData = ClipData.newPlainText(if (item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE) "Note preview" else "Copied content", textToCopy)
             clipboard.setClipEntry(clipData.toClipEntry())
-            Toast.makeText(context, "✓ Copied to clipboard", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, if (item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE) "Preview copied; open Cobalt for the full note" else "Copied to clipboard", Toast.LENGTH_SHORT).show()
         }
     }
 
     val shareContent = {
+        if (item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE) {
+            // Share complete Markdown through the main app; never share a preview as a full body.
+            onOpenInApp()
+            Toast.makeText(context, "Use Share Markdown in Cobalt to share the complete note", Toast.LENGTH_SHORT).show()
+        } else {
         onClose()
         val sendIntent = Intent().apply {
             action = Intent.ACTION_SEND
@@ -1371,6 +1387,7 @@ private fun DockItemDetailContent(
         context.startActivity(Intent.createChooser(sendIntent, "Share").apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         })
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -1657,57 +1674,11 @@ private fun DockItemDetailContent(
                 }
 
                 SavedItemType.TEXT, SavedItemType.CODE -> {
-                    if (item.content.isNotBlank()) {
-                        SelectionContainer {
-                            Text(
-                                text = parseMarkdown(
-                                    text = item.content,
-                                    primaryColor = MaterialTheme.colorScheme.primary,
-                                    onLinkClick = onOpenLink
-                                ),
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontSize = 12.sp,
-                                    lineHeight = 18.sp
-                                )
-                            )
-                        }
-                    }
+                    val preview = item.preview.ifEmpty { item.content }.take(com.example.notes.NoteSizePolicy.PREVIEW_CHARACTERS)
+                    Text(preview, maxLines = com.example.notes.NoteSizePolicy.DOCK_PREVIEW_LINES,
+                        overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+                    Text("Preview · open Cobalt for the complete note", style = MaterialTheme.typography.labelSmall)
 
-                    if (!item.extractedText.isNullOrBlank() && item.extractedText != item.content) {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            text = "EXTRACTED TEXT",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 9.sp,
-                                letterSpacing = 1.sp
-                            )
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = detailContainerColor,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            SelectionContainer {
-                                Text(
-                                    text = parseMarkdown(
-                                        text = item.extractedText.trim(),
-                                        primaryColor = MaterialTheme.colorScheme.primary,
-                                        onLinkClick = onOpenLink
-                                    ),
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontSize = 11.sp,
-                                        lineHeight = 16.sp
-                                    ),
-                                    modifier = Modifier.padding(8.dp)
-                                )
-                            }
-                        }
-                    }
                 }
             }
 
@@ -1751,6 +1722,7 @@ private fun DockItemDetailContent(
                             SavedItemType.LINK -> "Copy Link"
                             SavedItemType.IMAGE, SavedItemType.VIDEO -> "Copy OCR"
                             SavedItemType.AUDIO -> "Copy Transcript"
+                            SavedItemType.TEXT, SavedItemType.CODE -> "Copy Preview"
                             else -> "Copy"
                         }
                         Text(copyLabel, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)

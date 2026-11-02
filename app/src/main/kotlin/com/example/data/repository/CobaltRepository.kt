@@ -209,6 +209,9 @@ class CobaltRepository(private val context: Context) {
             .flowOn(Dispatchers.IO)
     }
 
+    fun getRecentDockItemsFlow(): Flow<List<SavedItem>> = savedItemDao.getRecentDockItemsFlow()
+        .map { items -> items.map { it.toDomainModel() } }.flowOn(Dispatchers.IO)
+
     suspend fun getAllItems(): List<SavedItem> = withContext(Dispatchers.IO) {
         try {
             savedItemDao.getAllItems().map { it.toDomain() }
