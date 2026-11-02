@@ -6,11 +6,6 @@ on:
         description: 'Release notes (leave blank to use auto-generated notes)'
         required: false
         default: ''
-      play_only:
-        description: 'Only update Play release APK (preserve FOSS release APK)'
-        required: false
-        type: boolean
-        default: false
   push:
     branches: [main]
     paths:
@@ -117,77 +112,27 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew assembleRelease --parallel --build-cache
 
-      - name: Rename artifacts with version
-        id: rename
-        run: |
-          VERSION="${{ needs.check-version.outputs.version_name }}"
-          mkdir -p release-artifacts
+      - name: Name release APK
+        env:
+          VERSION: ${{ needs.check-version.outputs.version_name }}
+        run: mv app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/cobalt-v${VERSION}.apk"
 
-          # Search broadly since AGP output layout can be either
-          # apk/fossRelease/... or apk/foss/release/... depending on version.
-          FOSS_APK=$(find app/build/outputs/apk -path "*foss*" -path "*release*" -iname "*.apk" ! -iname "*unsigned*" | head -n1)
-          PLAY_APK=$(find app/build/outputs/apk -path "*play*" -path "*release*" -iname "*.apk" ! -iname "*unsigned*" | head -n1)
-
-          if [ -z "$FOSS_APK" ]; then
-            echo "::error::No FOSS release APK found under app/build/outputs/apk"
-            echo "Directory contents:"
-            find app/build/outputs/apk -type f
-            exit 1
-          fi
-          if [ -z "$PLAY_APK" ]; then
-            echo "::error::No Play release APK found under app/build/outputs/apk"
-            echo "Directory contents:"
-            find app/build/outputs/apk -type f
-            exit 1
-          fi
-
-          echo "Found FOSS APK: $FOSS_APK"
-          echo "Found Play APK: $PLAY_APK"
-
-          FOSS_NAME="cobalt-foss-v${VERSION}.apk"
-          PLAY_NAME="cobalt-play-v${VERSION}.apk"
-
-          cp "$FOSS_APK" "release-artifacts/$FOSS_NAME"
-          cp "$PLAY_APK" "release-artifacts/$PLAY_NAME"
-
-          echo "apk_name_foss=$FOSS_NAME" >> "$GITHUB_OUTPUT"
-          echo "apk_name_play=$PLAY_NAME" >> "$GITHUB_OUTPUT"
-
-      - name: Upload FOSS APK Artifact
+      - name: Upload release APK and R8 mapping
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.rename.outputs.apk_name_foss }}
-          path: release-artifacts/${{ steps.rename.outputs.apk_name_foss }}
-          retention-days: 90
-
-      - name: Upload Play APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.rename.outputs.apk_name_play }}
-          path: release-artifacts/${{ steps.rename.outputs.apk_name_play }}
+          name: cobalt-release
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error
           retention-days: 90
 
       - name: Create GitHub Release
-        if: github.event.inputs.play_only != 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.check-version.outputs.version_name }}
           name: "Cobalt v${{ needs.check-version.outputs.version_name }}"
           generate_release_notes: true
-          append_body: true
           body: ${{ github.event.inputs.release_notes }}
           draft: false
-          prerelease: false
-          files: |
-            release-artifacts/${{ steps.rename.outputs.apk_name_foss }}
-            release-artifacts/${{ steps.rename.outputs.apk_name_play }}
-
-      - name: Update Play APK on GitHub Release (play_only mode)
-        if: github.event.inputs.play_only == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG="v${{ needs.check-version.outputs.version_name }}"
-          PLAY_FILE="release-artifacts/${{ steps.rename.outputs.apk_name_play }}"
-          echo "Updating only $PLAY_FILE on release $TAG..."
-          gh release upload "$TAG" "$PLAY_FILE" --clobber
+          files: app/build/outputs/apk/release/*.apk
