@@ -75,4 +75,20 @@ class LegacyNoteRecoveryTest {
             assertEquals(body, LegacyBodyInputStream(database.savedItemDao(), note.id).bufferedReader(Charsets.UTF_8).use { it.readText() })
         } finally { output.delete() }
     }
+    @Test fun warmedPlainTextSlicesAreAvailableWithoutAnotherDatabaseRead() = runBlocking {
+        val body = "a😀漢字\r\n".repeat(2_000)
+        insert(body)
+        val note = reader.observeNotes().first().single()
+        val snapshot = reader.bodyMetadata(note.id)
+        assertNull(reader.cachedChunk(note, 0, 31, snapshot))
+        reader.prefetchDisplay(note, snapshot, 0)
+        val cached = reader.cachedChunk(note, 0, 31, snapshot)
+        assertNotNull(cached)
+        assertEquals(reader.displayChunk(note, 0, 31, snapshot), cached)
+        assertEquals(body, buildString {
+            val count = ((snapshot.byteLength + 30) / 31).toInt()
+            for (index in 0 until count) append(reader.displayChunk(note, index, 31, snapshot))
+        })
+    }
+
 }

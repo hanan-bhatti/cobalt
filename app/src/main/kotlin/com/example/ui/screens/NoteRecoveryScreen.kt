@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
@@ -31,11 +30,9 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.notes.LegacyNoteRecovery
 import com.example.notes.NoteSizePolicy
@@ -255,37 +252,5 @@ private fun RecoveryNoteSize(bytes: Long) {
         Text(formatNoteSize(context, bytes), modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
             style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary, maxLines = 1)
-    }
-}
-
-@Composable
-internal fun NoteBodyPlainText(reader: LegacyNoteRecovery, note: RecoveryNote, modifier: Modifier, jumpByte: Long = 0,
-    header: (@Composable () -> Unit)? = null,
-    listState: androidx.compose.foundation.lazy.LazyListState = rememberLazyListState(),
-    contentPadding: PaddingValues = PaddingValues(0.dp)) {
-    val fontScale = LocalDensity.current.fontScale
-    BoxWithConstraints(modifier) {
-        // A block remains roughly one viewport high even for text consisting only of newlines.
-        val chunkBytes = (maxHeight.value / (24f * fontScale)).toInt().coerceIn(1, 128)
-        val count = if (note.byteLength == 0L) 0 else (note.byteLength - 1) / chunkBytes + 1
-        LaunchedEffect(jumpByte, chunkBytes, count) {
-            if (count in 1..Int.MAX_VALUE.toLong()) listState.scrollToItem(if (jumpByte == 0L) 0 else
-                (jumpByte / chunkBytes).coerceIn(0, count - 1).toInt() + if (header == null) 0 else 1)
-        }
-        if (count > Int.MAX_VALUE) {
-            Text("This note is too large for recovery display. Use Export to preserve the complete body.")
-        } else LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = contentPadding) {
-            if (header != null) item { header(); Spacer(Modifier.height(28.dp)) }
-            items(count.toInt(), key = { it }) { index ->
-                val chunk by produceState<String?>(null, note.id, index, chunkBytes) {
-                    try { value = reader.displayChunk(note, index, chunkBytes) }
-                    catch (cancel: CancellationException) { throw cancel }
-                    catch (_: Exception) { value = "[This part could not be read. The original note is unchanged.]" }
-                }
-                SelectionContainer {
-                    Text(chunk ?: "…", fontFamily = FontFamily.Monospace, lineHeight = 24.sp)
-                }
-            }
-        }
     }
 }

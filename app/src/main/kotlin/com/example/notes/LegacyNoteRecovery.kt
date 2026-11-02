@@ -22,6 +22,7 @@ class LegacyNoteRecovery(
     private val mutex = Mutex()
     private val store = PrivateMarkdownStore(this.context)
     private val pages = LinkedHashMap<Pair<String, String>, ByteArray>(8, 0.75f, true)
+    @Volatile private var cachedPages: Map<Pair<String, String>, ByteArray> = emptyMap()
 
     fun observeNotes() = dao.observeRecoveryNotes()
 
@@ -33,49 +34,69 @@ class LegacyNoteRecovery(
             }
             store.deleteAll(id)
         }
-        mutex.withLock { pages.keys.removeAll { it.first == id } }
+        mutex.withLock { pages.keys.removeAll { it.first == id }; cachedPages = pages.toMap() }
     }
 
-    suspend fun displayChunk(note: RecoveryNote, index: Int, chunkBytes: Int): String =
+    suspend fun bodyMetadata(id: String): NoteBodyMetadata = withContext(Dispatchers.IO) {
+        dao.getNoteBodyMetadata(id) ?: throw IOException("Note is missing")
+    }
+    private fun pageKey(id: String, metadata: NoteBodyMetadata, index: Long) =
+        id to "${metadata.contentHash ?: "INLINE:${metadata.updatedAt}"}:$index"
+
+    /** Memory-only lookup for first composition; never waits for disk or a worker lock. */
+    fun cachedChunk(note: RecoveryNote, index: Int, chunkBytes: Int, metadata: NoteBodyMetadata): String? {
+        require(chunkBytes in 1..128)
+        val start = index.toLong() * chunkBytes
+        val end = minOf(metadata.byteLength, start + chunkBytes)
+        if (start >= end) return ""
+        val from = (start - 3).coerceAtLeast(0)
+        val until = minOf(metadata.byteLength, end + 3)
+        val result = ByteArray((until - from).toInt())
+        val snapshot = cachedPages
+        var position = from
+        while (position < until) {
+            val page = snapshot[pageKey(note.id, metadata, position / NoteSizePolicy.IO_CHUNK_BYTES)] ?: return null
+            val offset = (position % NoteSizePolicy.IO_CHUNK_BYTES).toInt()
+            val count = minOf(page.size - offset, (until - position).toInt())
+            if (count <= 0) return null
+            page.copyInto(result, (position - from).toInt(), offset, offset + count)
+            position += count
+        }
+        var first = (start - from).toInt()
+        var last = (end - from).toInt()
+        while (first < result.size && (result[first].toInt() and 0xC0) == 0x80) first++
+        while (last < result.size && (result[last].toInt() and 0xC0) == 0x80) last++
+        return if (first >= last) "" else String(result, first, last - first, Charsets.UTF_8)
+    }
+    private suspend fun loadPage(id: String, metadata: NoteBodyMetadata, index: Long) {
+        currentCoroutineContext().ensureActive()
+        val key = pageKey(id, metadata, index)
+        if (pages[key] != null) return
+        pages[key] = if (metadata.bodyLocation == "FILE") {
+            store.readRange(id, metadata.contentHash ?: throw IOException("Body reference missing"),
+                index * NoteSizePolicy.IO_CHUNK_BYTES, NoteSizePolicy.IO_CHUNK_BYTES)
+        } else dao.readRecoveryBytes(id, index * NoteSizePolicy.IO_CHUNK_BYTES + 1, NoteSizePolicy.IO_CHUNK_BYTES)
+            ?: throw IOException("Note is no longer available")
+        while (pages.size > 8) pages.remove(pages.keys.first())
+        cachedPages = pages.toMap() // Immutable arrays/map published after IO; UI reads never acquire the IO mutex.
+    }
+    suspend fun prefetchDisplay(note: RecoveryNote, metadata: NoteBodyMetadata, byteOffset: Long) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val page = byteOffset.coerceAtLeast(0) / NoteSizePolicy.IO_CHUNK_BYTES
+            for (index in page..page + 2) if (index * NoteSizePolicy.IO_CHUNK_BYTES < metadata.byteLength) loadPage(note.id, metadata, index)
+        }
+    }
+    suspend fun displayChunk(note: RecoveryNote, index: Int, chunkBytes: Int, snapshot: NoteBodyMetadata? = null): String =
         withContext(Dispatchers.IO) {
-            require(chunkBytes in 1..128)
-            val metadata = dao.getNoteBodyMetadata(note.id) ?: throw IOException("Note is missing")
+            val metadata = snapshot ?: bodyMetadata(note.id)
+            cachedChunk(note, index, chunkBytes, metadata)?.let { return@withContext it }
             val start = index.toLong() * chunkBytes
-            val end = minOf(note.byteLength, start + chunkBytes)
-            if (start >= end) return@withContext ""
-            val from = (start - 3).coerceAtLeast(0)
-            val until = minOf(note.byteLength, end + 3)
-            val bytes = mutex.withLock {
-                val result = ByteArray((until - from).toInt())
-                var position = from
-                while (position < until) {
-                    currentCoroutineContext().ensureActive()
-                    val pageIndex = position / NoteSizePolicy.IO_CHUNK_BYTES
-                    val key = note.id to "${metadata.contentHash ?: "INLINE"}:$pageIndex"
-                    val page = pages[key] ?: (
-                        if (metadata.bodyLocation == "FILE") {
-                            store.readRange(note.id, metadata.contentHash ?: throw IOException("Body reference is missing"),
-                                pageIndex * NoteSizePolicy.IO_CHUNK_BYTES, NoteSizePolicy.IO_CHUNK_BYTES)
-                        } else dao.readRecoveryBytes(note.id, pageIndex * NoteSizePolicy.IO_CHUNK_BYTES + 1,
-                            NoteSizePolicy.IO_CHUNK_BYTES) ?: throw IOException("Note is no longer available")
-                    ).also {
-                        pages[key] = it
-                        while (pages.size > 8) pages.remove(pages.keys.first())
-                    }
-                    val offset = (position % NoteSizePolicy.IO_CHUNK_BYTES).toInt()
-                    val size = minOf(page.size - offset, (until - position).toInt())
-                    if (size <= 0) throw IOException("Note changed while it was being read")
-                    page.copyInto(result, (position - from).toInt(), offset, offset + size)
-                    position += size
-                }
-                result
+            mutex.withLock {
+                val from = (start - 3).coerceAtLeast(0) / NoteSizePolicy.IO_CHUNK_BYTES
+                val until = minOf(metadata.byteLength, start + chunkBytes + 3) / NoteSizePolicy.IO_CHUNK_BYTES
+                for (page in from..until) if (page * NoteSizePolicy.IO_CHUNK_BYTES < metadata.byteLength) loadPage(note.id, metadata, page)
             }
-            // Extend only to a UTF-8 code point boundary, without duplicating its bytes.
-            var first = (start - from).toInt()
-            var last = (end - from).toInt()
-            while (first < bytes.size && (bytes[first].toInt() and 0xC0) == 0x80) first++
-            while (last < bytes.size && (bytes[last].toInt() and 0xC0) == 0x80) last++
-            if (first >= last) "" else String(bytes, first, last - first, Charsets.UTF_8)
+            cachedChunk(note, index, chunkBytes, metadata) ?: throw IOException("Note changed while it was being read")
         }
 
     /** Raw Markdown export; original SQLite content is never modified. */

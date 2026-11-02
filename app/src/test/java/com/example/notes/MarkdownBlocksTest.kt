@@ -36,4 +36,23 @@ class MarkdownBlocksTest {
         history.didRedo(change)
         assertEquals(change, history.undoChange)
     }
+    @Test fun firstBlockDoesNotReadTheWholeLargeDocument() {
+        val prefix = "# First heading\n\n".toByteArray()
+        var consumed = 0
+        val source = object : java.io.InputStream() {
+            override fun read(): Int {
+                if (consumed >= 55_000_000) return -1
+                val index = consumed++
+                return if (index < prefix.size) prefix[index].toInt() and 255 else 'x'.code
+            }
+        }
+        MarkdownBlocks.Cursor(source, 128, 8).use { cursor ->
+            val first = cursor.next()!!
+            assertEquals(0L, first.start)
+            assertEquals(prefix.size.toLong(), first.end)
+            assertTrue(first.markdown)
+            assertTrue("Only a buffered prefix should be read", consumed <= NoteSizePolicy.IO_CHUNK_BYTES)
+        }
+    }
+
 }

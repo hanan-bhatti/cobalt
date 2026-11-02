@@ -129,7 +129,8 @@ fun MarkdownText(
     color: Color = MaterialTheme.colorScheme.onSurface,
     maxLines: Int = Int.MAX_VALUE,
     onLinkClick: ((String) -> Unit)? = null,
-    onMarkdownChange: ((String) -> Unit)? = null
+    onMarkdownChange: ((String) -> Unit)? = null,
+    prepared: SafeMarkdownDocument? = null
 ) {
     if (markdown.isBlank()) return
 
@@ -140,11 +141,11 @@ fun MarkdownText(
         Text("This Markdown needs large-note mode. Open the note to read or export its complete body.", modifier = modifier, color = color)
         return
     }
-    val parsed by produceState<SafeMarkdownDocument?>(null, markdown) {
-        value = withContext(Dispatchers.Default) { parseSafeMarkdown(markdown) }
+    val parsed by produceState<SafeMarkdownDocument?>(prepared, markdown, prepared) {
+        value = prepared ?: withContext(Dispatchers.Default) { parseSafeMarkdown(markdown) }
     }
     val document = parsed?.node
-    if (parsed == null) { Text("Rendering Markdown…", modifier = modifier, color = color); return }
+    if (parsed == null) { NoteBodySkeleton(modifier, lines = 2); return }
     if (document == null) {
         Text(markdown, modifier = modifier, color = color, maxLines = minOf(maxLines, NoteSizePolicy.MARKDOWN_BLOCK_LINES))
         return
@@ -172,12 +173,16 @@ fun MarkdownText(
     }
 }
 
-internal data class SafeMarkdownDocument(val node: Node?, val links: Int = 0)
+data class SafeMarkdownDocument(val node: Node?, val links: Int = 0)
+
+private val safeMarkdownParser = object : ThreadLocal<Parser>() {
+    override fun initialValue(): Parser = Parser.builder()
+        .extensions(listOf(StrikethroughExtension.create(), TablesExtension.create())).build()
+}
 
 /** Bounded parser input plus iterative depth/link checks before recursive Compose rendering. */
 internal fun parseSafeMarkdown(markdown: String): SafeMarkdownDocument {
-    val parser = Parser.builder().extensions(listOf(StrikethroughExtension.create(), TablesExtension.create())).build()
-    val document = parser.parse(markdown)
+    val document = safeMarkdownParser.get()!!.parse(markdown)
     val pending = ArrayDeque<Pair<Node, Int>>()
     pending.addLast(document to 0)
     var links = 0
