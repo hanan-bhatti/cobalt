@@ -166,9 +166,13 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     val tmdbApiKey: StateFlow<String> = _tmdbApiKey.asStateFlow()
 
     fun updateTmdbApiKey(key: String) {
-        repository.setTmdbApiKey(key.trim())
-        _tmdbApiKey.value = key.trim()
-        showToast("TMDb API Key saved successfully")
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) { repository.setTmdbApiKey(key.trim()) }
+                _tmdbApiKey.value = key.trim()
+                showToast("TMDb API Key saved successfully")
+            } catch (_: Exception) { showToast("Could not protect the key. Previous credential retained.") }
+        }
     }
 
     // ----------------------------------------------------
@@ -1576,6 +1580,16 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     data class PendingSection(val hash: String, val start: Long, val end: Long, val replacement: String)
     private val _pendingSections = MutableStateFlow<Map<String, PendingSection>>(emptyMap())
     val pendingSections = _pendingSections.asStateFlow()
+    private val generationHistories = mutableMapOf<String, com.example.notes.NoteGenerationHistory>()
+    fun noteGenerationHistory(id: String) = generationHistories.getOrPut(id) { com.example.notes.NoteGenerationHistory() }
+
+    fun journalSectionOnBackground(id: String, hash: String, start: Long, end: Long, replacement: String) {
+        viewModelScope.launch {
+            try { com.example.notes.SectionDraftStore(context).save(id, hash, start, end, replacement) }
+            catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: Exception) { showToast("Could not journal the edit. Keep the editor open and retry saving.") }
+        }
+    }
     private val windowHistories = object : LinkedHashMap<String, com.example.notes.WindowEditHistory>(8, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, com.example.notes.WindowEditHistory>?) = size > 8
     }
@@ -2139,7 +2153,26 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun shareLocalFile(file: java.io.File, item: com.example.data.model.SavedItem, context: android.content.Context) {
-        val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        viewModelScope.launch {
+        try {
+        val exported = withContext(Dispatchers.IO) {
+            val directory = File(context.cacheDir, "shares").also { check(it.isDirectory || it.mkdirs()) }
+            val target = File(directory, "share_${UUID.randomUUID()}.${file.extension.take(8).ifEmpty { "bin" }}")
+            val cancellation = kotlin.coroutines.coroutineContext
+            try {
+                file.inputStream().use { input -> target.outputStream().use { output ->
+                    val buffer = ByteArray(com.example.notes.NoteSizePolicy.IO_CHUNK_BYTES)
+                    while (true) {
+                        cancellation.ensureActive()
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        output.write(buffer, 0, count)
+                    }
+                } }
+                target
+            } catch (error: Throwable) { target.delete(); throw error }
+        }
+        val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", exported)
         val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
             type = when (item.type) {
                 com.example.data.model.SavedItemType.TEXT, com.example.data.model.SavedItemType.CODE -> "text/markdown"
@@ -2151,6 +2184,9 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         context.startActivity(android.content.Intent.createChooser(shareIntent, "Share Media"))
+        } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+        catch (_: Exception) { showToast("Could not prepare the shared file. Original retained.") }
+        }
     }
 
     private fun shareAsText(item: com.example.data.model.SavedItem, context: android.content.Context) {

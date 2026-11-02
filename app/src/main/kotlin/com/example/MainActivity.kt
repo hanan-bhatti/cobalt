@@ -139,6 +139,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (getSharedPreferences("cobalt_settings", MODE_PRIVATE).getBoolean("hide_recents", false)) {
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        }
         enableEdgeToEdge()
         setContent {
             com.example.ui.theme.MyApplicationTheme {
@@ -182,7 +185,12 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
-            } else startAppropriateApp()
+            } else {
+                startAppropriateApp()
+                try { com.example.notes.NoteReconciliation.run(applicationContext) }
+                catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+                catch (_: Exception) { /* Recovery remains available; do not turn a check failure into a crash loop. */ }
+            }
         }
     }
 
@@ -202,6 +210,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startNormalApp() {
+        lifecycleScope.launch {
+            com.example.data.repository.SettingsRepository(applicationContext).hideRecents.collect { hidden ->
+                if (hidden) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+            }
+        }
         pendingNavDestination.value = intent?.getStringExtra("NAVIGATE_TO")
 
         // Force widget update on app start to overcome OEM background restrictions

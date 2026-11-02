@@ -51,11 +51,29 @@ fun FileNoteScreen(item: SavedItem, viewModel: CobaltViewModel, onClose: () -> U
     var outline by remember(item.id) { mutableStateOf<List<NoteTextNavigator.Heading>?>(null) }
     var lineIndex by remember(item.id, note.contentHash) { mutableStateOf<Utf8LineIndex?>(null) }
     var targetLine by rememberSaveable(item.id) { mutableStateOf("") }
+    var plainText by rememberSaveable(item.id) { mutableStateOf(item.byteLength >= NoteSizePolicy.TIER_B_MAX_BYTES) }
+    var copyEndLine by rememberSaveable(item.id) { mutableStateOf("") }
     val previousStarts = remember(item.id) { mutableStateListOf<Long>() }
     val folders by viewModel.customFolders.collectAsState()
     val folderEntities by viewModel.customFolderEntities.collectAsState()
     val pendingSections by viewModel.pendingSections.collectAsState()
     val pendingSection = pendingSections[item.id]
+    val generationHistory = remember(item.id) { viewModel.noteGenerationHistory(item.id) }
+    var historyRevision by remember { mutableIntStateOf(0) }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    val latestFlush by rememberUpdatedState {
+        val hash = editingHash
+        if (dirty && hash != null && pendingSection == null && !journalRecovered && !busy) {
+            viewModel.journalSectionOnBackground(note.id, hash, pageStart, pageEnd, draft)
+        }
+    }
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE || event == androidx.lifecycle.Lifecycle.Event.ON_STOP) latestFlush()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer); latestFlush() }
+    }
     val editHistory = remember(item.id, editingHash, pageStart) { viewModel.noteWindowHistory(item.id, editingHash, pageStart) }
     var canUndo by remember(editHistory) { mutableStateOf(editHistory.canUndo) }
     var canRedo by remember(editHistory) { mutableStateOf(editHistory.canRedo) }
@@ -98,9 +116,6 @@ fun FileNoteScreen(item: SavedItem, viewModel: CobaltViewModel, onClose: () -> U
             if (dirty && editingHash != hash) {
                 message = "The note changed elsewhere. Your draft is retained; reload before saving."
             } else {
-                if (NoteSizePolicy.needsWarning(note.byteLength)) Text(
-                    "This note is above 50 MB. It is kept intact; large-file operations may take longer.",
-                    style = MaterialTheme.typography.bodySmall)
                 try {
                     val window = persistence.window(note.id, hash, pageStart)
                     pageEnd = window.end
@@ -122,6 +137,9 @@ fun FileNoteScreen(item: SavedItem, viewModel: CobaltViewModel, onClose: () -> U
                 val entry = sectionDrafts.save(note.id, pending.hash, pending.start, pending.end, pending.replacement)
                 durableDraft = entry
                 val saved = sectionDrafts.apply(note.id, entry)
+                generationHistory.record(NoteGeneration(pending.hash, note.byteLength, note.preview),
+                    NoteGeneration(saved.contentHash!!, saved.byteLength, saved.preview))
+                historyRevision++
                 durableDraft = null
                 viewModel.clearNoteSection(note.id, pending)
                 dirty = false
@@ -155,6 +173,22 @@ fun FileNoteScreen(item: SavedItem, viewModel: CobaltViewModel, onClose: () -> U
     fun close() {
         if (dirty || pendingSection != null || durableDraft != null) confirmDiscard = true else onClose()
     }
+    fun restoreVersion(undo: Boolean) {
+        val change = (if (undo) generationHistory.undoChange else generationHistory.redoChange) ?: return
+        val expected = if (undo) change.after.hash else change.before.hash
+        val target = if (undo) change.before else change.after
+        busy = true
+        job = scope.launch {
+            try {
+                val saved = persistence.restoreGeneration(note.id, expected, target)
+                if (undo) generationHistory.didUndo(change) else generationHistory.didRedo(change)
+                historyRevision++; dirty = false; note = saved
+                viewModel.showDetailItem(saved)
+            } catch (cancel: CancellationException) { throw cancel }
+            catch (_: Exception) { message = "Undo/redo could not be applied. Saved versions retained." }
+            finally { busy = false; job = null }
+        }
+    }
     BackHandler { if (!busy) close() }
 
     Scaffold(topBar = {
@@ -172,10 +206,16 @@ fun FileNoteScreen(item: SavedItem, viewModel: CobaltViewModel, onClose: () -> U
                 TextButton(onClick = { job?.cancel() }) { Text("Cancel") }
             }
             message?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 3) }
+            if (NoteSizePolicy.needsWarning(note.byteLength)) Text(
+                "This note is above 50 MB. It is kept intact; large-file operations may take longer.",
+                style = MaterialTheme.typography.bodySmall)
             if (note.bodyMissing || note.contentHash == null) {
                 Text("The body is missing, unavailable, or still needs migration. The note record is retained. See Settings → Data Migration.")
             } else {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TextButton(onClick = { plainText = !plainText }, enabled = !editing && !busy && note.byteLength < NoteSizePolicy.TIER_B_MAX_BYTES) {
+                        Text(if (plainText) "Markdown" else "Plain text")
+                    }
                     TextButton(onClick = { if (!dirty) editing = !editing }, enabled = !busy) {
                         Text(if (editing) "Read" else "Edit sections")
                     }
@@ -187,6 +227,10 @@ fun FileNoteScreen(item: SavedItem, viewModel: CobaltViewModel, onClose: () -> U
                 }
                 TextButton(onClick = { viewModel.shareItem(note, context) }, enabled = !busy) { Text("Share Markdown") }
                 Row {
+                    key(historyRevision) {
+                        TextButton(onClick = { restoreVersion(true) }, enabled = !busy && !dirty && durableDraft == null && generationHistory.undoChange != null) { Text("Undo save") }
+                        TextButton(onClick = { restoreVersion(false) }, enabled = !busy && !dirty && durableDraft == null && generationHistory.redoChange != null) { Text("Redo save") }
+                    }
                     TextButton(onClick = { showFind = !showFind }, enabled = !busy) { Text("Find") }
                     TextButton(onClick = {
                         val hash = note.contentHash ?: return@TextButton
@@ -274,6 +318,45 @@ fun FileNoteScreen(item: SavedItem, viewModel: CobaltViewModel, onClose: () -> U
                             }
                         }, enabled = !busy && !dirty && durableDraft == null && targetLine.toLongOrNull()?.let { it > 0 } == true) { Text("Jump") }
                     }
+                    Row {
+                        OutlinedTextField(value = copyEndLine, onValueChange = { copyEndLine = it.filter(Char::isDigit).take(12) },
+                            singleLine = true, label = { Text("Copy through line") }, modifier = Modifier.weight(1f), enabled = !busy)
+                        TextButton(onClick = {
+                            val hash = note.contentHash ?: return@TextButton
+                            val first = targetLine.toLongOrNull()?.minus(1) ?: return@TextButton
+                            val last = copyEndLine.toLongOrNull() ?: return@TextButton
+                            busy = true
+                            job = scope.launch {
+                                try {
+                                    val text = withContext(Dispatchers.IO) {
+                                        val cancellation = currentCoroutineContext()
+                                        val table = PieceTable(FileNoteByteSource(persistence.store, note.id, hash, note.byteLength))
+                                        val index = lineIndex ?: table.openStream().use { input -> Utf8LineIndex.build(input) { cancellation.ensureActive() } }
+                                        require(first >= 0 && last > first && last <= index.lineCount)
+                                        val start = index.byteOffset(first, { table.openStream(it) }) { cancellation.ensureActive() }
+                                        val end = if (last == index.lineCount) note.byteLength else index.byteOffset(last, { table.openStream(it) }) { cancellation.ensureActive() }
+                                        val result = StringBuilder()
+                                        table.openStream(start, end).bufferedReader(Charsets.UTF_8).use { input ->
+                                            val buffer = CharArray(4096)
+                                            while (true) {
+                                                cancellation.ensureActive()
+                                                val count = input.read(buffer)
+                                                if (count < 0) break
+                                                check(result.length + count <= 100_000) { "Use Export for selections above 100,000 characters" }
+                                                result.append(buffer, 0, count)
+                                            }
+                                        }
+                                        result.toString()
+                                    }
+                                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Selected note lines", text))
+                                    message = "Selected lines copied."
+                                } catch (cancel: CancellationException) { throw cancel }
+                                catch (_: Exception) { message = "Could not copy this range. Check line numbers; use Export above 100,000 characters." }
+                                finally { busy = false; job = null }
+                            }
+                        }, enabled = !busy && targetLine.toLongOrNull() != null && copyEndLine.toLongOrNull() != null) { Text("Copy lines") }
+                    }
                 }
                 if (pendingSection != null) {
                     Text(if (durableDraft != null) "A section draft is stored privately for recovery. Retry saving before closing."
@@ -348,7 +431,12 @@ fun FileNoteScreen(item: SavedItem, viewModel: CobaltViewModel, onClose: () -> U
         if (!editing && !note.bodyMissing && note.contentHash != null) {
             Text("Large-note mode · plain text · ${note.byteLength} bytes", style = MaterialTheme.typography.bodySmall)
             key(note.contentHash) {
-                NoteBodyPlainText(reader, RecoveryNote(note.id, note.title, note.byteLength), Modifier.weight(1f).fillMaxWidth(), jumpByte)
+                if (!plainText && note.byteLength < NoteSizePolicy.TIER_B_MAX_BYTES) LazyMarkdownNote(note.id, note.contentHash!!,
+                    note.byteLength, jumpByte, Modifier.weight(1f).fillMaxWidth(),
+                    onBlockChange = if (busy || dirty || durableDraft != null) null else { start, end, updated ->
+                        saveSection(updated, note.contentHash, start, end)
+                    })
+                else NoteBodyPlainText(reader, RecoveryNote(note.id, note.title, note.byteLength), Modifier.weight(1f).fillMaxWidth(), jumpByte)
             }
         }
         }

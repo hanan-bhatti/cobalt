@@ -172,10 +172,10 @@ fun MarkdownText(
     }
 }
 
-private data class SafeMarkdownDocument(val node: Node?)
+internal data class SafeMarkdownDocument(val node: Node?, val links: Int = 0)
 
 /** Bounded parser input plus iterative depth/link checks before recursive Compose rendering. */
-private fun parseSafeMarkdown(markdown: String): SafeMarkdownDocument {
+internal fun parseSafeMarkdown(markdown: String): SafeMarkdownDocument {
     val parser = Parser.builder().extensions(listOf(StrikethroughExtension.create(), TablesExtension.create())).build()
     val document = parser.parse(markdown)
     val pending = ArrayDeque<Pair<Node, Int>>()
@@ -184,11 +184,11 @@ private fun parseSafeMarkdown(markdown: String): SafeMarkdownDocument {
     while (pending.isNotEmpty()) {
         val (node, depth) = pending.removeLast()
         if (depth > NoteSizePolicy.MARKDOWN_MAX_DEPTH) return SafeMarkdownDocument(null)
-        if ((node is Link || node is Image) && ++links > NoteSizePolicy.DECORATED_LINK_LIMIT) return SafeMarkdownDocument(null)
+        if ((node is Link || node is Image) && ++links > NoteSizePolicy.DECORATED_LINK_LIMIT) return SafeMarkdownDocument(null, links)
         var child = node.firstChild
         while (child != null) { pending.addLast(child to depth + 1); child = child.next }
     }
-    return SafeMarkdownDocument(document)
+    return SafeMarkdownDocument(document, links)
 }
 
 @Composable
