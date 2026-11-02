@@ -24,9 +24,10 @@ class LazyNoteReaderTest {
         try {
             compose.setContent { MaterialTheme { LazyMarkdownNote(id, ref.hash, ref.bytes, 0, Modifier.fillMaxSize()) } }
             compose.waitUntil(15_000) { compose.onAllNodes(hasScrollAction()).fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(15_000) { compose.onAllNodes(hasText("Paragraph 1")).fetchSemanticsNodes().isNotEmpty() }
             assertTrue(compose.onAllNodes(hasText("Paragraph", substring = true)).fetchSemanticsNodes().size < 100)
             compose.onNode(hasScrollAction()).performScrollToIndex(2_000)
-            compose.waitForIdle()
+            compose.waitUntil(15_000) { compose.onAllNodes(hasText("Paragraph 2001")).fetchSemanticsNodes().isNotEmpty() }
             assertTrue(compose.onAllNodes(hasText("Paragraph", substring = true)).fetchSemanticsNodes().size < 100)
         } finally { store.deleteAll(id) }
     }

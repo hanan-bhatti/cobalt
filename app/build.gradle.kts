@@ -51,6 +51,7 @@ android {
 
   buildTypes {
     release {
+      isDebuggable = false
       isCrunchPngs = false
       isMinifyEnabled = true
       isShrinkResources = true
@@ -85,6 +86,11 @@ android {
     includeInBundle = false
   }
   testOptions { unitTests { isIncludeAndroidResources = true } }
+}
+
+tasks.withType<Test>().configureEach {
+  maxParallelForks = 1
+  maxHeapSize = "512m"
 }
 
 tasks.withType<KotlinCompile>().configureEach {
