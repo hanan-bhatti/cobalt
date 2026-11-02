@@ -31,7 +31,7 @@
 ## 📖 Table of Contents
 
 - [Overview](#-overview)
-- [FOSS vs. Play Flavors](#-foss-vs-play-flavors)
+- [Cobalt distribution](#-cobalt-distribution)
 - [Screenshots](#-screenshots)
 - [Key Features](#-key-features)
   - [⚡ Cobalt SideDock](#-cobalt-sidedock-100-jetpack-compose)
@@ -56,32 +56,12 @@ With Cobalt, you never need to leave your current task to save a thought or extr
 
 ---
 
-## 📦 FOSS vs. Play Flavors
+## 📦 Cobalt distribution
 
-Cobalt is intentionally engineered into **two distinct distribution flavors** to give you total control over privacy, cloud connectivity, and Google dependencies:
+Cobalt has one Android application, distributed through GitHub and F-Droid.
+Notes are local. Optional integrations use your own credentials; see [NETWORK.md](NETWORK.md).
+Crash reports are saved locally and shared through an email chooser only on request.
 
-<div align="center">
-
-| Feature | 🌿 FOSS Edition (F-Droid) | ⚡ Play Edition (Google Play) |
-|---|---|---|
-| **Distribution** | [F-Droid Package](https://f-droid.org/en/packages/com.hanan_bhatti.cobalt/) & [GitHub Releases](https://github.com/hanan-bhatti/cobalt/releases/latest) | Google Play Store & [GitHub Releases](https://github.com/hanan-bhatti/cobalt/releases/latest) |
-| **Google Dependencies** | **0% — Completely De-Googled** | Google Play Services enabled |
-| **Telemetry & Trackers** | **Zero / None** (No analytics, pure privacy) | Firebase Analytics (Opt-in crash monitoring) |
-| **Primary Database** | Encrypted Local SQLite (Room Database) | Encrypted Local SQLite (Room Database) |
-| **Cloud Synchronization** | Offline-First (Manual JSON Backup & Restore) | Automated Cloud Firestore & Firebase Storage Sync |
-| **Authentication** | None needed (Immediate local access) | Google Sign-In & Passwordless Email Link |
-| **Gemini AI Engine** | Direct user Gemini API Key via Retrofit | Direct Gemini API Key & Firebase AI services |
-| **Background Footprint** | Extremely low battery and memory usage | Cloud sync background services |
-| **License** | 100% Free & Open Source (AGPL v3.0) | 100% Free & Open Source (AGPL v3.0) |
-
-</div>
-
-> [!NOTE]
-> **Which flavor should I choose?**
-> * **Choose FOSS** if you value strict privacy, use a de-Googled ROM (GrapheneOS, CalyxOS, LineageOS), or prefer installing updates through [F-Droid](https://f-droid.org/en/packages/com.hanan_bhatti.cobalt/).
-> * **Choose Play** if you want seamless automatic cloud backups across multiple Android devices and convenient Google account synchronization.
-
----
 
 ## 📱 Screenshots
 
@@ -149,7 +129,6 @@ graph TD
     B --> C["CobaltRepository (Single Source of Truth)"]
     C --> D[("SQLite / Room Database (Local Cache)")]
     C --> E["Gemini AI Client (Retrofit / REST)"]
-    C -. Play Flavor .-> F["Firebase Services (Auth, Firestore, Storage)"]
     A --> G["Cobalt SideDock (WindowManager + RenderThread GPU)"]
     A --> H["Media3 / ExoPlayer (Audio Waveforms)"]
 ```
@@ -162,7 +141,6 @@ graph TD
 * **Web Integration**: [AndroidX Browser (Chrome Custom Tabs)](https://developer.android.com/jetpack/androidx/releases/browser)
 * **Widgets**: [Jetpack Glance](https://developer.android.com/jetpack/compose/glance)
 * **Network & Serializer**: Retrofit 2 + Moshi Kotlin + OkHttp 4
-* **Cloud Services (Play Edition)**: Firebase Firestore, Firebase Storage, Firebase Auth, Google Credential Manager
 
 ---
 
@@ -198,24 +176,10 @@ cd cobalt
 
 ### 2. Build Your Desired Flavor
 
-* **To build the FOSS release APK (De-Googled, F-Droid flavor)**:
-  ```bash
-  ./gradlew assembleFossRelease
-  ```
-  *Output: `app/build/outputs/apk/foss/release/app-foss-release.apk`*
+Build the single application with `./gradlew assembleRelease`.
+The APK is written to `app/build/outputs/apk/release/`.
+Release signing remains configured by the existing environment variables.
 
-* **To build the Play release APK (Firebase cloud sync flavor)**:
-  ```bash
-  ./gradlew assemblePlayRelease
-  ```
-  *(Requires `app/src/play/google-services.json`)*
-
-* **To build debug APK for rapid development**:
-  ```bash
-  ./gradlew assembleFossDebug
-  ```
-
----
 
 ## 📈 Star History
 

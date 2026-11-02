@@ -1,3 +1,11 @@
+## Unreleased — single application cleanup
+
+- Consolidate Android sources and build configuration into one Cobalt application.
+- Remove discontinued cloud distribution, backend deployment sources, analytics
+  wrappers and cloud account/storage screens. Retain local email crash reporting.
+- Document outbound connections and historical credential findings.
+- Release verification remains in progress; this entry is not a release certification.
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -302,7 +310,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Instant Local Saving:** Enabled instant DB saves for extracted links prior to background metadata fetching.
 - **Widget Sync on Edge Notes:** Triggered instant widget recomposition when saving quick edge notes from the overlay.
 - **Firestore Sync Path Formatting:** Resolved Firestore folder document path slashes and fixed early exit bugs in `syncUnsyncedItems`.
-- 
+-
 ### Fixed
 - **Active State Update Syncing:** Updated `updateSavedItem` to instantly update state metrics inside the active detail view when modifying properties.
 - **Dynamic System Category Coloring:** Fixed the edge panel and capture widgets' coloring logic to support dynamic/system theme color schemes.

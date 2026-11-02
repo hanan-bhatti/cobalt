@@ -16,7 +16,12 @@ Organization & Viewing:
 - Storage Management: View local storage usage broken down by media type, with options to delete cached files.
 
 Network & Privacy Disclosures:
-The FOSS build stores all data locally on your device. It does not include analytics, tracking SDKs, or background synchronization services. Certain optional features connect to external APIs:
+Cobalt stores all data locally on your device. It does not include analytics, tracking SDKs, or Cobalt-owned cloud synchronization. Certain optional features connect to external APIs:
 - AI Screen OCR & Transcription: Sends selected image regions or voice notes to Google's Gemini API for processing. This requires you to provide your own Gemini API key in Settings.
 - Movie & Anime Data: Queries The Movie Database (TMDb) and Jikan (MyAnimeList) for media details and poster images. TMDb searches require your own TMDb API key.
 - Trailers: Embedded playback of YouTube trailers on media detail screens.
+
+- Trakt: Optional user-authorized watch tracking and synchronization.
+- Updates: GitHub release checks are opt-in in Release & Updates.
+- Links and remote media: Metadata and images can contact saved URL hosts.
+- Crashes: Reports stay local until you choose to share them by email.

@@ -120,8 +120,7 @@ def sync_fdroid_yml(version_code, version_name):
             f"    commit: {commit_ref}\n"
             f"    subdir: app\n"
             f"    gradle:\n"
-            f"      - foss\n"
-            f"    prebuild: sed -i -e '/playImplementation/d' build.gradle.kts"
+            f"      - yes"
         )
         if 'AllowedAPKSigningKeys:' in content:
             content = content.replace('AllowedAPKSigningKeys:', f"{new_build}\n\nAllowedAPKSigningKeys:")
