@@ -13,7 +13,6 @@ Organization & Viewing:
 - Folders & Archive: Organize items into custom folders or archive them to remove them from the main feed while keeping them stored.
 - Search & Filters: Search across titles, content, extracted OCR text, and URLs, with filter chips for each media type.
 - Media Hub: Track movies and anime with watch statuses (Plan to Watch, Watching, Completed), genres, ratings, and release years.
-- Storage Management: View local storage usage broken down by media type, with options to delete cached files.
 
 Network & Privacy Disclosures:
 Cobalt stores all data locally on your device. It does not include analytics, tracking SDKs, or Cobalt-owned cloud synchronization. Certain optional features connect to external APIs:
@@ -25,3 +24,5 @@ Cobalt stores all data locally on your device. It does not include analytics, tr
 - Updates: GitHub release checks are opt-in in Release & Updates.
 - Links and remote media: Metadata and images can contact saved URL hosts.
 - Crashes: Reports stay local until you choose to share them by email.
+
+Automatic Android backup and device transfer are disabled. Uninstalling Cobalt can permanently remove local data.

@@ -4,6 +4,8 @@
 - Remove discontinued cloud distribution, backend deployment sources, analytics
   wrappers and cloud account/storage screens. Retain local email crash reporting.
 - Document outbound connections and historical credential findings.
+- Remove account state, storage-management helpers and pull-to-refresh controls.
+- Disable automatic Android backup and device transfer; retain existing note data.
 - Release verification remains in progress; this entry is not a release certification.
 
 # Changelog
