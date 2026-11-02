@@ -27,6 +27,7 @@ object ClipboardUrlHelper {
      * Returns the normalized URL (e.g. "https://example.com/...") or null if invalid.
      */
     fun parseUrl(rawText: String): String? {
+        if (rawText.length > com.example.notes.NoteSizePolicy.URL_CHARACTERS) return null
         val trimmed = rawText.trim()
         if (trimmed.isEmpty() || trimmed.contains(" ") || trimmed.contains("\n") || trimmed.contains("\r") || trimmed.contains("\t")) {
             return null
@@ -55,6 +56,7 @@ object ClipboardUrlHelper {
      * Extracts the clean domain name (e.g. "example.com" or "github.com") without "www."
      */
     fun extractDomain(url: String): String {
+        if (url.length > com.example.notes.NoteSizePolicy.URL_CHARACTERS) return url.take(30)
         return try {
             val formatted = if (!url.startsWith("http://") && !url.startsWith("https://")) {
                 "https://$url"

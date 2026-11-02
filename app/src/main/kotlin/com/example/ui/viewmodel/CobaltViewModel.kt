@@ -753,10 +753,9 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             when {
                 // 1. Text Shared
                 mimeType.startsWith("text/") && textContent != null -> {
-                    // Extract URL from text using regex if it's not exclusively a URL
-                    val urlRegex = "(?i)\\b((?:https?://|www\\d{0,3}[.]|[a-z0-9.\\-]+[.][a-z]{2,4}/)(?:[^\\s()<>]+|\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\))+(?:\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\)|[^\\s`!()\\[\\]{};:'\".,<>?«»“”‘’]))".toRegex()
-                    val matchResult = urlRegex.find(textContent)
-                    val url = matchResult?.value
+                    val url = withContext(Dispatchers.Default) {
+                        com.example.utils.ClipboardUrlHelper.parseUrl(textContent)
+                    }
 
                     if (url != null) {
                         // Title might be in subject, or in the remaining text
@@ -770,7 +769,9 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                         fetchLinkPreviewForActiveItem(url)
                     } else {
                         // Check if looks like code
-                        val isCode = textContent.contains("class ") || textContent.contains("fun ") || textContent.contains("{") || textContent.contains("import ")
+                        val isCode = withContext(Dispatchers.Default) {
+                            textContent.contains("class ") || textContent.contains("fun ") || textContent.contains("{") || textContent.contains("import ")
+                        }
                         _activeCaptureItem.value = SavedItem(
                             type = if (isCode) SavedItemType.CODE else SavedItemType.TEXT,
                             title = subject?.takeIf { it.isNotBlank() } ?: if (isCode) "Captured Code Snippet" else "Captured Text Note",
@@ -1394,9 +1395,192 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _noteInputBusy = MutableStateFlow(false)
     val noteInputBusy = _noteInputBusy.asStateFlow()
+    data class QuickDraftState(
+        val ready: Boolean = false, val text: String = "", val busy: Boolean = false, val title: String = "",
+        val snapshot: com.example.notes.QuickNoteDraftStore.Snapshot? = null, val error: String? = null, val pending: Boolean = false
+    )
+    private val _quickDraft = MutableStateFlow(QuickDraftState())
+    val quickDraft = _quickDraft.asStateFlow()
+    data class MarkdownImportState(val running: Boolean = false, val bytes: Long = 0, val message: String? = null,
+        val canSplit: Boolean = false, val partsSaved: Int = 0)
+    private val _markdownImport = MutableStateFlow(MarkdownImportState())
+    val markdownImport = _markdownImport.asStateFlow()
+    private var markdownImportJob: kotlinx.coroutines.Job? = null
+    private var markdownImportSource: Uri? = null
+    private var markdownImportSession = UUID.randomUUID().toString()
+
+    fun cancelMarkdownImport() { markdownImportJob?.cancel() }
+
+    fun importMarkdown(uri: Uri) {
+        if (markdownImportJob?.isActive == true) return
+        markdownImportSource = uri
+        markdownImportSession = UUID.randomUUID().toString()
+        _markdownImport.value = MarkdownImportState(running = true)
+        markdownImportJob = viewModelScope.launch {
+            try {
+                val saved = withContext(Dispatchers.IO) {
+                    val name = context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),
+                        null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) cursor.getString(0)?.take(160)?.removeSuffix(".md") else null
+                    } ?: "Imported note"
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        val prepared = com.example.notes.NoteImport.prepare(input, name)
+                        prepared.body.use { body ->
+                            com.example.notes.NotePersistence(context).importMarkdown(prepared.note, body) { bytes ->
+                                _markdownImport.value = MarkdownImportState(running = true, bytes = bytes)
+                            }
+                        }
+                    } ?: throw java.io.IOException("Cannot open selected document")
+                }
+                val warning = if (com.example.notes.NoteSizePolicy.needsWarning(saved.byteLength)) " Above 50 MB; large-file mode is recommended." else ""
+                _markdownImport.value = MarkdownImportState(bytes = saved.byteLength, message = "Markdown imported.$warning")
+                com.example.widget.WidgetUpdater.update(context)
+            } catch (cancel: kotlinx.coroutines.CancellationException) {
+                _markdownImport.value = MarkdownImportState(message = "Import cancelled. The source document was not changed.")
+                throw cancel
+            } catch (error: Exception) {
+                _markdownImport.value = MarkdownImportState(canSplit = error is com.example.notes.NoteSizeExceededException,
+                    message = "Import failed. New notes must be at most 55 MB; split larger files. The source document was not changed.")
+            }
+        }
+    }
+
+    fun splitMarkdownImport() {
+        val uri = markdownImportSource ?: return
+        if (markdownImportJob?.isActive == true) return
+        val session = markdownImportSession
+        _markdownImport.value = MarkdownImportState(running = true)
+        markdownImportJob = viewModelScope.launch {
+            var partsSaved = 0
+            var bytesSaved = 0L
+            try {
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        val prepared = com.example.notes.NoteImport.prepare(input, "Imported note")
+                        prepared.body.use { body ->
+                            val parts = com.example.notes.Utf8NoteParts(body)
+                            val persistence = com.example.notes.NotePersistence(context)
+                            while (true) {
+                                kotlin.coroutines.coroutineContext.ensureActive()
+                                val part = parts.next() ?: break
+                                val index = partsSaved + 1
+                                val id = UUID.nameUUIDFromBytes("$session:$index".toByteArray(Charsets.UTF_8)).toString()
+                                val saved = part.use { source -> persistence.importMarkdown(prepared.note.copy(id = id,
+                                    title = "${prepared.note.title} (part $index)"), source) { bytes ->
+                                    _markdownImport.value = MarkdownImportState(running = true, bytes = bytesSaved + bytes, partsSaved = partsSaved)
+                                } }
+                                partsSaved++
+                                bytesSaved += saved.byteLength
+                            }
+                        }
+                    } ?: throw java.io.IOException("Cannot read source document")
+                }
+                _markdownImport.value = MarkdownImportState(bytes = bytesSaved, partsSaved = partsSaved,
+                    message = "Saved $partsSaved Markdown parts. The source document was not changed.")
+                com.example.widget.WidgetUpdater.update(context)
+            } catch (cancel: kotlinx.coroutines.CancellationException) {
+                _markdownImport.value = MarkdownImportState(canSplit = true, partsSaved = partsSaved,
+                    message = "Split cancelled. $partsSaved completed parts are kept. Retry checks the same part IDs.")
+                throw cancel
+            } catch (_: Exception) {
+                _markdownImport.value = MarkdownImportState(canSplit = true, partsSaved = partsSaved,
+                    message = "Split stopped. $partsSaved completed parts and the original document are retained. Retry checks the same part IDs.")
+            }
+        }
+    }
+    private var quickDraftJob: kotlinx.coroutines.Job? = null
+    private var quickTitleJob: kotlinx.coroutines.Job? = null
+    private var quickDraftPendingText: String? = null
+    private var quickDraftSaving = false
+
+    fun loadQuickDraft() {
+        if (_quickDraft.value.ready || quickDraftJob?.isActive == true) return
+        quickDraftJob = viewModelScope.launch {
+            try {
+                val loaded = withContext(Dispatchers.IO) { com.example.notes.QuickNoteDraftStore(context).load() }
+                _quickDraft.value = QuickDraftState(ready = true, text = loaded.text, snapshot = loaded.snapshot, title = loaded.title)
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: Exception) { _quickDraft.value = QuickDraftState(error = "Draft unavailable. Original reference retained. Retry loading.") }
+        }
+    }
+
+    fun updateQuickDraftTitle(title: String) {
+        if (!_quickDraft.value.ready || _quickDraft.value.busy || quickDraftSaving) return
+        if (title.length > 2048) {
+            _quickDraft.update { it.copy(error = "Title limited to 2,048 characters. Paste longer text in the body.") }
+            return
+        }
+        _quickDraft.update { it.copy(title = title, error = null) }
+        quickTitleJob?.cancel()
+        quickTitleJob = viewModelScope.launch {
+            try {
+                kotlinx.coroutines.delay(300)
+                withContext(Dispatchers.IO) { com.example.notes.QuickNoteDraftStore(context).writeTitle(title) }
+            }
+            catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: Exception) { _quickDraft.update { it.copy(error = "Could not store the draft title. Retry saving before closing.") } }
+        }
+    }
+
+    fun updateQuickDraft(text: String) {
+        if (!_quickDraft.value.ready || _quickDraft.value.busy || quickDraftSaving) return
+        quickDraftJob?.cancel()
+        quickDraftPendingText = text
+        val large = com.example.notes.NoteEditorWindows.requiresWindow(text)
+        _quickDraft.update { it.copy(text = if (large) it.text else text, busy = large, error = null, pending = true) }
+        quickDraftJob = viewModelScope.launch {
+            try {
+                if (!large) kotlinx.coroutines.delay(400)
+                val snapshot = withContext(Dispatchers.IO) { com.example.notes.QuickNoteDraftStore(context).write(text) }
+                quickDraftPendingText = null
+                _quickDraft.value = QuickDraftState(ready = true, text = if (large) "" else text, snapshot = snapshot, title = _quickDraft.value.title)
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: Exception) {
+                _quickDraft.update { it.copy(busy = false, error = "Draft could not be stored. Retry before closing. New notes are limited to 55 MB; split larger pastes.") }
+            }
+        }
+    }
+
+    fun saveQuickDraft(folders: List<String>, open: Boolean = false, onSaved: () -> Unit = {}) {
+        if (quickDraftSaving || !_quickDraft.value.ready) return
+        quickDraftSaving = true
+        val pending = quickDraftPendingText
+        val title = _quickDraft.value.title
+        val previousJob = quickDraftJob
+        val previousTitleJob = quickTitleJob
+        previousJob?.cancel()
+        previousTitleJob?.cancel()
+        _quickDraft.update { it.copy(busy = true, error = null) }
+        quickDraftJob = viewModelScope.launch {
+            try {
+                previousJob?.join()
+                previousTitleJob?.join()
+                val saved = withContext(Dispatchers.IO) {
+                    val drafts = com.example.notes.QuickNoteDraftStore(context)
+                    if (pending != null) drafts.write(pending)
+                    drafts.writeTitle(title)
+                    drafts.promote(folders)
+                }
+                quickDraftPendingText = null
+                _quickDraft.value = QuickDraftState(ready = true)
+                onSaved()
+                if (open) showDetailItem(saved)
+                com.example.widget.WidgetUpdater.update(context)
+                showToast("Note saved.")
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: Exception) {
+                _quickDraft.update { it.copy(busy = false, error = "Could not save. Your draft is retained; retry.") }
+            } finally { quickDraftSaving = false }
+        }
+    }
     data class PendingSection(val hash: String, val start: Long, val end: Long, val replacement: String)
     private val _pendingSections = MutableStateFlow<Map<String, PendingSection>>(emptyMap())
     val pendingSections = _pendingSections.asStateFlow()
+    private val windowHistories = object : LinkedHashMap<String, com.example.notes.WindowEditHistory>(8, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, com.example.notes.WindowEditHistory>?) = size > 8
+    }
+    fun noteWindowHistory(id: String, hash: String?, start: Long): com.example.notes.WindowEditHistory =
+        windowHistories.getOrPut("$id:$hash:$start") { com.example.notes.WindowEditHistory() }
     fun retainNoteSection(id: String, section: PendingSection) {
         _pendingSections.update { it + (id to section) }
     }
@@ -1415,21 +1599,41 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         noteTextJob = viewModelScope.launch {
             var applied = false
             try {
-                val text = withContext(Dispatchers.Default) {
-                    require(start in 0..end && end <= source.content.length)
-                    val merged = source.content.replaceRange(start, end, replacement)
+                val plan = withContext(Dispatchers.Default) {
                     val cancellation = kotlin.coroutines.coroutineContext
-                    val bytes = com.example.notes.NoteEditorWindows.utf8Bytes(merged) {
-                        cancellation.ensureActive()
-                    }
-                    if (!com.example.notes.NoteSizePolicy.accepts(bytes, existing = source.byteLength > com.example.notes.NoteSizePolicy.IMPORT_MAX_BYTES)) {
-                        throw java.io.IOException("Note exceeds 55 MB. Split the paste or import smaller Markdown files.")
-                    }
-                    merged
+                    com.example.notes.NoteTextReplacement(source.content, start, end, replacement) { cancellation.ensureActive() }
                 }
-                if (revision == noteTextRevision && _activeCaptureItem.value?.id == id) {
-                    updateActiveCaptureItem { it.copy(content = text, bodyLoaded = true) }
-                    applied = true
+                if (!com.example.notes.NoteSizePolicy.acceptsEdit(plan.byteLength, source.byteLength)) {
+                    throw java.io.IOException("Note exceeds 55 MB. Split the paste or import smaller Markdown files.")
+                }
+                if (com.example.notes.NotePersistence.isNote(source) && plan.byteLength >= com.example.notes.NoteSizePolicy.TIER_A_MAX_BYTES) {
+                    val saved = withContext(Dispatchers.IO) {
+                        val cancellation = kotlin.coroutines.coroutineContext
+                        plan.openStream().use { input ->
+                            com.example.notes.NotePersistence(context).saveStream(source.copy(updatedAt = System.currentTimeMillis()), input) {
+                                cancellation.ensureActive()
+                                if (revision != noteTextRevision || _activeCaptureItem.value?.id != id) {
+                                    throw kotlinx.coroutines.CancellationException("Note closed or replaced")
+                                }
+                            }
+                        }
+                    }
+                    if (revision == noteTextRevision && _activeCaptureItem.value?.id == id) {
+                        saveAfterNoteInput = false
+                        captureDrafts.remove(source.type)
+                        _activeCaptureItem.value = null
+                        _isEditingItem.value = false
+                        editOriginalId = null
+                        _activeDetailItem.value = saved
+                        com.example.widget.WidgetUpdater.update(context)
+                        showToast("Saved in large-note mode. Continue editing sections without loading the whole note.")
+                    }
+                } else {
+                    val text = withContext(Dispatchers.Default) { source.content.replaceRange(start, end, replacement) }
+                    if (revision == noteTextRevision && _activeCaptureItem.value?.id == id) {
+                        updateActiveCaptureItem { it.copy(content = text, bodyLoaded = true) }
+                        applied = true
+                    }
                 }
             } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
             catch (error: Exception) { showToast(error.message ?: "Paste could not be applied. Saved note unchanged.") }
@@ -1446,7 +1650,12 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
     fun updateActiveCaptureItem(updater: (SavedItem) -> SavedItem) {
         val oldItem = _activeCaptureItem.value
-        val newItem = oldItem?.let(updater)
+        var newItem = oldItem?.let(updater)
+        if (newItem?.type == SavedItemType.LINK &&
+            (newItem.content.length > com.example.notes.NoteSizePolicy.URL_CHARACTERS || newItem.content.indexOf('\n') >= 0)) {
+            newItem = newItem.copy(type = SavedItemType.TEXT, bodyLoaded = true)
+            showToast("Pasted text opened as a note so its full content is preserved.")
+        }
         _activeCaptureItem.value = newItem
         if (oldItem != null) {
             captureDrafts[oldItem.type] = oldItem
@@ -1515,27 +1724,6 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 throw cancel
             } catch (_: Exception) {
                 showToast("Could not save. Your draft has been retained; please retry.")
-            } finally {
-                _isSaving.value = false
-            }
-        }
-    }
-
-    fun saveQuickNote(title: String, content: String, onComplete: () -> Unit = {}) {
-        viewModelScope.launch {
-            _isSaving.value = true
-            try {
-                val item = com.example.data.model.SavedItem(
-                    type = com.example.data.model.SavedItemType.TEXT,
-                    title = title,
-                    content = content
-                )
-                repository.saveItem(item, null)
-                com.example.widget.WidgetUpdater.update(context)
-                kotlinx.coroutines.delay(200)
-                onComplete()
-            } catch (e: Exception) {
-                android.util.Log.e("CobaltVM", "Failed to save quick note: ${e.message}")
             } finally {
                 _isSaving.value = false
             }

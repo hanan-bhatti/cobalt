@@ -150,7 +150,27 @@ class MainActivity : ComponentActivity() {
             }
         }
         lifecycleScope.launch {
-            val needed = com.example.notes.NoteMigrationManager.needsStartupMigration(applicationContext)
+            if (com.example.notes.StartupCrashGuard.isSafeMode) {
+                showRecovery()
+                return@launch
+            }
+            val needed = try {
+                com.example.notes.NoteMigrationManager.needsStartupMigration(applicationContext)
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: Exception) {
+                setContent {
+                    com.example.ui.theme.MyApplicationTheme {
+                        androidx.compose.material3.Surface(Modifier.fillMaxSize()) {
+                            androidx.compose.foundation.layout.Column(Modifier.padding(24.dp)) {
+                                androidx.compose.material3.Text("Cobalt could not prepare note storage. Your notes have not been deleted.")
+                                androidx.compose.material3.TextButton(onClick = { recreate() }) { androidx.compose.material3.Text("Retry") }
+                                androidx.compose.material3.TextButton(onClick = { showRecovery() }) { androidx.compose.material3.Text("Open recovery") }
+                            }
+                        }
+                    }
+                }
+                return@launch
+            }
             if (needed) {
                 setContent {
                     com.example.ui.theme.MyApplicationTheme {

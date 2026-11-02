@@ -25,11 +25,18 @@ object NoteMigrationManager {
     val status = mutableStatus.asStateFlow()
     private fun preferences(context: Context) = context.applicationContext.getSharedPreferences("note_migration", Context.MODE_PRIVATE)
 
-    fun shouldPauseBackground(context: Context): Boolean =
-        context.getDatabasePath("cobalt_db").exists() &&
-            preferences(context).getInt("completed_format", 0) < BODY_FORMAT_VERSION
+    fun shouldPauseBackground(context: Context): Boolean {
+        val prefs = preferences(context)
+        return prefs.getBoolean("migration_required", false) ||
+            (context.getDatabasePath("cobalt_db").exists() && prefs.getInt("completed_format", 0) < BODY_FORMAT_VERSION)
+    }
 
     suspend fun needsStartupMigration(context: Context): Boolean = withContext(Dispatchers.IO) {
+        if (context.getSharedPreferences("draft_prefs", Context.MODE_PRIVATE).contains("quick_note")) {
+            check(preferences(context).edit().putBoolean("migration_required", true).commit())
+            refreshStatus(context)
+            return@withContext true
+        }
         if (!context.getDatabasePath("cobalt_db").exists()) {
             preferences(context).edit().putInt("completed_format", BODY_FORMAT_VERSION)
                 .putString("phase", Phase.COMPLETE.name).commit()
@@ -68,7 +75,7 @@ object NoteMigrationManager {
             .putInt("converted", status.converted).putInt("verified", status.verified)
             .putInt("failed", status.failed).putLong("last_run", status.lastRun)
             .putString("errors", JSONArray(status.errors).toString())
-        if (status.phase == Phase.COMPLETE) editor.putInt("completed_format", BODY_FORMAT_VERSION)
+        if (status.phase == Phase.COMPLETE) editor.putInt("completed_format", BODY_FORMAT_VERSION).putBoolean("migration_required", false)
         check(editor.commit()) { "Cannot persist migration results" }
     }
 
@@ -81,6 +88,7 @@ object NoteMigrationManager {
                 val database = AppDatabase.getDatabase(context)
                 val dao = database.savedItemDao()
                 val persistence = NotePersistence(context)
+                QuickNoteDraftStore(context).migrateLegacyLocked()
                 // Opening Room runs the additive v8 -> v9 schema transaction first.
                 val notes = dao.allNoteBodyMetadata()
                 result = result.copy(total = notes.size)

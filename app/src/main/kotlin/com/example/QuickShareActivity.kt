@@ -40,10 +40,8 @@ import java.io.FileOutputStream
 import java.util.UUID
 
 /**
- * Zero-lag Share Sheet Receiver.
- * Receives shared URLs, text, images, and videos from the Android system share sheet,
- * persists an optimistic record immediately, finishes in < 80ms, and enriches
- * metadata / persists files in the background without user interruption.
+ * Receives explicitly shared content, preserves complete text notes and finishes
+ * only after durable persistence succeeds. Optional metadata enrichment runs on IO.
  */
 class QuickShareActivity : ComponentActivity() {
 
@@ -62,13 +60,13 @@ class QuickShareActivity : ComponentActivity() {
         val type = intent?.type
 
         if ((Intent.ACTION_SEND == action || Intent.ACTION_SEND_MULTIPLE == action) && type != null) {
-            handleQuickShare(intent, type)
+            activityScope.launch { handleQuickShare(intent, type) }
         } else {
             finish()
         }
     }
 
-    private fun handleQuickShare(intent: Intent, mimeType: String) {
+    private suspend fun handleQuickShare(intent: Intent, mimeType: String) {
         val appContext = applicationContext
         val textContent = intent.getStringExtra(Intent.EXTRA_TEXT)
         val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)
@@ -80,9 +78,7 @@ class QuickShareActivity : ComponentActivity() {
         when {
             // 1. Text or URL Shared
             mimeType.startsWith("text/") && textContent != null -> {
-                val urlRegex = "(?i)\\b((?:https?://|www\\d{0,3}[.]|[a-z0-9.\\-]+[.][a-z]{2,4}/)(?:[^\\s()<>]+|\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\))+(?:\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\)|[^\\s`!()\\[\\]{};:'\".,<>?«»“”‘’]))".toRegex()
-                val match = urlRegex.find(textContent)
-                val url = match?.value
+                val url = com.example.utils.ClipboardUrlHelper.parseUrl(textContent)
 
                 if (url != null) {
                     val initialTitle = subject?.takeIf { it.isNotBlank() } ?: "Shared Link"
@@ -98,7 +94,7 @@ class QuickShareActivity : ComponentActivity() {
                         linkTitle = initialTitle
                     )
 
-                    persistAndNotify("Saved link to Cobalt!", entity)
+                    if (!persistAndNotify("Saved link to Cobalt!", entity)) return
 
                     // Background enrichment for OpenGraph preview
                     activityScope.launch {
@@ -140,7 +136,7 @@ class QuickShareActivity : ComponentActivity() {
                         extractedText = null,
                         thumbnailPath = null
                     )
-                    persistAndNotify("Saved to Cobalt!", entity)
+                    if (!persistAndNotify("Saved to Cobalt!", entity)) return
                 }
             }
 
@@ -157,7 +153,7 @@ class QuickShareActivity : ComponentActivity() {
                     thumbnailPath = mediaUri.toString()
                 )
 
-                persistAndNotify("Saved image to Cobalt!", entity)
+                if (!persistAndNotify("Saved image to Cobalt!", entity)) return
 
                 // Background cache persistence
                 activityScope.launch {
@@ -200,7 +196,7 @@ class QuickShareActivity : ComponentActivity() {
                     thumbnailPath = null
                 )
 
-                persistAndNotify("Saved video to Cobalt!", entity)
+                if (!persistAndNotify("Saved video to Cobalt!", entity)) return
 
                 // Background cache persistence
                 activityScope.launch {
@@ -231,29 +227,31 @@ class QuickShareActivity : ComponentActivity() {
             }
 
             else -> {
-                Toast.makeText(appContext, "Unsupported content format", Toast.LENGTH_SHORT).show()
-                finish()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(appContext, "Unsupported content format", Toast.LENGTH_SHORT).show()
+                    finish()
+                }
             }
         }
     }
 
-    private fun persistAndNotify(message: String, entity: SavedItemEntity) {
+    private suspend fun persistAndNotify(message: String, entity: SavedItemEntity): Boolean {
         val appContext = applicationContext
-        Toast.makeText(appContext, "Saving…", Toast.LENGTH_SHORT).show()
-        activityScope.launch {
-            try {
-                com.example.notes.NotePersistence(appContext).save(entity.toDomainModel(bodyLoaded = true))
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(appContext, message, Toast.LENGTH_SHORT).show()
-                    finish()
-                }
-            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
-            catch (_: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(appContext, "Could not save this capture. Please share it again.", Toast.LENGTH_LONG).show()
-                    finish()
-                }
+        withContext(Dispatchers.Main) { Toast.makeText(appContext, "Saving…", Toast.LENGTH_SHORT).show() }
+        return try {
+            com.example.notes.NotePersistence(appContext).save(entity.toDomainModel(bodyLoaded = true))
+            withContext(Dispatchers.Main) {
+                Toast.makeText(appContext, message, Toast.LENGTH_SHORT).show()
+                finish()
             }
+            true
+        } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+        catch (_: Exception) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(appContext, "Could not save this capture. Please share it again.", Toast.LENGTH_LONG).show()
+                finish()
+            }
+            false
         }
     }
 

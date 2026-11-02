@@ -472,6 +472,16 @@ fun TextCapturePage(
     modifier: Modifier = Modifier
 ) {
     var showNewFolderCreator by remember { mutableStateOf(false) }
+    val importState by viewModel.markdownImport.collectAsState()
+    var confirmSplitImport by remember { mutableStateOf(false) }
+    val markdownPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri -> if (uri != null) viewModel.importMarkdown(uri) }
+    if (confirmSplitImport) AlertDialog(onDismissRequest = { confirmSplitImport = false },
+        title = { Text("Split into Markdown notes?") },
+        text = { Text("Create parts of at most 50 MB without changing the source. UTF-8 characters stay intact. A part may begin inside a paragraph or code fence. Completed parts are kept if you cancel.") },
+        confirmButton = { TextButton(onClick = { confirmSplitImport = false; viewModel.splitMarkdownImport() }) { Text("Split into notes") } },
+        dismissButton = { TextButton(onClick = { confirmSplitImport = false }) { Text("Cancel") } })
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val minContentHeight = maxHeight
@@ -483,6 +493,17 @@ fun TextCapturePage(
                 .padding(horizontal = 20.dp, vertical = 10.dp)
                 .padding(bottom = bottomPadding + 24.dp)
         ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = { markdownPicker.launch(arrayOf("text/*", "application/octet-stream")) },
+                    enabled = !importState.running) { Text("Import .md file") }
+                if (importState.running) TextButton(onClick = viewModel::cancelMarkdownImport) { Text("Cancel import") }
+            }
+            if (importState.running) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                Text("Importing ${importState.bytes} bytes…", style = MaterialTheme.typography.bodySmall)
+            }
+            importState.message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+            if (importState.canSplit && !importState.running) TextButton(onClick = { confirmSplitImport = true }) { Text("Split into notes") }
             // 1. Clean borderless Title input
             BasicTextField(
                 value = item.title,
@@ -523,7 +544,7 @@ fun TextCapturePage(
             )
 
             // Optional Clipboard Paste Chip
-            if (!isPreviewMode && textContent.text.isEmpty() && clipboardRawText.isNotBlank()) {
+            if (!isPreviewMode && textContent.text.isEmpty() && clipboardRawText.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(10.dp))
                 val pasteLabel = if (clipboardUrl != null) "Paste link: $clipboardDomain" else "Paste from clipboard"
                 ClipboardPasteChip(
@@ -1492,13 +1513,13 @@ fun CaptureScreen(
 
     val item = activeItem ?: return
 
-    var clipboardRawText by remember { mutableStateOf("") }
+    var clipboardRawText by remember { mutableStateOf("", referentialEqualityPolicy()) }
     // Read clipboard when sheet/screen mounts
     LaunchedEffect(Unit) {
         try {
             val entry = clipboard.getClipEntry()
             val text = entry?.clipData?.let { data ->
-                if (data.itemCount > 0) data.getItemAt(0).text?.toString()?.trim().orEmpty() else ""
+                if (data.itemCount > 0) data.getItemAt(0).text?.toString().orEmpty() else ""
             } ?: ""
             clipboardRawText = text
         } catch (_: Exception) {
@@ -1586,9 +1607,9 @@ fun CaptureScreen(
         try {
             val entry = clipboard.getClipEntry()
             val text = entry?.clipData?.let { data ->
-                if (data.itemCount > 0) data.getItemAt(0).text?.toString()?.trim().orEmpty() else ""
+                if (data.itemCount > 0) data.getItemAt(0).text?.toString().orEmpty() else ""
             } ?: ""
-            if (text.isNotBlank() && text != clipboardRawText) {
+            if (text.isNotEmpty() && kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { text != clipboardRawText }) {
                 clipboardRawText = text
             }
         } catch (_: Exception) {

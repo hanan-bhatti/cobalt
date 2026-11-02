@@ -100,8 +100,10 @@ fun GlobalExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
     var showAddFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
     var showQuickNoteOverlay by remember { mutableStateOf(false) }
-    var captureTitle by remember { mutableStateOf("") }
-    var captureContent by remember { mutableStateOf("") }
+    val quickDraft by viewModel.quickDraft.collectAsState()
+    val captureTitle = quickDraft.title
+    val captureContent = quickDraft.text
+    LaunchedEffect(showQuickNoteOverlay) { if (showQuickNoteOverlay) viewModel.loadQuickDraft() }
 
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
@@ -120,8 +122,6 @@ fun GlobalExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
             viewModel.openMediaSearchSheet()
         },
         RadialMenuItem(R.drawable.ic_custom_edit, "Quick Note", CategoryText.toThemeColor(isDark)) {
-            captureTitle = ""
-            captureContent = ""
             showQuickNoteOverlay = true
         },
         RadialMenuItem(R.drawable.ic_custom_voice, "Voice Memo", CategoryAudio.toThemeColor(isDark)) {
@@ -221,19 +221,22 @@ fun GlobalExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
         isVisible = showQuickNoteOverlay,
         onDismiss = {
             showQuickNoteOverlay = false
-            captureTitle = ""
-            captureContent = ""
         },
         captureTitle = captureTitle,
-        onTitleChange = { captureTitle = it },
+        onTitleChange = viewModel::updateQuickDraftTitle,
         captureContent = captureContent,
-        onContentChange = { captureContent = it },
-        isSaving = isSaving,
+        onContentChange = viewModel::updateQuickDraft,
+        isSaving = isSaving || !quickDraft.ready || quickDraft.busy,
+        savedDraftPreview = quickDraft.snapshot?.takeIf { captureContent.isEmpty() && it.bytes > 0 }?.preview,
+        draftError = quickDraft.error,
+        onRetryDraft = viewModel::loadQuickDraft,
+        hasPendingDraft = quickDraft.pending || quickDraft.snapshot != null,
+        onRestoreDraft = {
+            viewModel.saveQuickDraft(emptyList(), open = true, onSaved = { showQuickNoteOverlay = false })
+        },
         onSave = {
-            viewModel.saveQuickNote(captureTitle, captureContent) {
+            viewModel.saveQuickDraft(emptyList()) {
                 showQuickNoteOverlay = false
-                captureTitle = ""
-                captureContent = ""
             }
         },
         useBlur = useBlur,
@@ -413,8 +416,10 @@ fun ClassicExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
     var showAddFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
     var showQuickNoteOverlay by remember { mutableStateOf(false) }
-    var captureTitle by remember { mutableStateOf("") }
-    var captureContent by remember { mutableStateOf("") }
+    val quickDraft by viewModel.quickDraft.collectAsState()
+    val captureTitle = quickDraft.title
+    val captureContent = quickDraft.text
+    LaunchedEffect(showQuickNoteOverlay) { if (showQuickNoteOverlay) viewModel.loadQuickDraft() }
 
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
@@ -503,8 +508,6 @@ fun ClassicExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
                             SmallFloatingActionButton(
                                 onClick = {
                                     isFabExpanded = false
-                                    captureTitle = ""
-                                    captureContent = ""
                                     showQuickNoteOverlay = true
                                 },
                                 containerColor = MaterialTheme.colorScheme.surface,
@@ -623,19 +626,22 @@ fun ClassicExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
         isVisible = showQuickNoteOverlay,
         onDismiss = {
             showQuickNoteOverlay = false
-            captureTitle = ""
-            captureContent = ""
         },
         captureTitle = captureTitle,
-        onTitleChange = { captureTitle = it },
+        onTitleChange = viewModel::updateQuickDraftTitle,
         captureContent = captureContent,
-        onContentChange = { captureContent = it },
-        isSaving = isSaving,
+        onContentChange = viewModel::updateQuickDraft,
+        isSaving = isSaving || !quickDraft.ready || quickDraft.busy,
+        savedDraftPreview = quickDraft.snapshot?.takeIf { captureContent.isEmpty() && it.bytes > 0 }?.preview,
+        draftError = quickDraft.error,
+        onRetryDraft = viewModel::loadQuickDraft,
+        hasPendingDraft = quickDraft.pending || quickDraft.snapshot != null,
+        onRestoreDraft = {
+            viewModel.saveQuickDraft(emptyList(), open = true, onSaved = { showQuickNoteOverlay = false })
+        },
         onSave = {
-            viewModel.saveQuickNote(captureTitle, captureContent) {
+            viewModel.saveQuickDraft(emptyList()) {
                 showQuickNoteOverlay = false
-                captureTitle = ""
-                captureContent = ""
             }
         },
         useBlur = useBlur,
@@ -655,7 +661,12 @@ fun QuickNoteBottomSheet(
     isSaving: Boolean,
     onSave: () -> Unit,
     useBlur: Boolean,
-    hazeState: HazeState
+    hazeState: HazeState,
+    savedDraftPreview: String? = null,
+    draftError: String? = null,
+    hasPendingDraft: Boolean = false,
+    onRetryDraft: () -> Unit = {},
+    onRestoreDraft: () -> Unit = {}
 ) {
     val focusManager = LocalFocusManager.current
     val titleFocusRequester = remember { FocusRequester() }
@@ -779,7 +790,7 @@ fun QuickNoteBottomSheet(
                                         onSave()
                                         focusManager.clearFocus()
                                     },
-                                    enabled = !isSaving && captureContent.isNotBlank(),
+                                    enabled = !isSaving && (captureContent.isNotBlank() || savedDraftPreview != null || hasPendingDraft),
                                     shape = RoundedCornerShape(16.dp),
                                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
                                     modifier = Modifier.height(34.dp)
@@ -814,6 +825,7 @@ fun QuickNoteBottomSheet(
                                 BasicTextField(
                                     value = captureTitle,
                                     onValueChange = onTitleChange,
+                                    enabled = !isSaving,
                                     singleLine = true,
                                     textStyle = MaterialTheme.typography.headlineSmall.copy(
                                         color = MaterialTheme.colorScheme.onSurface,
@@ -855,11 +867,20 @@ fun QuickNoteBottomSheet(
                                 Spacer(modifier = Modifier.height(10.dp))
 
                                 // 3. Body Input (Borderless or Markdown Preview)
-                                if (!isPreviewMode) {
+                                draftError?.let {
+                                    Text(it, color = MaterialTheme.colorScheme.error)
+                                    TextButton(onClick = onRetryDraft) { Text("Retry loading draft") }
+                                }
+                                if (savedDraftPreview != null) {
+                                    Text("A large draft is stored privately. Restore it to continue editing.")
+                                    Text(savedDraftPreview, maxLines = 3)
+                                    TextButton(onClick = onRestoreDraft, enabled = !isSaving) { Text("Restore draft and open") }
+                                } else if (!isPreviewMode) {
                                     BasicTextField(
                                         value = contentValue,
+                                        enabled = !isSaving,
                                         onValueChange = { updated ->
-                                            contentValue = updated
+                                            if (!com.example.notes.NoteEditorWindows.requiresWindow(updated.text)) contentValue = updated
                                             onContentChange(updated.text)
                                         },
                                         textStyle = MaterialTheme.typography.bodyLarge.copy(
@@ -915,7 +936,7 @@ fun QuickNoteBottomSheet(
                             }
 
                             // 4. Markdown Accessory Toolbar Pinned Above Keyboard
-                            if (imePadding > 0.dp || isPreviewMode) {
+                            if (!isSaving && savedDraftPreview == null && (imePadding > 0.dp || isPreviewMode)) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -930,7 +951,7 @@ fun QuickNoteBottomSheet(
                                         MarkdownAccessoryToolbar(
                                             textFieldValue = contentValue,
                                             onApplyFormat = { updated ->
-                                                contentValue = updated
+                                                if (!com.example.notes.NoteEditorWindows.requiresWindow(updated.text)) contentValue = updated
                                                 onContentChange(updated.text)
                                             },
                                             isPreviewMode = isPreviewMode,
