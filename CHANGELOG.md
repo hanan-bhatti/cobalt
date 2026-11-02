@@ -1,5 +1,11 @@
 ## Unreleased — single application cleanup
 
+- Align migration, recovery and storage-error pages with Appearance settings,
+  including saved themes, shared headers and back motion. Simplify migration
+  actions, use counted All/Large filters, single-line note titles and size badges,
+  and match folder-card context menus with action icons. Source-only change;
+  compilation and runtime UI verification are pending.
+
 - Integrate large-note reading into the original detail screen; place advanced
   note actions in its overflow menu instead of a separate large-note interface.
 - Restore frameless capture editing and keyboard-only formatting controls.
