@@ -1,5 +1,32 @@
 # Markdown storage checkpoint — 2026-11-02
 
+## Latest source status
+
+Feature expansion is stopped pending compilation. Since the initial checkpoint,
+source now includes file-backed quick drafts wired into both active FAB variants,
+section recovery journals, streamed large-paste replacement, a byte-source piece
+table, sparse UTF-8 line indexing, section undo/redo, complete-file find/current-match
+replacement, heading navigation, streaming SAF import and explicit UTF-8 splitting.
+Side Dock now requests only 15 recent records and displays note previews in two
+lines; note copy actions are explicitly labelled as previews. Shared multi-line
+text is preserved as a note instead of being reduced to its first URL. Markdown
+parsing now runs off the main thread with input, depth and link-count guards.
+
+New unit/instrumented test sources cover these helpers, historical v8 schema
+validation, draft recreation/conflicts and export/import. A fixture generator
+creates one requested file at a time; no large fixture binaries were generated.
+No dependency was added. These additions have **not been compiled or tested**.
+The older sections below record the earlier checkpoint and are historical;
+several listed code gaps now have source implementations, not validation results.
+
+The next blocking action is a limited debug compile. After compile fixes and
+targeted tests, an installable test APK is needed before asking the user to test.
+The complete large-note Markdown block renderer, cross-section selection/editing,
+the remaining security audit, process-death/rotation UI checks, release/R8 smoke
+test and measured performance remain outstanding. Global search still indexes
+only the first 32 KiB, while in-note find scans the complete file. There is no
+claim that the original full mission or release gates are complete.
+
 This is a development checkpoint, not a release approval or completed performance
 gate. No real user database was migrated by the development agent.
 
