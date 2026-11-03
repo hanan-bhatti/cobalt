@@ -7,13 +7,14 @@ verified separately on the emulator. Fixture files are streamed one at a time.
 """
 import argparse
 import hashlib
-import io
 import json
 from pathlib import Path
 import re
 import sqlite3
+import shutil
 import subprocess
 import tarfile
+import threading
 import time
 from urllib.parse import quote
 
@@ -49,18 +50,34 @@ class Baseline:
         return r.stdout if binary else r.stdout.decode(errors='replace')
 
     def rows(self):
-        archive = self.adb('exec-out', 'run-as', PACKAGE, 'tar', '-cf', '-',
-                           'databases/cobalt_db', 'databases/cobalt_db-wal', binary=True, check=False)
         folder = OUT / 'metadata-snapshot'
         folder.mkdir(exist_ok=True)
         for name in ['cobalt_db', 'cobalt_db-wal', 'cobalt_db-shm']:
             (folder / name).unlink(missing_ok=True)
-        with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
-            for member in tar.getmembers():
-                if member.name in ['databases/cobalt_db', 'databases/cobalt_db-wal']:
-                    source = tar.extractfile(member)
-                    if source is not None:
-                        (folder / Path(member.name).name).write_bytes(source.read())
+        # A migrated SQLite file can retain a large freelist. Stream its snapshot rather
+        # than retaining the entire tar/DB in host RAM while testing a 1 GB library.
+        command = [ADB, '-s', self.serial, 'exec-out', 'run-as', PACKAGE, 'tar', '-cf', '-',
+                   'databases/cobalt_db', 'databases/cobalt_db-wal']
+        with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as process:
+            deadline = threading.Timer(40, process.kill)
+            deadline.daemon = True
+            deadline.start()
+            try:
+                with tarfile.open(fileobj=process.stdout, mode='r|') as tar:
+                    for member in tar:
+                        if member.name in ['databases/cobalt_db', 'databases/cobalt_db-wal'] and member.isfile():
+                            source = tar.extractfile(member)
+                            if source is not None:
+                                with source, (folder / Path(member.name).name).open('wb') as output:
+                                    shutil.copyfileobj(source, output, length=16_384)
+                process.wait(timeout=5)
+            finally:
+                deadline.cancel()
+                if process.poll() is None:
+                    process.kill()
+                    process.wait()
+        if not (folder / 'cobalt_db').is_file():
+            raise RuntimeError('Debug metadata snapshot unavailable')
         with sqlite3.connect(f'file:{folder / "cobalt_db"}?mode=ro', uri=True) as db:
             db.row_factory = sqlite3.Row
             return [dict(row) for row in db.execute(
