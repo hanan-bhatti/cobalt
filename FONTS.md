@@ -103,6 +103,22 @@ The bundled fonts provide broad typography coverage for Latin, Cyrillic, and Gre
 
 ---
 
+## APK Size Impact
+
+All font files are compressed inside the APK by Android's asset packaging tool (`aapt2`). Below are the exact measured byte counts before and after bundling fonts:
+
+| Asset / Artifact | Size (Bytes) | Size (MB) |
+|---|---|---|
+| Uncompressed Font Assets (9 TTFs) | 3,623,964 B | ~3.46 MB |
+| Baseline Debug APK | 33,591,331 B | ~32.03 MB |
+| **New Debug APK** | **34,704,819 B** | **~33.09 MB** |
+| *Debug APK Delta* | *+1,113,488 B* | *~1.06 MB* |
+| Baseline Release APK | 6,162,775 B | ~5.88 MB |
+| **New Release APK (Minified/Shrunk)** | **8,062,583 B** | **~7.69 MB** |
+| *Release APK Delta* | *+1,899,808 B* | *~1.81 MB* |
+
+---
+
 ## How to Update Fonts
 
 To refresh or update the pinned fonts to a newer upstream release:
