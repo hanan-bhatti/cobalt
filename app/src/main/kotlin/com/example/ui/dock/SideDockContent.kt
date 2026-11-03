@@ -704,8 +704,12 @@ fun SideDockContent(
                                         .fillMaxWidth()
                                         .padding(horizontal = 10.dp, vertical = 7.dp)
                                 ) {
-                                if (dockSaving) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                                if (pendingDockNote != null && !dockSaving) Text("A paste is waiting to save. Tap Save before closing.", style = MaterialTheme.typography.labelSmall)
+                                    if (dockSaving) {
+                                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                    }
+                                    if (pendingDockNote != null && !dockSaving) {
+                                        Text("A paste is waiting to save. Tap Save before closing.", style = MaterialTheme.typography.labelSmall)
+                                    }
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         verticalAlignment = Alignment.CenterVertically

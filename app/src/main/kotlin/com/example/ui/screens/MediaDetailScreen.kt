@@ -198,7 +198,7 @@ fun MediaDetailSection(
                         contentColor = Color.White
                     ) {
                         Text(
-                            text = formattedMediaType.uppercase(Locale.getDefault()),
+                            text = formattedMediaType.uppercase(androidx.compose.ui.platform.LocalConfiguration.current.locales[0]),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)

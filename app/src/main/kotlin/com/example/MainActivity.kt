@@ -376,7 +376,7 @@ class MainActivity : ComponentActivity() {
                     contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
                     modifier = Modifier.fillMaxSize()
                 ) { innerPadding ->
-                    Box(modifier = Modifier.fillMaxSize()) {
+                    Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
                         @OptIn(ExperimentalSharedTransitionApi::class)
                         SharedTransitionLayout {
                             Surface(
