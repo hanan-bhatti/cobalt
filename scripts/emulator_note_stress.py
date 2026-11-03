@@ -27,9 +27,9 @@ PREFIX = 'CobaltStress-'
 
 
 class Baseline:
-    def __init__(self, serial):
-        if not serial.startswith('emulator-'):
-            raise ValueError('This harness is restricted to an explicitly selected emulator')
+    def __init__(self, serial, allow_physical=False):
+        if not serial.startswith('emulator-') and not allow_physical:
+            raise ValueError('Physical devices require an explicit --serial and --allow-physical-device')
         self.serial = serial
         OUT.mkdir(parents=True, exist_ok=True)
         self.events = OUT / 'events.jsonl'
@@ -70,19 +70,23 @@ class Baseline:
     def metrics(self, label):
         mem = self.adb('shell', 'dumpsys', 'meminfo', PACKAGE)
         gfx = self.adb('shell', 'dumpsys', 'gfxinfo', PACKAGE)
+        cpu = self.adb('shell', 'dumpsys', 'cpuinfo')
         (OUT / f'{label}-meminfo.txt').write_text(mem)
         (OUT / f'{label}-gfxinfo.txt').write_text(gfx)
+        (OUT / f'{label}-cpuinfo.txt').write_text(cpu)
         pss = re.search(r'TOTAL PSS:\s*(\d+)', mem)
         if not pss:
             pss = re.search(r'^\s*TOTAL\s+(\d+)', mem, re.M)
         java = re.search(r'^\s*Java Heap:\s*(\d+)', mem, re.M)
         total = re.search(r'Total frames rendered:\s*(\d+)', gfx)
         jank = re.search(r'Janky frames:\s*(\d+)\s*\(([^)]+)\)', gfx)
+        process_cpu = re.search(r'^\s*([\d.]+)%\s+\d+/' + re.escape(PACKAGE) + r':', cpu, re.M)
         return self.event('metrics', label=label, pss_kib=int(pss[1]) if pss else None,
                           java_heap_pss_kib=int(java[1]) if java else None,
                           frames=int(total[1]) if total else None,
                           janky_frames=int(jank[1]) if jank else None,
                           jank_percent=jank[2] if jank else None,
+                          cpu_percent=float(process_cpu[1]) if process_cpu else None,
                           pid=self.adb('shell', 'pidof', PACKAGE, check=False).strip())
 
     def ui(self, label):
@@ -185,17 +189,26 @@ class Baseline:
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--serial', default='emulator-5554')
-    p.add_argument('action', choices=['snapshot', 'matrix', 'metrics', 'ui'])
+    p.add_argument('action', choices=['snapshot', 'matrix', 'metrics', 'ui', 'reset-metrics'])
+    p.add_argument('--allow-physical-device', action='store_true',
+                   help='Opt into testing the debug package on the explicitly selected physical device')
     p.add_argument('--fill-bytes', type=int, default=1_000_000_000)
     p.add_argument('--label', default='baseline')
     args = p.parse_args()
-    b = Baseline(args.serial)
+    if args.allow_physical_device and args.serial == 'emulator-5554':
+        p.error('--allow-physical-device requires an explicit physical-device --serial')
+    b = Baseline(args.serial, args.allow_physical_device)
+    # Never fall back to the production package or root when debug access is unavailable.
+    b.adb('shell', 'run-as', PACKAGE, 'id')
     if args.action == 'snapshot':
         print(json.dumps(b.rows(), indent=2))
     elif args.action == 'matrix':
         b.matrix(args.fill_bytes)
     elif args.action == 'metrics':
         b.metrics(args.label)
+    elif args.action == 'reset-metrics':
+        b.adb('shell', 'dumpsys', 'gfxinfo', PACKAGE, 'reset')
+        b.event('frame_counters_reset')
     else:
         b.ui(args.label)
 
