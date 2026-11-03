@@ -129,9 +129,17 @@ class Baseline:
         available = int(re.search(r'MemAvailable:\s*(\d+)', Path('/proc/meminfo').read_text())[1])
         if available < 700 * 1024:
             raise RuntimeError('Host available memory below 700 MiB; pause rather than load it further')
+        space = self.adb('shell', 'df', '-k', '/data').strip().splitlines()
+        try:
+            free_bytes = int(space[-1].split()[3]) * 1024
+        except (ValueError, IndexError) as error:
+            raise RuntimeError('Could not verify device free storage before importing fixtures') from error
+        if free_bytes < length * 4 + 512 * 1024 * 1024:
+            raise RuntimeError('Device needs more free storage for this fixture plus recovery/checkpoint workspace')
         remote = f'/sdcard/Download/{name}.md'
         uri = 'content://com.android.externalstorage.documents/document/' + quote(f'primary:Download/{name}.md', safe='')
-        self.event('import_start', title=name, bytes=length, host_available_kib=available)
+        self.event('import_start', title=name, bytes=length, host_available_kib=available,
+                   device_free_bytes=free_bytes)
         self.adb('push', str(path), remote, timeout=90)
         start = time.perf_counter()
         launch = self.adb('shell', 'am', 'start', '-W', '-a', 'android.intent.action.VIEW',
