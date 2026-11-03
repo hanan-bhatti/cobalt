@@ -184,6 +184,8 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
                 }
                 check(document.revision == revision && mutable.value.document === document) { "The preview changed. Retry this edit." }
                 document.content.replace(range.first, range.second, replacement)
+                // Formatted preview has no native View/ContentChangeEvent bridge attached.
+                document.recordEdit(range.first, range.second - range.first, replacement)
                 continuousChanged(document)
                 val (ref, savedRevision) = checkpointContinuous(mutable.value)
                 if (document.revision == savedRevision) document.byteLength = ref.bytes
