@@ -62,6 +62,18 @@ data class TraktRefreshTokenRequest(
     val grant_type: String = "refresh_token"
 )
 
+@JsonClass(generateAdapter = true)
+data class TraktRevokeTokenRequest(
+    val token: String,
+    val client_id: String
+)
+
+data class TraktDisconnectResult(
+    val success: Boolean,
+    val revokedOnServer: Boolean,
+    val userMessage: String
+)
+
 // ==========================================
 // 2. USER PROFILE MODELS
 // ==========================================

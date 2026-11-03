@@ -76,6 +76,7 @@ import com.example.ui.components.rememberCollapsibleTopBarState
 import com.example.ui.viewmodel.CobaltViewModel
 import com.example.util.CobaltCustomTabsLauncher
 import com.example.util.TraktSyncWorker
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -864,25 +865,46 @@ fun TraktSyncSettingsScreen(
     // DISCONNECT CONFIRMATION DIALOG
     // ──────────────────────────────────────────────
     if (showDisconnectDialog) {
+        val coroutineScope = rememberCoroutineScope()
+        var isDisconnectingInProgress by remember { mutableStateOf(false) }
+
         AlertDialog(
-            onDismissRequest = { showDisconnectDialog = false },
+            onDismissRequest = {
+                if (!isDisconnectingInProgress) showDisconnectDialog = false
+            },
             title = { Text("Disconnect Trakt?", fontWeight = FontWeight.Bold) },
             text = {
-                Text("This will remove your Trakt account session from Cobalt. Your existing saved movies and shows in Cobalt will remain intact.")
+                Text("This will remove your Trakt account session from Cobalt and attempt server-side token revocation. Your existing saved movies and shows in Cobalt will remain intact.")
             },
             confirmButton = {
                 TextButton(
+                    enabled = !isDisconnectingInProgress,
                     onClick = {
-                        authManager.disconnect()
-                        showDisconnectDialog = false
-                        Toast.makeText(context, "Disconnected from Trakt", Toast.LENGTH_SHORT).show()
+                        isDisconnectingInProgress = true
+                        coroutineScope.launch {
+                            val result = authManager.disconnect()
+                            isDisconnectingInProgress = false
+                            showDisconnectDialog = false
+                            Toast.makeText(context, result.userMessage, Toast.LENGTH_LONG).show()
+                        }
                     }
                 ) {
-                    Text("Disconnect", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                    if (isDisconnectingInProgress) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    } else {
+                        Text("Disconnect", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDisconnectDialog = false }) {
+                TextButton(
+                    enabled = !isDisconnectingInProgress,
+                    onClick = { showDisconnectDialog = false }
+                ) {
                     Text("Cancel")
                 }
             }

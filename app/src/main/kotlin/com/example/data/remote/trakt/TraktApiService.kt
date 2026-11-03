@@ -47,7 +47,8 @@ interface TraktApiService {
 
     @POST("oauth/revoke")
     suspend fun revokeToken(
-        @Body request: Map<String, String>
+        @retrofit2.http.Header("Authorization") authorization: String? = null,
+        @Body request: TraktRevokeTokenRequest
     ): Response<Unit>
 
     // ==========================================

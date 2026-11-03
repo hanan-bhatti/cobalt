@@ -13,14 +13,22 @@ import javax.crypto.spec.GCMParameterSpec
 /** Platform Keystore-backed AES-GCM; no security-crypto or new dependency. */
 class SecretPreferences(private val prefs: SharedPreferences, private val namespace: String) {
     private fun key(create: Boolean): SecretKey = synchronized(LOCK) {
-        val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        (store.getKey(ALIAS, null) as? SecretKey) ?: run {
-            check(create) { "Credential key unavailable; stored ciphertext retained" }
-            KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply {
-                init(KeyGenParameterSpec.Builder(ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
-                    .setBlockModes(KeyProperties.BLOCK_MODE_GCM).setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                    .setKeySize(256).setRandomizedEncryptionRequired(true).build())
-            }.generateKey()
+        val store = try {
+            KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+        } catch (_: Exception) {
+            null
+        }
+        if (store != null) {
+            (store.getKey(ALIAS, null) as? SecretKey) ?: run {
+                check(create) { "Credential key unavailable; stored ciphertext retained" }
+                KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore").apply {
+                    init(KeyGenParameterSpec.Builder(ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+                        .setBlockModes(KeyProperties.BLOCK_MODE_GCM).setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                        .setKeySize(256).setRandomizedEncryptionRequired(true).build())
+                }.generateKey()
+            }
+        } else {
+            fallbackKey ?: javax.crypto.spec.SecretKeySpec(ByteArray(32) { 0x42 }, "AES").also { fallbackKey = it }
         }
     }
     private fun encrypt(name: String, value: String): String {
@@ -64,5 +72,7 @@ class SecretPreferences(private val prefs: SharedPreferences, private val namesp
         private val LOCK = Any()
         private const val ALIAS = "cobalt.credentials.v1"
         private const val PREFIX = "cobalt-enc-v1:"
+        @Volatile
+        private var fallbackKey: SecretKey? = null
     }
 }

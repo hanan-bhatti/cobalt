@@ -29,7 +29,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicLong
 
 sealed class TraktDeviceAuthState {
     object Idle : TraktDeviceAuthState()
@@ -48,12 +52,23 @@ sealed class TraktDeviceAuthState {
  * Manages Trakt OAuth2 Device Code authentication, tokens, custom client credentials,
  * and active session state.
  */
-class TraktAuthManager(private val context: Context) {
+class TraktAuthManager(
+    private val context: Context,
+    private val apiServiceProvider: () -> TraktApiService = { TraktClient.apiService }
+) {
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     private val secrets = com.example.util.SecretPreferences(prefs, PREFS_NAME)
     private val authScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var pollingJob: Job? = null
+
+    private val sessionEpoch = AtomicLong(System.currentTimeMillis())
+    @Volatile private var isDisconnecting = false
+    private val disconnectMutex = Mutex()
+
+    fun currentSessionEpoch(): Long = sessionEpoch.get()
+    fun isDisconnectingActive(): Boolean = isDisconnecting
+    fun isSessionInvalid(expectedEpoch: Long): Boolean = isDisconnecting || sessionEpoch.get() != expectedEpoch
 
     init {
         TraktClient.tokenProvider = { getAccessToken() }
@@ -186,13 +201,16 @@ class TraktAuthManager(private val context: Context) {
     fun startDeviceAuth() {
         pollingJob?.cancel()
         _deviceAuthState.value = TraktDeviceAuthState.RequestingCode
+        val currentEpoch = sessionEpoch.get()
 
         pollingJob = authScope.launch {
             try {
+                if (isSessionInvalid(currentEpoch)) return@launch
                 Log.d(TAG, "Requesting Trakt device code for client_id: ${getClientId()}...")
-                val codeResponse = TraktClient.apiService.getDeviceCode(
+                val codeResponse = apiServiceProvider().getDeviceCode(
                     TraktDeviceCodeRequest(client_id = getClientId())
                 )
+                if (isSessionInvalid(currentEpoch)) return@launch
                 Log.i(TAG, "Device code generated: user_code=${codeResponse.user_code}, verification_url=${codeResponse.verification_url}, interval=${codeResponse.interval}s, expires_in=${codeResponse.expires_in}s")
 
                 _deviceAuthState.value = TraktDeviceAuthState.PendingApproval(
@@ -209,17 +227,19 @@ class TraktAuthManager(private val context: Context) {
 
                 while (System.currentTimeMillis() - startTime < timeoutMs) {
                     delay(intervalMs)
+                    if (isSessionInvalid(currentEpoch)) return@launch
                     pollCount++
                     try {
                         val elapsedSec = (System.currentTimeMillis() - startTime) / 1000
                         Log.d(TAG, "Device token poll #$pollCount (elapsed: ${elapsedSec}s, interval: ${intervalMs / 1000}s)...")
-                        val response = TraktClient.apiService.getDeviceToken(
+                        val response = apiServiceProvider().getDeviceToken(
                             TraktDeviceTokenRequest(
                                 code = codeResponse.device_code,
                                 client_id = getClientId()
                             )
                         )
 
+                        if (isSessionInvalid(currentEpoch)) return@launch
                         Log.d(TAG, "Device token poll #$pollCount HTTP response code: ${response.code()}")
 
                         when (response.code()) {
@@ -227,7 +247,9 @@ class TraktAuthManager(private val context: Context) {
                                 val tokenResponse = response.body()
                                 Log.i(TAG, "Device token poll: 200 OK. Token body present: ${tokenResponse != null}")
                                 if (tokenResponse != null && tokenResponse.access_token.isNotBlank()) {
+                                    if (isSessionInvalid(currentEpoch)) return@launch
                                     saveTokens(tokenResponse)
+                                    val postAuthEpoch = sessionEpoch.get()
                                     Log.i(TAG, "Trakt tokens successfully saved! (expires in: ${tokenResponse.expires_in}s)")
 
                                     // Immediately transition UI to Success so the dialog updates instantly
@@ -236,10 +258,11 @@ class TraktAuthManager(private val context: Context) {
                                     // Run non-blocking background tasks for user profile and initial sync
                                     authScope.launch {
                                         try {
+                                            if (isSessionInvalid(postAuthEpoch)) return@launch
                                             Log.d(TAG, "Fetching user profile post-auth...")
                                             val userResult = fetchAndSaveUserProfile()
                                             val user = userResult.getOrNull()
-                                            if (user != null) {
+                                            if (user != null && !isSessionInvalid(postAuthEpoch)) {
                                                 Log.i(TAG, "Trakt profile loaded: @${user.username}")
                                                 _deviceAuthState.value = TraktDeviceAuthState.Success(user)
                                             }
@@ -248,6 +271,7 @@ class TraktAuthManager(private val context: Context) {
                                         }
 
                                         try {
+                                            if (isSessionInvalid(postAuthEpoch)) return@launch
                                             Log.d(TAG, "Enqueuing initial Trakt sync...")
                                             com.example.util.TraktSyncWorker.enqueueOneTimeSync(context)
                                         } catch (e: Exception) {
@@ -256,7 +280,9 @@ class TraktAuthManager(private val context: Context) {
                                     }
 
                                     delay(1800)
-                                    _deviceAuthState.value = TraktDeviceAuthState.Idle
+                                    if (!isSessionInvalid(postAuthEpoch)) {
+                                        _deviceAuthState.value = TraktDeviceAuthState.Idle
+                                    }
                                     return@launch
                                 } else {
                                     val errStr = response.errorBody()?.string() ?: "Empty body"
@@ -317,13 +343,17 @@ class TraktAuthManager(private val context: Context) {
                     }
                 }
 
-                _deviceAuthState.value = TraktDeviceAuthState.Error("Verification timed out. Please try again.")
+                if (!isSessionInvalid(currentEpoch)) {
+                    _deviceAuthState.value = TraktDeviceAuthState.Error("Verification timed out. Please try again.")
+                }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 Log.d(TAG, "Device auth job cancelled normally.")
                 throw e
             } catch (e: Exception) {
-                Log.e(TAG, "Failed device authorization flow: ${e.message}", e)
-                _deviceAuthState.value = TraktDeviceAuthState.Error(e.localizedMessage ?: "Failed to connect to Trakt.")
+                if (!isSessionInvalid(currentEpoch)) {
+                    Log.e(TAG, "Failed device authorization flow: ${e.message}", e)
+                    _deviceAuthState.value = TraktDeviceAuthState.Error(e.localizedMessage ?: "Failed to connect to Trakt.")
+                }
             }
         }
     }
@@ -338,6 +368,8 @@ class TraktAuthManager(private val context: Context) {
     }
 
     fun saveTokens(token: TraktTokenResponse) {
+        if (isDisconnecting) return
+        sessionEpoch.incrementAndGet()
         val expiresAt = System.currentTimeMillis() + (token.expires_in * 1000L)
         secrets.putAll(mapOf(KEY_ACCESS_TOKEN to token.access_token, KEY_REFRESH_TOKEN to token.refresh_token))
         prefs.edit().putLong(KEY_EXPIRES_AT, expiresAt).apply()
@@ -349,8 +381,15 @@ class TraktAuthManager(private val context: Context) {
      * Fetches the user profile from /users/me and caches it locally.
      */
     suspend fun fetchAndSaveUserProfile(): Result<TraktUser> = withContext(Dispatchers.IO) {
+        val startEpoch = sessionEpoch.get()
+        if (isSessionInvalid(startEpoch)) {
+            return@withContext Result.failure(IllegalStateException("Session disconnected or invalid"))
+        }
         try {
-            val user = TraktClient.apiService.getCurrentUser()
+            val user = apiServiceProvider().getCurrentUser()
+            if (isSessionInvalid(startEpoch)) {
+                return@withContext Result.failure(IllegalStateException("Session disconnected or invalid"))
+            }
             prefs.edit()
                 .putString(KEY_USERNAME, user.username)
                 .putString(KEY_USER_NAME, user.name)
@@ -368,6 +407,9 @@ class TraktAuthManager(private val context: Context) {
      * Refreshes the access token using the stored refresh token if expired.
      */
     suspend fun refreshAccessTokenIfNeeded(): String? = withContext(Dispatchers.IO) {
+        val startEpoch = sessionEpoch.get()
+        if (isSessionInvalid(startEpoch)) return@withContext null
+
         val expiresAt = prefs.getLong(KEY_EXPIRES_AT, 0L)
         val now = System.currentTimeMillis()
         val currentAccessToken = secrets.get(KEY_ACCESS_TOKEN)
@@ -381,32 +423,108 @@ class TraktAuthManager(private val context: Context) {
         val refreshToken = secrets.get(KEY_REFRESH_TOKEN) ?: return@withContext null
 
         try {
-            val response = TraktClient.apiService.refreshToken(
+            val response = apiServiceProvider().refreshToken(
                 TraktRefreshTokenRequest(
                     client_id = getClientId(),
                     refresh_token = refreshToken
                 )
             )
+            if (isSessionInvalid(startEpoch)) {
+                Log.w(TAG, "Token refreshed but session was invalidated during call; discarding.")
+                return@withContext null
+            }
             saveTokens(response)
             return@withContext response.access_token
         } catch (e: Exception) {
             Log.e(TAG, "Failed to refresh Trakt access token: ${e.message}", e)
-            return@withContext currentAccessToken
+            return@withContext if (!isSessionInvalid(startEpoch)) currentAccessToken else null
         }
     }
 
     /**
      * Disconnects and wipes all Trakt tokens, session data, and cached profiles.
+     * Attempts server-side token revocation with bounded timeout.
      * Preserves custom client ID and custom base URL if configured.
      */
-    fun disconnect() {
-        val customClientId = getCustomClientId()
-        val customBaseUrl = getCustomBaseUrl()
-        prefs.edit().clear().apply()
-        if (customClientId != null) setCustomClientId(customClientId)
-        if (customBaseUrl != null) setCustomBaseUrl(customBaseUrl)
-        _isConnected.value = false
-        _currentUser.value = null
+    suspend fun disconnect(): TraktDisconnectResult = withContext(Dispatchers.IO) {
+        disconnectMutex.withLock {
+            val tokenToRevoke = getAccessToken()
+            val clientId = getClientId()
+            val customClientId = getCustomClientId()
+            val customBaseUrl = getCustomBaseUrl()
+
+            if (tokenToRevoke.isNullOrBlank() && !hasValidToken() && _currentUser.value == null) {
+                return@withContext TraktDisconnectResult(
+                    success = true,
+                    revokedOnServer = false,
+                    userMessage = "Trakt is already disconnected."
+                )
+            }
+
+            try {
+                isDisconnecting = true
+                sessionEpoch.incrementAndGet()
+
+                // 1. Cancel active in-flight authentication polling
+                cancelDeviceAuth()
+
+                // 2. Stop and cancel all WorkManager background sync jobs
+                try {
+                    com.example.util.TraktSyncWorker.cancelAll(context)
+                } catch (e: Exception) {
+                    Log.w(TAG, "WorkManager cancellation notice: ${e.message}")
+                }
+
+                // 3. Invalidate sync engine
+                TraktSyncEngine.onSessionInvalidated()
+
+                // 4. Wipe local credentials, session data, user profiles, and sync checkpoints
+                prefs.edit().clear().apply()
+                if (customClientId != null) setCustomClientId(customClientId)
+                if (customBaseUrl != null) setCustomBaseUrl(customBaseUrl)
+                _isConnected.value = false
+                _currentUser.value = null
+
+                // 5. Attempt remote server-side revocation bounded by timeout
+                var serverRevoked = false
+                if (!tokenToRevoke.isNullOrBlank()) {
+                    serverRevoked = try {
+                        withTimeoutOrNull(8000L) {
+                            try {
+                                val response = apiServiceProvider().revokeToken(
+                                    authorization = "Bearer $tokenToRevoke",
+                                    request = TraktRevokeTokenRequest(
+                                        token = tokenToRevoke,
+                                        client_id = clientId
+                                    )
+                                )
+                                response.isSuccessful
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Remote revocation network call failed: ${e.message}")
+                                false
+                            }
+                        } ?: false
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Remote revocation error: ${e.message}")
+                        false
+                    }
+                }
+
+                val userMessage = if (serverRevoked) {
+                    "Disconnected from Trakt. Server authorization was revoked."
+                } else {
+                    "Disconnected locally. To revoke access on Trakt, visit trakt.tv/oauth/authorized_applications."
+                }
+
+                TraktDisconnectResult(
+                    success = true,
+                    revokedOnServer = serverRevoked,
+                    userMessage = userMessage
+                )
+            } finally {
+                isDisconnecting = false
+            }
+        }
     }
 
     companion object {
@@ -439,6 +557,12 @@ class TraktAuthManager(private val context: Context) {
         fun getInstance(context: Context): TraktAuthManager {
             return instance ?: synchronized(this) {
                 instance ?: TraktAuthManager(context.applicationContext).also { instance = it }
+            }
+        }
+
+        fun setInstanceForTesting(manager: TraktAuthManager?) {
+            synchronized(this) {
+                instance = manager
             }
         }
     }

@@ -22,87 +22,143 @@ object LegalDocs {
     val privacyPolicy = """
         **Privacy Policy**
 
-        Cobalt stores notes locally. It has no analytics SDK or automatic crash upload.
-        Crash reports are stored locally. Selecting Send opens an email chooser;
-        your email application sends the report only when you choose to send it.
-        Reports contain exception details and may contain sensitive values in exception messages.
+        Last updated: 3 November 2026
 
-        Optional Gemini requests send the selected input to Google using your API key.
-        Media features contact TMDB, Jikan and OMDb; Trakt connects only when configured.
-        Saved links and remote media can contact the websites that host them.
-        GitHub release checks are controlled in Release & Updates settings.
-        See NETWORK.md in the source repository for the connection inventory and limitations.
+        **1. Overview and Local Storage**
 
-        Sharing is an explicit user action. Automatic Android backup and device
-        transfer are disabled; uninstalling the app can permanently remove local data.
-        Uninstalling the app can remove local data. Export anything you need to keep.
+        Cobalt is a free, open-source personal capture and knowledge archive. Your notes, captured media, and organizational data are stored locally on your device. Cobalt does not operate a user account system, and there is no Cobalt cloud note synchronization service.
+
+        Saved notes, Markdown files, media recordings, and database tables are stored in Cobalt's private application storage without separate app-level encryption. Optional service credentials—specifically your Gemini API key, TMDb API key, and Trakt OAuth tokens—are stored encrypted using Android Keystore (AES-256-GCM). Hardware backing for this storage depends on your device hardware and Android platform support.
+
+        **2. Optional AI Features**
+
+        When you use Gemini-powered OCR, Cobalt transmits the cropped screenshot region you selected. If you do not select a crop region, the entire captured screenshot is transmitted. When you use voice memo transcription, Cobalt sends the recorded audio file. When you format speech text, Cobalt sends the transcribed text and formatting instructions.
+
+        These requests are sent to Google's Gemini API over HTTPS using the Gemini API key you provide. Cobalt tracks aggregate token counts and request counts locally on your device to show your usage; these counters are never uploaded or shared.
+
+        **3. Media and Remote Content**
+
+        When you search for movies and TV shows, Cobalt contacts The Movie Database (TMDb) using your configured API key. When you search for anime, Cobalt contacts Jikan; new anime searches require an active internet connection, though previously saved anime details can be viewed offline. Uncached remote images will not load while offline.
+
+        Posters, backdrops, cast photos, user avatars, and other remote images load automatically when media cards or details are displayed. When you save or share a URL, Cobalt automatically contacts the host website to fetch page titles and preview metadata. Opening saved items that reference remote media may download and cache those media files locally. Cobalt does not contact OMDb; that integration is unused.
+
+        **4. Trakt Synchronization**
+
+        Connecting Trakt is optional. Authentication uses Trakt's Device Code flow, where you approve access at trakt.tv/activate; Cobalt does not handle or store your Trakt password or use PKCE browser redirects.
+
+        When connected, Cobalt reads your Trakt profile, watched movie and TV history (including episode plays), ratings, and watchlist. Cobalt sends updates to Trakt when you mark movies or episodes as watched, rate items, or change watchlist status. Cobalt runs an initial sync upon connecting and updates when you tap "Sync Now". Cobalt does not run scheduled periodic background sync.
+
+        Disconnecting Trakt clears your stored Trakt tokens and session details locally and attempts server-side revocation on Trakt's servers. If your device is offline or the revocation request fails, local disconnect still completes, and you can revoke Cobalt's access at any time through your Trakt account settings on trakt.tv. Previously synchronized items remain in your local Cobalt library. Disconnecting Trakt, uninstalling Cobalt, or deleting local items does not remove your watch history, ratings, or watchlist from your Trakt account.
+
+        **5. YouTube Trailers**
+
+        Trailer playback in media details uses an embedded Android WebView that loads the YouTube embed player. Network requests to YouTube and Google begin automatically whenever you open the detail screen of a movie or TV show that includes a trailer link.
+
+        The embedded player runs with JavaScript, web storage, and third-party cookies enabled. YouTube and Google process these requests under their own terms and privacy practices. This external web playback is independent of Cobalt, which contains no analytics or tracking SDKs.
+
+        **6. Crash Reports and Feedback**
+
+        Cobalt does not include an analytics SDK and does not automatically upload crash reports.
+
+        When an unexpected crash occurs, Cobalt writes a report locally. Crash reports include the app version, device manufacturer, device model, Android OS version, thread name, timestamp, exception message, and technical stack trace. Because exception messages and stack traces are not redacted, they may contain sensitive details such as file paths, identifiers, or URLs associated with the crash.
+
+        Selecting "Send" opens an external email chooser. The report is sent only if you complete the action inside your email application. The developer receives the report and your email address. If you use in-app feedback export, a Markdown copy is saved to the app's cache directory and shared through your chosen application. Crash report and feedback files in cache are not automatically deleted.
+
+        **7. Sharing, Retention, and Deletion**
+
+        Exporting or sharing content is initiated by you. Note exports are generated as plaintext Markdown; app settings and API credentials are excluded, but any personal information or secrets written inside your notes will be included in the export. Shared copies are handled by the destination app you choose. Temporary share copies remain in the app cache until cleared.
+
+        Deleted items move to Trash and are kept for 30 days before automatic removal, or you can delete them permanently at any time. Automatic Android backup and device-to-device transfers are disabled in Cobalt's configuration, though behavior can vary across customized operating system builds. Clearing app storage or uninstalling Cobalt removes your local notes, media, and credentials permanently. Externally saved exports and data stored on third-party services like Trakt remain unaffected.
+
+        **8. App Updates**
+
+        Cobalt can check GitHub for application releases. Automatic release checks are disabled by default. Manual checks in the Release Updates screen contact GitHub's API. Cobalt sends standard HTTP request headers without user identifiers or personal data. Cobalt does not automatically download or install app updates; update links open the GitHub releases page in your browser.
+
+        **9. Third Parties and Contact**
+
+        Third-party services—including Google Gemini, TMDb, Jikan, Trakt, YouTube, and GitHub—operate independently of Cobalt. Their own terms and privacy policies govern how they handle connection metadata and request content.
+
+        For privacy questions, contact hannanbhatti2006@gmail.com.
+
+        Cobalt's source code is available at:
+        [github.com/hanan-bhatti/cobalt](https://github.com/hanan-bhatti/cobalt)
     """.trimIndent()
 
     val termsOfConditions = """
         **Terms and Conditions**
 
-        Last updated: 22 July 2026
+        Last updated: 3 November 2026
 
-        **1. Agreement**
-        Using Cobalt means you agree to these terms.
+        **1. Agreement and Open Source License**
 
-        **2. Your content**
-        Whatever you save, notes, links, images, stays yours. You're responsible for what you store in the app.
+        By using Cobalt, you agree to these terms. Cobalt is free and open-source software licensed under the GNU Affero General Public License (AGPL-3.0-or-later). Nothing in these terms limits your rights under that license. Source code and full license text are available at [github.com/hanan-bhatti/cobalt](https://github.com/hanan-bhatti/cobalt).
 
-        **3. Third-party integrations & keys**
-        To search movies and TV shows, you may choose to supply your own TMDb API key. You are solely responsible for obtaining your key and complying with TMDb's terms of service. Cobalt provides this integration as a convenience and is not affiliated with TMDb.
+        **2. Your Content and Responsibility**
 
-        **4. Fair use**
-        Don't use the app to store illegal content or abuse the AI/API integrations it relies on.
+        You retain full ownership of the notes, links, images, media, and other content you store in Cobalt. Because Cobalt stores your information locally without a cloud note backup service, you are responsible for maintaining your own backups and exports of important content.
 
-        **5. Uptime**
-        Optional AI and media integrations depend on third-party services (Gemini, TMDb, Jikan, Trakt), so they're provided as-is. Interruptions can happen and aren't guaranteed against.
+        **3. Third-Party Services and API Keys**
 
-        **6. License**
-        The app is licensed under AGPL-3.0-or-later. Source code, issues, and license text are all at [github.com/hanan-bhatti/cobalt](https://github.com/hanan-bhatti/cobalt).
+        Cobalt includes optional integrations with external services such as Google Gemini, The Movie Database (TMDb), Jikan, Trakt, and YouTube. You may choose to provide your own API keys or link third-party accounts.
 
-        **7. Termination**
-        You are responsible for complying with the terms of services you choose to contact.
+        You are responsible for obtaining any required personal keys, keeping them secure, and complying with the terms of use established by each third-party provider. Cobalt is independent and is not affiliated with or endorsed by these third-party services.
+
+        **4. Service Availability and Offline Use**
+
+        Cobalt is designed as an offline-first capture tool for your locally saved data. However, external integrations—such as AI OCR, audio transcription, online media searches, remote image loading, link preview scraping, trailer playback, and Trakt synchronization—require an active internet connection and depend on the operational availability of third-party APIs and servers.
+
+        **5. Disclaimer of Warranties**
+
+        As provided in the GNU Affero General Public License, Cobalt is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for full details.
+
+        **6. External Accounts and Service Terms**
+
+        When you connect an external service or send data to an external provider through Cobalt, your relationship with that provider is governed by their respective terms of service and policies. You may disconnect integrations or revoke account authorizations at any time.
     """.trimIndent()
 
     val faq = """
-        Q: How do I save a link quickly?
-        A: Use the home screen widget, or share directly from your browser using the "Share to" menu.
+        Q: How do I save a link or content quickly?
+        A: Use the quick capture widget or share text, links, or media directly from any browser or app using Android's share menu.
 
-        Q: How does Movie & TV (Media) search work?
-        A: To search movies and TV shows, you need to set your free TMDb API key in the 'Movie & TV Integration' profile settings. Anime search is powered by Jikan and works offline or online without any API key.
+        Q: Does sharing a link make network requests?
+        A: Yes. When you save or share a URL, Cobalt automatically contacts the host website to fetch page titles and preview metadata.
+
+        Q: How does movie and TV search work?
+        A: Searching movies and TV shows requires your own free TMDb API key configured in Profile settings. Anime search is powered by Jikan and requires an active internet connection, but does not need an API key.
+
+        Q: Can I view anime and media offline?
+        A: You can view previously saved media and anime details offline. However, new searches require an internet connection, and remote images that are not yet cached will not load while offline.
+
+        Q: Does OCR or voice transcription work offline?
+        A: No. OCR text recognition and audio transcription run through Google's Gemini API, so they require an internet connection and your configured Gemini API key.
 
         Q: Can I save media directly from the OCR overlay?
-        A: Yes! When you capture text on your screen, the overlay panel offers a direct media search and a one-tap save action.
+        A: Yes. When you capture text on your screen, the overlay panel offers a direct media search and a one-tap save action.
 
-        Q: Does OCR work offline?
-        A: No. OCR runs through the Gemini API, so it needs an internet connection.
+        Q: Is my data backed up to the cloud?
+        A: Cobalt has no Cobalt user accounts and no cloud note sync. Your notes and media stay locally on your device. Optional Trakt sync only synchronizes your movie and TV watch tracking with Trakt.
 
-        Q: Is my data backed up?
-        A: Cobalt has no account or cloud note sync. Notes stay local. Optional integrations
-        such as Trakt contact their services only when used or configured.
+        Q: What happens if I uninstall Cobalt or clear storage?
+        A: Uninstalling Cobalt or clearing app storage deletes your local notes, media, and stored API keys. Android backup is disabled, so export any notes you wish to keep before uninstalling.
+
+        Q: Does disconnecting Trakt or deleting items in Cobalt remove them from Trakt?
+        A: No. Disconnecting Trakt clears your local session and attempts server-side token revocation, but it does not delete your remote data on Trakt. If offline, local disconnect still finishes. Deleting local items in Cobalt also does not delete your watch history or ratings on Trakt.
 
         Q: Can I use Markdown in notes?
-        A: Yes, standard syntax works: bold, italics, and links.
+        A: Yes. Standard syntax such as bold, italics, headings, bullet lists, and links is supported.
 
-        Q: Is this app free?
-        A: Yes, completely. No subscriptions, no ads, no paywalled features.
-
-        Q: Is it open source?
-        A: Yes. The full source is on GitHub at github.com/hanan-bhatti/cobalt under the AGPL-3.0-or-later license. Read the code, report bugs, or contribute.
-
-        Q: Why did you build this?
-        A: I wanted a fast, no-nonsense capture tool without ads, subscriptions, or a bloated feature list I'd never touch.
+        Q: Is Cobalt free and open source?
+        A: Yes. Cobalt is completely free with no ads, subscriptions, or tracking SDKs. The full source code is on GitHub under the AGPL-3.0-or-later license.
     """.trimIndent()
 
     val about = """
         **About Cobalt**
 
-        Cobalt is a free, open-source capture app for links, notes, images, and code snippets, built to get things out of your head and into one place with as little friction as possible.
+        Cobalt is a free, open-source capture app for links, notes, images, and code snippets, built to get things out of your head and into a personal local archive with as little friction as possible.
 
-        I built it because I wanted a fast, no-nonsense capture tool that didn't come with ads, subscriptions, or a bloated feature set I'd never touch. Share something from any app, and it lands here, organized automatically.
+        I built it because I wanted a fast, no-nonsense capture tool without ads, subscriptions, or tracking. Notes and media remain stored locally on your device, while optional online integrations provide AI transcription and media metadata when needed.
 
-        The full source is on GitHub at [github.com/hanan-bhatti/cobalt](https://github.com/hanan-bhatti/cobalt), licensed under AGPL-3.0-or-later. Read the code, file an issue, or fork it and make it your own.
+        The full source code is on GitHub at [github.com/hanan-bhatti/cobalt](https://github.com/hanan-bhatti/cobalt), licensed under AGPL-3.0-or-later. Read the code, file an issue, or fork it and make it your own.
 
         Built with Jetpack Compose.
     """.trimIndent()
