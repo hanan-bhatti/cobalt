@@ -18,6 +18,9 @@ object NoteSizePolicy {
     const val MARKDOWN_MAX_DEPTH = 32
     const val URL_CHARACTERS = 8192
     const val EDITOR_UNDO_PRESSURE_BYTES = 8 * 1024 * 1024L
+    const val MARKDOWN_CACHE_BYTES = 8 * 1024 * 1024L
+    const val MARKDOWN_CACHE_BLOCKS = 16_384
+    const val MARKDOWN_PREFETCH_BLOCKS = 256
     const val DOCK_RECENT_ITEMS = 15
     const val DOCK_PREVIEW_LINES = 2
 

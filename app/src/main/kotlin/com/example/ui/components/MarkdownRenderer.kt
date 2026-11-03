@@ -71,6 +71,7 @@ import org.commonmark.ext.gfm.tables.TableRow
 import org.commonmark.ext.gfm.tables.TablesExtension
 import org.commonmark.node.*
 import org.commonmark.parser.Parser
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.LinkAnnotation
@@ -132,7 +133,7 @@ fun MarkdownText(
     onMarkdownChange: ((String) -> Unit)? = null,
     prepared: SafeMarkdownDocument? = null
 ) {
-    if (markdown.isBlank()) return
+    if (markdown.isBlank() && prepared == null) return
 
     val context = LocalContext.current
     val isDark = isSystemInDarkTheme()
@@ -154,6 +155,7 @@ fun MarkdownText(
     val taskCounter = remember(markdown) { AtomicInteger(0) }
     taskCounter.set(0)
 
+    CompositionLocalProvider(LocalMarkdownLinkDecoration provides (parsed?.decorateLinks != false)) {
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -171,9 +173,13 @@ fun MarkdownText(
             taskCounter = taskCounter
         )
     }
+    }
 }
 
-data class SafeMarkdownDocument(val node: Node?, val links: Int = 0)
+private val LocalMarkdownLinkDecoration = staticCompositionLocalOf { true }
+private val plainUrlPattern = Regex("""https?://[^\s<>"{}|\\^`\[\]]+""")
+data class SafeMarkdownDocument(val node: Node?, val links: Int = 0, val nodeCount: Int = 0,
+    val decorateLinks: Boolean = true)
 
 private val safeMarkdownParser = object : ThreadLocal<Parser>() {
     override fun initialValue(): Parser = Parser.builder()
@@ -186,14 +192,30 @@ internal fun parseSafeMarkdown(markdown: String): SafeMarkdownDocument {
     val pending = ArrayDeque<Pair<Node, Int>>()
     pending.addLast(document to 0)
     var links = 0
+    var count = 0
     while (pending.isNotEmpty()) {
         val (node, depth) = pending.removeLast()
-        if (depth > NoteSizePolicy.MARKDOWN_MAX_DEPTH) return SafeMarkdownDocument(null)
-        if ((node is Link || node is Image) && ++links > NoteSizePolicy.DECORATED_LINK_LIMIT) return SafeMarkdownDocument(null, links)
+        count++
+        // Flatten excessive container nesting while retaining its rendered children. Do not
+        // downgrade an entire note/paragraph to raw Markdown when a safety guard is reached.
+        val flatten = depth > 8 && (node is BlockQuote || node is BulletList || node is OrderedList ||
+            node is ListItem || node is Emphasis || node is StrongEmphasis)
         var child = node.firstChild
+        if (flatten) {
+            while (child != null) {
+                val next = child.next
+                child.unlink(); node.insertBefore(child)
+                pending.addLast(child to depth)
+                child = next
+            }
+            node.unlink()
+            continue
+        }
+        if (node is Link || node is Image) links++
+        if (node is org.commonmark.node.Text && node.parent !is Link) links += plainUrlPattern.findAll(node.literal).count()
         while (child != null) { pending.addLast(child to depth + 1); child = child.next }
     }
-    return SafeMarkdownDocument(document, links)
+    return SafeMarkdownDocument(document, links, count, links <= NoteSizePolicy.DECORATED_LINK_LIMIT)
 }
 
 @Composable
@@ -211,6 +233,7 @@ private fun ColumnScope.RenderNode(
     isTaskChecked: Boolean = false,
     stripTaskPrefix: Boolean = false
 ) {
+    val decorateLinks = LocalMarkdownLinkDecoration.current
     var child = node.firstChild
     var bulletIndex = 1
     val isOrderedList = node is OrderedList
@@ -220,7 +243,7 @@ private fun ColumnScope.RenderNode(
         when (currentChild) {
             is org.commonmark.node.Paragraph -> {
                 val annotatedString = buildAnnotatedString {
-                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix)
+                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, decorateLinks)
                 }
                 val isRtl = isRtlText(annotatedString.text)
                 val blockDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
@@ -241,7 +264,7 @@ private fun ColumnScope.RenderNode(
             }
             is Heading -> {
                 val annotatedString = buildAnnotatedString {
-                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark)
+                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, decorateLinks = decorateLinks)
                 }
                 val isRtl = isRtlText(annotatedString.text)
                 val blockDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
@@ -394,7 +417,7 @@ private fun ColumnScope.RenderNode(
                             .padding(10.dp)
                     ) {
                         Text(
-                            text = currentChild.literal.trim(),
+                            text = currentChild.literal.removeSuffix("\n"),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 13.sp,
@@ -418,7 +441,7 @@ private fun ColumnScope.RenderNode(
                             .padding(10.dp)
                     ) {
                         Text(
-                            text = currentChild.literal.trim(),
+                            text = currentChild.literal.removeSuffix("\n"),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontFamily = FontFamily.Monospace,
                             fontSize = 13.sp,
@@ -468,6 +491,7 @@ private fun MarkdownTable(
     isDark: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val decorateLinks = LocalMarkdownLinkDecoration.current
     val rows = remember(tableBlock) {
         val result = mutableListOf<TableRowModel>()
         var child = tableBlock.firstChild
@@ -610,7 +634,8 @@ private fun MarkdownTable(
                                             primaryColor = primaryColor,
                                             onLinkClick = onLinkClick,
                                             context = context,
-                                            isDark = isDark
+                                            isDark = isDark,
+                                            decorateLinks = decorateLinks
                                         )
                                     }
                                     Text(
@@ -652,7 +677,8 @@ private fun AnnotatedString.Builder.AppendInlineNodes(
     context: android.content.Context,
     isDark: Boolean,
     isTaskChecked: Boolean = false,
-    stripTaskPrefix: Boolean = false
+    stripTaskPrefix: Boolean = false,
+    decorateLinks: Boolean = true
 ) {
     var child = node.firstChild
     var hasStripped = false
@@ -665,7 +691,8 @@ private fun AnnotatedString.Builder.AppendInlineNodes(
                     literal = literal.replaceFirst(Regex("""^\[[ xX]\]\s*"""), "")
                     hasStripped = true
                 }
-                val urlRegex = Regex("""https?://[^\s<>"{}|\\^`\[\]]+""")
+                if (!decorateLinks) { append(literal); child = currentChild.next; continue }
+                val urlRegex = plainUrlPattern
                 var lastIndex = 0
                 val matches = urlRegex.findAll(literal)
                 val linkStyles = TextLinkStyles(
@@ -703,17 +730,17 @@ private fun AnnotatedString.Builder.AppendInlineNodes(
             }
             is Strikethrough -> {
                 withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) {
-                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix)
+                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, decorateLinks)
                 }
             }
             is StrongEmphasis -> {
                 withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix)
+                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, decorateLinks)
                 }
             }
             is Emphasis -> {
                 withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
-                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix)
+                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, decorateLinks)
                 }
             }
             is Code -> {
@@ -729,6 +756,11 @@ private fun AnnotatedString.Builder.AppendInlineNodes(
                 }
             }
             is Link -> {
+                if (!decorateLinks) {
+                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, false)
+                    child = currentChild.next
+                    continue
+                }
                 val destination = currentChild.destination
                 val linkStyles = TextLinkStyles(
                     style = SpanStyle(
@@ -750,7 +782,7 @@ private fun AnnotatedString.Builder.AppendInlineNodes(
                     }
                 }
                 withLink(LinkAnnotation.Url(url = destination, styles = linkStyles, linkInteractionListener = linkListener)) {
-                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix)
+                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, decorateLinks)
                 }
             }
             is HardLineBreak -> {
@@ -760,7 +792,7 @@ private fun AnnotatedString.Builder.AppendInlineNodes(
                 append("\n") // Use clean single line break instead of double space
             }
             else -> {
-                AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix)
+                AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, decorateLinks)
             }
         }
         child = currentChild.next

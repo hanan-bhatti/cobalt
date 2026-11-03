@@ -17,85 +17,116 @@ import com.example.ui.components.NoteBodySkeleton
 import com.example.ui.components.SafeMarkdownDocument
 import com.example.ui.components.parseSafeMarkdown
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-private data class PreparedNoteBlock(val text: String, val document: SafeMarkdownDocument?)
+internal data class PreparedNoteBlock(val text: String, val document: SafeMarkdownDocument?)
 
 /** One serialized reader, bounded IO batches and parsed-block LRU; never a job per link. */
-private class MarkdownReadSession(private val store: NoteBodyStore, private val id: String,
+internal class MarkdownReadSession(private val store: NoteBodyStore, private val id: String,
     private val hash: String, private val byteLimit: Int, private val lineLimit: Int) {
     val blocks = mutableStateListOf<MarkdownBlocks.Block>()
     var finished by mutableStateOf(false)
         private set
     private val mutex = Mutex()
     private var cursor: MarkdownBlocks.Cursor? = null
+    private var reader: NoteRangeReader? = null
     private var pending: MarkdownBlocks.Block? = null
     private var closed = false
     private val decorated = HashSet<Long>()
     private var linkCount = 0
-    private val cache = object : LinkedHashMap<Long, PreparedNoteBlock>(96, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, PreparedNoteBlock>?) = size > 96
+    private var cacheBytes = 0L
+    private data class Cached(val value: PreparedNoteBlock, val bytes: Long)
+    private val cache = LinkedHashMap<Long, Cached>(256, 0.75f, true)
+    private val documents = object : LinkedHashMap<String, SafeMarkdownDocument>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, SafeMarkdownDocument>?) = size > 64
     }
-    private val documents = object : LinkedHashMap<String, SafeMarkdownDocument>(32, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, SafeMarkdownDocument>?) = size > 32
-    }
-    fun cached(block: MarkdownBlocks.Block): PreparedNoteBlock? = synchronized(cache) { cache[block.start] }
+    val estimatedCacheBytes: Long get() = synchronized(cache) { cacheBytes }
+    fun cached(block: MarkdownBlocks.Block): PreparedNoteBlock? = synchronized(cache) { cache[block.start]?.value }
     private fun parsed(block: MarkdownBlocks.Block, text: String): PreparedNoteBlock {
-        val document = if (block.markdown) documents[text] ?: parseSafeMarkdown(text).also { documents[text] = it } else null
-        val allowed = document?.node != null && (document.links == 0 || block.start in decorated ||
-            linkCount + document.links <= NoteSizePolicy.DECORATED_LINK_LIMIT)
-        if (allowed && document != null && document.links > 0 && decorated.add(block.start)) linkCount += document.links
-        return PreparedNoteBlock(text, document.takeIf { allowed }).also { synchronized(cache) { cache[block.start] = it } }
+        val source = block.renderSource(text)
+        val document = documents[source] ?: parseSafeMarkdown(source).also { documents[source] = it }
+        val decorate = document.links == 0 || block.start in decorated ||
+            linkCount + document.links <= NoteSizePolicy.DECORATED_LINK_LIMIT
+        if (decorate && document.links > 0 && decorated.add(block.start)) linkCount += document.links
+        val value = PreparedNoteBlock(text, document.copy(decorateLinks = decorate))
+        val cost = 128L + text.length * 2L + source.length * 2L + document.nodeCount * 96L
+        synchronized(cache) {
+            cache.remove(block.start)?.let { cacheBytes -= it.bytes }
+            cache[block.start] = Cached(value, cost); cacheBytes += cost
+            while (cache.size > 1 && (cacheBytes > NoteSizePolicy.MARKDOWN_CACHE_BYTES || cache.size > NoteSizePolicy.MARKDOWN_CACHE_BLOCKS)) {
+                val oldest = cache.entries.iterator().next()
+                cacheBytes -= oldest.value.bytes; cache.remove(oldest.key)
+            }
+        }
+        return value
+    }
+    private suspend fun range(start: Long, count: Int): ByteArray = withContext(Dispatchers.IO) {
+        val input = reader ?: store.openRangeReader(id, hash).also { reader = it }
+        input.read(start, count)
+    }
+    private suspend fun prepareBatch(batch: List<MarkdownBlocks.Block>) {
+        var index = 0
+        while (index < batch.size) {
+            currentCoroutineContext().ensureActive()
+            val first = index
+            while (index + 1 < batch.size && batch[index + 1].end - batch[first].start <= NoteSizePolicy.IO_CHUNK_BYTES) index++
+            val selected = batch.subList(first, index + 1)
+            val start = selected.first().start
+            val bytes = range(start, (selected.last().end - start).toInt())
+            withContext(Dispatchers.Default) {
+                for (block in selected) {
+                    currentCoroutineContext().ensureActive()
+                    parsed(block, String(bytes, (block.start - start).toInt(), (block.end - block.start).toInt(), Charsets.UTF_8))
+                }
+            }
+            index++
+        }
     }
     suspend fun append(prepare: Boolean = true) = mutex.withLock {
         if (finished || closed) return@withLock
-        // Complete one bounded batch before observing cancellation: a consumed range must be published.
+        // Publish every consumed range. Cancellation is observed between bounded scanner batches.
         withContext(NonCancellable) {
             var eof = false
             val batch = withContext(Dispatchers.IO) {
                 val source = cursor ?: MarkdownBlocks.Cursor(store.open(id, hash), byteLimit, lineLimit).also { cursor = it }
+                val blockLimit = if (prepare) 128 else 4096
+                val spanLimit = if (prepare) NoteSizePolicy.IO_CHUNK_BYTES else 1024 * 1024
                 buildList<MarkdownBlocks.Block> {
-                    while (size < 64) {
-                        currentCoroutineContext().ensureActive()
+                    var visited = 0
+                    while (visited++ < blockLimit) {
                         val next = pending?.also { pending = null } ?: source.next()
                         if (next == null) { eof = true; break }
-                        if (isNotEmpty() && next.end - first().start > NoteSizePolicy.IO_CHUNK_BYTES) { pending = next; break }
-                        add(next)
+                        if (isNotEmpty() && next.end - first().start > spanLimit) { pending = next; break }
+                        if (next.visible) add(next)
                     }
                 }
             }
-            try {
-                if (prepare && batch.isNotEmpty()) {
-                    val first = batch.first().start
-                    val bytes = withContext(Dispatchers.IO) { store.readRange(id, hash, first, (batch.last().end - first).toInt()) }
-                    withContext(Dispatchers.Default) {
-                        for (block in batch) {
-                            currentCoroutineContext().ensureActive()
-                            val from = (block.start - first).toInt()
-                            val count = (block.end - block.start).toInt()
-                            parsed(block, String(bytes, from, count, Charsets.UTF_8))
-                        }
-                    }
-                }
-            } finally {
-                // The scanner has advanced. Publish even if prefetch/jump was cancelled so no ranges disappear.
-                withContext(NonCancellable + Dispatchers.Main.immediate) { blocks.addAll(batch); finished = eof }
+            try { if (prepare && batch.isNotEmpty()) prepareBatch(batch) }
+            finally {
+                withContext(Dispatchers.Main.immediate) { blocks.addAll(batch); finished = eof }
             }
         }
+    }
+    suspend fun warm(first: Int, last: Int) = mutex.withLock {
+        if (closed || blocks.isEmpty()) return@withLock
+        val from = first.coerceIn(0, blocks.lastIndex)
+        val until = last.coerceIn(from, blocks.lastIndex)
+        val missing = (from..until).map { blocks[it] }.filter { cached(it) == null }
+        prepareBatch(missing)
     }
     suspend fun prepare(block: MarkdownBlocks.Block): PreparedNoteBlock = mutex.withLock {
         cached(block)?.let { return@withLock it }
         check(!closed)
-        val text = withContext(Dispatchers.IO) { store.readRange(id, hash, block.start, (block.end - block.start).toInt()).toString(Charsets.UTF_8) }
+        val text = range(block.start, (block.end - block.start).toInt()).toString(Charsets.UTF_8)
         withContext(Dispatchers.Default) { parsed(block, text) }
     }
     suspend fun close() = mutex.withLock {
         closed = true
-        withContext(Dispatchers.IO) { cursor?.close() }
-        synchronized(cache) { cache.clear() }; documents.clear()
+        withContext(Dispatchers.IO) { try { cursor?.close() } finally { reader?.close() } }
+        synchronized(cache) { cache.clear(); cacheBytes = 0 }; documents.clear()
     }
 }
 
@@ -117,22 +148,26 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
         val state = rememberLazyListState()
         val headerItems = if (header == null) 0 else 1
         LaunchedEffect(session) {
-            try { session.append(); awaitCancellation() }
+            try {
+                session.append()
+                while (!session.finished) { ensureActive(); session.append(prepare = false); yield() }
+                awaitCancellation()
+            }
             catch (cancel: CancellationException) { throw cancel }
             catch (_: Exception) { failure = true }
             finally { withContext(NonCancellable) { runCatching { session.close() } } }
         }
         LaunchedEffect(session, state) {
             snapshotFlow {
-                Triple(state.firstVisibleItemIndex, state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0, session.blocks.size)
-            }.distinctUntilChanged().collect { (first, last, count) ->
-                if (count == 0 || jumping || failure) return@collect
+                val first = state.firstVisibleItemIndex
+                val last = state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                // Index growth beyond the warm range must not cancel a useful prefetch repeatedly.
+                Triple(first, last, minOf(session.blocks.size, last + NoteSizePolicy.MARKDOWN_PREFETCH_BLOCKS + 1))
+            }.distinctUntilChanged().collectLatest { (first, last, count) ->
+                if (count == 0 || jumping || failure) return@collectLatest
                 try {
-                    // Existing visible rows retain their prepared values while the next range warms.
-                    for (index in (first - headerItems - 8).coerceAtLeast(0)..(last - headerItems + 24).coerceAtMost(count - 1)) {
-                        session.prepare(session.blocks[index])
-                    }
-                    if (!session.finished && last - headerItems >= count - 32) session.append()
+                    session.warm((first - headerItems - 64).coerceAtLeast(0),
+                        (last - headerItems + NoteSizePolicy.MARKDOWN_PREFETCH_BLOCKS).coerceAtMost(count - 1))
                 } catch (cancel: CancellationException) { throw cancel }
                 catch (_: Exception) { failure = true }
             }
@@ -150,7 +185,8 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
                 } }
                 if (session.blocks.isNotEmpty()) {
                     val target = (if (index >= 0) index else -index - 1).coerceIn(0, session.blocks.lastIndex)
-                    for (nearby in target..(target + 24).coerceAtMost(session.blocks.lastIndex)) session.prepare(session.blocks[nearby])
+                    session.warm((target - 32).coerceAtLeast(0),
+                        (target + NoteSizePolicy.MARKDOWN_PREFETCH_BLOCKS).coerceAtMost(session.blocks.lastIndex))
                     state.scrollToItem(target + headerItems)
                 }
             } catch (cancel: CancellationException) { throw cancel }
@@ -167,12 +203,19 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
                     catch (_: Exception) { value = PreparedNoteBlock("This part could not be read. The saved note is retained.", null) }
                 }
                 val loaded = ready
-                if (loaded == null) NoteBodySkeleton(lines = 2)
+                if (loaded == null) {
+                    // A cold range reserves bounded space; no scrolling skeleton or raw Markdown.
+                    val wraps = ((block.end - block.start + columns - 1) / columns).toInt()
+                    val lines = maxOf(block.lines, wraps).coerceIn(1, lineLimit * 2)
+                    Spacer(Modifier.height((lines * 24 * fontScale).dp))
+                }
                 else if (loaded.document != null) MarkdownText(loaded.text, prepared = loaded.document,
                     onMarkdownChange = onBlockChange?.let { change -> { updated -> change(block.start, block.end, updated) } })
                 else SelectionContainer { Text(loaded.text, lineHeight = 24.sp) }
             }
-            if (!session.finished && !failure) item(key = "note_loading") { NoteBodySkeleton() }
+            if (!session.finished && !failure) item(key = "note_loading") {
+                if (session.blocks.isEmpty()) NoteBodySkeleton() else Spacer(Modifier.height(maxHeight))
+            }
             if (failure) item(key = "note_error") { Text("This note could not be rendered. Use plain text or Export; its body is retained.") }
         }
     }

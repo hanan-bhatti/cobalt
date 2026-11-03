@@ -367,7 +367,7 @@ fun DetailScreen(
             }
 
     }
-    var plainNote by remember(item.id) { mutableStateOf(item.type == SavedItemType.CODE || item.byteLength >= com.example.notes.NoteSizePolicy.TIER_B_MAX_BYTES) }
+    var plainNote by remember(item.id) { mutableStateOf(item.type == SavedItemType.CODE) }
     var noteJump by remember(item.id) { mutableLongStateOf(0) }
 
     Scaffold(

@@ -32,7 +32,7 @@ fun UnifiedNoteBody(item: SavedItem, viewModel: CobaltViewModel, plain: Boolean,
             item { header() }
             item { Text("The note body is unavailable. Its record is retained. See Settings → Data Migration.") }
         } else key(item.id, hash, plain) {
-            if (!plain && item.byteLength < NoteSizePolicy.TIER_B_MAX_BYTES) LazyMarkdownNote(item.id, hash,
+            if (!plain) LazyMarkdownNote(item.id, hash,
                 item.byteLength, jump, Modifier.weight(1f).fillMaxWidth(), header = header,
                 onBlockChange = if (busy) null else { start, end, updated ->
                     busy = true

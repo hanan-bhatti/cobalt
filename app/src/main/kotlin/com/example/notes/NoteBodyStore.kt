@@ -13,6 +13,13 @@ private fun ByteArray.hex() = joinToString("") { "%02x".format(it.toInt() and 0x
 interface NoteBodyStore {
     fun open(id: String, hash: String): InputStream
     fun readRange(id: String, hash: String, offset: Long, count: Int): ByteArray
+    fun openRangeReader(id: String, hash: String): NoteRangeReader {
+        val store = this
+        return object : NoteRangeReader {
+            override fun read(offset: Long, count: Int) = store.readRange(id, hash, offset, count)
+            override fun close() = Unit
+        }
+    }
     fun writeAtomic(id: String, input: InputStream, allowOversize: Boolean = false, progress: (Long) -> Unit = {}): NoteBodyRef
     fun verify(id: String, hash: String, bytes: Long): Boolean
     fun delete(id: String, hash: String)
@@ -20,6 +27,9 @@ interface NoteBodyStore {
     fun committed(id: String, hash: String) {}
     fun deleteAll(id: String)
 }
+
+/** A confined random reader; opening/reading/closing all happen off Main. */
+interface NoteRangeReader : Closeable { fun read(offset: Long, count: Int): ByteArray }
 
 data class NoteBodyRef(val hash: String, val bytes: Long, val preview: String)
 
@@ -36,6 +46,18 @@ class PrivateMarkdownStore(context: Context, private val checkpoint: (WriteStage
     override fun size(id: String, hash: String): Long? = file(id, hash).takeIf { it.isFile }?.length()
 
     override fun open(id: String, hash: String): InputStream = FileInputStream(file(id, hash))
+
+    override fun openRangeReader(id: String, hash: String): NoteRangeReader {
+        val input = RandomAccessFile(file(id, hash), "r")
+        return object : NoteRangeReader {
+            override fun read(offset: Long, count: Int): ByteArray {
+                require(offset >= 0 && count in 0..NoteSizePolicy.IO_CHUNK_BYTES)
+                input.seek(offset)
+                return ByteArray(minOf(count.toLong(), (input.length() - offset).coerceAtLeast(0)).toInt()).also { input.readFully(it) }
+            }
+            override fun close() = input.close()
+        }
+    }
 
     override fun readRange(id: String, hash: String, offset: Long, count: Int): ByteArray {
         require(offset >= 0 && count in 0..NoteSizePolicy.IO_CHUNK_BYTES)
