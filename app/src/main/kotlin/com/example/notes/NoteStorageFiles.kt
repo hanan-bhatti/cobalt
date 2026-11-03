@@ -5,5 +5,5 @@ data class NoteStorageFile(val directoryKey: String, val name: String, val bytes
     val hash: String? = name.substringBeforeLast('.').takeIf {
         (name.endsWith(".md") || name.endsWith(".delta")) && it.matches(Regex("[0-9a-f]{64}"))
     }
-    val isRetiredJournal = name.endsWith(".edits.retired")
+    val isRetiredJournal = name.matches(Regex("[0-9a-f-]{36}\\.edits\\.retired"))
 }

@@ -26,6 +26,8 @@ class CobaltApplication : Application(), ImageLoaderFactory {
         // Install local reporting first so the startup guard chains to it.
         com.example.util.LocalCrashReporter.init(this)
         com.example.notes.StartupCrashGuard.install(this)
+        // Defer expiry if WorkManager is temporarily unavailable; opening Trash also retries.
+        runCatching { com.example.notes.TrashCleanupWorker.schedule(this) }
     }
 
     override fun newImageLoader(): ImageLoader {

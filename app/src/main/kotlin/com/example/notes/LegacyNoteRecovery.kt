@@ -27,13 +27,7 @@ class LegacyNoteRecovery(
     fun observeNotes() = dao.observeRecoveryNotes()
 
     suspend fun delete(id: String) = withContext(Dispatchers.IO) {
-        NoteWriteLock.mutex.withLock {
-            database.withTransaction {
-                dao.deleteRecoveryNote(id)
-                dao.deleteNoteSearch(id)
-            }
-            store.deleteAll(id)
-        }
+        TrashManager(context, database, store).delete(id)
         mutex.withLock { pages.keys.removeAll { it.first == id }; cachedPages = pages.toMap() }
     }
 

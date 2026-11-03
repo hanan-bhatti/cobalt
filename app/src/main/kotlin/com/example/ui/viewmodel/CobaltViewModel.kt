@@ -483,13 +483,15 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
         // 1. Instantly close sheet and notify user
         closeMediaSearchSheet()
-        showToast("Saved ${item.title} to Cobalt!")
 
         // 2. Save locally and launch background enrichment
         viewModelScope.launch {
-            repository.saveItem(newItem)
-            WidgetUpdater.update(context)
-            repository.enrichMediaItemDetails(newItem)
+            try {
+                val saved = repository.saveNewMediaItem(newItem)
+                showToast("Saved ${item.title} to Cobalt!")
+                repository.enrichMediaItemDetails(saved)
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: Exception) { showToast("Could not save this media item. Please retry.") }
         }
     }
 
@@ -1827,21 +1829,19 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
     fun deleteSavedItem(item: SavedItem) {
         viewModelScope.launch {
-            repository.deleteItem(item)
-            _lastDeletedItemForUndo.value = item
+            try {
+                if (repository.deleteItem(item)) _lastDeletedItemForUndo.value = item
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: Exception) { showToast("Could not move this item to Trash. Please retry.") }
         }
     }
 
     fun restoreDeletedItem(item: SavedItem) {
         _lastDeletedItemForUndo.value = null
         viewModelScope.launch {
-            repository.saveItem(item)
-                        launch(kotlinx.coroutines.Dispatchers.IO) {
-                try {
-                } catch (e: Exception) {
-                    Log.e("CobaltVM", "Background sync failed: ${e.message}")
-                }
-            }
+            try { repository.restoreDeletedItem(item.id) }
+            catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: Exception) { showToast("Undo is unavailable. Check Settings → Storage → Trash.") }
         }
     }
 

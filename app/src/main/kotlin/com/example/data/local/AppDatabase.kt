@@ -25,8 +25,9 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [SavedItemEntity::class, CustomFolderEntity::class, NoteSearchEntity::class], version = 9, exportSchema = false)
+@Database(entities = [SavedItemEntity::class, CustomFolderEntity::class, NoteSearchEntity::class, TrashEntryEntity::class], version = 10, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
+    abstract fun trashDao(): TrashDao
     abstract fun savedItemDao(): SavedItemDao
     abstract fun customFolderDao(): CustomFolderDao
 
@@ -68,6 +69,16 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS trash_entries (itemId TEXT NOT NULL PRIMARY KEY, deletedAt INTEGER NOT NULL, expiresAt INTEGER NOT NULL, undoOnly INTEGER NOT NULL, purgeStarted INTEGER NOT NULL)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_trash_entries_expiresAt ON trash_entries(expiresAt)")
+                // Give any previously soft-deleted rows a fresh recovery window, never expire them on upgrade.
+                val now = System.currentTimeMillis()
+                db.execSQL("INSERT OR IGNORE INTO trash_entries SELECT id, ?, ?, 0, 0 FROM saved_items WHERE isDeleted = 1", arrayOf(now, now + com.example.notes.TrashPolicy.RETENTION_MS))
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -75,7 +86,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "cobalt_db"
                 )
-                .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+                .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
                 .build()
                 INSTANCE = instance
                 instance

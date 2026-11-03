@@ -24,15 +24,28 @@ import com.example.notes.NoteSizePolicy
 
 @Dao
 interface SavedItemDao {
+    @Query("SELECT isDeleted FROM saved_items WHERE id = :id")
+    suspend fun isItemDeleted(id: String): Boolean?
+    @Query("SELECT id FROM saved_items WHERE isDeleted = 1")
+    suspend fun deletedIds(): List<String>
+    @Query("UPDATE saved_items SET isDeleted = :deleted, updatedAt = :now WHERE id = :id")
+    suspend fun setDeleted(id: String, deleted: Boolean, now: Long): Int
+    @Query("DELETE FROM saved_items WHERE id = :id")
+    suspend fun deleteById(id: String)
+    @Query("SELECT content AS path, thumbnailPath FROM saved_items WHERE id != :excludedId AND upper(type) IN ('LINK', 'IMAGE', 'VIDEO', 'AUDIO', 'MEDIA')")
+    suspend fun otherMediaPaths(excludedId: String): List<OwnedMediaPaths>
+    @Query("SELECT id, content AS path, thumbnailPath, isDeleted FROM saved_items WHERE upper(type) IN ('LINK', 'IMAGE', 'VIDEO', 'AUDIO', 'MEDIA')")
+    suspend fun mediaStorageItems(): List<MediaStorageItem>
+    @Query("SELECT id FROM saved_items WHERE upper(type) = 'MEDIA' AND isDeleted = 0")
+    suspend fun activeMediaIds(): List<String>
+    @Query("UPDATE saved_items SET content = :content, thumbnailPath = :thumbnail WHERE id = :id AND isDeleted = 0")
+    suspend fun updateMediaPaths(id: String, content: String, thumbnail: String?): Int
     @Query("SELECT id, COALESCE(NULLIF(substr(title, 1, 160), ''), 'Untitled note') AS title, CASE WHEN bodyLocation = 'FILE' THEN byteLength ELSE length(CAST(content AS BLOB)) END AS byteLength FROM saved_items WHERE isDeleted = 0 AND upper(type) NOT IN ('LINK', 'IMAGE', 'VIDEO', 'AUDIO', 'MEDIA') ORDER BY timestamp DESC")
     fun observeRecoveryNotes(): Flow<List<com.example.notes.RecoveryNote>>
 
     /** Byte slices preserve NULs and UTF-8; the caller must stay off the main thread. */
     @Query("SELECT coalesce(substr(CAST(content AS BLOB), :start, max(0, min(:count, ${NoteSizePolicy.IO_CHUNK_BYTES}))), X'') FROM saved_items WHERE id = :id")
     fun readRecoveryBytes(id: String, start: Long, count: Int): ByteArray?
-
-    @Query("DELETE FROM saved_items WHERE id = :id AND upper(type) NOT IN ('LINK', 'IMAGE', 'VIDEO', 'AUDIO', 'MEDIA')")
-    suspend fun deleteRecoveryNote(id: String)
 
     @Query("SELECT id, type, title, CASE WHEN upper(type) NOT IN ('LINK', 'IMAGE', 'VIDEO', 'AUDIO', 'MEDIA') THEN CASE WHEN bodyLocation = 'FILE' THEN preview ELSE substr(content, 1, 200) END ELSE content END AS content, timestamp, foldersJson, extractedText, thumbnailPath, orderIndex, isSynced, linkTitle, linkDescription, linkImage, isBackedUp, sizeBytes, isPendingBackup, isUnavailable, mediaType, watchStatus, genresJson, watchProvidersJson, trailerUrl, backdropUrl, releaseYear, rating, runtime, tagline, budget, revenue, status, productionCompaniesJson, isArchived, updatedAt, isDeleted, traktId, tmdbId, imdbId, userRating, lastWatchedAt, showProgressJson, bodyLocation, contentHash, byteLength, formatVersion, preview, bodyMissing FROM saved_items WHERE isDeleted = 0 ORDER BY orderIndex DESC, timestamp DESC")
     fun getAllItemsFlow(): Flow<List<SavedItemEntity>>
@@ -57,6 +70,8 @@ interface SavedItemDao {
 
     @Query("DELETE FROM note_search WHERE noteId = :id")
     suspend fun deleteNoteSearch(id: String)
+    @Query("SELECT COUNT(*) FROM note_search WHERE noteId = :id")
+    suspend fun noteSearchCount(id: String): Int
 
     @Insert
     suspend fun insertNoteSearch(entry: NoteSearchEntity)
@@ -73,18 +88,18 @@ interface SavedItemDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertItems(items: List<SavedItemEntity>)
 
-    @Delete
-    suspend fun deleteItem(item: SavedItemEntity)
-
-    @Query("SELECT id, type, title, CASE WHEN upper(type) NOT IN ('LINK', 'IMAGE', 'VIDEO', 'AUDIO', 'MEDIA') THEN CASE WHEN bodyLocation = 'FILE' THEN preview ELSE substr(content, 1, 200) END ELSE content END AS content, timestamp, foldersJson, extractedText, thumbnailPath, orderIndex, isSynced, linkTitle, linkDescription, linkImage, isBackedUp, sizeBytes, isPendingBackup, isUnavailable, mediaType, watchStatus, genresJson, watchProvidersJson, trailerUrl, backdropUrl, releaseYear, rating, runtime, tagline, budget, revenue, status, productionCompaniesJson, isArchived, updatedAt, isDeleted, traktId, tmdbId, imdbId, userRating, lastWatchedAt, showProgressJson, bodyLocation, contentHash, byteLength, formatVersion, preview, bodyMissing FROM saved_items ORDER BY orderIndex DESC, timestamp DESC")
+    @Query("SELECT id, type, title, CASE WHEN upper(type) NOT IN ('LINK', 'IMAGE', 'VIDEO', 'AUDIO', 'MEDIA') THEN CASE WHEN bodyLocation = 'FILE' THEN preview ELSE substr(content, 1, 200) END ELSE content END AS content, timestamp, foldersJson, extractedText, thumbnailPath, orderIndex, isSynced, linkTitle, linkDescription, linkImage, isBackedUp, sizeBytes, isPendingBackup, isUnavailable, mediaType, watchStatus, genresJson, watchProvidersJson, trailerUrl, backdropUrl, releaseYear, rating, runtime, tagline, budget, revenue, status, productionCompaniesJson, isArchived, updatedAt, isDeleted, traktId, tmdbId, imdbId, userRating, lastWatchedAt, showProgressJson, bodyLocation, contentHash, byteLength, formatVersion, preview, bodyMissing FROM saved_items WHERE isDeleted = 0 ORDER BY orderIndex DESC, timestamp DESC")
     suspend fun getAllItems(): List<SavedItemEntity>
 
-    @Query("SELECT id, type, title, CASE WHEN upper(type) NOT IN ('LINK', 'IMAGE', 'VIDEO', 'AUDIO', 'MEDIA') THEN CASE WHEN bodyLocation = 'FILE' THEN preview ELSE substr(content, 1, 200) END ELSE content END AS content, timestamp, foldersJson, extractedText, thumbnailPath, orderIndex, isSynced, linkTitle, linkDescription, linkImage, isBackedUp, sizeBytes, isPendingBackup, isUnavailable, mediaType, watchStatus, genresJson, watchProvidersJson, trailerUrl, backdropUrl, releaseYear, rating, runtime, tagline, budget, revenue, status, productionCompaniesJson, isArchived, updatedAt, isDeleted, traktId, tmdbId, imdbId, userRating, lastWatchedAt, showProgressJson, bodyLocation, contentHash, byteLength, formatVersion, preview, bodyMissing FROM saved_items WHERE traktId = :traktId LIMIT 1")
+    @Query("SELECT id, type, title, CASE WHEN upper(type) NOT IN ('LINK', 'IMAGE', 'VIDEO', 'AUDIO', 'MEDIA') THEN CASE WHEN bodyLocation = 'FILE' THEN preview ELSE substr(content, 1, 200) END ELSE content END AS content, timestamp, foldersJson, extractedText, thumbnailPath, orderIndex, isSynced, linkTitle, linkDescription, linkImage, isBackedUp, sizeBytes, isPendingBackup, isUnavailable, mediaType, watchStatus, genresJson, watchProvidersJson, trailerUrl, backdropUrl, releaseYear, rating, runtime, tagline, budget, revenue, status, productionCompaniesJson, isArchived, updatedAt, isDeleted, traktId, tmdbId, imdbId, userRating, lastWatchedAt, showProgressJson, bodyLocation, contentHash, byteLength, formatVersion, preview, bodyMissing FROM saved_items WHERE traktId = :traktId AND isDeleted = 0 LIMIT 1")
     suspend fun getItemByTraktId(traktId: Long): SavedItemEntity?
 
-    @Query("SELECT id, type, title, CASE WHEN upper(type) NOT IN ('LINK', 'IMAGE', 'VIDEO', 'AUDIO', 'MEDIA') THEN CASE WHEN bodyLocation = 'FILE' THEN preview ELSE substr(content, 1, 200) END ELSE content END AS content, timestamp, foldersJson, extractedText, thumbnailPath, orderIndex, isSynced, linkTitle, linkDescription, linkImage, isBackedUp, sizeBytes, isPendingBackup, isUnavailable, mediaType, watchStatus, genresJson, watchProvidersJson, trailerUrl, backdropUrl, releaseYear, rating, runtime, tagline, budget, revenue, status, productionCompaniesJson, isArchived, updatedAt, isDeleted, traktId, tmdbId, imdbId, userRating, lastWatchedAt, showProgressJson, bodyLocation, contentHash, byteLength, formatVersion, preview, bodyMissing FROM saved_items WHERE tmdbId = :tmdbId LIMIT 1")
+    @Query("SELECT id, type, title, CASE WHEN upper(type) NOT IN ('LINK', 'IMAGE', 'VIDEO', 'AUDIO', 'MEDIA') THEN CASE WHEN bodyLocation = 'FILE' THEN preview ELSE substr(content, 1, 200) END ELSE content END AS content, timestamp, foldersJson, extractedText, thumbnailPath, orderIndex, isSynced, linkTitle, linkDescription, linkImage, isBackedUp, sizeBytes, isPendingBackup, isUnavailable, mediaType, watchStatus, genresJson, watchProvidersJson, trailerUrl, backdropUrl, releaseYear, rating, runtime, tagline, budget, revenue, status, productionCompaniesJson, isArchived, updatedAt, isDeleted, traktId, tmdbId, imdbId, userRating, lastWatchedAt, showProgressJson, bodyLocation, contentHash, byteLength, formatVersion, preview, bodyMissing FROM saved_items WHERE tmdbId = :tmdbId AND isDeleted = 0 LIMIT 1")
     suspend fun getItemByTmdbId(tmdbId: Int): SavedItemEntity?
 
     @Query("SELECT id, type, title, CASE WHEN upper(type) NOT IN ('LINK', 'IMAGE', 'VIDEO', 'AUDIO', 'MEDIA') THEN CASE WHEN bodyLocation = 'FILE' THEN preview ELSE substr(content, 1, 200) END ELSE content END AS content, timestamp, foldersJson, extractedText, thumbnailPath, orderIndex, isSynced, linkTitle, linkDescription, linkImage, isBackedUp, sizeBytes, isPendingBackup, isUnavailable, mediaType, watchStatus, genresJson, watchProvidersJson, trailerUrl, backdropUrl, releaseYear, rating, runtime, tagline, budget, revenue, status, productionCompaniesJson, isArchived, updatedAt, isDeleted, traktId, tmdbId, imdbId, userRating, lastWatchedAt, showProgressJson, bodyLocation, contentHash, byteLength, formatVersion, preview, bodyMissing FROM saved_items WHERE traktId IS NOT NULL AND isDeleted = 0")
     suspend fun getAllTraktItems(): List<SavedItemEntity>
 }
+
+data class OwnedMediaPaths(val path: String, val thumbnailPath: String?)
+data class MediaStorageItem(val id: String, val path: String, val thumbnailPath: String?, val isDeleted: Boolean)

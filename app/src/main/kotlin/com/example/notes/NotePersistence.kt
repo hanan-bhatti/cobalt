@@ -56,6 +56,15 @@ class NotePersistence(
 ) {
     private val appContext = context.applicationContext
     private val dao = database.savedItemDao()
+    private val deletionFence by lazy { NoteDeletionFence(appContext) }
+
+    internal suspend fun saveNonNoteLocked(item: SavedItem): SavedItem {
+        require(!isNote(item) && !item.isDeleted)
+        deletionFence.requireAlive(item.id)
+        check(dao.isItemDeleted(item.id) != true) { "This item is in Trash. Restore it before editing." }
+        dao.insertItem(SavedItemEntity.fromDomainModel(item))
+        return item
+    }
 
     private fun compactPrevious(id: String, previous: String?, current: String) {
         NoteHistoryCompactor.enqueue(store, id, previous, current) {
@@ -67,6 +76,8 @@ class NotePersistence(
     internal suspend fun commitPrepared(item: SavedItem, ref: NoteBodyRef): SavedItem = withContext(Dispatchers.IO) {
         require(isNote(item))
         NoteWriteLock.mutex.withLock {
+            deletionFence.requireAlive(item.id)
+            check(dao.isItemDeleted(item.id) != true) { "This note is in Trash." }
             val previous = dao.getNoteBodyMetadata(item.id)
             check(previous?.contentHash == item.contentHash) { "Note changed or was deleted; draft retained" }
             check(NoteSizePolicy.acceptsEdit(ref.bytes, previous?.byteLength ?: 0)) { "Note exceeds the permitted edit size; draft retained" }
@@ -89,6 +100,8 @@ class NotePersistence(
     internal suspend fun importLocked(item: SavedItem, input: InputStream, allowOversize: Boolean = false,
         progress: (Long) -> Unit = {}, replaceExisting: Boolean = false): SavedItem {
         require(isNote(item))
+        deletionFence.requireAlive(item.id)
+        check(dao.isItemDeleted(item.id) != true) { "This note is in Trash." }
         val cancellation = currentCoroutineContext()
         val previous = dao.getNoteBodyMetadata(item.id)
         if (replaceExisting) {
@@ -142,6 +155,8 @@ class NotePersistence(
                 }
             }
             val metadata = dao.getItemById(id) ?: throw IOException("Note was deleted; recovery file retained")
+            deletionFence.requireAlive(id)
+            check(!metadata.isDeleted) { "This note is in Trash. Restore it before changing versions." }
             check(metadata.contentHash == expectedHash) { "Note changed; reopen before undo" }
             check(store.verify(id, target.hash, target.bytes)) { "Undo generation unavailable; saved note retained" }
             store.materialize(id, target.hash)
@@ -209,10 +224,11 @@ class NotePersistence(
 
     suspend fun save(item: SavedItem, progress: (Long) -> Unit = {}): SavedItem = withContext(Dispatchers.IO) {
         if (!isNote(item)) {
-            dao.insertItem(SavedItemEntity.fromDomainModel(item))
-            return@withContext item
+            return@withContext NoteWriteLock.mutex.withLock { saveNonNoteLocked(item) }
         }
         NoteWriteLock.mutex.withLock {
+            deletionFence.requireAlive(item.id)
+            check(!item.isDeleted && dao.isItemDeleted(item.id) != true) { "This note is in Trash. Restore it before editing." }
             var old = dao.getNoteBodyMetadata(item.id)
             if (old != null && old.bodyLocation != "FILE") old = migrateOneLocked(item.id)
             if (!item.bodyLoaded) {
@@ -262,6 +278,7 @@ class NotePersistence(
     suspend fun load(id: String, includeSmallBody: Boolean = true): SavedItem? = withContext(Dispatchers.IO) {
         NoteWriteLock.mutex.withLock {
             val metadata = dao.getItemById(id) ?: return@withLock null
+            if (metadata.isDeleted) return@withLock null
             if (!isNote(metadata.toDomainModel())) return@withLock metadata.toDomainModel()
             val ref = try {
                 val reference = dao.getNoteBodyMetadata(id) ?: throw IOException("Note is missing")
@@ -306,6 +323,8 @@ class NotePersistence(
         withContext(Dispatchers.IO) {
             NoteWriteLock.mutex.withLock {
                 val current = dao.getNoteBodyMetadata(id) ?: throw IOException("Note is missing")
+                deletionFence.requireAlive(id)
+                check(dao.isItemDeleted(id) != true) { "This note is in Trash." }
                 check(current.contentHash == hash) { "Note changed; reload this section before saving" }
                 require(window.start >= 0 && window.end in window.start..current.byteLength)
                 val table = PieceTable(FileNoteByteSource(store, id, hash, current.byteLength))

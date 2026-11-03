@@ -555,7 +555,10 @@ class CobaltRepository(private val context: Context) {
                 tmdbId = tmdbId ?: item.tmdbId
             )
             if (saveToDb) {
-                notePersistence.save(newItem)
+                try { notePersistence.save(newItem) }
+                catch (error: IllegalStateException) {
+                    if (savedItemDao.isItemDeleted(item.id) != true && !com.example.notes.NoteDeletionFence(context).deleted(item.id)) throw error
+                }
             }
             return@withContext newItem
         }
@@ -569,33 +572,64 @@ class CobaltRepository(private val context: Context) {
         }
     }
     suspend fun saveItemLocallyOnly(item: SavedItem) = withContext(Dispatchers.IO) {
-        val updatedItem = item.copy(timestamp = System.currentTimeMillis())
-        notePersistence.save(updatedItem)
+        fun prepare(): SavedItem {
+            val updatedItem = item.copy(timestamp = System.currentTimeMillis())
+            return updatedItem
+        }
+        if (com.example.notes.NotePersistence.isNote(item)) notePersistence.save(prepare()) else {
+            com.example.notes.NoteWriteLock.mutex.withLock {
+                com.example.notes.NoteDeletionFence(context).requireAlive(item.id)
+                check(savedItemDao.isItemDeleted(item.id) != true) { "This item is in Trash." }
+                notePersistence.saveNonNoteLocked(prepare())
+            }
+        }
     }
 
     suspend fun saveItem(item: SavedItem, mediaBytes: ByteArray? = null, onProgress: (Float) -> Unit = {}): SavedItem = withContext(Dispatchers.IO) {
-        val itemSize = when {
-            mediaBytes != null -> mediaBytes.size.toLong()
-            (item.thumbnailPath ?: item.content).startsWith("/") -> java.io.File(item.thumbnailPath ?: item.content).length()
-            item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO -> item.sizeBytes
-            com.example.notes.NotePersistence.isNote(item) -> item.byteLength
-            else -> item.content.toByteArray().size.toLong()
+        suspend fun persist(): SavedItem {
+            val itemSize = when {
+                mediaBytes != null -> mediaBytes.size.toLong()
+                (item.thumbnailPath ?: item.content).startsWith("/") -> java.io.File(item.thumbnailPath ?: item.content).length()
+                item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO -> item.sizeBytes
+                com.example.notes.NotePersistence.isNote(item) -> item.byteLength
+                else -> item.content.toByteArray().size.toLong()
+            }
+            val finalItem = item.copy(sizeBytes = itemSize, timestamp = if (item.timestamp == 0L) System.currentTimeMillis() else item.timestamp, updatedAt = System.currentTimeMillis())
+            val saved = if (com.example.notes.NotePersistence.isNote(finalItem)) notePersistence.save(finalItem) else notePersistence.saveNonNoteLocked(finalItem)
+            return saved
         }
-        val finalItem = item.copy(sizeBytes = itemSize, timestamp = if (item.timestamp == 0L) System.currentTimeMillis() else item.timestamp, updatedAt = System.currentTimeMillis())
-        val saved = notePersistence.save(finalItem)
+        val saved = if (com.example.notes.NotePersistence.isNote(item)) persist() else {
+            com.example.notes.NoteWriteLock.mutex.withLock {
+                com.example.notes.NoteDeletionFence(context).requireAlive(item.id)
+                check(savedItemDao.isItemDeleted(item.id) != true) { "This item is in Trash." }
+                persist()
+            }
+        }
         com.example.widget.WidgetUpdater.update(context)
         saved
     }
 
-    suspend fun deleteItem(item: SavedItem) = withContext(Dispatchers.IO) {
-        com.example.notes.NoteWriteLock.mutex.withLock {
-            db.withTransaction {
-                savedItemDao.deleteItem(item.toEntity())
-                savedItemDao.deleteNoteSearch(item.id)
-            }
-            // Keep the verified generation available for the existing Undo action.
+    suspend fun deleteItem(item: SavedItem): Boolean = com.example.notes.TrashManager(context, db).delete(item.id)
+
+    suspend fun restoreDeletedItem(id: String) = com.example.notes.TrashManager(context, db).restore(id)
+
+    /** Explicit user add: a deleted provider result gets a fresh capture identity, never an old autosave's identity. */
+    suspend fun saveNewMediaItem(item: SavedItem): SavedItem = withContext(Dispatchers.IO) {
+        require(item.type == SavedItemType.MEDIA)
+        val fence = com.example.notes.NoteDeletionFence(context)
+        val prefix = item.id.substringBeforeLast('_', item.id) + "_"
+        val providerId = item.id.substringAfterLast('_')
+        val active = savedItemDao.activeMediaIds().firstOrNull { !fence.deleted(it) && (it == item.id || (it.startsWith(prefix) && it.endsWith("_$providerId"))) }
+        val old = savedItemDao.getItemById(item.id)
+        if (active == null && old?.isDeleted == true && !fence.deleted(item.id)) {
+            try {
+                restoreDeletedItem(item.id)
+                return@withContext savedItemDao.getItemById(item.id)!!.toDomainModel()
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: IllegalStateException) { /* An expired Undo or purge gets a fresh capture below. */ }
         }
-        com.example.widget.WidgetUpdater.update(context)
+        val identity = active ?: if (fence.deleted(item.id) || old?.isDeleted == true) prefix + java.util.UUID.randomUUID() + "_" + providerId else item.id
+        saveItem(item.copy(id = identity))
     }
 
     suspend fun addCustomFolder(
@@ -846,6 +880,8 @@ class CobaltRepository(private val context: Context) {
         }
 
         try {
+            val fence = com.example.notes.NoteDeletionFence(context)
+            if (fence.deleted(item.id) || savedItemDao.isItemDeleted(item.id) == true) return@withContext null
             val destDir = getPermanentMediaDir(item.type)
             val extension = when (item.type) {
                 SavedItemType.VIDEO -> "mp4"
