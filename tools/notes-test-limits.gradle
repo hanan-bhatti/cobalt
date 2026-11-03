@@ -1,0 +1,8 @@
+// Optional init script: keep host note tests sequential on machines with limited RAM.
+allprojects {
+    tasks.withType(org.gradle.api.tasks.testing.Test).configureEach {
+        maxParallelForks = 1
+        maxHeapSize = "512m"
+        jvmArgs "-XX:ActiveProcessorCount=1"
+    }
+}
