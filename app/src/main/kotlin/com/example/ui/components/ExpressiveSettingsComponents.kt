@@ -58,9 +58,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.util.HapticManager
 
 /**
  * Returns an adaptive RoundedCornerShape for connected capsule items (Pill Group)
@@ -975,6 +980,146 @@ fun ExpressiveSegmentedChoiceItem(
                             text = option,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                         )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Expressive Typography Slider Item featuring:
+ * - Live value badge and unit
+ * - Endpoint hints at both ends reflecting the font family
+ * - Step snapping and light haptic tick via HapticManager on each step
+ * - TalkBack accessibility semantics (label, value with unit, step actions)
+ * - 48dp touch target support
+ * - Explanatory hint for disabled/static font constraints
+ */
+@Composable
+fun ExpressiveTypographySliderItem(
+    title: String,
+    value: Float,
+    valueDisplay: String,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    steps: Int = 0,
+    onValueChangeFinished: (() -> Unit)? = null,
+    startHint: @Composable (() -> Unit)? = null,
+    endHint: @Composable (() -> Unit)? = null,
+    shape: Shape = RoundedCornerShape(24.dp),
+    enabled: Boolean = true,
+    disabledHint: String? = null
+) {
+    val context = LocalContext.current
+    var lastHapticValue by remember { mutableStateOf(value) }
+
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = shape,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp)
+        ) {
+            // Header Row: Title, Subtitle, and Value Badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                    if (subtitle != null) {
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    }
+                    if (!enabled && disabledHint != null) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = disabledHint,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    shape = CircleShape
+                ) {
+                    Text(
+                        text = valueDisplay,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Slider with Endpoint Visual Hints
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                if (startHint != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        startHint()
+                    }
+                }
+
+                Slider(
+                    value = value,
+                    onValueChange = { newVal ->
+                        if (newVal != lastHapticValue) {
+                            HapticManager.performSwipeTick(context)
+                            lastHapticValue = newVal
+                        }
+                        onValueChange(newVal)
+                    },
+                    valueRange = valueRange,
+                    steps = steps,
+                    enabled = enabled,
+                    onValueChangeFinished = onValueChangeFinished,
+                    modifier = Modifier
+                        .weight(1f)
+                        .semantics {
+                            contentDescription = title
+                            stateDescription = valueDisplay
+                        }
+                )
+
+                if (endHint != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        endHint()
                     }
                 }
             }
