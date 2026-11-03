@@ -31,6 +31,19 @@ interface NoteByteSource {
     }
 }
 
+/** Immutable range of a shared source, allowing adjacent append ranges to coalesce. */
+class NoteByteSlice(val source: NoteByteSource, val offset: Long, override val size: Long) : NoteByteSource {
+    init { require(offset in 0..source.size && size in 0..(source.size - offset)) }
+    override fun read(offset: Long, count: Int): ByteArray {
+        require(offset in 0..size && count >= 0)
+        return source.read(this.offset + offset, minOf(count.toLong(), size - offset).toInt())
+    }
+    override fun openRange(offset: Long, length: Long): InputStream {
+        require(offset in 0..size && length in 0..(size - offset))
+        return source.openRange(this.offset + offset, length)
+    }
+}
+
 class FileNoteByteSource(private val store: NoteBodyStore, private val id: String,
     private val hash: String, override val size: Long) : NoteByteSource {
     override fun read(offset: Long, count: Int) = store.readRange(id, hash, offset, count)
@@ -71,7 +84,7 @@ class FileNoteByteSource(private val store: NoteBodyStore, private val id: Strin
  * operations retain descriptors, not document copies. Callers supply UTF-8 boundaries.
  * All methods are confined to the owning background editing coroutine.
  */
-class PieceTable(original: NoteByteSource) {
+class PieceTable(original: NoteByteSource, private val keepUndo: Boolean = true) {
     private data class Piece(val source: NoteByteSource, val offset: Long, val length: Long)
     private data class Edit(val start: Long, val removed: List<Piece>, val inserted: List<Piece>)
     private var pieces = if (original.size == 0L) emptyList() else listOf(Piece(original, 0, original.size))
@@ -118,10 +131,16 @@ class PieceTable(original: NoteByteSource) {
     fun replace(start: Long, end: Long, appended: NoteByteSource) {
         require(appended.size >= 0)
         val removed = slice(start, end)
-        val inserted = if (appended.size == 0L) emptyList() else listOf(Piece(appended, 0, appended.size))
+        val inserted = when {
+            appended.size == 0L -> emptyList()
+            appended is NoteByteSlice -> listOf(Piece(appended.source, appended.offset, appended.size))
+            else -> listOf(Piece(appended, 0, appended.size))
+        }
         splice(start, end - start, inserted)
-        undo.addLast(Edit(start, removed, inserted))
-        if (undo.size > MAX_UNDO_OPERATIONS) undo.removeFirst()
+        if (keepUndo) {
+            undo.addLast(Edit(start, removed, inserted))
+            if (undo.size > MAX_UNDO_OPERATIONS) undo.removeFirst()
+        }
         redo.clear()
     }
 
