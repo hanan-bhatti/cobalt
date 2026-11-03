@@ -209,6 +209,8 @@ class NoteStorageManager(context: Context,
             }.toList()
         }
     }
+    // Require physically free space; do not assume Android can reclaim cache owned by recovery.
+    @android.annotation.SuppressLint("UsableSpace")
     suspend fun optimizeDatabase() = withContext(Dispatchers.IO) {
         NoteWriteLock.mutex.withLock {
             val db = database.openHelper.writableDatabase
@@ -220,6 +222,8 @@ class NoteStorageManager(context: Context,
     }
 
     fun retention(): Int = prefs.getInt("copies_to_keep", 5).takeIf { it in RETENTIONS } ?: 5
+    // A failed preference commit must reach the UI; KTX edit discards the Boolean result.
+    @android.annotation.SuppressLint("UseKtx")
     suspend fun setRetention(value: Int) = withContext(Dispatchers.IO) {
         require(value in RETENTIONS)
         check(prefs.edit().putInt("copies_to_keep", value).commit()) { "Could not save retention preference" }

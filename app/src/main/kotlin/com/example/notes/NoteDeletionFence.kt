@@ -3,6 +3,8 @@ package com.example.notes
 import android.content.Context
 
 /** Tiny durable tombstones reject late autosaves after a permanent deletion. IO only. */
+// KTX edit returns Unit; these crash-safety steps must check the synchronous commit result.
+@android.annotation.SuppressLint("UseKtx")
 internal class NoteDeletionFence(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("permanently_deleted_notes", Context.MODE_PRIVATE)
     fun deleted(id: String): Boolean = prefs.getBoolean(PrivateMarkdownStore.storageKey(id), false)

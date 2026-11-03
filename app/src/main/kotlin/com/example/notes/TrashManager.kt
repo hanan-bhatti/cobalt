@@ -9,6 +9,8 @@ import kotlinx.coroutines.sync.withLock
 import java.io.File
 
 /** Trash is metadata plus intact private files. Purge is resumable; restore never saves a preview. */
+// KTX edit returns Unit; these crash-safety steps must check the synchronous commit result.
+@android.annotation.SuppressLint("UseKtx")
 class TrashManager(context: Context,
     private val database: AppDatabase = AppDatabase.getDatabase(context.applicationContext),
     private val store: NoteBodyStore = PrivateMarkdownStore(context.applicationContext),
