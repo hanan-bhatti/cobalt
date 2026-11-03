@@ -7,11 +7,63 @@ import java.io.InputStream
 interface NoteByteSource {
     val size: Long
     fun read(offset: Long, count: Int): ByteArray
+    fun openRange(offset: Long, length: Long): InputStream {
+        require(offset >= 0 && offset <= size && length >= 0 && length <= size - offset)
+        val source = this
+        return object : InputStream() {
+            var position = offset
+            val end = offset + length
+            override fun read(): Int {
+                val single = ByteArray(1)
+                return if (read(single, 0, 1) < 0) -1 else single[0].toInt() and 0xff
+            }
+            override fun read(bytes: ByteArray, off: Int, len: Int): Int {
+                if (off < 0 || len < 0 || off > bytes.size - len) throw IndexOutOfBoundsException()
+                if (len == 0) return 0
+                if (position == end) return -1
+                val count = minOf(len.toLong(), NoteSizePolicy.IO_CHUNK_BYTES.toLong(), end - position).toInt()
+                val data = source.read(position, count)
+                if (data.size != count) throw EOFException("Piece source is incomplete; saved note retained")
+                data.copyInto(bytes, off); position += count
+                return count
+            }
+        }
+    }
 }
 
 class FileNoteByteSource(private val store: NoteBodyStore, private val id: String,
     private val hash: String, override val size: Long) : NoteByteSource {
     override fun read(offset: Long, count: Int) = store.readRange(id, hash, offset, count)
+    override fun openRange(offset: Long, length: Long): InputStream {
+        require(offset >= 0 && offset <= size && length >= 0 && length <= size - offset)
+        val input = store.open(id, hash)
+        try {
+            var remaining = offset
+            while (remaining > 0) {
+                val skipped = input.skip(remaining)
+                if (skipped > 0) remaining -= skipped
+                else { if (input.read() < 0) throw EOFException("Piece source is incomplete"); remaining-- }
+            }
+        } catch (error: Throwable) { input.close(); throw error }
+        return object : InputStream() {
+            var remaining = length
+            override fun read(): Int {
+                if (remaining == 0L) return -1
+                val value = input.read()
+                if (value < 0) throw EOFException("Piece source is incomplete; saved note retained")
+                remaining--; return value
+            }
+            override fun read(bytes: ByteArray, off: Int, len: Int): Int {
+                if (off < 0 || len < 0 || off > bytes.size - len) throw IndexOutOfBoundsException()
+                if (len == 0) return 0
+                if (remaining == 0L) return -1
+                val count = input.read(bytes, off, minOf(len.toLong(), remaining).toInt())
+                if (count < 0) throw EOFException("Piece source is incomplete; saved note retained")
+                remaining -= count; return count
+            }
+            override fun close() = input.close()
+        }
+    }
 }
 
 /**
@@ -91,7 +143,8 @@ class PieceTable(original: NoteByteSource) {
         val snapshot = slice(start, end)
         return object : InputStream() {
             var index = 0
-            var offset = 0L
+            var active: InputStream? = null
+            var closed = false
             override fun read(): Int {
                 val single = ByteArray(1)
                 return if (read(single, 0, 1) < 0) -1 else single[0].toInt() and 0xff
@@ -99,16 +152,17 @@ class PieceTable(original: NoteByteSource) {
             override fun read(bytes: ByteArray, off: Int, len: Int): Int {
                 if (off < 0 || len < 0 || off > bytes.size - len) throw IndexOutOfBoundsException()
                 if (len == 0) return 0
-                if (index >= snapshot.size) return -1
-                val piece = snapshot[index]
-                val count = minOf(len.toLong(), NoteSizePolicy.IO_CHUNK_BYTES.toLong(), piece.length - offset).toInt()
-                val data = piece.source.read(piece.offset + offset, count)
-                if (data.size != count) throw EOFException("Piece source is incomplete; saved note retained")
-                data.copyInto(bytes, off)
-                offset += count
-                if (offset == piece.length) { index++; offset = 0 }
-                return count
+                check(!closed) { "Stream is closed" }
+                while (index < snapshot.size) {
+                    val piece = snapshot[index]
+                    val input = active ?: piece.source.openRange(piece.offset, piece.length).also { active = it }
+                    val count = input.read(bytes, off, minOf(len, NoteSizePolicy.IO_CHUNK_BYTES))
+                    if (count >= 0) return count
+                    input.close(); active = null; index++
+                }
+                return -1
             }
+            override fun close() { closed = true; active?.close(); active = null }
         }
     }
 

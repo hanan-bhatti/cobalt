@@ -6,6 +6,33 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class PieceTableTest {
+    @Test fun filePiecesKeepOneOpenStreamAndCloseItInsteadOfOpeningEveryChunk() {
+        val bytes = ByteArray(100_000) { (it % 127).toByte() }
+        var opened = 0
+        var closed = 0
+        val store = object : NoteBodyStore {
+            override fun open(id: String, hash: String): java.io.InputStream {
+                opened++
+                return object : ByteArrayInputStream(bytes) { override fun close() { closed++; super.close() } }
+            }
+            override fun readRange(id: String, hash: String, offset: Long, count: Int): ByteArray = error("No range-open per chunk")
+            override fun writeAtomic(id: String, input: java.io.InputStream, allowOversize: Boolean, progress: (Long) -> Unit): NoteBodyRef = error("Read only")
+            override fun verify(id: String, hash: String, bytes: Long) = true
+            override fun delete(id: String, hash: String) = Unit
+            override fun size(id: String, hash: String): Long = bytes.size.toLong()
+            override fun deleteAll(id: String) = Unit
+        }
+        val table = PieceTable(FileNoteByteSource(store, "note", "hash", bytes.size.toLong()))
+        val actual = table.openStream(123, 90_000).use { it.readBytes() }
+        assertArrayEquals(bytes.copyOfRange(123, 90_000), actual)
+        assertEquals(1, opened)
+        assertEquals(1, closed)
+        val cancelled = table.openStream()
+        cancelled.read(ByteArray(32))
+        cancelled.close()
+        assertEquals(2, opened)
+        assertEquals(2, closed)
+    }
     private fun source(text: String): NoteByteSource {
         val bytes = text.toByteArray(Charsets.UTF_8)
         return object : NoteByteSource {
