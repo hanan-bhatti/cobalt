@@ -46,6 +46,13 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     private val repository = CobaltRepository(context)
     private val fileEditor = com.example.notes.FileEditorSession(context, viewModelScope)
     val fileEditorState = fileEditor.state
+    fun enableContinuousEditor() = fileEditor.enableContinuous()
+    fun continuousEditorChanged(document: com.example.notes.ContinuousNoteDocument) = fileEditor.continuousChanged(document)
+    fun continuousEditorBusy(document: com.example.notes.ContinuousNoteDocument, busy: Boolean) = fileEditor.continuousBusy(document, busy)
+    fun formatContinuousEditor(format: String) { fileEditorState.value.document?.onFormat?.invoke(format) }
+    suspend fun checkpointFileEditor() = fileEditor.flushJournal()
+    fun replaceContinuousNoteRange(start: Long, end: Long, hash: String, text: String) =
+        fileEditor.replaceContinuousRange(start, end, hash, text)
     fun editFileWindow(text: String) = fileEditor.edit(text)
     fun focusFileWindow(start: Long, end: Long, hash: String) = fileEditor.focus(start, end, hash)
     fun flushFileEditor() { viewModelScope.launch { fileEditor.flushJournal() } }

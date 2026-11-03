@@ -167,7 +167,9 @@ fun MarkdownAccessoryToolbar(
     onApplyFormat: (TextFieldValue) -> Unit,
     isPreviewMode: Boolean,
     onTogglePreview: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onNativeCommand: ((String) -> Unit)? = null,
+    enabled: Boolean = true
 ) {
     val toolsScrollState = rememberScrollState()
 
@@ -203,13 +205,27 @@ fun MarkdownAccessoryToolbar(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (onNativeCommand != null) {
+                listOf(
+                    Triple("undo", R.drawable.ic_custom_undo, "Undo"),
+                    Triple("redo", R.drawable.ic_custom_redo, "Redo"),
+                    Triple("find", R.drawable.ic_custom_search, "Find in note"),
+                    Triple("outline", R.drawable.ic_custom_outline, "Outline")
+                ).forEach { (command, icon, description) ->
+                    IconButton(onClick = { onNativeCommand(command) }, enabled = enabled, modifier = Modifier.size(32.dp)) {
+                        Icon(painterResource(icon), description, modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
             toolbarActions.forEach { action ->
                 Surface(
                     onClick = {
-                        applyMarkdownFormat(textFieldValue, action.type) { updated ->
+                        if (onNativeCommand != null) onNativeCommand(action.type.name)
+                        else applyMarkdownFormat(textFieldValue, action.type) { updated ->
                             onApplyFormat(updated)
                         }
                     },
+                    enabled = enabled,
                     shape = RoundedCornerShape(8.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
                     border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
@@ -249,6 +265,7 @@ fun MarkdownAccessoryToolbar(
         // Pinned Preview Toggle Pill
         Surface(
             onClick = onTogglePreview,
+            enabled = enabled,
             shape = RoundedCornerShape(8.dp),
             color = if (isPreviewMode) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
             border = BorderStroke(
@@ -475,8 +492,6 @@ fun TextCapturePage(
     var showNewFolderCreator by remember { mutableStateOf(false) }
     val file by viewModel.fileEditorState.collectAsState()
     val fileEditing = file.id == item.id
-    val fieldFocus = remember { androidx.compose.ui.focus.FocusRequester() }
-    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
 
     val noteHeader: @Composable () -> Unit = {
             // 1. Clean borderless Title input
@@ -526,8 +541,11 @@ fun TextCapturePage(
                     label = pasteLabel,
                     accentColor = pageCategoryColor,
                     onClick = {
-                        val newText = clipboardRawText
-                        onTextContentChange(TextFieldValue(text = newText, selection = TextRange(newText.length)))
+                        if (fileEditing) viewModel.formatContinuousEditor("paste")
+                        else {
+                            val newText = clipboardRawText
+                            onTextContentChange(TextFieldValue(text = newText, selection = TextRange(newText.length)))
+                        }
                     }
                 )
             }
@@ -536,20 +554,12 @@ fun TextCapturePage(
 
     }
     val noteEditor: @Composable () -> Unit = {
-        LaunchedEffect(file.window.start, file.busy, file.generation?.hash, isPreviewMode) {
-            if (fileEditing && !file.busy && file.generation != null && !isPreviewMode) {
-                fieldFocus.requestFocus()
-                keyboard?.show()
-            }
-        }
-            // The body is frameless. Its value is a bounded editor window.
-            if (fileEditing && file.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-            if (fileEditing) file.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        // Small notes retain the original frameless field. File notes use the continuous engine below.
             if (!isPreviewMode) {
                     if (viewModel.noteInputBusy.collectAsState().value) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     BasicTextField(
                     value = textContent,
-                    enabled = !viewModel.noteInputBusy.collectAsState().value && (!fileEditing || (!file.busy && file.generation != null)),
+                    enabled = !viewModel.noteInputBusy.collectAsState().value,
                     onValueChange = onTextContentChange,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         fontSize = 16.sp,
@@ -573,8 +583,7 @@ fun TextCapturePage(
                     visualTransformation = MarkdownVisualTransformation(),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .defaultMinSize(minHeight = if (fileEditing) 24.dp else 180.dp)
-                        .then(if (fileEditing) Modifier.focusRequester(fieldFocus) else Modifier)
+                        .defaultMinSize(minHeight = 180.dp)
                         .testTag("capture_content_input")
                 )
             } else {
@@ -592,7 +601,6 @@ fun TextCapturePage(
                         )
                     } else {
                         Column {
-                            if (fileEditing) Text("Preview of the focused text. Save to read the formatted note.", style = MaterialTheme.typography.labelSmall)
                             MarkdownText(
                             markdown = textContent.text,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -658,7 +666,7 @@ fun TextCapturePage(
     }
     if (fileEditing) {
         ContinuousNoteEditor(viewModel, modifier.fillMaxSize().padding(horizontal = 20.dp)
-            .padding(top = 10.dp, bottom = bottomPadding + 24.dp), noteHeader, noteEditor, noteFooter)
+            .padding(top = 10.dp, bottom = bottomPadding + 24.dp), noteHeader, noteFooter, preview = isPreviewMode)
     } else BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val minContentHeight = maxHeight
         Column(Modifier.fillMaxWidth().heightIn(min = minContentHeight).verticalScroll(rememberScrollState())
@@ -1785,8 +1793,10 @@ fun CaptureScreen(
                             MarkdownAccessoryToolbar(
                                 textFieldValue = textContent,
                                 onApplyFormat = ::applyEditorText,
+                                onNativeCommand = if (fileEditing) viewModel::formatContinuousEditor else null,
+                                enabled = !fileEditing || (fileEditor.document != null && !fileEditor.busy),
                                 isPreviewMode = isPreviewMode,
-                                onTogglePreview = { isPreviewMode = !isPreviewMode },
+                                onTogglePreview = { if (!fileEditing || !fileEditor.busy) isPreviewMode = !isPreviewMode },
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

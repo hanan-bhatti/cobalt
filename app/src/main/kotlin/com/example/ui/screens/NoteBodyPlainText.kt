@@ -23,12 +23,12 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 internal fun NoteBodyPlainText(reader: LegacyNoteRecovery, note: RecoveryNote, modifier: Modifier, jumpByte: Long = 0,
     header: (@Composable () -> Unit)? = null,
     listState: androidx.compose.foundation.lazy.LazyListState = rememberLazyListState(),
-    contentPadding: PaddingValues = PaddingValues(0.dp)) {
+    contentPadding: PaddingValues = PaddingValues(0.dp), body: NoteBodyMetadata? = null) {
     val fontScale = LocalDensity.current.fontScale
-    var unavailable by remember(reader, note.id, note.byteLength) { mutableStateOf(false) }
-    val metadata by produceState<NoteBodyMetadata?>(null, reader, note.id, note.byteLength) {
+    var unavailable by remember(reader, note.id, note.byteLength, body?.contentHash) { mutableStateOf(false) }
+    val metadata by produceState<NoteBodyMetadata?>(null, reader, note.id, note.byteLength, body?.contentHash) {
         try {
-            val snapshot = reader.bodyMetadata(note.id)
+            val snapshot = body ?: reader.bodyMetadata(note.id)
             reader.prefetchDisplay(note, snapshot, 0)
             value = snapshot
         } catch (cancel: CancellationException) { throw cancel }
