@@ -56,6 +56,26 @@ class NotePersistence(
 ) {
     private val dao = database.savedItemDao()
 
+    /** Commit an already staged editor generation without copying/fsyncing the same body again. */
+    internal suspend fun commitPrepared(item: SavedItem, ref: NoteBodyRef): SavedItem = withContext(Dispatchers.IO) {
+        require(isNote(item))
+        NoteWriteLock.mutex.withLock {
+            val previous = dao.getNoteBodyMetadata(item.id)
+            check(previous?.contentHash == item.contentHash) { "Note changed or was deleted; draft retained" }
+            check(NoteSizePolicy.acceptsEdit(ref.bytes, previous?.byteLength ?: 0)) { "Note exceeds the permitted edit size; draft retained" }
+            check(store.verify(item.id, ref.hash, ref.bytes)) { "Draft verification failed; original retained" }
+            currentCoroutineContext().ensureActive()
+            val saved = item.copy(content = "", bodyLoaded = false, bodyLocation = "FILE", contentHash = ref.hash,
+                byteLength = ref.bytes, sizeBytes = ref.bytes, preview = ref.preview, formatVersion = 1, bodyMissing = false)
+            database.withTransaction {
+                dao.insertItem(SavedItemEntity.fromDomainModel(saved))
+                index(item.id, ref.hash)
+            }
+            runCatching { store.committed(item.id, ref.hash) }
+            saved
+        }
+    }
+
     /** Caller holds NoteWriteLock; imports never materialize the body in a String. */
     internal suspend fun importLocked(item: SavedItem, input: InputStream, allowOversize: Boolean = false,
         progress: (Long) -> Unit = {}, replaceExisting: Boolean = false): SavedItem {
