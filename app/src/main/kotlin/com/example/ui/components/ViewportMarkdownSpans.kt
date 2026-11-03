@@ -17,13 +17,25 @@ internal class ViewportMarkdownSpans(private val content: Content) : Spans {
     fun clear() { prepared = null }
     /** Background worker only; copy at most a small visible range, never the whole document. */
     fun prepare(first: Int, last: Int) {
-        val version = content.documentVersion
+        var version = 0L
         val lines = mutableListOf<Pair<Int, String>>()
-        val from = first.coerceIn(0, content.lineCount - 1)
-        val end = last.coerceIn(from, minOf(content.lineCount - 1, from + 160))
-        content.runReadActionsOnLines(from, end, Content.ContentLineConsumer2 { index, text, _ ->
-            lines.add(index to text.subSequence(0, minOf(text.length, 4096)).toString())
-        })
+        try {
+            // Bounds and the bounded copy must share the same read lock. A deletion can
+            // otherwise remove the requested lines between lineCount and the bulk read.
+            // Content's read lock is reentrant; line zero exists for every live document.
+            content.runReadActionsOnLines(0, 0, Content.ContentLineConsumer2 { _, _, _ ->
+                version = content.documentVersion
+                val from = first.coerceIn(0, content.lineCount - 1)
+                val end = last.coerceIn(from, minOf(content.lineCount - 1, from + 160))
+                content.runReadActionsOnLines(from, end, Content.ContentLineConsumer2 { index, text, _ ->
+                    lines.add(index to text.subSequence(0, minOf(text.length, 4096)).toString())
+                })
+            })
+        } catch (_: IndexOutOfBoundsException) {
+            // Disposal may release the model before this cancelled worker obtains its lock.
+            clear()
+            return
+        }
         var links = 0
         val next = HashMap<Int, List<Span>>()
         for ((line, text) in lines) {
