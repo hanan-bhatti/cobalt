@@ -1,5 +1,10 @@
 # Reader hot-path changes — 2026-11-03
 
+Historical first pass. Its 96-block cache, size-forced Tier C plain mode and hard
+fragment literal fallback are superseded by the follow-up documented in
+`continuous-editor-2026-11-03.md` and the current `ARCHITECTURE.md`. Do not treat
+this earlier source report as describing the latest reader.
+
 Source implementation only. No Gradle build, Kotlin compilation, unit-test run,
 APK installation, emulator benchmark or release/R8 check was performed for these
 changes, following the user's no-build instruction. Earlier successful tests/APKs

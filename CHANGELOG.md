@@ -1,5 +1,33 @@
 ## Unreleased — single application cleanup
 
+### Note recovery and storage management
+
+- Native editor autosave records checksummed operations instead of repeatedly retaining full idle checkpoints.
+- Recover journals with a disk piece table before opening the resident editor model.
+- Add Settings → Storage & Recovery: human-readable sizes, explicit copy retention/cleanup, and older-copy export/restore.
+- Protect current notes, drafts, active readers and undo references during cleanup.
+- Offer direct export of unsaved editor text after a storage/save failure; retain closing models until native views release them.
+- No new dependency or network connection. Debug compilation and 81 targeted host regressions pass. The live disk-backed editor requirement and device/release/performance acceptance remain pending.
+
+
+- Honor Markdown mode for large notes instead of silently forcing files of 5 MB
+  and above into plain text. Text notes default to bounded lazy Markdown rendering;
+  code notes keep their plain-text default. Carry Markdown context across long
+  fences/tables and keep formatting after the link-decoration cap is reached.
+- Batch reader prefetch through a persistent handle with an estimated 8 MiB cache,
+  group small paragraphs and remove per-row fast-scroll skeletons. Cold misses
+  may still reserve space; device latency and frame-rate budgets are unmeasured.
+
+- Replace capture's separate editable ranges with a continuous native editor for
+  file notes, retaining the frameless body and keyboard-only Markdown toolbar.
+  Add global selection/IME editing, undo/redo, cancellable paste, literal find and
+  replace, heading navigation and bounded source styling. Keep complete notes
+  accessible through plain-text/export fallback when the resident model exceeds
+  the device memory estimate. Full 55 MB editing budgets remain unmet/unverified.
+- Stream file-backed piece-table ranges through one open handle per piece. Save
+  verified editor checkpoints without writing the complete body a second time.
+  Preserve legacy window drafts and saved originals during transition.
+
 - Prepare note content from a small prefix instead of parsing the full document
   before display. Add bounded parsed-block/page caches, nearby-content prefetch
   and static skeleton loading. Timing and memory budgets remain unmeasured.
@@ -9,8 +37,8 @@
 - Align migration, recovery and storage-error pages with Appearance settings,
   including saved themes, shared headers and back motion. Simplify migration
   actions, use counted All/Large filters, single-line note titles and size badges,
-  and match folder-card context menus with action icons. Source-only change;
-  compilation and runtime UI verification are pending.
+  and match folder-card context menus with action icons. Debug compilation passes;
+  device visual/back-gesture verification remains pending.
 
 - Integrate large-note reading into the original detail screen; place advanced
   note actions in its overflow menu instead of a separate large-note interface.
