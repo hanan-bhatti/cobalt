@@ -1,6 +1,9 @@
 package com.example.ui.components
 
 import android.app.Activity
+import android.os.Looper
+import org.robolectric.Shadows.shadowOf
+import java.time.Duration
 import android.view.inputmethod.EditorInfo
 import com.example.notes.ContinuousNoteDocument
 import io.github.rosemoe.sora.text.Content
@@ -28,7 +31,8 @@ class ContinuousMarkdownViewTest {
             editor.bind(document) { document.changed() }
             assertEquals(490, editor.cursor.left)
             assertEquals(530, editor.cursor.right)
-            val ime = editor.onCreateInputConnection(EditorInfo())!!
+            awaitReady(editor)
+            val ime = requireNotNull(editor.onCreateInputConnection(EditorInfo()))
             assertTrue(ime.commitText("composed😀", 1))
             assertEquals(original.replaceRange(490, 530, "composed😀"), editor.text.toString())
             editor.undo()
@@ -43,10 +47,23 @@ class ContinuousMarkdownViewTest {
         val document = ContinuousNoteDocument(Content("retained"))
         try {
             editor.bind(document) { document.changed() }
-            val ime = editor.onCreateInputConnection(EditorInfo())!!
+            awaitReady(editor)
+            val ime = requireNotNull(editor.onCreateInputConnection(EditorInfo()))
             document.freeze(true)
             assertFalse(ime.commitText("replacement", 1))
             assertEquals("retained", editor.text.toString())
         } finally { editor.dispose(); document.content.release(); activity.pause().stop().destroy() }
     }
+    private fun awaitReady(editor: ContinuousMarkdownView) {
+        editor.layout(0, 0, 1080, 1500)
+        editor.requestFocus()
+        val looper = shadowOf(Looper.getMainLooper())
+        repeat(300) {
+            looper.idleFor(Duration.ofMillis(16))
+            if (editor.isEditable) return
+            Thread.sleep(5) // Let Sora's background layout publish its result to the paused main looper.
+        }
+        assertTrue("Native editor layout did not become ready", editor.isEditable)
+    }
+
 }
