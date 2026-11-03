@@ -3,7 +3,7 @@
 Cobalt is a single Android application. Text and code note bodies, including
 empty and one-line notes, are immutable Markdown generations in app-private
 internal storage. `NoteBodyStore` is the only component that accesses body files.
-Room v9 stores metadata, a 200-character preview, byte length, format version and
+Room v10 stores metadata, a 200-character preview, byte length, format version and
 SHA-256 reference. Links/media keep their existing URL/path representation.
 
 ## Writes and recovery
@@ -137,9 +137,45 @@ Sora model itself is still resident in RAM; the recovery adapter is not a live
 large-file editor. Emergency export can stream an unsaved COW snapshot directly
 to a user-chosen SAF target when internal storage cannot accept another copy.
 
-Storage & Recovery performs metadata/file-size accounting and user-confirmed
+Storage performs metadata/file-size accounting and user-confirmed
 retention cleanup. It protects DB references, drafts, interrupted writes, open
 readers and undo histories. It retains unknown files; there is no automatic
-pruning or compression. Older-copy restore changes the body with a saved-version
+pruning. Older versions can be compacted into verified, gzip-compressed copy/insert
+deltas against a retained complete anchor; the current body remains a complete
+Markdown file. Older-copy restore changes the body with a saved-version
 guard and never silently overwrites a recovery draft. Detailed current limitations
 and actual test output are in [the recovery/storage report](docs/note-recovery-storage-2026-11-03.md).
+
+The [delta-history follow-up](docs/note-delta-history-2026-11-03.md) describes atomic
+conversion, anchor protection, bounded compaction and the distinction between saved
+versions and the still-resident live editor. Reader prefetch yields between small
+batches so visible Markdown does not queue behind the whole speculative range.
+
+
+## Trash and explicit maintenance
+
+Room v10 adds a metadata-only Trash table. The v9 upgrade keeps existing bodies
+and gives pre-existing soft-deleted records a fresh 30-day recovery period.
+Deleting hides an item from active queries while retaining its private body,
+versions and drafts. Restore only changes deletion metadata: a list projection
+can never replace the real body. Turning Trash off affects future deletions;
+a short 30-second Undo period remains. Android may defer expiry work.
+
+Permanent deletion first persists a resumable purge marker and deletion fence,
+then removes owned bodies, versions, drafts and private media, and finally removes
+Room/search metadata. Late saves cannot recreate the deleted identity. Files shared
+by another item are preserved. Legacy cache-only media is verified and moved to
+private durable storage before entering Trash. A failed purge remains retryable
+and cannot restore a partially removed body.
+
+Storage reports separate current data, history, Trash, unlinked files, recovery,
+cache and database/settings sizes. Explicit review can recover/export/remove
+unlinked completed bodies and media. Active drafts, incomplete writes, leased
+bodies and required delta anchors remain protected. Cleanup acts on reviewed file
+identities; it does not silently include newly created files. Cache cleanup is
+restricted to rebuildable image cache, idle registered workspace and older export
+copies. Database compaction is explicit and requires temporary free space.
+
+Normal note recovery is accessible through Storage → Manage notes; migration
+retains only its emergency unavailable-storage recovery route. No new dependency,
+permission or outbound connection is introduced by Trash or Storage maintenance.

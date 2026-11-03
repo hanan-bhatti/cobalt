@@ -1,13 +1,33 @@
 ## Unreleased — single application cleanup
 
+- Compact eligible older note versions into verified compressed copy/insert deltas,
+  retain complete history anchors, and reconstruct/export/restore without whole-body
+  Strings. Keep the current note as Markdown and retain originals on conversion failure.
+- Prioritize visible Markdown over speculative prefetch; reduce heading-jump preparation.
+- Preserve original line endings when toggling Markdown checkboxes, including quoted
+  and ordered tasks; exclude code using CommonMark parsing.
+
+### Storage and Trash
+
+- Replace the storage size rows with a themed segmented usage bar and compact
+  category breakdown, plus focused history, Trash, unlinked files and maintenance pages.
+- Keep deleted items and their versions recoverable for 30 days. Add Restore,
+  reviewed Empty Trash and resumable permanent deletion; disabling Trash retains
+  a short Undo window for new deletions.
+- Expose retained unlinked bodies/media for recovery, export or explicit cleanup.
+  Protect current notes, active recovery work, shared media and required delta anchors.
+- Add safe cache cleanup and explicit database compaction. Reuse existing delete,
+  undo, export and menu icons, and use the supplied Storage icon.
+- Move ordinary note recovery access to Storage and remove its duplicate migration link.
+
 ### Note recovery and storage management
 
 - Native editor autosave records checksummed operations instead of repeatedly retaining full idle checkpoints.
 - Recover journals with a disk piece table before opening the resident editor model.
-- Add Settings → Storage & Recovery: human-readable sizes, explicit copy retention/cleanup, and older-copy export/restore.
+- Add Settings → Storage: human-readable sizes, explicit copy retention/cleanup, and older-copy export/restore.
 - Protect current notes, drafts, active readers and undo references during cleanup.
 - Offer direct export of unsaved editor text after a storage/save failure; retain closing models until native views release them.
-- No new dependency or network connection. Debug compilation and 81 targeted host regressions pass. The live disk-backed editor requirement and device/release/performance acceptance remain pending.
+- No new dependency or network connection. Debug compilation and 114 targeted host regressions pass. The live disk-backed editor requirement and device/release/performance acceptance remain pending.
 
 
 - Honor Markdown mode for large notes instead of silently forcing files of 5 MB

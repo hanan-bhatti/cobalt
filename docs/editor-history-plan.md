@@ -18,6 +18,12 @@
   recovery writer is healthy. Failed writers still force a full checkpoint.
 - Cleanup remains explicit. This change does not delete existing saved versions.
 
+Saved-history follow-up: older complete generations can now be compacted into
+verified copy/insert deltas, while retaining the current `.md` and its history
+anchor. See [implementation and limits](note-delta-history-2026-11-03.md).
+This replaces redundant storage bytes, without deleting a restorable version.
+The live disk-backed editor and inverse-operation undo below remain planned.
+
 ## Planned replacement, not implemented by the unchanged-save fix
 
 1. Keep the original file immutable during an editing session. Append inserted text
