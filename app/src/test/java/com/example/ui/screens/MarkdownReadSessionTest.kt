@@ -5,6 +5,11 @@ import java.io.ByteArrayInputStream
 import java.io.InputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.async
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.withContext
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -23,6 +28,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = android.app.Application::class)
 class MarkdownReadSessionTest {
     private class Store(val bytes: ByteArray) : NoteBodyStore {
+        var beforeRead: ((Long) -> Unit)? = null
         var opens = 0
         var closed = 0
         var reads = 0
@@ -32,7 +38,9 @@ class MarkdownReadSessionTest {
         override fun openRangeReader(id: String, hash: String): NoteRangeReader {
             opens++
             return object : NoteRangeReader {
-                override fun read(offset: Long, count: Int): ByteArray { reads++; return readRange(id, hash, offset, count) }
+                override fun read(offset: Long, count: Int): ByteArray {
+                    reads++; beforeRead?.invoke(offset); return readRange(id, hash, offset, count)
+                }
                 override fun close() { closed++ }
             }
         }
@@ -41,6 +49,30 @@ class MarkdownReadSessionTest {
         override fun delete(id: String, hash: String) = Unit
         override fun size(id: String, hash: String): Long = bytes.size.toLong()
         override fun deleteAll(id: String) = Unit
+    }
+    @Test fun visiblePreparationDoesNotWaitForTheEntireSpeculativeRange() = runBlocking {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        val store = Store((1..1000).joinToString("\n\n") { "**Paragraph $it** and some text" }.toByteArray())
+        val session = MarkdownReadSession(store, "note", "hash", 128, 4)
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val offsets = java.util.Collections.synchronizedList(ArrayList<Long>())
+        try {
+            while (!session.finished) session.append(prepare = false)
+            store.beforeRead = { offset ->
+                offsets.add(offset)
+                if (offsets.size == 1) { entered.countDown(); check(release.await(5, TimeUnit.SECONDS)) }
+            }
+            val warm = async(Dispatchers.Default) { session.warm(0, session.blocks.lastIndex - 1) }
+            assertTrue(withContext(Dispatchers.IO) { entered.await(5, TimeUnit.SECONDS) })
+            val target = session.blocks.last()
+            // UNDISTPATCHED queues the visible request on the mutex before prefetch resumes.
+            val visible = async(start = CoroutineStart.UNDISPATCHED) { session.prepare(target) }
+            release.countDown()
+            assertNotNull(visible.await().document)
+            warm.await()
+            assertEquals("Offscreen work monopolized the reader", 1, offsets.indexOf(target.start))
+        } finally { release.countDown(); session.close(); Dispatchers.resetMain() }
     }
     private fun nodes(root: Node): List<Node> = buildList {
         val pending = ArrayDeque<Node>(); pending.add(root)

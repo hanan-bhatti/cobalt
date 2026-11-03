@@ -92,8 +92,8 @@ internal class MarkdownReadSession(private val store: NoteBodyStore, private val
             var eof = false
             val batch = withContext(Dispatchers.IO) {
                 val source = cursor ?: MarkdownBlocks.Cursor(store.open(id, hash), byteLimit, lineLimit).also { cursor = it }
-                val blockLimit = if (prepare) 128 else 4096
-                val spanLimit = if (prepare) NoteSizePolicy.IO_CHUNK_BYTES else 1024 * 1024
+                val blockLimit = if (prepare) 128 else 512
+                val spanLimit = if (prepare) NoteSizePolicy.IO_CHUNK_BYTES else 128 * 1024
                 buildList<MarkdownBlocks.Block> {
                     var visited = 0
                     while (visited++ < blockLimit) {
@@ -110,12 +110,26 @@ internal class MarkdownReadSession(private val store: NoteBodyStore, private val
             }
         }
     }
-    suspend fun warm(first: Int, last: Int) = mutex.withLock {
-        if (closed || blocks.isEmpty()) return@withLock
-        val from = first.coerceIn(0, blocks.lastIndex)
-        val until = last.coerceIn(from, blocks.lastIndex)
-        val missing = (from..until).map { blocks[it] }.filter { cached(it) == null }
-        prepareBatch(missing)
+    suspend fun warm(first: Int, last: Int) {
+        val requested = mutex.withLock {
+            if (closed || blocks.isEmpty() || last < first || last < 0 || first > blocks.lastIndex) return
+            blocks.subList(first.coerceAtLeast(0), last.coerceAtMost(blocks.lastIndex) + 1).toList()
+        }
+        // Yield the reader between small speculative batches. A newly visible row must not
+        // wait behind hundreds of offscreen parses or a complete warm range.
+        for (batch in requested.chunked(8)) {
+            currentCoroutineContext().ensureActive()
+            mutex.withLock {
+                if (closed) return
+                prepareBatch(batch.filter { cached(it) == null })
+            }
+            yield()
+        }
+    }
+    suspend fun warmVisible(first: Int, last: Int) {
+        warm(first, last)
+        warm(last + 1, last + NoteSizePolicy.MARKDOWN_PREFETCH_BLOCKS)
+        warm(first - 64, first - 1)
     }
     suspend fun prepare(block: MarkdownBlocks.Block): PreparedNoteBlock = mutex.withLock {
         cached(block)?.let { return@withLock it }
@@ -162,12 +176,14 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
                 val first = state.firstVisibleItemIndex
                 val last = state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
                 // Index growth beyond the warm range must not cancel a useful prefetch repeatedly.
-                Triple(first, last, minOf(session.blocks.size, last + NoteSizePolicy.MARKDOWN_PREFETCH_BLOCKS + 1))
-            }.distinctUntilChanged().collectLatest { (first, last, count) ->
-                if (count == 0 || jumping || failure) return@collectLatest
+                if (jumping || failure) null else
+                    Triple(first, last, minOf(session.blocks.size, last + NoteSizePolicy.MARKDOWN_PREFETCH_BLOCKS + 1))
+            }.distinctUntilChanged().collectLatest { visible ->
+                val (first, last, count) = visible ?: return@collectLatest
+                if (count == 0) return@collectLatest
                 try {
-                    session.warm((first - headerItems - 64).coerceAtLeast(0),
-                        (last - headerItems + NoteSizePolicy.MARKDOWN_PREFETCH_BLOCKS).coerceAtMost(count - 1))
+                    session.warmVisible((first - headerItems).coerceAtLeast(0),
+                        (last - headerItems).coerceAtMost(count - 1))
                 } catch (cancel: CancellationException) { throw cancel }
                 catch (_: Exception) { failure = true }
             }
@@ -185,8 +201,7 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
                 } }
                 if (session.blocks.isNotEmpty()) {
                     val target = (if (index >= 0) index else -index - 1).coerceIn(0, session.blocks.lastIndex)
-                    session.warm((target - 32).coerceAtLeast(0),
-                        (target + NoteSizePolicy.MARKDOWN_PREFETCH_BLOCKS).coerceAtMost(session.blocks.lastIndex))
+                    session.warm(target, (target + 8).coerceAtMost(session.blocks.lastIndex))
                     state.scrollToItem(target + headerItems)
                 }
             } catch (cancel: CancellationException) { throw cancel }
