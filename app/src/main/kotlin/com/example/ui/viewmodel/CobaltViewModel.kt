@@ -175,6 +175,14 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         settingsRepository.setFolderRankingEnabled(enabled)
     }
 
+    val typographyPrefs = settingsRepository.typographyPrefs
+    fun setTypographyPrefs(prefs: com.example.data.model.TypographyPrefs) {
+        settingsRepository.setTypographyPrefs(prefs)
+    }
+    fun resetTypographyToDefaults() {
+        settingsRepository.resetTypographyToDefaults()
+    }
+
     fun isApiKeySet(): Boolean {
         return settingsRepository.geminiApiKey.value.isNotEmpty()
     }

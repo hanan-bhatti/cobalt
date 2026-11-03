@@ -20,6 +20,10 @@ package com.example.data.repository
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.example.data.model.CodeFontFamily
+import com.example.data.model.TextFontFamily
+import com.example.data.model.TypographyPrefs
+import com.example.data.model.TypographyPreset
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,6 +39,45 @@ class SettingsRepository(private val context: Context) {
         if (key == "hide_recents") {
             _hideRecents.value = prefs.getBoolean("hide_recents", false)
         }
+    }
+
+    private fun loadTypographyPrefsInternal(): TypographyPrefs {
+        return TypographyPrefs(
+            useCustomFont = prefs.getBoolean(KEY_USE_CUSTOM_FONT, true),
+            applyToAppUi = prefs.getBoolean(KEY_APPLY_TO_APP_UI, false),
+            textFont = TextFontFamily.fromKey(prefs.getString(KEY_TEXT_FONT, "inter")),
+            codeFont = CodeFontFamily.fromKey(prefs.getString(KEY_CODE_FONT, "jetbrains_mono")),
+            fontSize = prefs.getInt(KEY_FONT_SIZE, 16),
+            fontWeight = prefs.getInt(KEY_FONT_WEIGHT, 400),
+            lineHeight = prefs.getFloat(KEY_LINE_HEIGHT, 1.5f),
+            letterSpacing = prefs.getFloat(KEY_LETTER_SPACING, 0.0f),
+            paragraphSpacing = prefs.getInt(KEY_PARAGRAPH_SPACING, 8),
+            preset = TypographyPreset.fromKey(prefs.getString(KEY_TYPOGRAPHY_PRESET, "comfortable"))
+        ).validated()
+    }
+
+    private val _typographyPrefs = MutableStateFlow(loadTypographyPrefsInternal())
+    val typographyPrefs: StateFlow<TypographyPrefs> = _typographyPrefs.asStateFlow()
+
+    fun setTypographyPrefs(updated: TypographyPrefs) {
+        val validated = updated.validated()
+        prefs.edit()
+            .putBoolean(KEY_USE_CUSTOM_FONT, validated.useCustomFont)
+            .putBoolean(KEY_APPLY_TO_APP_UI, validated.applyToAppUi)
+            .putString(KEY_TEXT_FONT, validated.textFont.key)
+            .putString(KEY_CODE_FONT, validated.codeFont.key)
+            .putInt(KEY_FONT_SIZE, validated.fontSize)
+            .putInt(KEY_FONT_WEIGHT, validated.fontWeight)
+            .putFloat(KEY_LINE_HEIGHT, validated.lineHeight)
+            .putFloat(KEY_LETTER_SPACING, validated.letterSpacing)
+            .putInt(KEY_PARAGRAPH_SPACING, validated.paragraphSpacing)
+            .putString(KEY_TYPOGRAPHY_PRESET, validated.preset.key)
+            .apply()
+        _typographyPrefs.value = validated
+    }
+
+    fun resetTypographyToDefaults() {
+        setTypographyPrefs(TypographyPrefs.DEFAULT)
     }
 
     init {
@@ -397,6 +440,11 @@ class SettingsRepository(private val context: Context) {
             KEY_EDGE_ANIM_DAMPING -> _edgePanelAnimDamping.value = prefs.getFloat(KEY_EDGE_ANIM_DAMPING, 0.72f)
             KEY_PROFILE_ARCHIVE_STYLE -> _profileArchiveStyle.value = prefs.getString(KEY_PROFILE_ARCHIVE_STYLE, "pills") ?: "pills"
             KEY_FOLDER_RANKING_ENABLED -> _isFolderRankingEnabled.value = prefs.getBoolean(KEY_FOLDER_RANKING_ENABLED, true)
+            KEY_USE_CUSTOM_FONT, KEY_APPLY_TO_APP_UI, KEY_TEXT_FONT, KEY_CODE_FONT,
+            KEY_FONT_SIZE, KEY_FONT_WEIGHT, KEY_LINE_HEIGHT, KEY_LETTER_SPACING,
+            KEY_PARAGRAPH_SPACING, KEY_TYPOGRAPHY_PRESET -> {
+                _typographyPrefs.value = loadTypographyPrefsInternal()
+            }
         }
     }
 
@@ -451,5 +499,16 @@ URL EXTRACTION RULES for urls:
         private const val KEY_EDGE_ANIM_PRESET = "edge_panel_anim_preset"
         private const val KEY_EDGE_ANIM_STIFFNESS = "edge_panel_anim_stiffness"
         private const val KEY_EDGE_ANIM_DAMPING = "edge_panel_anim_damping"
+
+        const val KEY_USE_CUSTOM_FONT = "pref_use_custom_font"
+        const val KEY_APPLY_TO_APP_UI = "pref_apply_to_app_ui"
+        const val KEY_TEXT_FONT = "pref_text_font"
+        const val KEY_CODE_FONT = "pref_code_font"
+        const val KEY_FONT_SIZE = "pref_font_size"
+        const val KEY_FONT_WEIGHT = "pref_font_weight"
+        const val KEY_LINE_HEIGHT = "pref_line_height"
+        const val KEY_LETTER_SPACING = "pref_letter_spacing"
+        const val KEY_PARAGRAPH_SPACING = "pref_paragraph_spacing"
+        const val KEY_TYPOGRAPHY_PRESET = "pref_typography_preset"
     }
 }
