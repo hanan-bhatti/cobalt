@@ -96,6 +96,9 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
                         }
                     }
                 }
+                doc.recordEdit(event.changeStart.index,
+                    if (event.action == ContentChangeEvent.ACTION_DELETE) part.length else 0,
+                    if (event.action == ContentChangeEvent.ACTION_INSERT) part else "")
                 changed()
                 warmStyles()
             }
@@ -116,6 +119,8 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
         val end = value.selectionEnd
         val x = value.scrollX
         val y = value.scrollY
+        val previousDocument = document
+        value.attachView()
         document = value
         binding = true
         try {
@@ -128,6 +133,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
                 setSelectionRegion(left.line, left.column, right.line, right.column, false)
             }
         } finally { binding = false }
+        previousDocument?.detachView()
         value.onFreeze = freeze
         value.onFormat = format
         freeze(value.frozen)
@@ -324,6 +330,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
                 beginStandaloneEdit(); batch = true
                 if (right > left) { text.delete(left, right); modified = true }
                 var offset = 0
+                var chunks = 0
                 while (offset < incoming.length) {
                     ensureActive()
                     var end = minOf(offset + 2048, incoming.length)
@@ -331,6 +338,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
                     insertAt(left + offset, incoming.subSequence(offset, end)); modified = true
                     offset = end
                     pasteProgress(offset.toFloat() / incoming.length.coerceAtLeast(1))
+                    if (++chunks % 8 == 0) doc.awaitRecovery?.invoke()
                     yield()
                 }
                 select(left + incoming.length, left + incoming.length)
@@ -456,7 +464,10 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
                 beginStandaloneEdit(); batch = true
                 for ((index, position) in matches.asReversed().withIndex()) {
                     text.replace(position, position + query.length, replacement); modified = true
-                    if (index % 16 == 0) { pasteProgress(index.toFloat() / matches.size); yield() }
+                    if (index % 16 == 0) {
+                        pasteProgress(index.toFloat() / matches.size)
+                        doc.awaitRecovery?.invoke(); yield()
+                    }
                 }
                 text.endBatchEdit(); batch = false
                 select(matches.first(), matches.first() + replacement.length)
@@ -562,6 +573,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
         }
         scope.cancel()
         release()
+        document?.detachView()
         document = null
     }
 }

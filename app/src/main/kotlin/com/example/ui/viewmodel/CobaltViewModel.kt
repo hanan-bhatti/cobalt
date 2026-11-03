@@ -55,7 +55,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         fileEditor.replaceContinuousRange(start, end, hash, text)
     fun editFileWindow(text: String) = fileEditor.edit(text)
     fun focusFileWindow(start: Long, end: Long, hash: String) = fileEditor.focus(start, end, hash)
-    fun flushFileEditor() { viewModelScope.launch { fileEditor.flushJournal() } }
+    fun flushFileEditor() { viewModelScope.launch { fileEditor.flushJournal(fullCheckpoint = false) } }
     val settingsRepository = com.example.data.repository.SettingsRepository(context)
 
     /** Returns true when the device has an active internet-capable network. */

@@ -17,7 +17,8 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
     data class State(val id: String? = null, val originalHash: String? = null, val generation: NoteBodyRef? = null,
         val window: EditableNoteWindow = EditableNoteWindow(0, 0, ""), val text: String = "", val dirty: Boolean = false,
         val busy: Boolean = false, val error: String? = null, val previous: List<Long> = emptyList(),
-        val document: ContinuousNoteDocument? = null, val caretStart: Int = 0, val caretEnd: Int = 0)
+        val document: ContinuousNoteDocument? = null, val caretStart: Int = 0, val caretEnd: Int = 0,
+        val editToken: String? = null)
     private val context = context.applicationContext
     private val mutable = MutableStateFlow(State())
     val state = mutable.asStateFlow()
@@ -27,7 +28,36 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
     private var operation: Job? = null
     private var failedPaste: String? = null
     private var closing: Job? = null
+    private val failedClosings = HashMap<String, State>() // Main only; never discard unsaved RAM after an IO failure.
     private val checkpointMutex = Mutex()
+    private var editWriter: ContinuousEditWriter? = null
+
+    private suspend fun attachJournal(owner: State): State {
+        val document = owner.document ?: return owner
+        val id = owner.id ?: error("Missing note identity")
+        val ref = owner.generation ?: error("Missing journal base")
+        editWriter?.close()
+        val token = owner.editToken ?: java.util.UUID.randomUUID().toString()
+        val log = withContext(Dispatchers.IO) {
+            if (owner.editToken == null) store.createEditJournal(id, token, ref) else store.editJournal(id, token)
+        }
+        val next = owner.copy(editToken = token)
+        withContext(Dispatchers.IO) { snapshot(next) }
+        val writer = ContinuousEditWriter(scope, log) {
+            scope.launch(Dispatchers.Main.immediate) {
+                if (mutable.value.document === document) {
+                    document.freeze(true)
+                    document.pendingEdit?.cancel()
+                    mutable.value = mutable.value.copy(error =
+                        "Recovery could not keep up. Editing is paused; use Save to keep the complete document. The original is retained.")
+                }
+            }
+        }
+        editWriter = writer
+        document.awaitRecovery = { writer.flush() }
+        document.onEdit = { start, removed, inserted -> writer.record(document.content, start, removed, inserted) }
+        return next
+    }
 
     /** Called once per session. Editing no longer changes focus between separate text fields. */
     fun enableContinuous() {
@@ -47,6 +77,22 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
                         mutable.value = opening.copy(busy = true)
                     }
                 }
+                opening.editToken?.let { token ->
+                    val before = opening
+                    val recovered = withContext(Dispatchers.IO) {
+                        val cancellation = currentCoroutineContext()
+                        val ref = store.recoverEditJournal(before.id!!, token, before.generation!!) { cancellation.ensureActive() }
+                        val next = before.copy(generation = ref, editToken = null,
+                            window = EditableNoteWindow(0, 0, ""), text = "", dirty = false)
+                        snapshot(next)
+                        runCatching { store.retireEditJournal(before.id!!, token, ref) }
+                        next
+                    }
+                    opening = recovered
+                    if (mutable.value.id == before.id && mutable.value.generation?.hash == before.generation?.hash) {
+                        mutable.value = recovered.copy(busy = true)
+                    }
+                }
                 val source = opening
                 val loaded = withContext(Dispatchers.IO) {
                     val ref = source.generation ?: error("Body unavailable")
@@ -62,14 +108,19 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
                             }
                             override fun read(): Int { cancellation.ensureActive(); return super.read() }
                         }
-                        ContinuousNoteDocument(ContentIO.createFrom(checked, Charsets.UTF_8), table.size).also {
-                            it.selectionStart = source.caretStart.coerceIn(0, it.content.length)
-                            it.selectionEnd = source.caretEnd.coerceIn(it.selectionStart, it.content.length)
-                        }
+                        val model = ContinuousNoteDocument(ContentIO.createFrom(checked, Charsets.UTF_8), table.size)
+                        try {
+                            model.also {
+                                it.selectionStart = source.caretStart.coerceIn(0, it.content.length)
+                                it.selectionEnd = source.caretEnd.coerceIn(it.selectionStart, it.content.length)
+                            }
+                        } catch (error: Throwable) { model.content.release(); throw error }
                     }
                 }
-                if (mutable.value.id == opening.id && mutable.value.generation?.hash == opening.generation?.hash) {
-                    mutable.value = opening.copy(document = loaded, busy = false)
+                if (mutable.value.id == source.id && mutable.value.generation?.hash == source.generation?.hash) {
+                    val next = opening.copy(document = loaded, busy = false, dirty = loaded.revision > 0)
+                    try { mutable.value = attachJournal(next) }
+                    catch (error: Throwable) { withContext(NonCancellable + Dispatchers.IO) { loaded.content.release() }; throw error }
                 } else withContext(Dispatchers.IO) { loaded.content.release() }
             } catch (cancel: CancellationException) { throw cancel }
             catch (error: EditorCapacityException) { continuousFailure(opening, error.message.orEmpty()) }
@@ -89,12 +140,13 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
         val current = mutable.value
         if (current.document !== document) return
         document.changed()
-        mutable.value = current.copy(dirty = true, error = null)
+        val recoveryError = if (editWriter?.healthy == true) null else current.error ?:
+            "Recovery is paused. Use Save before closing; the original is retained."
+        mutable.value = current.copy(dirty = true, error = recoveryError)
         journal?.cancel()
         journal = if (current.busy) null else scope.launch {
-            // A large body checkpoints after an idle pause, not on every key or cursor movement.
-            delay(if ((current.generation?.bytes ?: 0) >= NoteSizePolicy.TIER_B_MAX_BYTES) 3000 else 1000)
-            flushJournal()
+            delay(250)
+            flushEditOperations()
         }
     }
 
@@ -105,7 +157,7 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
         if (busy) journal?.cancel()
         if (!busy && current.dirty) {
             journal?.cancel()
-            journal = scope.launch { delay(1000); flushJournal() }
+            journal = scope.launch { delay(250); flushEditOperations() }
         }
     }
 
@@ -138,33 +190,61 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
             } catch (cancel: CancellationException) { throw cancel }
             catch (_: Exception) { mutable.value = mutable.value.copy(busy = false,
                 error = "Preview edit could not be saved. Original and draft retained; retry Save.") }
-            finally { document.freeze(wasFrozen) }
+            finally { document.freeze(wasFrozen || editWriter?.healthy != true) }
+        }
+    }
+
+    private suspend fun flushEditOperations() {
+        try { editWriter?.flush() }
+        catch (cancel: CancellationException) { throw cancel }
+        catch (_: Exception) {
+            mutable.value = mutable.value.copy(error = "Recovery journal failed. Use Save before closing; the original is retained.")
         }
     }
 
     private suspend fun checkpointContinuous(current: State): Pair<NoteBodyRef, Long> = checkpointMutex.withLock {
-        withContext(Dispatchers.IO) {
-            val document = current.document ?: error("No continuous document")
+        val document = current.document ?: error("No continuous document")
+        val wasFrozen = document.frozen
+        withContext(Dispatchers.Main.immediate) { document.freeze(true) }
+        var completed = false
+        try {
+            editWriter?.close(); editWriter = null
+            document.onEdit = null; document.awaitRecovery = null
             val revision = document.revision
-            val frozenContent = document.snapshot()
-            val cancellation = currentCoroutineContext()
-            val ref = try {
-                ContinuousNoteDocument.stream(frozenContent).use { input ->
-                    store.writeAtomic(current.id!!, input,
-                        document.permittedBytes > NoteSizePolicy.IMPORT_MAX_BYTES) { cancellation.ensureActive() }
-                }
-            } finally { frozenContent.release() }
+            val ref = withContext(Dispatchers.IO) {
+                val frozenContent = document.snapshot()
+                val cancellation = currentCoroutineContext()
+                try {
+                    ContinuousNoteDocument.stream(frozenContent).use { input ->
+                        store.writeAtomic(current.id!!, input,
+                            document.permittedBytes > NoteSizePolicy.IMPORT_MAX_BYTES) { cancellation.ensureActive() }
+                    }
+                } finally { frozenContent.release() }
+            }
             check(ref.bytes <= document.permittedBytes) { "Note exceeds 55 MB. Draft and original retained." }
-            // The same recovery preference format is understood by the existing startup path.
-            val previousJournal = prefs.getString(current.id, null)?.let { JSONObject(it) }
-            val previousDraft = previousJournal?.optString("hash")
-            snapshot(current.copy(generation = ref, window = EditableNoteWindow(0, 0, ""), dirty = false),
-                previousCheckpoint = previousDraft)
-            // The preference now owns a verified recovery generation. Do not infer that an older
-            // content hash is disposable: it may also be a saved undo/history generation.
-            runCatching { store.committed(current.id!!, ref.hash) }
+            document.savedRevision = revision
+            val previousToken = withContext(Dispatchers.IO) {
+                prefs.getString(current.id, null)?.let { JSONObject(it).optString("editToken") }
+                    ?.takeUnless { it == "null" || it.isBlank() }
+            }
+            val next = current.copy(generation = ref, window = EditableNoteWindow(0, 0, ""),
+                dirty = false, editToken = null)
+            // Publish a verified full copy before starting a fresh delta log; old log remains recoverable.
+            withContext(Dispatchers.IO) { snapshot(next); runCatching { store.committed(current.id!!, ref.hash) } }
+            withContext(Dispatchers.Main.immediate) {
+                if (mutable.value.document === document) mutable.value = mutable.value.copy(
+                    generation = ref, editToken = null, dirty = false)
+            }
+            previousToken?.let { token -> withContext(Dispatchers.IO) {
+                runCatching { store.retireEditJournal(current.id!!, token, ref) }
+            } }
+            val attached = attachJournal(next)
+            withContext(Dispatchers.Main.immediate) {
+                if (mutable.value.document === document) mutable.value = mutable.value.copy(editToken = attached.editToken)
+            }
+            completed = true
             ref to revision
-        }
+        } finally { withContext(NonCancellable + Dispatchers.Main.immediate) { document.freeze(if (completed) wasFrozen else true) } }
     }
 
     private fun snapshot(s: State, patch: NoteBodyRef? = null, previousCheckpoint: String? = null) {
@@ -176,6 +256,7 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
             .put("previousCheckpoint", previousCheckpoint ?: JSONObject.NULL)
             .put("caretStart", s.document?.selectionStart ?: s.caretStart)
             .put("caretEnd", s.document?.selectionEnd ?: s.caretEnd)
+            .put("editToken", s.editToken ?: JSONObject.NULL)
         check(prefs.edit().putString(id, json.toString()).commit()) { "Could not journal edits; retry before closing" }
     }
     private suspend fun readWindow(id: String, ref: NoteBodyRef, start: Long) = persistence.window(id, ref.hash, start)
@@ -183,6 +264,12 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
     suspend fun open(item: SavedItem) {
         closing?.join(); operation?.cancelAndJoin(); journal?.cancelAndJoin()
         failedPaste = null
+        failedClosings.remove(item.id)?.let { retained ->
+            mutable.value = retained.copy(busy = false,
+                error = "Recovery could not be written when closing. This unsaved editor is retained in memory; retry Save before leaving the app.")
+            retained.document?.freeze(true)
+            return
+        }
         mutable.value = State(id = item.id, originalHash = item.contentHash, busy = true)
         try {
             val loaded = withContext(Dispatchers.IO) {
@@ -209,7 +296,8 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
                 }
                 val window = readWindow(item.id, ref, start)
                 State(item.id, hash, ref, if (patchEnd != null) window.copy(end = patchEnd) else window, patchText ?: window.text, patchText != null,
-                    caretStart = saved?.optInt("caretStart", 0) ?: 0, caretEnd = saved?.optInt("caretEnd", 0) ?: 0)
+                    caretStart = saved?.optInt("caretStart", 0) ?: 0, caretEnd = saved?.optInt("caretEnd", 0) ?: 0,
+                    editToken = saved?.optString("editToken")?.takeUnless { it == "null" || it.isBlank() })
             }
             if (mutable.value.id == item.id) mutable.value = loaded
         } catch (cancel: CancellationException) { throw cancel }
@@ -252,10 +340,11 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
         }
     }
 
-    suspend fun flushJournal() {
+    suspend fun flushJournal(fullCheckpoint: Boolean = true) {
         val current = mutable.value
         if (current.id == null || current.generation == null || current.busy) return
         if (current.document != null) {
+            if (!fullCheckpoint) { flushEditOperations(); return }
             if (!current.dirty) return
             try {
                 val (ref, revision) = checkpointContinuous(current)
@@ -337,11 +426,19 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
                 val saved = persistence.commitPrepared(item.copy(content = "", contentHash = current.originalHash,
                     bodyLoaded = false), ref)
                 withContext(Dispatchers.IO) { check(prefs.edit().remove(item.id).commit()) }
+                editWriter?.close(); editWriter = null; document.onEdit = null; document.awaitRecovery = null
+                val completedToken = mutable.value.editToken
+                completedToken?.let { token -> withContext(Dispatchers.IO) {
+                    runCatching { store.retireEditJournal(item.id, token, ref) }
+                } }
                 mutable.value = State()
+                failedClosings.remove(item.id)
+                document.closeSession()
                 return saved
             } catch (error: Exception) {
-                document.freeze(false)
-                mutable.value = current.copy(error = "Save failed. Original and draft retained; retry before closing.")
+                document.freeze(editWriter?.healthy != true)
+                mutable.value = mutable.value.copy(busy = false,
+                    error = "Save failed. Original and draft retained; retry before closing.")
                 throw error
             }
         }
@@ -362,15 +459,48 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
         current.document?.pendingEdit?.cancel()
         journal?.cancel()
         if (current.id != null && current.generation != null) closing = scope.launch {
-            operation?.join(); journal?.join(); current.document?.pendingEdit?.join(); flushJournalSnapshot(current)
+            operation?.join(); journal?.join(); current.document?.pendingEdit?.join()
+            val recovered = flushJournalSnapshot(current)
+            if (recovered) current.document?.closeSession()
+            else {
+                current.document?.freeze(true)
+                failedClosings[current.id!!] = current
+            }
         }
         mutable.value = State()
     }
-    private suspend fun flushJournalSnapshot(current: State) = withContext(Dispatchers.IO) {
+    private suspend fun flushJournalSnapshot(current: State): Boolean = withContext(Dispatchers.IO) {
         runCatching {
-            if (current.document != null) { checkpointContinuous(current); return@runCatching }
+            if (current.document != null) {
+                if (current.dirty || current.document.revision != current.document.savedRevision) {
+                    checkpointContinuous(current)
+                }
+                checkpointMutex.withLock {
+                    editWriter?.close(); editWriter = null; current.document.onEdit = null; current.document.awaitRecovery = null
+                    // Only update cursor metadata. A full checkpoint may have advanced the base
+                    // while close was waiting; never overwrite it with captured stale State.
+                    val json = prefs.getString(current.id, null)?.let { JSONObject(it) }
+                    if (json != null) {
+                        if (current.originalHash != null && json.optString("hash") == current.originalHash &&
+                            current.document.revision == current.document.savedRevision && json.isNull("patch")) {
+                            // Opening and closing an unchanged saved note must not leave a phantom draft.
+                            check(prefs.edit().remove(current.id).commit())
+                            json.optString("editToken").takeUnless { it.isBlank() || it == "null" }?.let { token ->
+                                runCatching { store.retireEditJournal(current.id!!, token,
+                                    NoteBodyRef(json.getString("hash"), json.getLong("bytes"), json.getString("preview"))) }
+                            }
+                        } else {
+                            json.put("caretStart", current.document.selectionStart).put("caretEnd", current.document.selectionEnd)
+                            check(prefs.edit().putString(current.id, json.toString()).commit())
+                        }
+                    }
+                }
+                return@runCatching
+            }
+            val existing = prefs.getString(current.id, null)?.let { JSONObject(it) }
+            if (existing != null && existing.optString("hash") != current.generation?.hash) return@runCatching
             val patch = if (current.dirty) TextUtf8InputStream(current.text).use { store.writeAtomic("capture-window:${current.id}", it) } else null
             snapshot(current, patch)
-        }
+        }.isSuccess
     }
 }

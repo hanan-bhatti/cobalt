@@ -26,6 +26,13 @@ interface NoteBodyStore {
     fun size(id: String, hash: String): Long?
     fun committed(id: String, hash: String) {}
     fun deleteAll(id: String)
+    fun createEditJournal(id: String, token: String, base: NoteBodyRef): NoteEditJournal =
+        throw UnsupportedOperationException("Edit journals unavailable")
+    fun editJournal(id: String, token: String): NoteEditJournal =
+        throw UnsupportedOperationException("Edit journals unavailable")
+    fun retireEditJournal(id: String, token: String, verified: NoteBodyRef) {}
+    fun recoverEditJournal(id: String, token: String, base: NoteBodyRef, checkCancelled: () -> Unit = {}): NoteBodyRef =
+        throw UnsupportedOperationException("Journal recovery unavailable")
 }
 
 /** A confined random reader; opening/reading/closing all happen off Main. */
@@ -36,11 +43,48 @@ data class NoteBodyRef(val hash: String, val bytes: Long, val preview: String)
 class PrivateMarkdownStore(context: Context, private val checkpoint: (WriteStage) -> Unit = {}) : NoteBodyStore {
     enum class WriteStage { JOURNAL_SYNCED, CHUNK_WRITTEN, DATA_SYNCED, RENAMED, VERIFIED }
     private val root = File(context.applicationContext.filesDir, "notes")
+    private val work = File(context.applicationContext.cacheDir, "note-body-work")
     private fun key(id: String) = sha256(id.toByteArray(Charsets.UTF_8))
     private fun directory(id: String) = File(root, key(id))
     private fun file(id: String, hash: String): File {
         require(hash.matches(Regex("[0-9a-f]{64}"))) { "Invalid body reference" }
         return File(directory(id), "$hash.md")
+    }
+
+    private fun journalFile(id: String, token: String): File {
+        require(token.matches(Regex("[0-9a-f-]{36}"))) { "Invalid journal identity" }
+        return File(directory(id), "$token.edits")
+    }
+
+    override fun createEditJournal(id: String, token: String, base: NoteBodyRef): NoteEditJournal {
+        val dir = directory(id)
+        check(dir.isDirectory) { "Journal base directory missing" }
+        return NoteEditJournal.create(journalFile(id, token), base.hash, base.bytes).also { syncDirectory(dir) }
+    }
+    override fun editJournal(id: String, token: String): NoteEditJournal = NoteEditJournal(journalFile(id, token))
+
+    override fun recoverEditJournal(id: String, token: String, base: NoteBodyRef, checkCancelled: () -> Unit): NoteBodyRef {
+        check(verify(id, base.hash, base.bytes)) { "Recovery base verification failed; originals retained" }
+        val log = editJournal(id, token)
+        if (log.bytes() == 80L) {
+            log.replay(base.hash, base.bytes, { _, _ -> error("Unexpected journal operation") }, {})
+            return base
+        }
+        return open(id, base.hash).use { input ->
+            DiskJournalRecovery.replay(input, log, base.hash, base.bytes, work, checkCancelled) { recovered ->
+                writeAtomic(id, recovered, allowOversize = base.bytes > NoteSizePolicy.IMPORT_MAX_BYTES) { checkCancelled() }
+            }
+        }
+    }
+
+    override fun retireEditJournal(id: String, token: String, verified: NoteBodyRef) {
+        check(verify(id, verified.hash, verified.bytes)) { "Cannot retire recovery before verification" }
+        val source = journalFile(id, token)
+        if (!source.isFile) return
+        // Rename only after a durable preference/DB reference owns the verified full replacement.
+        // A crash before this step merely retains extra recovery bytes.
+        Os.rename(source.absolutePath, File(source.parentFile, source.name + ".retired").absolutePath)
+        syncDirectory(source.parentFile!!)
     }
 
     override fun size(id: String, hash: String): Long? = file(id, hash).takeIf { it.isFile }?.length()
