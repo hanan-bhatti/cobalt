@@ -165,6 +165,11 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
         invalidate()
     }
 
+    fun codeTypeface(code: Boolean) {
+        val expected = if (code) Typeface.MONOSPACE else Typeface.DEFAULT
+        if (typefaceText != expected) setTypefaceText(expected)
+    }
+
     fun applyColors(background: Int, foreground: Int, accent: Int, muted: Int, selection: Int) {
         colorScheme.apply {
             setColor(EditorColorScheme.WHOLE_BACKGROUND, background)

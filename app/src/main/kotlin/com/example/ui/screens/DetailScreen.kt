@@ -57,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import com.example.ui.components.bounceClick
 import com.example.ui.components.MarkdownText
+import com.example.ui.components.NoteFloatingSearchBar
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboard
@@ -369,6 +370,15 @@ fun DetailScreen(
     }
     var plainNote by remember(item.id) { mutableStateOf(item.type == SavedItemType.CODE) }
     var noteJump by remember(item.id) { mutableLongStateOf(0) }
+    var isSearchingNote by remember(item.id) { mutableStateOf(false) }
+    var activeSearchQuery by remember(item.id) { mutableStateOf("") }
+    var activeMatchOffset by remember(item.id) { mutableStateOf<Long?>(null) }
+
+    BackHandler(enabled = isSearchingNote) {
+        isSearchingNote = false
+        activeSearchQuery = ""
+        activeMatchOffset = null
+    }
 
     Scaffold(
         topBar = {
@@ -387,7 +397,16 @@ fun DetailScreen(
                 TopAppBar(
                     title = { },
                     navigationIcon = {
-                        IconButton(onClick = onClose, modifier = Modifier.bounceClick().testTag("detail_back_button")) {
+                        IconButton(
+                            onClick = {
+                                if (isSearchingNote) {
+                                    isSearchingNote = false
+                                } else {
+                                    onClose()
+                                }
+                            },
+                            modifier = Modifier.bounceClick().testTag("detail_back_button")
+                        ) {
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_custom_close),
                                 contentDescription = "Close",
@@ -397,9 +416,6 @@ fun DetailScreen(
                         }
                     },
                     actions = {
-                        if (com.example.notes.NotePersistence.isNote(item)) NoteDetailActions(item, viewModel,
-                            plainNote, onPlainChange = { plainNote = it }, onJump = { noteJump = it })
-
                         IconButton(
                             onClick = { showDeleteConfirm = true },
                             modifier = Modifier.bounceClick().testTag("detail_delete_button")
@@ -423,6 +439,18 @@ fun DetailScreen(
                                 modifier = Modifier.size(24.dp)
                             )
                         }
+
+                        if (com.example.notes.NotePersistence.isNote(item)) {
+                            NoteDetailActions(
+                                item = item,
+                                viewModel = viewModel,
+                                plain = plainNote,
+                                onPlainChange = { plainNote = it },
+                                onJump = { noteJump = it },
+                                onStartSearch = { isSearchingNote = true },
+                                onDeleteClick = { showDeleteConfirm = true }
+                            )
+                        }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background
@@ -431,80 +459,82 @@ fun DetailScreen(
             }
         },
         bottomBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer {
-                        alpha = barsAlpha
-                        translationY = barsOffsetY.toPx()
-                    }
-                    .onGloballyPositioned { coordinates ->
-                        val pos = coordinates.positionInRoot()
-                        com.example.util.SafeLogger.d("CobaltAnim", "Detail BottomBar (Edit Item): alpha=$barsAlpha, pos=(${pos.x}, ${pos.y}), size=${coordinates.size}")
-                    }
-            ) {
-                val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
-                val barModifier = if (useBlur) {
-                    Modifier
+            if (!isSearchingNote) {
+                Box(
+                    modifier = Modifier
                         .fillMaxWidth()
-                        .hazeEffect(state = localHazeState, style = HazeStyle(
-                            backgroundColor = MaterialTheme.colorScheme.background,
-                            tint = HazeTint(MaterialTheme.colorScheme.background.copy(alpha = blurOpacity)),
-                            blurRadius = blurRadius.dp,
-                            noiseFactor = 0.02f
-                        ))
-                } else {
-                    Modifier.fillMaxWidth()
-                }
-                Surface(
-                    modifier = barModifier,
-                    tonalElevation = 0.dp,
-                    color = if (useBlur) Color.Transparent else MaterialTheme.colorScheme.background.copy(alpha = 0.92f),
-                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 24.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(
-                            onClick = {
-                                viewModel.shareItem(item, context)
-                            },
-                            modifier = Modifier.bounceClick().testTag("detail_bottom_share_button")
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_share),
-                                contentDescription = "Share",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(24.dp)
-                            )
+                        .graphicsLayer {
+                            alpha = barsAlpha
+                            translationY = barsOffsetY.toPx()
                         }
-
-                        Button(
-                            onClick = { onEdit(item) },
+                        .onGloballyPositioned { coordinates ->
+                            val pos = coordinates.positionInRoot()
+                            com.example.util.SafeLogger.d("CobaltAnim", "Detail BottomBar (Edit Item): alpha=$barsAlpha, pos=(${pos.x}, ${pos.y}), size=${coordinates.size}")
+                        }
+                ) {
+                    val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
+                    val barModifier = if (useBlur) {
+                        Modifier
+                            .fillMaxWidth()
+                            .hazeEffect(state = localHazeState, style = HazeStyle(
+                                backgroundColor = MaterialTheme.colorScheme.background,
+                                tint = HazeTint(MaterialTheme.colorScheme.background.copy(alpha = blurOpacity)),
+                                blurRadius = blurRadius.dp,
+                                noiseFactor = 0.02f
+                            ))
+                    } else {
+                        Modifier.fillMaxWidth()
+                    }
+                    Surface(
+                        modifier = barModifier,
+                        tonalElevation = 0.dp,
+                        color = if (useBlur) Color.Transparent else MaterialTheme.colorScheme.background.copy(alpha = 0.92f),
+                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                    ) {
+                        Row(
                             modifier = Modifier
-                                .weight(1f)
-                                .padding(start = 24.dp)
-                                .height(48.dp)
-                                .bounceClick()
-                                .testTag("detail_bottom_edit_button"),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = folderColor,
-                                contentColor = Color.White
-                            )
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
+                                .padding(horizontal = 24.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_edit),
-                                contentDescription = "Edit",
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Edit Item", fontWeight = FontWeight.Bold)
+                            IconButton(
+                                onClick = {
+                                    viewModel.shareItem(item, context)
+                                },
+                                modifier = Modifier.bounceClick().testTag("detail_bottom_share_button")
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_share),
+                                    contentDescription = "Share",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+
+                            Button(
+                                onClick = { onEdit(item) },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(start = 24.dp)
+                                    .height(48.dp)
+                                    .bounceClick()
+                                    .testTag("detail_bottom_edit_button"),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = folderColor,
+                                    contentColor = Color.White
+                                )
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_edit),
+                                    contentDescription = "Edit",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Edit Item", fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -516,6 +546,7 @@ fun DetailScreen(
         Surface(
             modifier = Modifier
                 .fillMaxSize()
+                .hazeSource(state = localHazeState)
                 .maybeSharedBounds(
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,
@@ -528,12 +559,21 @@ fun DetailScreen(
                 },
             color = MaterialTheme.colorScheme.background
         ) {
-            var showFullscreenImage by remember { mutableStateOf(false) }
+            Box(modifier = Modifier.fillMaxSize()) {
+                var showFullscreenImage by remember { mutableStateOf(false) }
             if (com.example.notes.NotePersistence.isNote(item)) {
-                UnifiedNoteBody(item, viewModel, plainNote, noteJump,
-                    Modifier.fillMaxSize().hazeSource(localHazeState)
+                UnifiedNoteBody(
+                    item = item,
+                    viewModel = viewModel,
+                    plain = plainNote,
+                    jump = noteJump,
+                    modifier = Modifier.fillMaxSize()
                         .padding(top = innerPadding.calculateTopPadding(), bottom = innerPadding.calculateBottomPadding())
-                        .padding(horizontal = 24.dp, vertical = 8.dp), header = detailHeader)
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                    header = detailHeader,
+                    searchQuery = if (isSearchingNote) activeSearchQuery else null,
+                    activeMatchByte = if (isSearchingNote) activeMatchOffset else null
+                )
             } else SelectionContainer {
                     Column(
                         modifier = Modifier
@@ -905,6 +945,62 @@ fun DetailScreen(
                 }
             }
             Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding() + 16.dp))
+        }
+        }
+
+        if (com.example.notes.NotePersistence.isNote(item)) {
+            val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
+            val isImeOpen = WindowInsets.ime.asPaddingValues().calculateBottomPadding() > 0.dp
+            val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            val bottomPadding = if (isImeOpen) 12.dp else (navBottom + 12.dp)
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .imePadding()
+            ) {
+                if (isSearchingNote) {
+                    // Dismiss search when tapping outside the search bar
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onTap = {
+                                        isSearchingNote = false
+                                        activeSearchQuery = ""
+                                        activeMatchOffset = null
+                                    }
+                                )
+                            }
+                    )
+                }
+
+                AnimatedVisibility(
+                    visible = isSearchingNote,
+                    enter = slideInVertically(initialOffsetY = { fullHeight -> fullHeight }) + fadeIn(),
+                    exit = slideOutVertically(targetOffsetY = { fullHeight -> fullHeight }) + fadeOut(),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(start = 16.dp, end = 16.dp, bottom = bottomPadding)
+                ) {
+                    NoteFloatingSearchBar(
+                        item = item,
+                        localHazeState = localHazeState,
+                        onJump = { noteJump = it },
+                        onClose = {
+                            isSearchingNote = false
+                            activeSearchQuery = ""
+                            activeMatchOffset = null
+                        },
+                        useBlur = useBlur,
+                        onSearchStateChanged = { query, offset, _, _ ->
+                            activeSearchQuery = query
+                            activeMatchOffset = offset
+                        }
+                    )
+                }
+            }
         }
         }
     }

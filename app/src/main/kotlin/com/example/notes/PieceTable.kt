@@ -88,6 +88,7 @@ class PieceTable(original: NoteByteSource, private val keepUndo: Boolean = true)
     private data class Piece(val source: NoteByteSource, val offset: Long, val length: Long)
     private data class Edit(val start: Long, val removed: List<Piece>, val inserted: List<Piece>)
     private var pieces = if (original.size == 0L) emptyList() else listOf(Piece(original, 0, original.size))
+    private var grouping = false
     private val undo = ArrayDeque<Edit>()
     private val redo = ArrayDeque<Edit>()
     var size: Long = original.size
@@ -137,8 +138,24 @@ class PieceTable(original: NoteByteSource, private val keepUndo: Boolean = true)
             else -> listOf(Piece(appended, 0, appended.size))
         }
         splice(start, end - start, inserted)
-        if (keepUndo) {
+        if (keepUndo && !grouping) {
             undo.addLast(Edit(start, removed, inserted))
+            if (undo.size > MAX_UNDO_OPERATIONS) undo.removeFirst()
+        }
+        if (!grouping) redo.clear()
+    }
+
+    /** One logical user transaction, even when native IME emits delete then insert. */
+    internal fun editGroup(action: () -> Unit) {
+        check(!grouping)
+        val before = pieces
+        val beforeSize = size
+        grouping = true
+        try { action() }
+        catch (error: Throwable) { pieces = before; size = beforeSize; throw error }
+        finally { grouping = false }
+        if (keepUndo) {
+            undo.addLast(Edit(0, before, pieces))
             if (undo.size > MAX_UNDO_OPERATIONS) undo.removeFirst()
         }
         redo.clear()
@@ -185,5 +202,49 @@ class PieceTable(original: NoteByteSource, private val keepUndo: Boolean = true)
         }
     }
 
-    companion object { const val MAX_UNDO_OPERATIONS = 100 }
+    /** Serialize descriptors only. Sources own the immutable bytes and must outlive this state. */
+    internal fun writeState(output: java.io.DataOutputStream, sourceId: (NoteByteSource) -> Int) {
+        fun write(parts: List<Piece>) {
+            output.writeInt(parts.size)
+            parts.forEach { output.writeInt(sourceId(it.source)); output.writeLong(it.offset); output.writeLong(it.length) }
+        }
+        output.writeLong(size); write(pieces)
+        for (stack in listOf(undo, redo)) {
+            output.writeInt(stack.size)
+            stack.forEach { output.writeLong(it.start); write(it.removed); write(it.inserted) }
+        }
+    }
+
+    companion object {
+        const val MAX_UNDO_OPERATIONS = 100
+        internal fun readState(input: java.io.DataInputStream, source: (Int) -> NoteByteSource): PieceTable {
+            var descriptors = 0
+            fun read(): List<Piece> {
+                val count = input.readInt()
+                require(count >= 0 && count <= 200_000 - descriptors) { "Invalid piece count" }
+                descriptors += count
+                return List(count) {
+                    val body = source(input.readInt()); val offset = input.readLong(); val length = input.readLong()
+                    require(offset in 0..body.size && length > 0 && length <= body.size - offset) { "Missing piece bytes" }
+                    Piece(body, offset, length)
+                }
+            }
+            val expected = input.readLong(); require(expected >= 0)
+            val parts = read()
+            val table = PieceTable(object : NoteByteSource {
+                override val size = 0L
+                override fun read(offset: Long, count: Int) = ByteArray(0)
+            })
+            table.pieces = parts; table.size = table.length(parts)
+            require(table.size == expected) { "Invalid document size" }
+            for (stack in listOf(table.undo, table.redo)) {
+                val count = input.readInt(); require(count in 0..MAX_UNDO_OPERATIONS)
+                repeat(count) {
+                    val start = input.readLong(); require(start >= 0)
+                    stack.addLast(Edit(start, read(), read()))
+                }
+            }
+            return table
+        }
+    }
 }

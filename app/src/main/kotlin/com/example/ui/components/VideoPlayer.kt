@@ -65,6 +65,7 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import coil.compose.AsyncImage
@@ -132,6 +133,7 @@ fun VideoPlayer(
 
     // 4. Build resilient ExoPlayer instance
     var retryTrigger by remember { mutableIntStateOf(0) }
+    var hasRecoveredFromRangeError by remember(resolvedPlayableUri, retryTrigger) { mutableStateOf(false) }
     val exoPlayer = remember(resolvedPlayableUri, retryTrigger) {
         playbackError = null
         isBuffering = true
@@ -153,7 +155,8 @@ fun VideoPlayer(
         // DefaultDataSource delegates content://, file://, and asset:// locally,
         // and routes remote http/https streams through httpDataSourceFactory.
         val universalDataSourceFactory = DefaultDataSource.Factory(context, httpDataSourceFactory)
-        val mediaSourceFactory = DefaultMediaSourceFactory(universalDataSourceFactory)
+        val extractorsFactory = DefaultExtractorsFactory().setConstantBitrateSeekingEnabled(true)
+        val mediaSourceFactory = DefaultMediaSourceFactory(universalDataSourceFactory, extractorsFactory)
 
         val mediaItem = MediaItem.fromUri(parsedUri)
 
@@ -196,6 +199,14 @@ fun VideoPlayer(
 
             override fun onPlayerError(error: PlaybackException) {
                 Log.e(TAG, "ExoPlayer error [${error.errorCodeName}]: ${error.message}", error)
+                if (error.errorCode == PlaybackException.ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE && !hasRecoveredFromRangeError) {
+                    hasRecoveredFromRangeError = true
+                    Log.w(TAG, "ExoPlayer encountered ERROR_CODE_IO_READ_POSITION_OUT_OF_RANGE. Auto-recovering from position 0...")
+                    exoPlayer.seekTo(0)
+                    exoPlayer.prepare()
+                    exoPlayer.play()
+                    return
+                }
                 playbackError = error
                 isBuffering = false
                 isPlaying = false
@@ -512,22 +523,25 @@ fun VideoPlayer(
  * Resolves local file cache or persistent media directories before falling back to remote streaming.
  */
 private fun resolveLocalOrRemotePath(context: Context, videoUri: String, itemId: String?): String {
-    // 1. Direct local file path
-    if (videoUri.startsWith("/")) {
-        val file = File(videoUri)
-        if (file.exists() && file.length() > 0) {
-            return videoUri
-        }
-    }
-
-    // 2. Check app persistent media directory: media/videos/$itemId.mp4
+    // 1. Check app persistent media directory first if itemId is known
     if (!itemId.isNullOrBlank()) {
         val persistentFile = File(context.filesDir, "media/videos/$itemId.mp4")
         if (persistentFile.exists() && persistentFile.length() > 0) {
             return persistentFile.absolutePath
         }
+    }
 
-        // Check common cache patterns
+    // 2. Direct local file path or file:// URI
+    val filePath = if (videoUri.startsWith("file://")) videoUri.removePrefix("file://") else videoUri
+    if (filePath.startsWith("/")) {
+        val file = File(filePath)
+        if (file.exists() && file.length() > 0) {
+            return file.absolutePath
+        }
+    }
+
+    // 3. Check common cache patterns by itemId
+    if (!itemId.isNullOrBlank()) {
         val cacheFiles = context.cacheDir.listFiles { _, name ->
             name.contains(itemId) && name.endsWith(".mp4")
         }
@@ -536,7 +550,7 @@ private fun resolveLocalOrRemotePath(context: Context, videoUri: String, itemId:
         }
     }
 
-    // 3. Fallback to passed videoUri (e.g. remote HTTPS URL)
+    // 4. Fallback to passed videoUri (e.g. remote HTTPS URL or content:// URI)
     return videoUri
 }
 

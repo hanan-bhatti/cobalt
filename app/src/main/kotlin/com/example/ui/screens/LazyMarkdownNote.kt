@@ -1,21 +1,27 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.notes.*
 import com.example.ui.components.MarkdownText
 import com.example.ui.components.NoteBodySkeleton
 import com.example.ui.components.SafeMarkdownDocument
+import com.example.ui.components.SearchHighlight
 import com.example.ui.components.parseSafeMarkdown
+import com.example.ui.components.withSearchHighlight
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -148,7 +154,9 @@ internal class MarkdownReadSession(private val store: NoteBodyStore, private val
 @Composable
 fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modifier: Modifier,
     onBlockChange: ((Long, Long, String) -> Unit)? = null,
-    header: (@Composable () -> Unit)? = null) {
+    header: (@Composable () -> Unit)? = null,
+    searchQuery: String? = null,
+    activeMatchByte: Long? = null) {
     val context = LocalContext.current
     val store = remember { PrivateMarkdownStore(context) }
     val fontScale = LocalDensity.current.fontScale
@@ -212,21 +220,56 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
             if (header != null) item(key = "note_header") { header(); Spacer(Modifier.height(28.dp)) }
             items(session.blocks.size, key = { session.blocks[it].start }, contentType = { "note_block" }) { index ->
                 val block = session.blocks[index]
+                val isBlockActive = activeMatchByte != null && (activeMatchByte in block.start until block.end || (block.start == block.end && activeMatchByte == block.start))
                 val ready by produceState(session.cached(block), session, block.start) {
                     if (value == null) try { value = session.prepare(block) }
                     catch (cancel: CancellationException) { throw cancel }
                     catch (_: Exception) { value = PreparedNoteBlock("This part could not be read. The saved note is retained.", null) }
                 }
                 val loaded = ready
-                if (loaded == null) {
-                    // A cold range reserves bounded space; no scrolling skeleton or raw Markdown.
-                    val wraps = ((block.end - block.start + columns - 1) / columns).toInt()
-                    val lines = maxOf(block.lines, wraps).coerceIn(1, lineLimit * 2)
-                    Spacer(Modifier.height((lines * 24 * fontScale).dp))
+                val blockModifier = if (isBlockActive) {
+                    Modifier
+                        .fillMaxWidth()
+                        .background(
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                } else {
+                    Modifier.fillMaxWidth().padding(top = if (index > 0 && !block.codeContinuesBefore && session.blocks[index - 1].markdown) 6.dp else 0.dp)
                 }
-                else if (loaded.document != null) MarkdownText(loaded.text, prepared = loaded.document,
-                    onMarkdownChange = onBlockChange?.let { change -> { updated -> change(block.start, block.end, updated) } })
-                else SelectionContainer { Text(loaded.text, lineHeight = 24.sp) }
+
+                Box(modifier = blockModifier) {
+                    if (loaded == null) {
+                        // Warm ranges normally hit the cache. Reserve bounded space on a cold jump;
+                        // do not show scrolling shimmer/skeleton rows or render raw Markdown.
+                        val wraps = ((block.end - block.start + columns - 1) / columns).toInt()
+                        val lines = maxOf(block.lines, wraps).coerceIn(1, lineLimit * 2)
+                        Spacer(Modifier.height((lines * 24 * fontScale).dp))
+                    }
+                    else if (loaded.document != null) MarkdownText(
+                        markdown = loaded.text,
+                        prepared = loaded.document,
+                        onMarkdownChange = onBlockChange?.let { change -> { updated -> change(block.start, block.end, updated) } },
+                        highlightQuery = searchQuery,
+                        isHighlightActive = isBlockActive,
+                        codeContinuesBefore = block.codeContinuesBefore,
+                        codeContinuesAfter = block.codeContinuesAfter
+                    )
+                    else SelectionContainer {
+                        val highlight = if (!searchQuery.isNullOrBlank()) SearchHighlight(searchQuery, isBlockActive) else null
+                        val primary = MaterialTheme.colorScheme.primary
+                        Text(
+                            text = AnnotatedString(loaded.text).withSearchHighlight(highlight, primary),
+                            lineHeight = 24.sp
+                        )
+                    }
+                }
             }
             if (!session.finished && !failure) item(key = "note_loading") {
                 if (session.blocks.isEmpty()) NoteBodySkeleton() else Spacer(Modifier.height(maxHeight))

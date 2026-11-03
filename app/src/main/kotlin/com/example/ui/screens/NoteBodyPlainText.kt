@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -17,13 +18,17 @@ import com.example.notes.NoteBodyMetadata
 import com.example.ui.components.NoteBodySkeleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collect
+import androidx.compose.ui.text.AnnotatedString
+import com.example.ui.components.SearchHighlight
+import com.example.ui.components.withSearchHighlight
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable
 internal fun NoteBodyPlainText(reader: LegacyNoteRecovery, note: RecoveryNote, modifier: Modifier, jumpByte: Long = 0,
     header: (@Composable () -> Unit)? = null,
     listState: androidx.compose.foundation.lazy.LazyListState = rememberLazyListState(),
-    contentPadding: PaddingValues = PaddingValues(0.dp), body: NoteBodyMetadata? = null) {
+    contentPadding: PaddingValues = PaddingValues(0.dp), body: NoteBodyMetadata? = null,
+    searchQuery: String? = null, activeMatchByte: Long? = null) {
     val fontScale = LocalDensity.current.fontScale
     var unavailable by remember(reader, note.id, note.byteLength, body?.contentHash) { mutableStateOf(false) }
     val metadata by produceState<NoteBodyMetadata?>(null, reader, note.id, note.byteLength, body?.contentHash) {
@@ -67,8 +72,18 @@ internal fun NoteBodyPlainText(reader: LegacyNoteRecovery, note: RecoveryNote, m
                     catch (_: Exception) { value = "[This part could not be read. The original note is unchanged.]" }
                 }
                 val text = chunk
+                val isChunkActive = activeMatchByte != null && (index.toLong() * chunkBytes <= activeMatchByte && activeMatchByte < (index + 1).toLong() * chunkBytes)
                 if (text == null) NoteBodySkeleton(lines = 1)
-                else SelectionContainer { Text(text, fontFamily = FontFamily.Monospace, lineHeight = 24.sp) }
+                else SelectionContainer {
+                    val highlight = if (!searchQuery.isNullOrBlank()) SearchHighlight(searchQuery, isChunkActive) else null
+                    val primary = MaterialTheme.colorScheme.primary
+                    val displayText = if (highlight != null) {
+                        AnnotatedString(text).withSearchHighlight(highlight, primary)
+                    } else {
+                        AnnotatedString(text)
+                    }
+                    Text(displayText, fontFamily = FontFamily.Monospace, lineHeight = 24.sp)
+                }
             }
         }
     }

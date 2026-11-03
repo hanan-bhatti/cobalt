@@ -1,0 +1,5 @@
+// Keep editor verification independent of another task building this shared checkout.
+// No source, SDK, dependency or application ID changes; outputs stay beneath ignored build/.
+allprojects {
+    layout.buildDirectory.set(rootProject.layout.projectDirectory.dir("build/editor-validation/" + project.path.replace(':', '_')))
+}

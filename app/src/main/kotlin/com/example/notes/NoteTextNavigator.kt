@@ -36,6 +36,101 @@ object NoteTextNavigator {
         }
     }
 
+    /**
+     * Bounded-memory case-insensitive UTF-8 search that collects all matching byte offsets.
+     */
+    fun findAll(input: InputStream, query: String, limit: Int = 1000, checkCancelled: () -> Unit = {}): List<Long> {
+        if (query.isEmpty() || query.length > 256) return emptyList()
+        val results = ArrayList<Long>()
+        val queryLower = query.lowercase(java.util.Locale.ROOT)
+        val queryChars = queryLower.toCharArray()
+        val queryLen = queryChars.size
+
+        val prefix = IntArray(queryLen)
+        var matched = 0
+        for (i in 1 until queryLen) {
+            while (matched > 0 && queryChars[i] != queryChars[matched]) matched = prefix[matched - 1]
+            if (queryChars[i] == queryChars[matched]) matched++
+            prefix[i] = matched
+        }
+
+        matched = 0
+        var currentByteOffset = 0L
+        val matchByteOffsets = LongArray(queryLen)
+
+        val buffer = ByteArray(NoteSizePolicy.IO_CHUNK_BYTES)
+        var bufPos = 0
+        var bufCount = 0
+
+        fun nextCharAndByte(): Pair<Char, Long>? {
+            if (bufPos >= bufCount) {
+                checkCancelled()
+                bufCount = input.read(buffer)
+                bufPos = 0
+                if (bufCount < 0) return null
+            }
+            val firstByte = buffer[bufPos++].toInt() and 0xFF
+            val charStartByte = currentByteOffset
+
+            val char: Char
+            when {
+                firstByte < 0x80 -> {
+                    currentByteOffset += 1
+                    char = firstByte.toChar()
+                }
+                firstByte and 0xE0 == 0xC0 -> {
+                    if (bufPos >= bufCount) {
+                        checkCancelled()
+                        bufCount = input.read(buffer)
+                        bufPos = 0
+                        if (bufCount < 0) { currentByteOffset += 1; return '?' to charStartByte }
+                    }
+                    val b2 = buffer[bufPos++].toInt() and 0x3F
+                    currentByteOffset += 2
+                    char = (((firstByte and 0x1F) shl 6) or b2).toChar()
+                }
+                firstByte and 0xF0 == 0xE0 -> {
+                    val b2 = if (bufPos < bufCount) buffer[bufPos++].toInt() and 0x3F else {
+                        checkCancelled()
+                        bufCount = input.read(buffer); bufPos = 0
+                        if (bufCount < 0) 0 else buffer[bufPos++].toInt() and 0x3F
+                    }
+                    val b3 = if (bufPos < bufCount) buffer[bufPos++].toInt() and 0x3F else {
+                        checkCancelled()
+                        bufCount = input.read(buffer); bufPos = 0
+                        if (bufCount < 0) 0 else buffer[bufPos++].toInt() and 0x3F
+                    }
+                    currentByteOffset += 3
+                    char = (((firstByte and 0x0F) shl 12) or (b2 shl 6) or b3).toChar()
+                }
+                else -> {
+                    currentByteOffset += 1
+                    char = '?'
+                }
+            }
+            return char to charStartByte
+        }
+
+        while (results.size < limit) {
+            val next = nextCharAndByte() ?: break
+            val charLower = next.first.lowercaseChar()
+            val charByte = next.second
+
+            while (matched > 0 && charLower != queryChars[matched]) {
+                matched = prefix[matched - 1]
+            }
+            if (charLower == queryChars[matched]) {
+                matchByteOffsets[matched] = charByte
+                matched++
+                if (matched == queryLen) {
+                    results.add(matchByteOffsets[0])
+                    matched = 0 // non-overlapping
+                }
+            }
+        }
+        return results
+    }
+
     fun headings(input: InputStream, checkCancelled: () -> Unit = {}): List<Heading> {
         val result = mutableListOf<Heading>()
         val line = java.io.ByteArrayOutputStream(512)

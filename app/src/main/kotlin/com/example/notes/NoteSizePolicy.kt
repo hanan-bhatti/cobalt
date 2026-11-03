@@ -57,4 +57,13 @@ object NoteSizePolicy {
         require(byteLength >= 0)
         return Location.FILE
     }
+
+    /** Formats raw byte counts into human-readable B, KB, MB, or GB strings. */
+    fun formatBytes(bytes: Long): String {
+        if (bytes <= 0) return "0 B"
+        val units = arrayOf("B", "KB", "MB", "GB")
+        val digitGroups = (Math.log10(bytes.toDouble()) / Math.log10(1024.0)).toInt().coerceIn(0, units.size - 1)
+        return if (digitGroups == 0) "$bytes B"
+        else String.format(java.util.Locale.US, "%.1f %s", bytes / Math.pow(1024.0, digitGroups.toDouble()), units[digitGroups])
+    }
 }

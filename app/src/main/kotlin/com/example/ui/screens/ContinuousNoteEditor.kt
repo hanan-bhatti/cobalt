@@ -143,6 +143,7 @@ internal fun ContinuousNoteEditor(viewModel: CobaltViewModel, modifier: Modifier
                         modifier = Modifier.fillMaxSize().testTag("capture_content_input"),
                         onRelease = { view -> view.dispose(); if (native === view) native = null },
                         update = { view ->
+                            view.codeTypeface(activeItem?.type == com.example.data.model.SavedItemType.CODE)
                             view.message = { message = it }
                             view.pasteProgress = { pasteProgress = it; viewModel.continuousEditorBusy(document, it != null) }
                             view.onTool = { tool = it }

@@ -131,7 +131,7 @@ fun GlobalExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
         RadialMenuItem(R.drawable.ic_custom_add_folder, "New Folder", DefaultFolderColor.toThemeColor(isDark)) {
             showAddFolderDialog = true
         },
-        RadialMenuItem(R.drawable.ic_custom_archive, "Import text", CategoryText.toThemeColor(isDark), importText),
+        RadialMenuItem(R.drawable.ic_custom_import, "Import text", CategoryText.toThemeColor(isDark), importText),
         RadialMenuItem(R.drawable.ic_custom_plus, "New Item", SuccessGreen.toThemeColor(isDark)) {
             viewModel.startManualCapture(SavedItemType.TEXT)
         }
@@ -508,8 +508,9 @@ fun ClassicExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("Import text", color = Color.White, fontWeight = FontWeight.Medium, modifier = Modifier.padding(end = 8.dp))
                             SmallFloatingActionButton(onClick = { isFabExpanded = false; importText() },
-                                containerColor = MaterialTheme.colorScheme.surface) {
-                                Icon(painterResource(R.drawable.ic_custom_archive), contentDescription = "Import text document")
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                contentColor = MaterialTheme.colorScheme.primary) {
+                                Icon(painterResource(R.drawable.ic_custom_import), contentDescription = "Import text document")
                             }
                         }
 

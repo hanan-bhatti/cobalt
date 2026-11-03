@@ -171,6 +171,9 @@ fun getFolderIconRes(iconName: String?): Int {
         "video" -> R.drawable.ic_custom_video
         "voice", "audio" -> R.drawable.ic_custom_voice
         "ai", "ocr" -> R.drawable.ic_custom_ocr
+        "quote" -> R.drawable.ic_custom_quote
+        "import" -> R.drawable.ic_custom_import
+        "export" -> R.drawable.ic_custom_export
         else -> R.drawable.ic_custom_folder
     }
 }
@@ -1628,6 +1631,7 @@ fun FolderMoveDialog(
     val customFolders by viewModel.customFolders.collectAsState()
     val customFolderEntities by viewModel.customFolderEntities.collectAsState()
     val allItems by viewModel.allItems.collectAsState()
+    val isFolderRankingEnabled by viewModel.isFolderRankingEnabled.collectAsState()
 
     com.example.ui.components.MoveToFolderDialog(
         title = "Move / Assign Folders",
@@ -1635,8 +1639,10 @@ fun FolderMoveDialog(
         customFolders = customFolders,
         customFolderEntities = customFolderEntities,
         allItems = allItems,
+        currentItem = item,
         initialSelectedFolders = item.folders.toSet(),
         isMultiSelect = true,
+        rankingEnabled = isFolderRankingEnabled,
         onDismiss = onDismiss,
         onCreateFolder = { name, iconName ->
             viewModel.createFolder(name = name, iconName = iconName)

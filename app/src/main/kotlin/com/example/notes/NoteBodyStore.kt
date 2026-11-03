@@ -33,6 +33,9 @@ interface NoteBodyStore {
     fun retireEditJournal(id: String, token: String, verified: NoteBodyRef) {}
     fun recoverEditJournal(id: String, token: String, base: NoteBodyRef, checkCancelled: () -> Unit = {}): NoteBodyRef =
         throw UnsupportedOperationException("Journal recovery unavailable")
+    fun openLiveEditor(id: String, token: String, base: NoteBodyRef, checkCancelled: () -> Unit = {}): DiskTextModel =
+        throw UnsupportedOperationException("Live disk editing unavailable")
+    fun retireLiveEditor(id: String, token: String) {}
     fun maintenanceFiles(): List<NoteStorageFile> = emptyList()
     fun removeMaintenanceFile(entry: NoteStorageFile): Boolean = false
     fun prepareArchivePrevious(id: String, previousHash: String, currentHash: String,
@@ -90,17 +93,17 @@ class PrivateMarkdownStore(context: Context,
         check(restored.hash == hash) { "History restoration mismatch; versions retained" }
     }
 
-    override fun historyAnchors(): Set<Pair<String, String>> = root.listFiles().orEmpty().flatMap { dir ->
-        dir.listFiles().orEmpty().filter { it.extension == "delta" }.map { entry ->
-            dir.name to entry.inputStream().use { NoteVersionDelta.inspect(it).baseHash }
-        }
-    }.toSet()
+    override fun historyAnchors(): Set<Pair<String, String>> = historyLinks().map { (target, base) -> target.first to base }.toSet()
 
     override fun historyLinks(): Map<Pair<String, String>, String> = root.listFiles().orEmpty().flatMap { dir ->
-        dir.listFiles().orEmpty().filter { it.extension == "delta" }.map { entry ->
-            val header = entry.inputStream().use { NoteVersionDelta.inspect(it) }
-            check(header.targetHash == entry.nameWithoutExtension)
-            (dir.name to header.targetHash) to header.baseHash
+        dir.listFiles().orEmpty().filter { it.extension == "delta" || it.name.endsWith(".live.state") }.map { entry ->
+            if (entry.name.endsWith(".live.state")) {
+                (dir.name to "live:${entry.name}") to DiskTextModel.inspect(entry).hash
+            } else {
+                val header = entry.inputStream().use { NoteVersionDelta.inspect(it) }
+                check(header.targetHash == entry.nameWithoutExtension)
+                (dir.name to header.targetHash) to header.baseHash
+            }
         }
     }.toMap()
 
@@ -229,6 +232,36 @@ class PrivateMarkdownStore(context: Context,
         // A crash before this step merely retains extra recovery bytes.
         fileOperations.renameAtomic(source, File(source.parentFile, source.name + ".retired"))
         syncDirectory(source.parentFile!!)
+    }
+
+    override fun openLiveEditor(id: String, token: String, base: NoteBodyRef, checkCancelled: () -> Unit): DiskTextModel {
+        require(token.matches(Regex("[0-9a-f-]{36}")))
+        val dir = directory(id)
+        val state = File(dir, "$token.live.state")
+        val original = NoteBodyLeases.guarded {
+            fence.requireAlive(id)
+            check(dir.isDirectory || dir.mkdirs())
+            val ref = if (state.isFile) DiskTextModel.inspect(state) else base
+            check(size(id, ref.hash) == ref.bytes) { "Live editor original is missing; files retained" }
+            NoteBodyLeases.acquire(key(id), ref.hash)
+            ref
+        }
+        val released = java.util.concurrent.atomic.AtomicBoolean(false)
+        val release = { if (released.compareAndSet(false, true)) NoteBodyLeases.release(key(id), original.hash) }
+        try {
+            return DiskTextModel.open(FileNoteByteSource(this, id, original.hash, original.bytes), original,
+                File(dir, "$token.live.buffer"), state, fileOperations, { fence.requireAlive(id) },
+                release, checkCancelled)
+        } catch (error: Throwable) { release(); throw error }
+    }
+    override fun retireLiveEditor(id: String, token: String) {
+        require(token.matches(Regex("[0-9a-f-]{36}")))
+        val dir = directory(id)
+        for (suffix in listOf("live.state", "live.buffer", "live.state.tmp")) {
+            val path = File(dir, "$token.$suffix")
+            if (path.exists()) check(path.delete()) { "Live editor history could not be removed" }
+        }
+        if (dir.isDirectory) syncDirectory(dir)
     }
 
     override fun maintenanceFiles(): List<NoteStorageFile> = root.listFiles().orEmpty()

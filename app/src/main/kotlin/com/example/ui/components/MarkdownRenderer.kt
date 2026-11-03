@@ -45,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -71,6 +72,7 @@ import org.commonmark.ext.gfm.tables.TableRow
 import org.commonmark.ext.gfm.tables.TablesExtension
 import org.commonmark.node.*
 import org.commonmark.parser.Parser
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -78,7 +80,6 @@ import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.LinkInteractionListener
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.withLink
-import com.example.util.CobaltCustomTabsLauncher
 import com.example.utils.isRtlText
 
 /**
@@ -87,6 +88,28 @@ import com.example.utils.isRtlText
  */
 fun toggleTaskListItem(markdown: String, targetTaskIndex: Int): String =
     com.example.notes.MarkdownTaskEdits.toggle(markdown, targetTaskIndex)
+
+data class SearchHighlight(val query: String, val isActive: Boolean)
+val LocalSearchHighlight = compositionLocalOf<SearchHighlight?> { null }
+
+fun AnnotatedString.withSearchHighlight(highlight: SearchHighlight?, primaryColor: Color): AnnotatedString {
+    if (highlight == null || highlight.query.isBlank() || this.text.isBlank()) return this
+    val textLower = this.text.lowercase(java.util.Locale.ROOT)
+    val queryLower = highlight.query.lowercase(java.util.Locale.ROOT)
+    var startIndex = 0
+    val builder = AnnotatedString.Builder(this)
+    val highlightStyle = SpanStyle(
+        background = if (highlight.isActive) primaryColor.copy(alpha = 0.38f) else primaryColor.copy(alpha = 0.18f),
+        fontWeight = FontWeight.Bold
+    )
+    while (true) {
+        val index = textLower.indexOf(queryLower, startIndex)
+        if (index < 0) break
+        builder.addStyle(highlightStyle, index, index + highlight.query.length)
+        startIndex = index + highlight.query.length
+    }
+    return builder.toAnnotatedString()
+}
 
 /**
  * A beautiful, fast, and robust Markdown renderer built on top of CommonMark.
@@ -102,7 +125,11 @@ fun MarkdownText(
     maxLines: Int = Int.MAX_VALUE,
     onLinkClick: ((String) -> Unit)? = null,
     onMarkdownChange: ((String) -> Unit)? = null,
-    prepared: SafeMarkdownDocument? = null
+    prepared: SafeMarkdownDocument? = null,
+    highlightQuery: String? = null,
+    isHighlightActive: Boolean = false,
+    codeContinuesBefore: Boolean = false,
+    codeContinuesAfter: Boolean = false
 ) {
     if (markdown.isBlank() && prepared == null) return
 
@@ -126,29 +153,33 @@ fun MarkdownText(
     val taskCounter = remember(markdown) { AtomicInteger(0) }
     taskCounter.set(0)
 
-    CompositionLocalProvider(LocalMarkdownLinkDecoration provides (parsed?.decorateLinks != false)) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+    val searchHighlight = if (!highlightQuery.isNullOrBlank()) SearchHighlight(highlightQuery, isHighlightActive) else null
+    CompositionLocalProvider(
+        LocalCodeContinuation provides (codeContinuesBefore to codeContinuesAfter),
+        LocalMarkdownLinkDecoration provides (parsed?.decorateLinks != false),
+        LocalSearchHighlight provides searchHighlight
     ) {
-        RenderNode(
-            node = document,
-            color = color,
-            primaryColor = primaryColor,
-            maxLines = maxLines,
-            onLinkClick = onLinkClick,
-            context = context,
-            isDark = isDark,
-            markdown = markdown,
-            onMarkdownChange = onMarkdownChange,
-            taskCounter = taskCounter
-        )
-    }
+        Column(
+            modifier = modifier,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            RenderNode(
+                node = document,
+                color = color,
+                primaryColor = primaryColor,
+                maxLines = maxLines,
+                onLinkClick = onLinkClick,
+                context = context,
+                isDark = isDark,
+                markdown = markdown,
+                onMarkdownChange = onMarkdownChange,
+                taskCounter = taskCounter
+            )
+        }
     }
 }
 
 private val LocalMarkdownLinkDecoration = staticCompositionLocalOf { true }
-private val plainUrlPattern = Regex("""https?://[^\s<>"{}|\\^`\[\]]+""")
 data class SafeMarkdownDocument(val node: Node?, val links: Int = 0, val nodeCount: Int = 0,
     val decorateLinks: Boolean = true)
 
@@ -183,7 +214,7 @@ internal fun parseSafeMarkdown(markdown: String): SafeMarkdownDocument {
             continue
         }
         if (node is Link || node is Image) links++
-        if (node is org.commonmark.node.Text && node.parent !is Link) links += plainUrlPattern.findAll(node.literal).count()
+        if (node is org.commonmark.node.Text && node.parent !is Link) links += com.example.notes.MarkdownAutoLinks.find(node.literal).count()
         while (child != null) { pending.addLast(child to depth + 1); child = child.next }
     }
     return SafeMarkdownDocument(document, links, count, links <= NoteSizePolicy.DECORATED_LINK_LIMIT)
@@ -202,7 +233,8 @@ private fun ColumnScope.RenderNode(
     onMarkdownChange: ((String) -> Unit)? = null,
     taskCounter: AtomicInteger? = null,
     isTaskChecked: Boolean = false,
-    stripTaskPrefix: Boolean = false
+    stripTaskPrefix: Boolean = false,
+    isInBlockQuote: Boolean = false
 ) {
     val decorateLinks = LocalMarkdownLinkDecoration.current
     var child = node.firstChild
@@ -218,13 +250,15 @@ private fun ColumnScope.RenderNode(
                 }
                 val isRtl = isRtlText(annotatedString.text)
                 val blockDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
+                val finalString = annotatedString.withSearchHighlight(LocalSearchHighlight.current, primaryColor)
                 CompositionLocalProvider(LocalLayoutDirection provides blockDirection) {
                     Text(
-                        text = annotatedString,
+                        text = finalString,
                         color = if (isTaskChecked) color.copy(alpha = 0.55f) else color,
                         style = MaterialTheme.typography.bodyMedium.copy(
+                            fontStyle = if (isInBlockQuote) FontStyle.Italic else FontStyle.Normal,
                             textDirection = TextDirection.Content,
-                            lineHeight = 22.sp,
+                            lineHeight = if (isInBlockQuote) 24.sp else 22.sp,
                             textDecoration = if (isTaskChecked) TextDecoration.LineThrough else null
                         ),
                         textAlign = if (isRtl) TextAlign.Right else TextAlign.Left,
@@ -245,9 +279,10 @@ private fun ColumnScope.RenderNode(
                     3 -> Triple(17.sp, FontWeight.SemiBold, 8.dp)
                     else -> Triple(15.sp, FontWeight.SemiBold, 6.dp)
                 }
+                val finalString = annotatedString.withSearchHighlight(LocalSearchHighlight.current, primaryColor)
                 CompositionLocalProvider(LocalLayoutDirection provides blockDirection) {
                     Text(
-                        text = annotatedString,
+                        text = finalString,
                         color = color,
                         fontSize = fontSize,
                         fontWeight = fontWeight,
@@ -354,74 +389,63 @@ private fun ColumnScope.RenderNode(
                 val quoteText = extractPlainText(currentChild)
                 val isRtl = isRtlText(quoteText)
                 val blockDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
-                val borderColor = primaryColor.copy(alpha = 0.6f)
                 CompositionLocalProvider(LocalLayoutDirection provides blockDirection) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .drawBehind {
-                                val lineX = if (isRtl) size.width - 1.5.dp.toPx() else 1.5.dp.toPx()
-                                drawLine(
-                                    color = borderColor,
-                                    start = Offset(lineX, 0f),
-                                    end = Offset(lineX, size.height),
-                                    strokeWidth = 3.dp.toPx()
-                                )
-                            }
-                            .padding(start = if (isRtl) 0.dp else 12.dp, end = if (isRtl) 12.dp else 0.dp)
+                            .padding(vertical = 6.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .border(
+                                width = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        RenderNode(currentChild, color.copy(alpha = 0.85f), primaryColor, maxLines, onLinkClick, context, isDark, markdown, onMarkdownChange, taskCounter)
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_quote),
+                            contentDescription = null,
+                            tint = primaryColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp)
+                        ) {
+                            RenderNode(
+                                node = currentChild,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                primaryColor = primaryColor,
+                                maxLines = maxLines,
+                                onLinkClick = onLinkClick,
+                                context = context,
+                                isDark = isDark,
+                                markdown = markdown,
+                                onMarkdownChange = onMarkdownChange,
+                                taskCounter = taskCounter,
+                                isInBlockQuote = true
+                            )
+                        }
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_custom_quote),
+                            contentDescription = null,
+                            tint = primaryColor,
+                            modifier = Modifier
+                                .align(Alignment.End)
+                                .size(18.dp)
+                                .rotate(180f)
+                        )
                     }
                 }
             }
             is FencedCodeBlock -> {
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .background(
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .padding(10.dp)
-                    ) {
-                        Text(
-                            text = currentChild.literal.removeSuffix("\n"),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 13.sp,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                textDirection = TextDirection.Ltr
-                            )
-                        )
-                    }
-                }
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) { MarkdownCodeBlock(AnnotatedString(currentChild.literal.removeSuffix("\n")).withSearchHighlight(LocalSearchHighlight.current, primaryColor)) }
             }
             is IndentedCodeBlock -> {
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .background(
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            .padding(10.dp)
-                    ) {
-                        Text(
-                            text = currentChild.literal.removeSuffix("\n"),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 13.sp,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                textDirection = TextDirection.Ltr
-                            )
-                        )
-                    }
-                }
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) { MarkdownCodeBlock(AnnotatedString(currentChild.literal.removeSuffix("\n")).withSearchHighlight(LocalSearchHighlight.current, primaryColor)) }
             }
             is TableBlock -> {
                 MarkdownTable(
@@ -526,15 +550,23 @@ private fun MarkdownTable(
             .padding(vertical = 8.dp)
     ) {
         val availableWidth = maxWidth
-        val minColumnWidth = 84.dp
-
-        val minTableWidth = minColumnWidth * columnCount
+        val colMinWidths = remember(columnCount, colMaxChars) {
+            (0 until columnCount).map { c ->
+                val chars = colMaxChars.getOrElse(c) { 3 }
+                when {
+                    chars <= 4 -> 80.dp
+                    chars <= 8 -> 110.dp
+                    else -> 175.dp
+                }
+            }
+        }
+        val minTableWidth = remember(colMinWidths) { colMinWidths.fold(0.dp) { acc, w -> acc + w } }
         val totalTableWidth = if (availableWidth > minTableWidth) availableWidth else minTableWidth
 
-        val colWidths = remember(columnCount, totalTableWidth, colMaxChars, totalChars) {
+        val colWidths = remember(columnCount, totalTableWidth, colMaxChars, totalChars, colMinWidths) {
             (0 until columnCount).map { c ->
                 val ratio = colMaxChars[c].toFloat() / totalChars
-                maxOf(minColumnWidth, totalTableWidth * ratio)
+                maxOf(colMinWidths[c], totalTableWidth * ratio)
             }
         }
 
@@ -609,8 +641,9 @@ private fun MarkdownTable(
                                             decorateLinks = decorateLinks
                                         )
                                     }
+                                    val finalCellText = cellText.withSearchHighlight(LocalSearchHighlight.current, primaryColor)
                                     Text(
-                                        text = cellText,
+                                        text = finalCellText,
                                         color = if (isHeader) MaterialTheme.colorScheme.onSurface else color,
                                         fontSize = if (isHeader) 13.sp else 12.5.sp,
                                         fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
@@ -663,9 +696,8 @@ private fun AnnotatedString.Builder.AppendInlineNodes(
                     hasStripped = true
                 }
                 if (!decorateLinks) { append(literal); child = currentChild.next; continue }
-                val urlRegex = plainUrlPattern
                 var lastIndex = 0
-                val matches = urlRegex.findAll(literal)
+                val matches = com.example.notes.MarkdownAutoLinks.find(literal)
                 val linkStyles = TextLinkStyles(
                     style = SpanStyle(
                         color = primaryColor,
@@ -674,26 +706,22 @@ private fun AnnotatedString.Builder.AppendInlineNodes(
                     )
                 )
                 for (match in matches) {
-                    if (match.range.first > lastIndex) {
-                        append(literal.substring(lastIndex, match.range.first))
+                    if (match.start > lastIndex) {
+                        append(literal.substring(lastIndex, match.start))
                     }
-                    val url = match.value
+                    val url = match.destination
                     val linkListener = LinkInteractionListener { annotation ->
                         val clickedUrl = (annotation as? LinkAnnotation.Url)?.url ?: url
                         if (onLinkClick != null) {
                             onLinkClick(clickedUrl)
                         } else {
-                            CobaltCustomTabsLauncher.launch(
-                                context = context,
-                                url = clickedUrl,
-                                isDarkTheme = isDark
-                            )
+                            openMarkdownLink(context, clickedUrl, isDark)
                         }
                     }
                     withLink(LinkAnnotation.Url(url = url, styles = linkStyles, linkInteractionListener = linkListener)) {
-                        append(url)
+                        append(match.label)
                     }
-                    lastIndex = match.range.last + 1
+                    lastIndex = match.end
                 }
                 if (lastIndex < literal.length) {
                     append(literal.substring(lastIndex))
@@ -745,11 +773,7 @@ private fun AnnotatedString.Builder.AppendInlineNodes(
                     if (onLinkClick != null) {
                         onLinkClick(clickedUrl)
                     } else {
-                        CobaltCustomTabsLauncher.launch(
-                            context = context,
-                            url = clickedUrl,
-                            isDarkTheme = isDark
-                        )
+                        openMarkdownLink(context, clickedUrl, isDark)
                     }
                 }
                 withLink(LinkAnnotation.Url(url = destination, styles = linkStyles, linkInteractionListener = linkListener)) {

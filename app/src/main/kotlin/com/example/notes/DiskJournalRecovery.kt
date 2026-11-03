@@ -92,7 +92,7 @@ internal object DiskJournalRecovery {
     }
 
     /** Read code units exactly, including an unpaired surrogate pending an IME replacement. */
-    private class Utf16UnitReader(input: InputStream) : Reader() {
+    internal class Utf16UnitReader(input: InputStream) : Reader() {
         private val data = DataInputStream(BufferedInputStream(input, 16 * 1024))
         override fun read(chars: CharArray, offset: Int, length: Int): Int {
             if (offset < 0 || length < 0 || offset > chars.size - length) throw IndexOutOfBoundsException()
@@ -111,7 +111,7 @@ internal object DiskJournalRecovery {
     }
 
     /** Chunk encoder keeps a high surrogate with its following low surrogate. */
-    private class ReaderUtf8Stream(private val reader: Reader, private val checkCancelled: () -> Unit) : InputStream() {
+    internal class ReaderUtf8Stream(private val reader: Reader, private val checkCancelled: () -> Unit) : InputStream() {
         private var buffer = ByteArray(0)
         private var position = 0
         private var carried: Char? = null

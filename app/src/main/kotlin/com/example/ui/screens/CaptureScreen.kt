@@ -56,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import com.example.ui.components.bounceClick
+import com.example.ui.components.folderSuggestionShimmer
 import com.example.ui.components.AudioRecorderComponent
 import com.example.ui.components.AudioPlayerComponent
 import androidx.compose.ui.geometry.Size
@@ -389,22 +390,25 @@ fun CleanFolderRow(
                         shape = RoundedCornerShape(12.dp),
                         color = if (isAssigned) {
                             folderColor.copy(alpha = 0.2f)
-                        } else if (isSuggested) {
-                            folderColor.copy(alpha = 0.10f)
                         } else {
                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                         },
                         border = BorderStroke(
-                            width = if (isAssigned) 1.5.dp else if (isSuggested) 1.5.dp else 1.dp,
+                            width = if (isAssigned) 1.5.dp else 1.dp,
                             color = if (isAssigned) {
                                 folderColor
                             } else if (isSuggested) {
-                                folderColor.copy(alpha = 0.75f)
+                                folderColor.copy(alpha = 0.65f)
                             } else {
                                 MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
                             }
                         ),
                         modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .folderSuggestionShimmer(
+                                color = folderColor,
+                                enabled = isSuggested && !isAssigned
+                            )
                             .bounceClick()
                             .testTag("tag_chip_$folderName")
                     ) {
@@ -415,13 +419,13 @@ fun CleanFolderRow(
                         ) {
                             FolderIcon(
                                 iconName = entity?.iconName,
-                                tint = if (isAssigned || isSuggested) folderColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                                tint = if (isAssigned) folderColor else if (isSuggested) folderColor.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(12.dp)
                             )
                             Text(
                                 text = folderName,
                                 fontSize = 11.sp,
-                                fontWeight = if (isAssigned || isSuggested) FontWeight.Bold else FontWeight.Medium,
+                                fontWeight = if (isAssigned) FontWeight.Bold else FontWeight.Medium,
                                 color = if (isAssigned) folderColor else MaterialTheme.colorScheme.onSurface
                             )
                         }
@@ -487,7 +491,8 @@ fun TextCapturePage(
     clipboardDomain: String = "",
     isKeyboardOpen: Boolean,
     bottomPadding: androidx.compose.ui.unit.Dp,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    rankedFolders: List<com.example.util.RankedFolder>? = null
 ) {
     var showNewFolderCreator by remember { mutableStateOf(false) }
     val file by viewModel.fileEditorState.collectAsState()
@@ -651,12 +656,13 @@ fun TextCapturePage(
                     },
                     showNewFolderCreator = showNewFolderCreator,
                     onToggleNewFolder = { showNewFolderCreator = !showNewFolderCreator },
-                    accentColor = pageCategoryColor
+                    accentColor = pageCategoryColor,
+                    rankedFolders = rankedFolders
                 )
 
                 // 6. Minimal Info Caption
                 Text(
-                    text = "Saves to ${SavedItemType.TEXT.displayName}",
+                    text = "Saves to ${item.type.displayName}",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
@@ -673,6 +679,9 @@ fun TextCapturePage(
             .padding(horizontal = 20.dp, vertical = 10.dp).padding(bottom = bottomPadding + 24.dp)) {
             noteHeader()
             noteEditor()
+            if (!isKeyboardOpen) {
+                Spacer(modifier = Modifier.weight(1f))
+            }
             noteFooter()
         }
     }
@@ -692,7 +701,8 @@ fun AudioCapturePage(
     isOcrLoading: Boolean,
     isKeyboardOpen: Boolean,
     bottomPadding: androidx.compose.ui.unit.Dp,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    rankedFolders: List<com.example.util.RankedFolder>? = null
 ) {
     var showNewFolderCreator by remember { mutableStateOf(false) }
 
@@ -906,7 +916,8 @@ fun AudioCapturePage(
                     },
                     showNewFolderCreator = showNewFolderCreator,
                     onToggleNewFolder = { showNewFolderCreator = !showNewFolderCreator },
-                    accentColor = pageCategoryColor
+                    accentColor = pageCategoryColor,
+                    rankedFolders = rankedFolders
                 )
 
                 // Minimal Info Caption
@@ -933,7 +944,8 @@ fun LinkCapturePage(
     clipboardDomain: String,
     isKeyboardOpen: Boolean,
     bottomPadding: androidx.compose.ui.unit.Dp,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    rankedFolders: List<com.example.util.RankedFolder>? = null
 ) {
     var showNewFolderCreator by remember { mutableStateOf(false) }
     val isExtracting by viewModel.isMetadataExtracting.collectAsState()
@@ -1445,7 +1457,8 @@ fun LinkCapturePage(
                     },
                     showNewFolderCreator = showNewFolderCreator,
                     onToggleNewFolder = { showNewFolderCreator = !showNewFolderCreator },
-                    accentColor = pageCategoryColor
+                    accentColor = pageCategoryColor,
+                    rankedFolders = rankedFolders
                 )
 
                 Text(
@@ -1541,6 +1554,19 @@ fun CaptureScreen(
 
     val customFolderEntities by viewModel.customFolderEntities.collectAsState()
     val folderMap = remember(customFolderEntities) { customFolderEntities.associateBy { it.name } }
+    val allArchiveItems by viewModel.homeItems.collectAsState()
+    val isFolderRankingEnabled by viewModel.isFolderRankingEnabled.collectAsState()
+    val rankedFolders = remember(customFolders, customFolderEntities, allArchiveItems, item.title, item.content, item.type, isFolderRankingEnabled) {
+        com.example.util.FolderRankingEngine.rankFolders(
+            folders = customFolders,
+            folderEntities = customFolderEntities,
+            allItems = allArchiveItems,
+            currentItemType = item.type,
+            currentItemTitle = item.title,
+            currentItemContent = item.content,
+            rankingEnabled = isFolderRankingEnabled
+        )
+    }
 
     val imeInsets = WindowInsets.ime
     val density = LocalDensity.current
@@ -1974,7 +2000,8 @@ fun CaptureScreen(
                         clipboardUrl = clipboardUrl,
                         clipboardDomain = clipboardDomain,
                         isKeyboardOpen = isKeyboardOpen,
-                        bottomPadding = innerPadding.calculateBottomPadding()
+                        bottomPadding = innerPadding.calculateBottomPadding(),
+                        rankedFolders = rankedFolders
                     )
                 } else if (pageType == SavedItemType.AUDIO) {
                     AudioCapturePage(
@@ -1989,7 +2016,8 @@ fun CaptureScreen(
                         onTogglePreview = { isPreviewMode = !isPreviewMode },
                         isOcrLoading = isOcrLoading,
                         isKeyboardOpen = isKeyboardOpen,
-                        bottomPadding = innerPadding.calculateBottomPadding()
+                        bottomPadding = innerPadding.calculateBottomPadding(),
+                        rankedFolders = rankedFolders
                     )
                 } else if (pageType == SavedItemType.LINK) {
                     LinkCapturePage(
@@ -2001,7 +2029,8 @@ fun CaptureScreen(
                         clipboardUrl = clipboardUrl,
                         clipboardDomain = clipboardDomain,
                         isKeyboardOpen = isKeyboardOpen,
-                        bottomPadding = innerPadding.calculateBottomPadding()
+                        bottomPadding = innerPadding.calculateBottomPadding(),
+                        rankedFolders = rankedFolders
                     )
                 } else {
                     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -3089,7 +3118,8 @@ fun CaptureScreen(
                                 },
                                 showNewFolderCreator = showNewFolderCreator,
                                 onToggleNewFolder = { showNewFolderCreator = !showNewFolderCreator },
-                                accentColor = pageCategoryColor
+                                accentColor = pageCategoryColor,
+                                rankedFolders = rankedFolders
                             )
 
                             // Clean minimal info text

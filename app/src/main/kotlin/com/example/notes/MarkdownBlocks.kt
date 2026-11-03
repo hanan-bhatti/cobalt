@@ -7,7 +7,8 @@ import java.io.InputStream
 object MarkdownBlocks {
     data class Block(val start: Long, val end: Long, val markdown: Boolean,
         val leading: String = "", val trailing: String = "", val lines: Int = 1,
-        val tableHeader: String? = null, val visible: Boolean = true) {
+        val tableHeader: String? = null, val visible: Boolean = true,
+        val codeContinuesBefore: Boolean = false, val codeContinuesAfter: Boolean = false) {
         fun renderSource(text: String): String = tableHeader.orEmpty() + leading + text + trailing
     }
 
@@ -54,12 +55,15 @@ object MarkdownBlocks {
         private var start = 0L
         private var lines = 0
         private var renderLines = 0
+        private var lineBytes = 0
         private var hasHeading = false
         private var safeStart = true
         private var nonBlank = false
         private var blankLine = true
         private var fence: Char? = null
         private var fenceLength = 0
+        private var continuedCode = false
+        private var listIndent = 0
         private var fenceInfo = ""
         private var table: String? = null
         private var tableCandidate: String? = null
@@ -87,12 +91,13 @@ object MarkdownBlocks {
             val insideLine = prefix.isNotEmpty()
             val closing = when {
                 safeStart && safeEnd -> ""
-                fence != null -> fenceClosing
+                fence != null -> if (insideLine) fenceClosing else fenceClosing.removePrefix("\n")
                 table != null && insideLine -> inline.trailing() + "|"
                 else -> inline.trailing()
             }
             val block = Block(start, offset, safeStart && safeEnd, leading, closing, renderLines.coerceAtLeast(1),
-                leadingTable, nonBlank || fence != null)
+                leadingTable, nonBlank || fence != null, continuedCode, fence != null)
+            continuedCode = fence != null
             leading = when {
                 fence != null -> fencePrefix()
                 table != null -> if (insideLine) "|" + inline.leading() else ""
@@ -107,9 +112,14 @@ object MarkdownBlocks {
             inline.finish(10)
             if (!blankLine || fence != null) renderLines++
             val text = lineText().removeSuffix("\r")
-            val indent = text.takeWhile { it == ' ' }.length
-            if (indent <= 3) {
-                val body = text.drop(indent)
+            val quote = QUOTE.find(text)?.value.orEmpty()
+            val unquoted = text.drop(quote.length)
+            val indent = unquoted.takeWhile { it == ' ' }.length
+            val listMarker = LIST.find(unquoted.drop(indent))?.value
+            if (fence == null && listMarker != null) listIndent = indent + listMarker.length
+            val containerIndent = if (listIndent > 0 && indent >= listIndent) listIndent else 0
+            if (indent - containerIndent <= 3) {
+                val body = unquoted.drop(indent).let { if (listMarker != null && fence == null) it.drop(listMarker.length) else it }
                 val first = body.firstOrNull()
                 val run = if (first == '`' || first == '~') body.takeWhile { it == first }.length else 0
                 if (run >= 3) {
@@ -121,6 +131,7 @@ object MarkdownBlocks {
                     else if (first == fence && run >= fenceLength && body.drop(run).isBlank()) fence = null
                     table = null; tableCandidate = null; inline.reset()
                 } else if (fence == null) {
+                    if (body.isNotBlank() && indent < listIndent && listMarker == null) listIndent = 0
                     if (table == null && tableCandidate != null && TABLE_DIVIDER.matches(body)) table = tableCandidate + "\n" + text + "\n"
                     else if (table != null && (body.isBlank() || '|' !in body)) table = null
                     tableCandidate = if ('|' in text && text.isNotBlank()) text else null
@@ -128,12 +139,16 @@ object MarkdownBlocks {
                 }
             }
             if (blankLine) { inline.reset(); table = null; tableCandidate = null }
+            lineBytes = 0
             prefix.setLength(0); prefixFull = false; blankLine = true
         }
         private fun endLine(): Boolean {
             val endedBlank = blankLine
             lines++
             finishLine()
+            // A closing fence ends its bounded render segment immediately. Continuations
+            // cannot accidentally style a later, unrelated code block as the same box.
+            if (continuedCode && fence == null) return true
             return endedBlank && fence == null && nonBlank &&
                 (hasHeading || offset - start >= maxBytes * 3 / 4 || renderLines >= maxLines * 3 / 4)
         }
@@ -153,12 +168,19 @@ object MarkdownBlocks {
                     return if (offset > start) emit(fence == null) else null
                 }
                 val measuredLines = if (fence == null && nonBlank) renderLines else lines
-                if (!(pendingCr && byte == 10) && (offset - start >= maxBytes || measuredLines >= maxLines) && (byte and 0xC0) != 0x80) {
+                val limitReached = if (fence != null) {
+                    // Keep ordinary fenced examples together, including blank lines. Large
+                    // fences remain bounded and join visually across adjacent lazy rows.
+                    (prefix.isEmpty() && byte != fence?.code && (offset - start >= maxOf(maxBytes, 4096) || lines >= maxOf(maxLines * 2, 24))) ||
+                        (offset - start >= maxOf(maxBytes, 4096) && lineBytes >= 4096)
+                } else offset - start >= maxBytes || measuredLines >= maxLines
+                if (!(pendingCr && byte == 10) && limitReached && (byte and 0xC0) != 0x80) {
                     inline.finish(byte)
                     pending = byte
                     return emit(false)
                 }
                 offset++
+                lineBytes++
                 if (byte == 13) {
                     pendingCr = true
                 } else if (byte == 10) {

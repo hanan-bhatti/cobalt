@@ -573,7 +573,8 @@ class CobaltRepository(private val context: Context) {
     }
     suspend fun saveItemLocallyOnly(item: SavedItem) = withContext(Dispatchers.IO) {
         fun prepare(): SavedItem {
-            val updatedItem = item.copy(timestamp = System.currentTimeMillis())
+            val itemToSave = persistLocalMedia(item)
+            val updatedItem = itemToSave.copy(timestamp = System.currentTimeMillis())
             return updatedItem
         }
         if (com.example.notes.NotePersistence.isNote(item)) notePersistence.save(prepare()) else {
@@ -585,16 +586,99 @@ class CobaltRepository(private val context: Context) {
         }
     }
 
+    private fun persistLocalMedia(item: SavedItem): SavedItem {
+        if (item.type != SavedItemType.VIDEO && item.type != SavedItemType.IMAGE && item.type != SavedItemType.AUDIO) {
+            return item
+        }
+        var updated = item
+        val destDir = getPermanentMediaDir(item.type)
+        val ext = when (item.type) {
+            SavedItemType.VIDEO -> "mp4"
+            SavedItemType.AUDIO -> "mp4"
+            else -> "jpg"
+        }
+
+        val primaryPath = if (item.type == SavedItemType.AUDIO) item.thumbnailPath else item.content
+        if (!primaryPath.isNullOrBlank() && primaryPath.startsWith("/") &&
+            (primaryPath.startsWith(context.cacheDir.absolutePath) || primaryPath.contains("/cache/"))) {
+            val sourceFile = File(primaryPath)
+            if (sourceFile.exists() && sourceFile.length() > 0) {
+                val permFile = File(destDir, "${item.id}.$ext")
+                val tempFile = File(destDir, "${item.id}.$ext.tmp")
+                try {
+                    sourceFile.inputStream().use { input ->
+                        java.io.FileOutputStream(tempFile).use { output ->
+                            input.copyTo(output)
+                            output.flush()
+                            try { output.fd.sync() } catch (_: Exception) {}
+                        }
+                    }
+                    if (tempFile.exists() && tempFile.length() == sourceFile.length()) {
+                        if (permFile.exists()) permFile.delete()
+                        if (tempFile.renameTo(permFile)) {
+                            try { sourceFile.delete() } catch (_: Exception) {}
+                            updated = if (item.type == SavedItemType.AUDIO) {
+                                updated.copy(thumbnailPath = permFile.absolutePath)
+                            } else {
+                                updated.copy(content = permFile.absolutePath)
+                            }
+                        }
+                    } else {
+                        try { tempFile.delete() } catch (_: Exception) {}
+                    }
+                } catch (e: Exception) {
+                    Log.e("CobaltRepo", "Could not persist media to permanent storage: ${e.message}", e)
+                    try { tempFile.delete() } catch (_: Exception) {}
+                }
+            }
+        }
+
+        // Also persist thumbnail if it's in cacheDir
+        val thumbPath = updated.thumbnailPath
+        if (!thumbPath.isNullOrBlank() && thumbPath.startsWith("/") &&
+            (thumbPath.startsWith(context.cacheDir.absolutePath) || thumbPath.contains("/cache/")) &&
+            thumbPath != updated.content) {
+            val sourceThumb = File(thumbPath)
+            if (sourceThumb.exists() && sourceThumb.length() > 0) {
+                val permThumb = File(getPermanentMediaDir(SavedItemType.IMAGE), "thumb_${item.id}.jpg")
+                val tempThumb = File(getPermanentMediaDir(SavedItemType.IMAGE), "thumb_${item.id}.jpg.tmp")
+                try {
+                    sourceThumb.inputStream().use { input ->
+                        java.io.FileOutputStream(tempThumb).use { output ->
+                            input.copyTo(output)
+                            output.flush()
+                            try { output.fd.sync() } catch (_: Exception) {}
+                        }
+                    }
+                    if (tempThumb.exists() && tempThumb.length() > 0) {
+                        if (permThumb.exists()) permThumb.delete()
+                        if (tempThumb.renameTo(permThumb)) {
+                            try { sourceThumb.delete() } catch (_: Exception) {}
+                            updated = updated.copy(thumbnailPath = permThumb.absolutePath)
+                        }
+                    } else {
+                        try { tempThumb.delete() } catch (_: Exception) {}
+                    }
+                } catch (e: Exception) {
+                    Log.e("CobaltRepo", "Could not persist thumbnail to permanent storage: ${e.message}", e)
+                    try { tempThumb.delete() } catch (_: Exception) {}
+                }
+            }
+        }
+        return updated
+    }
+
     suspend fun saveItem(item: SavedItem, mediaBytes: ByteArray? = null, onProgress: (Float) -> Unit = {}): SavedItem = withContext(Dispatchers.IO) {
         suspend fun persist(): SavedItem {
+            val itemToSave = persistLocalMedia(item)
             val itemSize = when {
                 mediaBytes != null -> mediaBytes.size.toLong()
-                (item.thumbnailPath ?: item.content).startsWith("/") -> java.io.File(item.thumbnailPath ?: item.content).length()
-                item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO -> item.sizeBytes
-                com.example.notes.NotePersistence.isNote(item) -> item.byteLength
-                else -> item.content.toByteArray().size.toLong()
+                (itemToSave.thumbnailPath ?: itemToSave.content).startsWith("/") -> java.io.File(itemToSave.thumbnailPath ?: itemToSave.content).length()
+                itemToSave.type == SavedItemType.IMAGE || itemToSave.type == SavedItemType.VIDEO || itemToSave.type == SavedItemType.AUDIO -> itemToSave.sizeBytes
+                com.example.notes.NotePersistence.isNote(itemToSave) -> itemToSave.byteLength
+                else -> itemToSave.content.toByteArray().size.toLong()
             }
-            val finalItem = item.copy(sizeBytes = itemSize, timestamp = if (item.timestamp == 0L) System.currentTimeMillis() else item.timestamp, updatedAt = System.currentTimeMillis())
+            val finalItem = itemToSave.copy(sizeBytes = itemSize, timestamp = if (itemToSave.timestamp == 0L) System.currentTimeMillis() else itemToSave.timestamp, updatedAt = System.currentTimeMillis())
             val saved = if (com.example.notes.NotePersistence.isNote(finalItem)) notePersistence.save(finalItem) else notePersistence.saveNonNoteLocked(finalItem)
             return saved
         }
@@ -817,6 +901,8 @@ class CobaltRepository(private val context: Context) {
         val cacheFile = File(context.cacheDir, fileName)
         FileOutputStream(cacheFile).use { fos ->
             fos.write(bytes)
+            fos.flush()
+            try { fos.fd.sync() } catch (_: Exception) {}
         }
         return@withContext cacheFile.absolutePath
     }
@@ -891,17 +977,30 @@ class CobaltRepository(private val context: Context) {
             val fileName = "${item.id}.$extension"
             val destFile = java.io.File(destDir, fileName)
 
-            if (!destFile.exists()) {
+            if (!destFile.exists() || destFile.length() == 0L) {
+                if (destFile.exists()) destFile.delete()
+                val tempFile = java.io.File(destDir, "$fileName.tmp")
                 val request = okhttp3.Request.Builder().url(remoteUrl).build()
                 val client = okhttp3.OkHttpClient()
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@withContext null
                     val body = response.body ?: return@withContext null
                     body.byteStream().use { input ->
-                        java.io.FileOutputStream(destFile).use { output ->
+                        java.io.FileOutputStream(tempFile).use { output ->
                             input.copyTo(output)
+                            output.flush()
+                            try { output.fd.sync() } catch (_: Exception) {}
                         }
                     }
+                }
+                if (tempFile.exists() && tempFile.length() > 0L) {
+                    com.example.notes.NoteBodyLeases.guarded {
+                        fence.requireAlive(item.id)
+                        check(tempFile.renameTo(destFile)) { "Could not publish cached media" }
+                    }
+                } else {
+                    try { tempFile.delete() } catch (_: Exception) {}
+                    return@withContext null
                 }
             }
 

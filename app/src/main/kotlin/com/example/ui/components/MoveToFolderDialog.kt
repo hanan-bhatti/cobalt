@@ -62,6 +62,7 @@ fun MoveToFolderDialog(
     customFolders: List<String>,
     customFolderEntities: List<CustomFolderEntity>,
     allItems: List<SavedItem> = emptyList(),
+    currentItem: SavedItem? = null,
     initialSelectedFolders: Set<String> = emptySet(),
     isMultiSelect: Boolean = true,
     rankingEnabled: Boolean = true,
@@ -74,11 +75,14 @@ fun MoveToFolderDialog(
     var showNewFolderCreator by remember { mutableStateOf(false) }
 
     val isDark = isSystemInDarkTheme()
-    val rankedFolders = remember(customFolders, customFolderEntities, allItems, rankingEnabled) {
+    val rankedFolders = remember(customFolders, customFolderEntities, allItems, rankingEnabled, currentItem) {
         FolderRankingEngine.rankFolders(
             folders = customFolders,
             folderEntities = customFolderEntities,
             allItems = allItems,
+            currentItemType = currentItem?.type,
+            currentItemTitle = currentItem?.title,
+            currentItemContent = currentItem?.content,
             rankingEnabled = rankingEnabled
         )
     }
@@ -260,23 +264,26 @@ fun MoveToFolderDialog(
                                     shape = RoundedCornerShape(16.dp),
                                     color = if (isSelected) {
                                         folderColor.copy(alpha = 0.14f)
-                                    } else if (ranked.isSuggested) {
-                                        folderColor.copy(alpha = 0.08f)
                                     } else {
                                         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                                     },
                                     border = BorderStroke(
-                                        width = if (isSelected) 1.5.dp else if (ranked.isSuggested) 1.5.dp else 1.dp,
+                                        width = if (isSelected) 1.5.dp else 1.dp,
                                         color = if (isSelected) {
                                             folderColor
                                         } else if (ranked.isSuggested) {
-                                            folderColor.copy(alpha = 0.75f)
+                                            folderColor.copy(alpha = 0.65f)
                                         } else {
                                             MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
                                         }
                                     ),
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .folderSuggestionShimmer(
+                                            color = folderColor,
+                                            enabled = ranked.isSuggested && !isSelected
+                                        )
                                         .bounceClick()
                                         .testTag("move_folder_row_$folder")
                                 ) {
@@ -304,14 +311,33 @@ fun MoveToFolderDialog(
                                         Spacer(modifier = Modifier.width(12.dp))
 
                                         Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = folder,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = if (isSelected || ranked.isSuggested) FontWeight.Bold else FontWeight.Medium,
-                                                color = MaterialTheme.colorScheme.onSurface,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                Text(
+                                                    text = folder,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                    color = MaterialTheme.colorScheme.onSurface,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                if (ranked.isSuggested && !isSelected) {
+                                                    Surface(
+                                                        shape = RoundedCornerShape(6.dp),
+                                                        color = folderColor.copy(alpha = 0.12f)
+                                                    ) {
+                                                        Text(
+                                                            text = "Suggested",
+                                                            fontSize = 9.sp,
+                                                            fontWeight = FontWeight.SemiBold,
+                                                            color = folderColor,
+                                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.5.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
                                             if (ranked.usageCount > 0) {
                                                 Text(
                                                     text = "${ranked.usageCount} ${if (ranked.usageCount == 1) "item" else "items"}",
@@ -364,59 +390,62 @@ fun MoveToFolderDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Inline New Folder Section
-                AnimatedVisibility(
-                    visible = showNewFolderCreator,
-                    enter = fadeIn(),
-                    exit = fadeOut()
+                // New Folder Button / Inline Creator (Same 44.dp height & 16.dp corner radius for zero modal layout shift)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
                 ) {
-                    InlineNewFolderCreator(
-                        onAddFolder = { name, iconName ->
-                            onCreateFolder(name, iconName)
-                            selectedFolders = selectedFolders + name
-                            showNewFolderCreator = false
-                        },
-                        onCancel = { showNewFolderCreator = false },
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                }
-
-                if (!showNewFolderCreator) {
-                    Surface(
-                        onClick = { showNewFolderCreator = true },
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .bounceClick()
-                            .testTag("dialog_new_folder_button")
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp, horizontal = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_plus),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(14.dp)
+                    androidx.compose.animation.Crossfade(
+                        targetState = showNewFolderCreator,
+                        label = "newFolderCreatorCrossfade"
+                    ) { isCreating ->
+                        if (isCreating) {
+                            InlineNewFolderCreator(
+                                onAddFolder = { name, iconName ->
+                                    onCreateFolder(name, iconName)
+                                    selectedFolders = selectedFolders + name
+                                    showNewFolderCreator = false
+                                },
+                                onCancel = { showNewFolderCreator = false },
+                                modifier = Modifier.fillMaxSize()
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Create New Folder",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                        } else {
+                            Surface(
+                                onClick = { showNewFolderCreator = true },
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .bounceClick()
+                                    .testTag("dialog_new_folder_button")
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_plus),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Create New Folder",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(14.dp))
                 }
+
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // Action Buttons
                 Row(

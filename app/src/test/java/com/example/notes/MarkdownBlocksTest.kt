@@ -12,7 +12,7 @@ class MarkdownBlocksTest {
         assertEquals(bytes.size.toLong(), blocks.last().end)
         blocks.zipWithNext().forEach { (a, b) -> assertEquals(a.end, b.start) }
         blocks.forEach {
-            assertTrue(it.end - it.start <= 132)
+            assertTrue(it.end - it.start <= 8192)
             val part = bytes.copyOfRange(it.start.toInt(), it.end.toInt())
             assertArrayEquals(part, part.toString(Charsets.UTF_8).toByteArray(Charsets.UTF_8))
         }

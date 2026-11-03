@@ -18,6 +18,7 @@
 
 package com.example.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -73,9 +74,7 @@ fun InlineNewFolderCreator(
     }
 
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Row(
@@ -126,13 +125,15 @@ fun InlineNewFolderCreator(
                         DropdownMenu(
                             expanded = isIconDropdownOpen,
                             onDismissRequest = { isIconDropdownOpen = false },
+                            shape = RoundedCornerShape(16.dp),
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
+                            border = BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                            ),
+                            shadowElevation = 8.dp,
                             modifier = Modifier
-                                .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.90f))
-                                .border(
-                                    1.dp,
-                                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
-                                    RoundedCornerShape(16.dp)
-                                )
+                                .clip(RoundedCornerShape(16.dp))
                                 .padding(4.dp)
                         ) {
                             Text(

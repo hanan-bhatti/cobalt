@@ -170,6 +170,11 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         settingsRepository.setRecentCapturesExpanded(expanded)
     }
 
+    val isFolderRankingEnabled = settingsRepository.isFolderRankingEnabled
+    fun setFolderRankingEnabled(enabled: Boolean) {
+        settingsRepository.setFolderRankingEnabled(enabled)
+    }
+
     fun isApiKeySet(): Boolean {
         return settingsRepository.geminiApiKey.value.isNotEmpty()
     }
@@ -1362,6 +1367,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                         context.contentResolver.openInputStream(uri)?.use { input ->
                             FileOutputStream(cacheFile).use { output ->
                                 input.copyTo(output)
+                                output.flush()
+                                try { output.fd.sync() } catch (_: Exception) {}
                             }
                         }
                     }
@@ -1388,6 +1395,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                                 val thumbFile = File(context.cacheDir, "thumb_${UUID.randomUUID()}.jpg")
                                 FileOutputStream(thumbFile).use { fos ->
                                     frameBitmap.compress(Bitmap.CompressFormat.JPEG, 85, fos)
+                                    fos.flush()
+                                    try { fos.fd.sync() } catch (_: Exception) {}
                                 }
                                 thumbFile.absolutePath
                             } catch (_: Exception) {
@@ -1451,16 +1460,36 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                         _markdownImport.value = MarkdownImportState(running = true, bytes = bytes)
                     }
                 }
-                val warning = if (com.example.notes.NoteSizePolicy.needsWarning(saved.byteLength)) " Above 50 MB; large-file mode is recommended." else ""
-                _markdownImport.value = MarkdownImportState(bytes = saved.byteLength, message = "Text document imported.$warning")
+                val warning = when {
+                    saved.byteLength > com.example.notes.NoteSizePolicy.SOFT_MAX_BYTES ->
+                        "⚠️ Large Document (${com.example.notes.NoteSizePolicy.formatBytes(saved.byteLength)}): Saved in high-performance streaming mode. Live editing is locked for single notes above 50 MB to prevent app memory crashes. Tap 'Split into notes' to divide into editable parts."
+                    saved.byteLength > com.example.notes.NoteSizePolicy.TIER_B_MAX_BYTES ->
+                        "ℹ️ Large Document (${com.example.notes.NoteSizePolicy.formatBytes(saved.byteLength)}): Saved successfully. High-performance streaming mode is active. Real-time rich formatting is restricted to prevent typing lag."
+                    else -> "Text document imported successfully (${com.example.notes.NoteSizePolicy.formatBytes(saved.byteLength)})."
+                }
+                _markdownImport.value = MarkdownImportState(
+                    bytes = saved.byteLength,
+                    canSplit = saved.byteLength > com.example.notes.NoteSizePolicy.TIER_B_MAX_BYTES,
+                    message = warning
+                )
                 showDetailItem(saved)
                 com.example.widget.WidgetUpdater.update(context)
             } catch (cancel: kotlinx.coroutines.CancellationException) {
                 _markdownImport.value = MarkdownImportState(message = "Import cancelled. The source document was not changed.")
                 throw cancel
             } catch (error: Exception) {
-                _markdownImport.value = MarkdownImportState(canSplit = error is com.example.notes.NoteSizeExceededException,
-                    message = "Import failed. New notes must be at most 55 MB; split larger files. The source document was not changed.")
+                val isOversize = error is com.example.notes.NoteSizeExceededException
+                val currentBytes = _markdownImport.value.bytes
+                val msg = if (isOversize) {
+                    "Document exceeds 55 MB limit (${if (currentBytes > 0) com.example.notes.NoteSizePolicy.formatBytes(currentBytes) else "55+ MB"}). Single notes in Cobalt cannot exceed 55 MB to ensure device stability and prevent out-of-memory errors. Tap 'Split into notes' below to automatically partition this document into manageable notes."
+                } else {
+                    "Import failed. ${error.message ?: "The document could not be read."}. The source document was not changed."
+                }
+                _markdownImport.value = MarkdownImportState(
+                    canSplit = isOversize,
+                    bytes = currentBytes,
+                    message = msg
+                )
             }
         }
     }

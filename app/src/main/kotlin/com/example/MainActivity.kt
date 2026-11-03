@@ -206,7 +206,7 @@ class MainActivity : ComponentActivity() {
 
     private fun startNormalApp() {
         lifecycleScope.launch {
-            com.example.data.repository.SettingsRepository(applicationContext).hideRecents.collect { hidden ->
+            viewModel.settingsRepository.hideRecents.collect { hidden ->
                 if (hidden) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
                 else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
             }

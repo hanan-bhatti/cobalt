@@ -128,6 +128,7 @@ fun HomeScreen(
     val isSaving by viewModel.isSaving.collectAsState()
     val customFolders by viewModel.customFolders.collectAsState()
     val customFolderEntities by viewModel.customFolderEntities.collectAsState()
+    val isFolderRankingEnabled by viewModel.isFolderRankingEnabled.collectAsState()
     val folderColorsMap = remember(customFolderEntities) {
         customFolderEntities.associate { it.name to (it.colorHex ?: "") }
     }
@@ -958,119 +959,31 @@ fun HomeScreen(
         val item = itemToManageFolders!!
         val liveItem = items.find { it.id == item.id } ?: item
 
-        AlertDialog(
-            onDismissRequest = { itemToManageFolders = null },
-            title = {
-                Column {
-                    Text(
-                        text = "Manage Folders",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Assign \"${liveItem.title.ifBlank { "Untitled Item" }}\" to folders",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.secondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+        com.example.ui.components.MoveToFolderDialog(
+            title = "Move / Assign Folders",
+            subtitle = "Assign folders to \"${liveItem.title.ifBlank { "Untitled Item" }}\"",
+            customFolders = customFolders,
+            customFolderEntities = customFolderEntities,
+            allItems = items,
+            currentItem = liveItem,
+            initialSelectedFolders = liveItem.folders.toSet(),
+            isMultiSelect = true,
+            rankingEnabled = isFolderRankingEnabled,
+            onDismiss = { itemToManageFolders = null },
+            onCreateFolder = { name, iconName ->
+                viewModel.createFolder(name = name, iconName = iconName)
             },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-
-                    Text(
-                        text = "Custom Folders",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    if (customFolders.isEmpty()) {
-                        Text(
-                            text = "No custom folders yet. Create one below!",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 200.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(customFolders) { folder ->
-                                val isAssigned = liveItem.folders.contains(folder)
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .clickable {
-                                            viewModel.toggleFolderAssignment(liveItem, folder)
-                                        }
-                                        .padding(vertical = 4.dp, horizontal = 8.dp)
-                                        .testTag("manage_folder_row_$folder"),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_custom_folder),
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Text(
-                                        text = folder,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    Checkbox(
-                                        checked = isAssigned,
-                                        onCheckedChange = {
-                                            viewModel.toggleFolderAssignment(liveItem, folder)
-                                        },
-                                        modifier = Modifier.testTag("checkbox_${folder}")
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-
-                    Text(
-                        text = "Create and Assign Folder",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    InlineNewFolderCreator(
-                        onAddFolder = { name, iconName ->
-                            viewModel.createFolder(name = name, iconName = iconName)
-                            viewModel.toggleFolderAssignment(liveItem, name)
-                        },
-                        onCancel = { itemToManageFolders = null }
-                    )
+            onConfirm = { selectedSet ->
+                val added = selectedSet - liveItem.folders.toSet()
+                val removed = liveItem.folders.toSet() - selectedSet
+                for (folder in added) {
+                    viewModel.toggleFolderAssignment(liveItem, folder)
                 }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { itemToManageFolders = null },
-                    modifier = Modifier.testTag("close_manage_folders_button")
-                ) {
-                    Text("Done", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                for (folder in removed) {
+                    viewModel.toggleFolderAssignment(liveItem, folder)
                 }
-            },
-            shape = RoundedCornerShape(20.dp),
-            containerColor = MaterialTheme.colorScheme.surface
+                itemToManageFolders = null
+            }
         )
     }
 
@@ -1084,6 +997,7 @@ fun HomeScreen(
             allItems = items,
             initialSelectedFolders = emptySet(),
             isMultiSelect = false,
+            rankingEnabled = isFolderRankingEnabled,
             onDismiss = { showBulkTagDialog = false },
             onCreateFolder = { name, iconName ->
                 viewModel.createFolder(name = name, iconName = iconName)

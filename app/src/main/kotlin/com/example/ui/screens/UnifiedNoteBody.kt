@@ -4,22 +4,29 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.example.R
 import com.example.data.model.SavedItem
 import com.example.notes.*
+import com.example.ui.components.NoteActionsBottomSheet
+import com.example.ui.components.NoteOutlineBottomSheet
+import com.example.ui.components.bounceClick
 import com.example.ui.viewmodel.CobaltViewModel
 import kotlinx.coroutines.*
 
 /** The note body is content inside the existing DetailScreen, never a second screen. */
 @Composable
 fun UnifiedNoteBody(item: SavedItem, viewModel: CobaltViewModel, plain: Boolean, jump: Long,
-    modifier: Modifier, header: @Composable () -> Unit) {
+    modifier: Modifier, header: @Composable () -> Unit,
+    searchQuery: String? = null, activeMatchByte: Long? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var busy by remember(item.id) { mutableStateOf(false) }
@@ -27,6 +34,33 @@ fun UnifiedNoteBody(item: SavedItem, viewModel: CobaltViewModel, plain: Boolean,
     Column(modifier) {
         if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        if (item.byteLength >= NoteSizePolicy.SOFT_MAX_BYTES) {
+            Surface(
+                color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.45f),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_custom_info),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        text = "Large document (${NoteSizePolicy.formatBytes(item.byteLength)}). Rendered in streaming mode. Live editing is locked for single notes above 50 MB to prevent app memory crashes.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
+            }
+        }
         val hash = item.contentHash
         if (item.bodyMissing || hash == null) LazyColumn(Modifier.fillMaxSize()) {
             item { header() }
@@ -48,23 +82,31 @@ fun UnifiedNoteBody(item: SavedItem, viewModel: CobaltViewModel, plain: Boolean,
                         catch (_: Exception) { failure = "Could not save this change. The note and recovery draft are retained." }
                         finally { busy = false }
                     }
-                })
+                },
+                searchQuery = searchQuery,
+                activeMatchByte = activeMatchByte)
             else NoteBodyPlainText(remember { LegacyNoteRecovery(context) }, RecoveryNote(item.id, item.title, item.byteLength),
-                Modifier.weight(1f).fillMaxWidth(), jump, header)
+                Modifier.weight(1f).fillMaxWidth(), jump, header,
+                searchQuery = searchQuery,
+                activeMatchByte = activeMatchByte)
         }
     }
 }
 
 @Composable
-fun NoteDetailActions(item: SavedItem, viewModel: CobaltViewModel, plain: Boolean,
-    onPlainChange: (Boolean) -> Unit, onJump: (Long) -> Unit) {
+fun NoteDetailActions(
+    item: SavedItem,
+    viewModel: CobaltViewModel,
+    plain: Boolean,
+    onPlainChange: (Boolean) -> Unit,
+    onJump: (Long) -> Unit,
+    onStartSearch: () -> Unit = {},
+    onDeleteClick: (() -> Unit)? = null
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val persistence = remember { NotePersistence(context) }
     var menu by remember { mutableStateOf(false) }
-    var search by remember { mutableStateOf(false) }
-    var query by remember { mutableStateOf("") }
-    var lastMatch by remember(item.contentHash) { mutableStateOf<Long?>(null) }
     var headings by remember { mutableStateOf<List<NoteTextNavigator.Heading>?>(null) }
     var busy by remember { mutableStateOf(false) }
     var failureMessage by remember { mutableStateOf<String?>(null) }
@@ -100,63 +142,73 @@ fun NoteDetailActions(item: SavedItem, viewModel: CobaltViewModel, plain: Boolea
             finally { busy = false }
         }
     }
-    Box {
-        IconButton(onClick = { menu = true }, enabled = !busy) { Icon(Icons.Default.MoreVert, "More note options") }
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            DropdownMenuItem(text = { Text("Find in note") }, onClick = { menu = false; search = true })
-            DropdownMenuItem(text = { Text("Outline") }, onClick = {
-                menu = false; busy = true
+
+    IconButton(
+        onClick = { menu = true },
+        enabled = !busy,
+        modifier = Modifier.bounceClick().testTag("detail_more_options_button")
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_custom_more_vert),
+            contentDescription = "More note options",
+            modifier = Modifier.size(22.dp)
+        )
+    }
+
+    if (menu) {
+        NoteActionsBottomSheet(
+            item = item,
+            plain = plain,
+            onPlainChange = onPlainChange,
+            canUndo = history.undoChange != null && !busy,
+            canRedo = history.redoChange != null && !busy,
+            onUndo = { restore(true) },
+            onRedo = { restore(false) },
+            onFindInNote = { onStartSearch() },
+            onShowOutline = {
+                busy = true
                 work = scope.launch {
-                    try { headings = withContext(Dispatchers.IO) {
-                        val cancellation = currentCoroutineContext()
-                        persistence.store.open(item.id, item.contentHash ?: error("Body unavailable")).use {
-                            NoteTextNavigator.headings(it) { cancellation.ensureActive() }
+                    try {
+                        headings = withContext(Dispatchers.IO) {
+                            val cancellation = currentCoroutineContext()
+                            persistence.store.open(item.id, item.contentHash ?: error("Body unavailable")).use {
+                                NoteTextNavigator.headings(it) { cancellation.ensureActive() }
+                            }
                         }
-                    } } catch (cancel: CancellationException) { throw cancel }
+                    } catch (cancel: CancellationException) { throw cancel }
                     catch (_: Exception) { failureMessage = "Could not read the outline." }
                     finally { busy = false }
                 }
-            })
-            DropdownMenuItem(text = { Text("Export Markdown") }, onClick = {
-                menu = false
+            },
+            onExportMarkdown = {
                 export.launch(item.title.replace(Regex("[^\\p{L}\\p{N} ._-]"), "_").take(80).ifBlank { "note" } + ".md")
-            })
-            if (item.byteLength < NoteSizePolicy.TIER_B_MAX_BYTES) DropdownMenuItem(text = { Text(if (plain) "Read as Markdown" else "Read as plain text") },
-                onClick = { menu = false; onPlainChange(!plain) })
-            DropdownMenuItem(text = { Text("Undo last saved edit") }, enabled = history.undoChange != null,
-                onClick = { menu = false; restore(true) })
-            DropdownMenuItem(text = { Text("Redo saved edit") }, enabled = history.redoChange != null,
-                onClick = { menu = false; restore(false) })
-        }
+            },
+            onShare = {
+                viewModel.shareItem(item, context)
+            },
+            onDelete = {
+                onDeleteClick?.invoke()
+            },
+            onDismissRequest = { menu = false }
+        )
     }
-    if (search) AlertDialog(onDismissRequest = { if (!busy) search = false }, title = { Text("Find in note") }, text = {
-        Column {
-            OutlinedTextField(query, onValueChange = { if (it.length <= 256) { query = it; lastMatch = null } },
-                singleLine = true, label = { Text("Case-sensitive text") }, enabled = !busy)
-            if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-        }
-    }, confirmButton = { TextButton(enabled = query.isNotEmpty() && !busy, onClick = {
-        busy = true
-        work = scope.launch {
-            try {
-                val found = withContext(Dispatchers.IO) {
-                    val cancellation = currentCoroutineContext()
-                    persistence.store.open(item.id, item.contentHash ?: error("Body unavailable")).use {
-                        NoteTextNavigator.find(it, query, lastMatch?.plus(1) ?: 0) { cancellation.ensureActive() }
-                    }
-                }
-                lastMatch = found
-                if (found != null) { onJump(found); search = false } else failureMessage = "No further match. Next search starts at the beginning."
-            } catch (cancel: CancellationException) { throw cancel }
-            catch (_: Exception) { failureMessage = "Search failed; note retained." }
-            finally { busy = false }
-        }
-    }) { Text("Find next") } }, dismissButton = { TextButton(onClick = { work?.cancel(); busy = false; search = false }) { Text("Close") } })
-    headings?.let { outline -> AlertDialog(onDismissRequest = { headings = null }, title = { Text("Outline") }, text = {
-        if (outline.isEmpty()) Text("No headings found.") else LazyColumn(Modifier.heightIn(max = 320.dp)) {
-            items(outline.size) { i -> TextButton(onClick = { onJump(outline[i].offset); headings = null }) { Text(outline[i].title, maxLines = 2) } }
-        }
-    }, confirmButton = { TextButton(onClick = { headings = null }) { Text("Close") } }) }
-    failureMessage?.let { message -> AlertDialog(onDismissRequest = { failureMessage = null }, text = { Text(message) },
-        confirmButton = { TextButton(onClick = { failureMessage = null }) { Text("OK") } }) }
+
+    headings?.let { outline ->
+        NoteOutlineBottomSheet(
+            outline = outline,
+            onSelectHeading = { offset ->
+                onJump(offset)
+                headings = null
+            },
+            onDismissRequest = { headings = null }
+        )
+    }
+
+    failureMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = { failureMessage = null },
+            text = { Text(message) },
+            confirmButton = { TextButton(onClick = { failureMessage = null }) { Text("OK") } }
+        )
+    }
 }

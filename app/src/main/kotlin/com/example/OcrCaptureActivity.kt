@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.sp
 import android.content.ClipboardManager
 import android.content.ClipData
 import com.example.ui.components.bounceClick
+import com.example.ui.components.folderSuggestionShimmer
 import com.example.ui.components.InlineNewFolderCreator
 import com.example.ui.components.MarkdownText
 import com.example.data.model.SavedItemType
@@ -373,14 +374,16 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                     val customFolders by viewModel.customFolders.collectAsState()
                     val customFolderEntities by viewModel.customFolderEntities.collectAsState()
                     val allArchiveItems by viewModel.allItems.collectAsState()
-                    val rankedFolders = remember(customFolders, customFolderEntities, allArchiveItems, noteTitle, activeItem?.extractedText) {
+                    val isFolderRankingEnabled by viewModel.isFolderRankingEnabled.collectAsState()
+                    val rankedFolders = remember(customFolders, customFolderEntities, allArchiveItems, noteTitle, activeItem?.extractedText, isFolderRankingEnabled) {
                         com.example.util.FolderRankingEngine.rankFolders(
                             folders = customFolders,
                             folderEntities = customFolderEntities,
                             allItems = allArchiveItems,
                             currentItemType = SavedItemType.TEXT,
                             currentItemTitle = noteTitle,
-                            currentItemContent = activeItem?.extractedText
+                            currentItemContent = activeItem?.extractedText,
+                            rankingEnabled = isFolderRankingEnabled
                         )
                     }
                     var selectedFolders by remember { mutableStateOf(emptySet<String>()) }
@@ -910,22 +913,26 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                     shape = RoundedCornerShape(50),
                                                     color = if (isFolderSelected) {
                                                         resolvedColor.copy(alpha = 0.16f)
-                                                    } else if (ranked.isSuggested) {
-                                                        resolvedColor.copy(alpha = 0.08f)
                                                     } else {
                                                         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                                                     },
                                                     border = BorderStroke(
-                                                        width = if (isFolderSelected) 1.5.dp else if (ranked.isSuggested) 1.5.dp else 1.dp,
+                                                        width = if (isFolderSelected) 1.5.dp else 1.dp,
                                                         color = if (isFolderSelected) {
                                                             resolvedColor
                                                         } else if (ranked.isSuggested) {
-                                                            resolvedColor.copy(alpha = 0.75f)
+                                                            resolvedColor.copy(alpha = 0.65f)
                                                         } else {
                                                             MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                                                         }
                                                     ),
-                                                    modifier = Modifier.padding(vertical = 4.dp)
+                                                    modifier = Modifier
+                                                        .padding(vertical = 4.dp)
+                                                        .clip(RoundedCornerShape(50))
+                                                        .folderSuggestionShimmer(
+                                                            color = resolvedColor,
+                                                            enabled = ranked.isSuggested && !isFolderSelected
+                                                        )
                                                 ) {
                                                     Row(
                                                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -935,13 +942,13 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                                         Icon(
                                                             painter = painterResource(id = folderIconRes),
                                                             contentDescription = null,
-                                                            tint = if (isFolderSelected || ranked.isSuggested) resolvedColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            tint = if (isFolderSelected) resolvedColor else if (ranked.isSuggested) resolvedColor.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant,
                                                             modifier = Modifier.size(14.dp)
                                                         )
                                                         Text(
                                                             text = folder,
                                                             style = MaterialTheme.typography.bodySmall,
-                                                            fontWeight = if (isFolderSelected || ranked.isSuggested) FontWeight.Bold else FontWeight.Normal,
+                                                            fontWeight = if (isFolderSelected) FontWeight.Bold else FontWeight.Medium,
                                                             color = if (isFolderSelected) resolvedColor else MaterialTheme.colorScheme.onSurfaceVariant
                                                         )
                                                         if (isFolderSelected) {

@@ -30,6 +30,17 @@ class SettingsRepository(private val context: Context) {
     private val secrets = com.example.util.SecretPreferences(prefs, "cobalt_settings")
     private val _hideRecents = MutableStateFlow(prefs.getBoolean("hide_recents", false))
     val hideRecents = _hideRecents.asStateFlow()
+
+    private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "hide_recents") {
+            _hideRecents.value = prefs.getBoolean("hide_recents", false)
+        }
+    }
+
+    init {
+        prefs.registerOnSharedPreferenceChangeListener(prefListener)
+    }
+
     fun setHideRecents(enabled: Boolean) {
         prefs.edit().putBoolean("hide_recents", enabled).apply()
         _hideRecents.value = enabled

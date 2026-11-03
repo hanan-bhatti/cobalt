@@ -30,6 +30,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -126,13 +127,17 @@ fun ArchiveItemCard(
         Card(
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(
-                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                containerColor = if (isSelected) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = if (isDark) 0.18f else 0.10f)
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                }
             ),
             border = BorderStroke(
-                width = if (isSelected) 2.dp else 0.dp,
-                color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                width = if (isSelected) 1.5.dp else 1.dp,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
             ),
-            elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 8.dp else 0.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 4.dp else 0.dp),
             modifier = Modifier
                 .fillMaxWidth()
                 .maybeSharedBounds(
@@ -192,16 +197,43 @@ fun ArchiveItemCard(
 
                     Spacer(modifier = Modifier.width(6.dp))
 
-                    val formattedDate = remember(item.timestamp) {
-                        SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(item.timestamp))
+                    if (isSelectionMode) {
+                        Box(
+                            modifier = Modifier
+                                .size(22.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.primary
+                                    else Color.Transparent
+                                )
+                                .border(
+                                    width = if (isSelected) 0.dp else 1.5.dp,
+                                    color = if (isSelected) Color.Transparent else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                    shape = CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isSelected) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_check),
+                                    contentDescription = "Selected",
+                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
+                        }
+                    } else {
+                        val formattedDate = remember(item.timestamp) {
+                            SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(item.timestamp))
+                        }
+                        Text(
+                            text = formattedDate,
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1
+                        )
                     }
-                    Text(
-                        text = formattedDate,
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1
-                    )
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -526,14 +558,6 @@ fun ArchiveItemCard(
                 leadingIcon = { Icon(painterResource(id = R.drawable.ic_custom_delete), null, tint = Color.Red, modifier = Modifier.size(20.dp)) }
             )
         }
-
-        if (isSelectionMode) {
-            Checkbox(
-                checked = isSelected,
-                onCheckedChange = { onClick() },
-                modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
-            )
-        }
     }
 }
 
@@ -583,14 +607,19 @@ fun ArchiveItemRow(
         val isVisible = item.id in TransitionCoordinator.homeVisibleItemIds
         val enableSharedBounds = isDetail || (isHomeHub && isVisible)
 
+        val isDark = isSystemInDarkTheme()
         Card(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.82f)
+                containerColor = if (isSelected) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = if (isDark) 0.18f else 0.10f)
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.82f)
+                }
             ),
             border = BorderStroke(
-                width = if (isSelected) 2.dp else 0.dp,
-                color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                width = if (isSelected) 1.5.dp else 1.dp,
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
             modifier = Modifier
@@ -764,6 +793,34 @@ fun ArchiveItemRow(
                         )
                     }
                 }
+
+                if (isSelectionMode) {
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else Color.Transparent
+                            )
+                            .border(
+                                width = if (isSelected) 0.dp else 1.5.dp,
+                                color = if (isSelected) Color.Transparent else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isSelected) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_check),
+                                contentDescription = "Selected",
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -774,7 +831,6 @@ fun ArchiveItemRow(
         ) {
             if (item.type == SavedItemType.LINK) {
                 val rowContext = LocalContext.current
-                val isDark = isSystemInDarkTheme()
                 DropdownMenuItem(
                     text = { Text("Open Link") },
                     onClick = {
@@ -812,14 +868,6 @@ fun ArchiveItemRow(
                 text = { Text("Delete") },
                 onClick = { showContextMenu = false; onDelete() },
                 leadingIcon = { Icon(painterResource(id = R.drawable.ic_custom_delete), null, tint = Color.Red, modifier = Modifier.size(20.dp)) }
-            )
-        }
-
-        if (isSelectionMode) {
-            Checkbox(
-                checked = isSelected,
-                onCheckedChange = { onClick() },
-                modifier = Modifier.align(Alignment.CenterEnd).padding(12.dp)
             )
         }
     }

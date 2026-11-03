@@ -1,0 +1,235 @@
+package com.example.notes
+
+import java.io.*
+import java.security.DigestInputStream
+import java.security.DigestOutputStream
+import java.security.MessageDigest
+
+/** IO-confined live text and Undo/Redo. Only descriptors and a sparse UTF-8 index occupy RAM. */
+class DiskTextModel private constructor(
+    private val original: IndexedUtf8Units,
+    private val appendFile: File,
+    private val stateFile: File,
+    private val fileOperations: NoteFileOperations,
+    val base: NoteBodyRef,
+    private val checkAlive: () -> Unit,
+    private val release: () -> Unit
+) : Closeable {
+    data class Position(val anchor: Int, val caret: Int)
+    data class Status(val revision: Long, val characters: Int, val bytes: Long, val selection: Position,
+        val canUndo: Boolean, val canRedo: Boolean)
+    private data class Change(val before: Position, val after: Position, val beforeBytes: Long, val afterBytes: Long)
+    private val added = AppendSource(appendFile)
+    private var table = PieceTable(original)
+    private val undo = ArrayDeque<Change>()
+    private val redo = ArrayDeque<Change>()
+    private var revision = 0L
+    private var byteLength = base.bytes
+    private var selection = Position(0, 0)
+    private var closed = false
+    private var failed = false
+    val status: Status get() = Status(revision, (table.size / 2).toInt(), byteLength, selection, table.canUndo, table.canRedo)
+    private fun ready() { check(!closed && !failed) { "Editor is closed or needs recovery" }; checkAlive() }
+    fun select(anchor: Int, caret: Int) {
+        ready(); require(anchor in 0..status.characters && caret in 0..status.characters)
+        selection = Position(anchor, caret)
+    }
+    /** Reads a bounded viewport; callers never request or construct the complete document String. */
+    fun text(start: Int, count: Int): String {
+        ready(); require(start in 0..status.characters && count in 0..MAX_VIEW_CHARACTERS)
+        val length = minOf(count, status.characters - start)
+        return table.openStream(start.toLong() * 2, (start + length).toLong() * 2).use { input ->
+            val data = DataInputStream(BufferedInputStream(input, NoteSizePolicy.IO_CHUNK_BYTES))
+            String(CharArray(length) { data.readChar() })
+        }
+    }
+    fun openUtf8(start: Int = 0, end: Int = status.characters, checkCancelled: () -> Unit = {}): InputStream {
+        ready(); require(start in 0..end && end <= status.characters)
+        return DiskJournalRecovery.ReaderUtf8Stream(DiskJournalRecovery.Utf16UnitReader(
+            table.openStream(start.toLong() * 2, end.toLong() * 2)), checkCancelled)
+    }
+    private fun utf8Size(start: Int, end: Int, checkCancelled: () -> Unit): Long {
+        var bytes = 0L
+        openUtf8(start, end, checkCancelled).use { input ->
+            val buffer = ByteArray(NoteSizePolicy.IO_CHUNK_BYTES)
+            while (true) { val count = input.read(buffer); if (count < 0) break; bytes += count }
+        }
+        return bytes
+    }
+    data class Replacement(val start: Int, val end: Int, val text: String)
+    /** Native IME replacement and format wrappers publish as one durable Undo transaction. */
+    fun replaceBatch(edits: List<Replacement>, before: Position = selection, after: Position? = null,
+        checkCancelled: () -> Unit = {}): Status {
+        ready(); require(edits.isNotEmpty() && edits.size <= 10_000)
+        return editGroup(before, after, checkCancelled) {
+            for (edit in edits) StringReader(edit.text).use { replaceRange(edit.start, edit.end, it, checkCancelled) }
+        }
+    }
+    fun replace(start: Int, end: Int, reader: Reader, after: Position? = null, checkCancelled: () -> Unit = {}): Status {
+        ready()
+        return editGroup(selection, after, checkCancelled) { replaceRange(start, end, reader, checkCancelled) }
+    }
+    fun replace(start: Int, end: Int, text: String, after: Position? = null) =
+        StringReader(text).use { replace(start, end, it, after) }
+    private fun editGroup(before: Position, after: Position?, checkCancelled: () -> Unit, action: () -> Unit): Status {
+        val previousBytes = byteLength
+        val previousSelection = selection
+        try {
+            table.editGroup {
+                action(); checkCancelled()
+                require(NoteSizePolicy.acceptsEdit(byteLength, base.bytes)) { "Note exceeds 55 MB. Split the insertion; original and Undo are retained." }
+                if (after != null) selection = after
+                require(selection.anchor in 0..status.characters && selection.caret in 0..status.characters)
+            }
+        } catch (error: Throwable) {
+            byteLength = previousBytes; selection = previousSelection
+            throw error
+        }
+        undo.addLast(Change(before, selection, previousBytes, byteLength))
+        if (undo.size > PieceTable.MAX_UNDO_OPERATIONS) undo.removeFirst()
+        redo.clear(); revision++
+        try { publish() } catch (error: Throwable) { failed = true; throw error }
+        return status
+    }
+    private fun replaceRange(start: Int, end: Int, reader: Reader, checkCancelled: () -> Unit) {
+        require(start in 0..end && end <= status.characters)
+        // Include neighbouring code units so split-surrogate IME updates count exact UTF-8 bytes.
+        val contextStart = (start - 1).coerceAtLeast(0)
+        val contextEnd = minOf(status.characters, end + 1)
+        val oldContextBytes = utf8Size(contextStart, contextEnd, checkCancelled)
+        val offset = appendFile.length()
+        var units = 0L
+        RandomAccessFile(appendFile, "rw").use { output ->
+            output.seek(offset)
+            val chars = CharArray(4096); val bytes = ByteArray(chars.size * 2)
+            while (true) {
+                checkCancelled(); val count = reader.read(chars)
+                if (count < 0) break
+                if (count == 0) continue
+                units += count
+                require(status.characters.toLong() - (end - start) + units <= Int.MAX_VALUE) { "Text-position limit exceeded" }
+                repeat(count) { bytes[it * 2] = (chars[it].code ushr 8).toByte(); bytes[it * 2 + 1] = chars[it].code.toByte() }
+                output.write(bytes, 0, count * 2)
+            }
+            output.fd.sync()
+        }
+        table.replace(start.toLong() * 2, end.toLong() * 2, NoteByteSlice(added, offset, units * 2))
+        byteLength += utf8Size(contextStart, contextEnd - (end - start) + units.toInt(), checkCancelled) - oldContextBytes
+        selection = Position(start + units.toInt(), start + units.toInt())
+    }
+    fun undo(): Boolean {
+        ready(); val change = undo.lastOrNull() ?: return false
+        try {
+            check(table.undo()); undo.removeLast(); redo.addLast(change)
+            selection = change.before; byteLength = change.beforeBytes; revision++; publish(); return true
+        } catch (error: Throwable) { failed = true; throw error }
+    }
+    fun redo(): Boolean {
+        ready(); val change = redo.lastOrNull() ?: return false
+        try {
+            check(table.redo()); redo.removeLast(); undo.addLast(change)
+            selection = change.after; byteLength = change.afterBytes; revision++; publish(); return true
+        } catch (error: Throwable) { failed = true; throw error }
+    }
+    fun flush() { ready(); publish() }
+    private fun publish() {
+        checkAlive()
+        val temp = File(stateFile.parentFile, stateFile.name + ".tmp")
+        try {
+            FileOutputStream(temp).use { raw ->
+                val hash = MessageDigest.getInstance("SHA-256")
+                val digest = DigestOutputStream(raw, hash)
+                val out = DataOutputStream(BufferedOutputStream(digest, NoteSizePolicy.IO_CHUNK_BYTES))
+                out.writeInt(MAGIC); out.writeInt(VERSION); out.writeUTF(base.hash); out.writeLong(base.bytes)
+                out.writeLong(revision); out.writeLong(byteLength)
+                fun position(value: Position) { out.writeInt(value.anchor); out.writeInt(value.caret) }
+                position(selection)
+                table.writeState(out) { source -> when (source) { original -> 0; added -> 1; else -> error("Unknown piece source") } }
+                for (stack in listOf(undo, redo)) {
+                    out.writeInt(stack.size)
+                    stack.forEach { position(it.before); position(it.after); out.writeLong(it.beforeBytes); out.writeLong(it.afterBytes) }
+                }
+                out.flush(); digest.on(false); raw.write(hash.digest()); raw.fd.sync()
+            }
+            NoteBodyLeases.guarded {
+                checkAlive(); fileOperations.renameAtomic(temp, stateFile); fileOperations.syncDirectory(stateFile.parentFile!!)
+            }
+        } finally { temp.delete() }
+    }
+    fun recover() {
+        check(!closed); checkAlive(); undo.clear(); redo.clear(); restore(); failed = false
+    }
+    private fun restore() {
+        val metadata = inspect(stateFile)
+        check(metadata.hash == base.hash && metadata.bytes == base.bytes) { "Editor state belongs to another original" }
+        DataInputStream(BufferedInputStream(FileInputStream(stateFile), NoteSizePolicy.IO_CHUNK_BYTES)).use { input ->
+            check(input.readInt() == MAGIC && input.readInt() == VERSION)
+            input.readUTF(); input.readLong()
+            revision = input.readLong(); byteLength = input.readLong()
+            require(revision >= 0 && byteLength >= 0)
+            fun position(): Position = Position(input.readInt(), input.readInt())
+            selection = position()
+            table = PieceTable.readState(input) { when (it) { 0 -> original; 1 -> added; else -> error("Invalid source") } }
+            require(table.size % 2 == 0L && table.size / 2 <= Int.MAX_VALUE)
+            require(selection.anchor in 0..status.characters && selection.caret in 0..status.characters)
+            for (stack in listOf(undo, redo)) {
+                val count = input.readInt(); require(count in 0..PieceTable.MAX_UNDO_OPERATIONS)
+                repeat(count) { stack.addLast(Change(position(), position(), input.readLong(), input.readLong())) }
+            }
+            require(table.canUndo == undo.isNotEmpty() && table.canRedo == redo.isNotEmpty())
+            check(input.available() == 32) { "Unexpected editor-state payload" }
+        }
+    }
+    override fun close() { if (!closed) { closed = true; release() } }
+    private class AppendSource(private val file: File) : NoteByteSource {
+        override val size get() = file.length()
+        override fun read(offset: Long, count: Int) = openRange(offset, minOf(count.toLong(), size - offset)).use { it.readBytes() }
+        override fun openRange(offset: Long, length: Long): InputStream {
+            require(offset in 0..size && length in 0..(size - offset))
+            val input = RandomAccessFile(file, "r"); input.seek(offset)
+            return object : InputStream() {
+                var remaining = length
+                override fun read(): Int { if (remaining == 0L) return -1; val value = input.read(); if (value < 0) throw EOFException(); remaining--; return value }
+                override fun read(bytes: ByteArray, off: Int, len: Int): Int {
+                    if (off < 0 || len < 0 || off > bytes.size - len) throw IndexOutOfBoundsException()
+                    if (len == 0) return 0
+                    if (remaining == 0L) return -1
+                    val count = input.read(bytes, off, minOf(len.toLong(), remaining, NoteSizePolicy.IO_CHUNK_BYTES.toLong()).toInt())
+                    if (count < 0) throw EOFException(); remaining -= count; return count
+                }
+                override fun close() = input.close()
+            }
+        }
+    }
+    companion object {
+        const val MAX_VIEW_CHARACTERS = 32_768
+        private const val MAGIC = 0x434C4956
+        private const val VERSION = 1
+        fun inspect(state: File): NoteBodyRef {
+            require(state.length() in 100..64L * 1024 * 1024) { "Invalid live editor state" }
+            val digest = MessageDigest.getInstance("SHA-256")
+            FileInputStream(state).use { raw ->
+                val buffer = ByteArray(NoteSizePolicy.IO_CHUNK_BYTES)
+                var remaining = state.length() - 32
+                while (remaining > 0) { val count = raw.read(buffer, 0, minOf(buffer.size.toLong(), remaining).toInt()); if (count < 0) throw EOFException(); digest.update(buffer, 0, count); remaining -= count }
+                val expected = ByteArray(32); DataInputStream(raw).readFully(expected)
+                check(MessageDigest.isEqual(digest.digest(), expected)) { "Live editor checksum failed; files retained" }
+            }
+            return DataInputStream(FileInputStream(state)).use {
+                check(it.readInt() == MAGIC && it.readInt() == VERSION) { "Unknown live editor format" }
+                val hash = it.readUTF(); val bytes = it.readLong()
+                require(hash.matches(Regex("[0-9a-f]{64}")) && bytes >= 0)
+                NoteBodyRef(hash, bytes, "")
+            }
+        }
+        fun open(source: NoteByteSource, base: NoteBodyRef, append: File, state: File,
+            operations: NoteFileOperations, checkAlive: () -> Unit = {}, release: () -> Unit = {}, checkCancelled: () -> Unit = {}): DiskTextModel {
+            val original = IndexedUtf8Units.build(source, checkCancelled)
+            check(append.isFile || append.createNewFile())
+            return DiskTextModel(original, append, state, operations, base, checkAlive, release).also {
+                try { if (state.exists()) it.restore() else it.publish() }
+                catch (error: Throwable) { it.close(); throw error }
+            }
+        }
+    }
+}
