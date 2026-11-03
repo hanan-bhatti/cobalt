@@ -20,9 +20,14 @@ package com.example.data.remote.trakt
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.example.data.local.AppDatabase
+import com.example.data.local.SavedItemEntity
+import com.example.data.model.SavedItem
+import com.example.data.model.SavedItemType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -43,6 +48,7 @@ class TraktDisconnectTest {
 
     private lateinit var context: Context
     private lateinit var fakeApiService: FakeTraktApiService
+    private lateinit var fakeCredentialStore: FakeTraktCredentialStore
     private lateinit var authManager: TraktAuthManager
 
     @Before
@@ -57,7 +63,12 @@ class TraktDisconnectTest {
         } catch (_: Exception) {}
 
         fakeApiService = FakeTraktApiService()
-        authManager = TraktAuthManager(context, apiServiceProvider = { fakeApiService })
+        fakeCredentialStore = FakeTraktCredentialStore()
+        authManager = TraktAuthManager(
+            context = context,
+            apiServiceProvider = { fakeApiService },
+            credentialStore = fakeCredentialStore
+        )
         TraktAuthManager.setInstanceForTesting(authManager)
         TraktSyncEngine.apiServiceProvider = { fakeApiService }
 
@@ -211,7 +222,7 @@ class TraktDisconnectTest {
         assertFalse(authManager.hasValidToken())
 
         // Verify the stale item was NOT inserted into Room database
-        val db = com.example.data.local.AppDatabase.getDatabase(context)
+        val db = AppDatabase.getDatabase(context)
         val staleItem = db.savedItemDao().getItemByTraktId(99999L)
         assertNull(staleItem)
     }
@@ -263,6 +274,86 @@ class TraktDisconnectTest {
         assertTrue(authManager.hasValidToken())
         assertTrue(authManager.isConnected.value)
     }
+
+    @Test
+    fun testDisconnect_clearsCredentialsEvenIfCallerCoroutineIsCancelled() = runBlocking {
+        logInWithMockTokens("token_caller_cancel")
+        fakeApiService.revokeDelayMs = 200L // Network call in progress
+
+        val disconnectJob = launch(Dispatchers.IO) {
+            authManager.disconnect()
+        }
+
+        delay(30L) // Wait for disconnect to start
+        disconnectJob.cancel() // Cancel the caller coroutine
+        disconnectJob.join()
+
+        // Local credentials must still be cleared because disconnect executes in NonCancellable context
+        assertFalse(authManager.hasValidToken())
+        assertNull(authManager.getAccessToken())
+        assertFalse(authManager.isConnected.value)
+        assertFalse(authManager.isDisconnectingActive())
+    }
+
+    @Test
+    fun testOutboundMutation_oldSessionCannotPushToNewlyConnectedSession() = runBlocking {
+        logInWithMockTokens("account_a_token")
+        val db = AppDatabase.getDatabase(context)
+        val dao = db.savedItemDao()
+        val testItem = SavedItem(
+            id = "test_item_race",
+            title = "Race Test Movie",
+            type = SavedItemType.MEDIA,
+            mediaType = "movie",
+            traktId = 12345L,
+            content = "https://trakt.tv/movies/12345"
+        )
+        dao.insertItem(
+            SavedItemEntity(
+                id = "test_item_race",
+                type = SavedItemType.MEDIA.name,
+                title = "Race Test Movie",
+                content = "https://trakt.tv/movies/12345",
+                timestamp = System.currentTimeMillis(),
+                foldersJson = "[]",
+                extractedText = null,
+                thumbnailPath = null,
+                traktId = 12345L,
+                mediaType = "movie"
+            )
+        )
+
+        // Launch outbound mutation in background coroutine
+        val mutationJob = async(Dispatchers.IO) {
+            TraktSyncEngine.markMovieWatched(context, testItem, isWatched = true)
+        }
+
+        // Immediately disconnect Account A and connect Account B
+        authManager.disconnect()
+        authManager.saveTokens(
+            TraktTokenResponse(
+                access_token = "account_b_token",
+                refresh_token = "account_b_refresh",
+                expires_in = 7200L
+            )
+        )
+
+        val result = mutationJob.await()
+        assertTrue(result.isSuccess)
+
+        // Outbound mutation was for Account A's epoch; it must NOT have sent addToHistory to Trakt using Account B
+        assertFalse(fakeApiService.addToHistoryCalled)
+    }
+}
+
+class FakeTraktCredentialStore : TraktCredentialStore {
+    private val map = mutableMapOf<String, String>()
+    override fun get(name: String): String? = map[name]
+    override fun putAll(values: Map<String, String?>) {
+        values.forEach { (k, v) ->
+            if (v == null) map.remove(k) else map[k] = v
+        }
+    }
 }
 
 class FakeTraktApiService : TraktApiService {
@@ -283,6 +374,8 @@ class FakeTraktApiService : TraktApiService {
     var watchedMoviesToReturn = listOf<TraktWatchedMovieItem>()
     var watchedShowsToReturn = listOf<TraktWatchedShowItem>()
     var getWatchedShowsDelayMs = 0L
+
+    var addToHistoryCalled = false
 
     override suspend fun revokeToken(
         authorization: String?,
@@ -344,7 +437,10 @@ class FakeTraktApiService : TraktApiService {
     override suspend fun getWatchlistShows(page: Int?, limit: Int?): List<TraktWatchlistItem> = emptyList()
     override suspend fun getMovieRatings(page: Int?, limit: Int?): List<TraktRatingItem> = emptyList()
     override suspend fun getShowRatings(page: Int?, limit: Int?): List<TraktRatingItem> = emptyList()
-    override suspend fun addToHistory(payload: TraktSyncPayload): TraktSyncResponse = TraktSyncResponse()
+    override suspend fun addToHistory(payload: TraktSyncPayload): TraktSyncResponse {
+        addToHistoryCalled = true
+        return TraktSyncResponse()
+    }
     override suspend fun removeFromHistory(payload: TraktSyncPayload): TraktSyncResponse = TraktSyncResponse()
     override suspend fun addRatings(payload: TraktSyncPayload): TraktSyncResponse = TraktSyncResponse()
     override suspend fun removeRatings(payload: TraktSyncPayload): TraktSyncResponse = TraktSyncResponse()

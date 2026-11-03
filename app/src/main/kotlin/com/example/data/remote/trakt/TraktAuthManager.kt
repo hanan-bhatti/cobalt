@@ -19,10 +19,13 @@
 package com.example.data.remote.trakt
 
 import android.content.Context
+import android.content.SharedPreferences
 import com.example.util.SafeLogger as Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -49,26 +52,66 @@ sealed class TraktDeviceAuthState {
 }
 
 /**
+ * Pluggable credential store interface to decouple credential persistence from AndroidKeyStore
+ * for unit testing without embedding test fallback keys in production.
+ */
+interface TraktCredentialStore {
+    fun get(name: String): String?
+    fun putAll(values: Map<String, String?>)
+}
+
+/**
+ * Production implementation strictly backed by [com.example.util.SecretPreferences]
+ * and platform Keystore.
+ */
+class DefaultTraktCredentialStore(
+    prefs: SharedPreferences,
+    namespace: String
+) : TraktCredentialStore {
+    private val secrets = com.example.util.SecretPreferences(prefs, namespace)
+    override fun get(name: String): String? = secrets.get(name)
+    override fun putAll(values: Map<String, String?>) = secrets.putAll(values)
+}
+
+/**
  * Manages Trakt OAuth2 Device Code authentication, tokens, custom client credentials,
  * and active session state.
  */
 class TraktAuthManager(
     private val context: Context,
-    private val apiServiceProvider: () -> TraktApiService = { TraktClient.apiService }
+    private val apiServiceProvider: () -> TraktApiService = { TraktClient.apiService },
+    credentialStore: TraktCredentialStore? = null
 ) {
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    private val secrets = com.example.util.SecretPreferences(prefs, PREFS_NAME)
+    private val secrets: TraktCredentialStore = credentialStore ?: DefaultTraktCredentialStore(prefs, PREFS_NAME)
     private val authScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var pollingJob: Job? = null
 
     private val sessionEpoch = AtomicLong(System.currentTimeMillis())
     @Volatile private var isDisconnecting = false
     private val disconnectMutex = Mutex()
+    private val sessionMutex = Mutex()
 
     fun currentSessionEpoch(): Long = sessionEpoch.get()
     fun isDisconnectingActive(): Boolean = isDisconnecting
     fun isSessionInvalid(expectedEpoch: Long): Boolean = isDisconnecting || sessionEpoch.get() != expectedEpoch
+
+    /**
+     * Executes the given persistence or mutation block atomically with respect to session lifecycle.
+     * Prevents disconnect from occurring between the epoch validity check and database write.
+     * Returns true if block was executed, or false if session is invalid/disconnecting.
+     */
+    suspend fun <T> runIfSessionValid(expectedEpoch: Long, block: suspend () -> T): Boolean {
+        return sessionMutex.withLock {
+            if (isSessionInvalid(expectedEpoch)) {
+                false
+            } else {
+                block()
+                true
+            }
+        }
+    }
 
     init {
         TraktClient.tokenProvider = { getAccessToken() }
@@ -85,8 +128,15 @@ class TraktAuthManager(
     private val _deviceAuthState = MutableStateFlow<TraktDeviceAuthState>(TraktDeviceAuthState.Idle)
     val deviceAuthState: StateFlow<TraktDeviceAuthState> = _deviceAuthState.asStateFlow()
 
-    fun getAccessToken(): String? = secrets.get(KEY_ACCESS_TOKEN)
-    fun getRefreshToken(): String? = secrets.get(KEY_REFRESH_TOKEN)
+    fun getAccessToken(): String? {
+        if (isDisconnecting) return null
+        return secrets.get(KEY_ACCESS_TOKEN)
+    }
+
+    fun getRefreshToken(): String? {
+        if (isDisconnecting) return null
+        return secrets.get(KEY_REFRESH_TOKEN)
+    }
 
     fun hasValidToken(): Boolean {
         val token = secrets.get(KEY_ACCESS_TOKEN)
@@ -267,6 +317,7 @@ class TraktAuthManager(
                                                 _deviceAuthState.value = TraktDeviceAuthState.Success(user)
                                             }
                                         } catch (e: Exception) {
+                                            if (e is CancellationException) throw e
                                             Log.w(TAG, "Non-fatal: failed to fetch profile: ${e.message}")
                                         }
 
@@ -275,6 +326,7 @@ class TraktAuthManager(
                                             Log.d(TAG, "Enqueuing initial Trakt sync...")
                                             com.example.util.TraktSyncWorker.enqueueOneTimeSync(context)
                                         } catch (e: Exception) {
+                                            if (e is CancellationException) throw e
                                             Log.w(TAG, "Failed to enqueue initial sync: ${e.message}")
                                         }
                                     }
@@ -336,7 +388,7 @@ class TraktAuthManager(
                                 Log.w(TAG, "Device token poll #$pollCount: Unexpected HTTP status ${response.code()}")
                             }
                         }
-                    } catch (e: kotlinx.coroutines.CancellationException) {
+                    } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
                         Log.w(TAG, "Device token poll iteration error: ${e.message}", e)
@@ -346,7 +398,7 @@ class TraktAuthManager(
                 if (!isSessionInvalid(currentEpoch)) {
                     _deviceAuthState.value = TraktDeviceAuthState.Error("Verification timed out. Please try again.")
                 }
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 Log.d(TAG, "Device auth job cancelled normally.")
                 throw e
             } catch (e: Exception) {
@@ -398,6 +450,7 @@ class TraktAuthManager(
             _currentUser.value = user
             Result.success(user)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Failed to fetch user profile: ${e.message}", e)
             Result.failure(e)
         }
@@ -436,6 +489,7 @@ class TraktAuthManager(
             saveTokens(response)
             return@withContext response.access_token
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Log.e(TAG, "Failed to refresh Trakt access token: ${e.message}", e)
             return@withContext if (!isSessionInvalid(startEpoch)) currentAccessToken else null
         }
@@ -443,12 +497,14 @@ class TraktAuthManager(
 
     /**
      * Disconnects and wipes all Trakt tokens, session data, and cached profiles.
+     * Executes in NonCancellable context so local credential clearing completes even if
+     * the caller coroutine is cancelled.
      * Attempts server-side token revocation with bounded timeout.
      * Preserves custom client ID and custom base URL if configured.
      */
-    suspend fun disconnect(): TraktDisconnectResult = withContext(Dispatchers.IO) {
+    suspend fun disconnect(): TraktDisconnectResult = withContext(Dispatchers.IO + NonCancellable) {
         disconnectMutex.withLock {
-            val tokenToRevoke = getAccessToken()
+            val tokenToRevoke = secrets.get(KEY_ACCESS_TOKEN)
             val clientId = getClientId()
             val customClientId = getCustomClientId()
             val customBaseUrl = getCustomBaseUrl()
@@ -463,27 +519,32 @@ class TraktAuthManager(
 
             try {
                 isDisconnecting = true
-                sessionEpoch.incrementAndGet()
 
-                // 1. Cancel active in-flight authentication polling
-                cancelDeviceAuth()
+                sessionMutex.withLock {
+                    sessionEpoch.incrementAndGet()
 
-                // 2. Stop and cancel all WorkManager background sync jobs
-                try {
-                    com.example.util.TraktSyncWorker.cancelAll(context)
-                } catch (e: Exception) {
-                    Log.w(TAG, "WorkManager cancellation notice: ${e.message}")
+                    // 1. Cancel active in-flight authentication polling
+                    cancelDeviceAuth()
+
+                    // 2. Stop and cancel all WorkManager background sync jobs
+                    try {
+                        com.example.util.TraktSyncWorker.cancelAll(context)
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.w(TAG, "WorkManager cancellation notice: ${e.message}")
+                    }
+
+                    // 3. Invalidate sync engine
+                    TraktSyncEngine.onSessionInvalidated()
+
+                    // 4. Wipe local credentials, session data, user profiles, and sync checkpoints
+                    prefs.edit().clear().apply()
+                    secrets.putAll(mapOf(KEY_ACCESS_TOKEN to null, KEY_REFRESH_TOKEN to null))
+                    if (customClientId != null) setCustomClientId(customClientId)
+                    if (customBaseUrl != null) setCustomBaseUrl(customBaseUrl)
+                    _isConnected.value = false
+                    _currentUser.value = null
                 }
-
-                // 3. Invalidate sync engine
-                TraktSyncEngine.onSessionInvalidated()
-
-                // 4. Wipe local credentials, session data, user profiles, and sync checkpoints
-                prefs.edit().clear().apply()
-                if (customClientId != null) setCustomClientId(customClientId)
-                if (customBaseUrl != null) setCustomBaseUrl(customBaseUrl)
-                _isConnected.value = false
-                _currentUser.value = null
 
                 // 5. Attempt remote server-side revocation bounded by timeout
                 var serverRevoked = false
@@ -500,11 +561,13 @@ class TraktAuthManager(
                                 )
                                 response.isSuccessful
                             } catch (e: Exception) {
+                                if (e is CancellationException) throw e
                                 Log.w(TAG, "Remote revocation network call failed: ${e.message}")
                                 false
                             }
                         } ?: false
                     } catch (e: Exception) {
+                        if (e is CancellationException) throw e
                         Log.w(TAG, "Remote revocation error: ${e.message}")
                         false
                     }

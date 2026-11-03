@@ -81,7 +81,7 @@ object TraktSyncEngine {
     var apiServiceProvider: (() -> TraktApiService)? = null
 
     fun getApiService(): TraktApiService {
-        return apiServiceProvider?.invoke() ?: getApiService()
+        return apiServiceProvider?.invoke() ?: TraktClient.apiService
     }
 
     fun onSessionInvalidated() {
@@ -380,14 +380,16 @@ object TraktSyncEngine {
                             showsCount++
                         }
 
-                        // Atomic page persistence directly to SQLite
-                        if (authManager.isSessionInvalid(sessionEpoch)) {
-                            Log.i(TAG, "Session invalidated during shows sync; aborting.")
-                            _syncStatus.value = TraktSyncStatus.Idle
-                            return@withContext Result.failure(IllegalStateException("Session disconnected or invalidated"))
-                        }
+                        // Atomic page persistence directly to SQLite guarded by session lock
                         if (pageEntities.isNotEmpty()) {
-                            dao.insertItems(pageEntities)
+                            val persisted = authManager.runIfSessionValid(sessionEpoch) {
+                                dao.insertItems(pageEntities)
+                            }
+                            if (!persisted) {
+                                Log.i(TAG, "Session invalidated during shows sync; aborting.")
+                                _syncStatus.value = TraktSyncStatus.Idle
+                                return@withContext Result.failure(IllegalStateException("Session disconnected or invalidated"))
+                            }
                         }
 
                         if (watchedShows.size < PAGE_SIZE) {
@@ -534,13 +536,15 @@ object TraktSyncEngine {
                             moviesCount++
                         }
 
-                        if (authManager.isSessionInvalid(sessionEpoch)) {
-                            Log.i(TAG, "Session invalidated during movies sync; aborting.")
-                            _syncStatus.value = TraktSyncStatus.Idle
-                            return@withContext Result.failure(IllegalStateException("Session disconnected or invalidated"))
-                        }
                         if (pageEntities.isNotEmpty()) {
-                            dao.insertItems(pageEntities)
+                            val persisted = authManager.runIfSessionValid(sessionEpoch) {
+                                dao.insertItems(pageEntities)
+                            }
+                            if (!persisted) {
+                                Log.i(TAG, "Session invalidated during movies sync; aborting.")
+                                _syncStatus.value = TraktSyncStatus.Idle
+                                return@withContext Result.failure(IllegalStateException("Session disconnected or invalidated"))
+                            }
                         }
 
                         if (watchedMovies.size < PAGE_SIZE) {
@@ -581,13 +585,24 @@ object TraktSyncEngine {
                             return@withContext Result.failure(IllegalStateException("Session disconnected or invalidated"))
                         }
                         val showRatings = getApiService().getShowRatings(page = showRatingPage, limit = PAGE_SIZE)
+                        val entitiesToUpdate = mutableListOf<SavedItemEntity>()
                         for (r in showRatings) {
                             if (authManager.isSessionInvalid(sessionEpoch)) break
                             val traktId = r.show?.ids?.trakt ?: continue
                             val entity = dao.getItemByTraktId(traktId)
                             if (entity != null && entity.userRating != r.rating) {
-                                dao.insertItem(entity.copy(userRating = r.rating))
+                                entitiesToUpdate.add(entity.copy(userRating = r.rating))
                                 ratingsCount++
+                            }
+                        }
+                        if (entitiesToUpdate.isNotEmpty()) {
+                            val persisted = authManager.runIfSessionValid(sessionEpoch) {
+                                entitiesToUpdate.forEach { dao.insertItem(it) }
+                            }
+                            if (!persisted) {
+                                Log.i(TAG, "Session invalidated during show ratings sync; aborting.")
+                                _syncStatus.value = TraktSyncStatus.Idle
+                                return@withContext Result.failure(IllegalStateException("Session disconnected or invalidated"))
                             }
                         }
                         if (showRatings.size < PAGE_SIZE) hasMoreShowRatings = false
@@ -603,13 +618,24 @@ object TraktSyncEngine {
                             return@withContext Result.failure(IllegalStateException("Session disconnected or invalidated"))
                         }
                         val movieRatings = getApiService().getMovieRatings(page = movieRatingPage, limit = PAGE_SIZE)
+                        val entitiesToUpdate = mutableListOf<SavedItemEntity>()
                         for (r in movieRatings) {
                             if (authManager.isSessionInvalid(sessionEpoch)) break
                             val traktId = r.movie?.ids?.trakt ?: continue
                             val entity = dao.getItemByTraktId(traktId)
                             if (entity != null && entity.userRating != r.rating) {
-                                dao.insertItem(entity.copy(userRating = r.rating))
+                                entitiesToUpdate.add(entity.copy(userRating = r.rating))
                                 ratingsCount++
+                            }
+                        }
+                        if (entitiesToUpdate.isNotEmpty()) {
+                            val persisted = authManager.runIfSessionValid(sessionEpoch) {
+                                entitiesToUpdate.forEach { dao.insertItem(it) }
+                            }
+                            if (!persisted) {
+                                Log.i(TAG, "Session invalidated during movie ratings sync; aborting.")
+                                _syncStatus.value = TraktSyncStatus.Idle
+                                return@withContext Result.failure(IllegalStateException("Session disconnected or invalidated"))
                             }
                         }
                         if (movieRatings.size < PAGE_SIZE) hasMoreMovieRatings = false
@@ -674,12 +700,16 @@ object TraktSyncEngine {
                                 watchlistCount++
                             }
                         }
-                        if (authManager.isSessionInvalid(sessionEpoch)) {
-                            Log.i(TAG, "Session invalidated before inserting watchlist shows; aborting.")
-                            _syncStatus.value = TraktSyncStatus.Idle
-                            return@withContext Result.failure(IllegalStateException("Session disconnected or invalidated"))
+                        if (pageEntities.isNotEmpty()) {
+                            val persisted = authManager.runIfSessionValid(sessionEpoch) {
+                                dao.insertItems(pageEntities)
+                            }
+                            if (!persisted) {
+                                Log.i(TAG, "Session invalidated before inserting watchlist shows; aborting.")
+                                _syncStatus.value = TraktSyncStatus.Idle
+                                return@withContext Result.failure(IllegalStateException("Session disconnected or invalidated"))
+                            }
                         }
-                        if (pageEntities.isNotEmpty()) dao.insertItems(pageEntities)
                         if (watchlistShows.size < PAGE_SIZE) hasMoreShowWatchlist = false
                         else showWatchlistPage++
                     }
@@ -722,12 +752,16 @@ object TraktSyncEngine {
                                 watchlistCount++
                             }
                         }
-                        if (authManager.isSessionInvalid(sessionEpoch)) {
-                            Log.i(TAG, "Session invalidated before inserting watchlist movies; aborting.")
-                            _syncStatus.value = TraktSyncStatus.Idle
-                            return@withContext Result.failure(IllegalStateException("Session disconnected or invalidated"))
+                        if (pageEntities.isNotEmpty()) {
+                            val persisted = authManager.runIfSessionValid(sessionEpoch) {
+                                dao.insertItems(pageEntities)
+                            }
+                            if (!persisted) {
+                                Log.i(TAG, "Session invalidated before inserting watchlist movies; aborting.")
+                                _syncStatus.value = TraktSyncStatus.Idle
+                                return@withContext Result.failure(IllegalStateException("Session disconnected or invalidated"))
+                            }
                         }
-                        if (pageEntities.isNotEmpty()) dao.insertItems(pageEntities)
                         if (watchlistMovies.size < PAGE_SIZE) hasMoreMovieWatchlist = false
                         else movieWatchlistPage++
                     }
@@ -737,12 +771,14 @@ object TraktSyncEngine {
             }
 
             // Sync successfully finished - clear checkpoints
-            if (authManager.isSessionInvalid(sessionEpoch)) {
+            val finalized = authManager.runIfSessionValid(sessionEpoch) {
+                authManager.clearSyncCheckpoint()
+            }
+            if (!finalized) {
                 Log.i(TAG, "Session invalidated before finalizing sync; aborting.")
                 _syncStatus.value = TraktSyncStatus.Idle
                 return@withContext Result.failure(IllegalStateException("Session disconnected or invalidated"))
             }
-            authManager.clearSyncCheckpoint()
 
             val totalItems = showsCount + moviesCount + ratingsCount + watchlistCount
             val summary = TraktSyncSummary(
@@ -1005,6 +1041,7 @@ object TraktSyncEngine {
         isWatched: Boolean
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val authManager = TraktAuthManager.getInstance(context)
+        val mutationEpoch = authManager.currentSessionEpoch()
         val db = AppDatabase.getDatabase(context)
         val dao = db.savedItemDao()
 
@@ -1048,9 +1085,16 @@ object TraktSyncEngine {
         }
 
         // 2. Outbound sync to Trakt with rate limiting
-        if (!authManager.hasValidToken() || authManager.isDisconnectingActive()) return@withContext Result.success(Unit)
+        if (authManager.isSessionInvalid(mutationEpoch) || !authManager.hasValidToken()) {
+            return@withContext Result.success(Unit)
+        }
 
         throttleWrite()
+
+        if (authManager.isSessionInvalid(mutationEpoch) || !authManager.hasValidToken()) {
+            return@withContext Result.success(Unit)
+        }
+
         val nowIso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("UTC")
         }.format(Date())
@@ -1086,6 +1130,7 @@ object TraktSyncEngine {
             }
             Result.success(Unit)
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Log.e(TAG, "Failed outbound episode watch sync: ${e.message}", e)
             Result.failure(e)
         }
@@ -1096,6 +1141,7 @@ object TraktSyncEngine {
      */
     suspend fun markMovieWatched(context: Context, item: SavedItem, isWatched: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
         val authManager = TraktAuthManager.getInstance(context)
+        val mutationEpoch = authManager.currentSessionEpoch()
         val db = AppDatabase.getDatabase(context)
         val dao = db.savedItemDao()
 
@@ -1110,9 +1156,16 @@ object TraktSyncEngine {
             )
         }
 
-        if (!authManager.hasValidToken() || authManager.isDisconnectingActive()) return@withContext Result.success(Unit)
+        if (authManager.isSessionInvalid(mutationEpoch) || !authManager.hasValidToken()) {
+            return@withContext Result.success(Unit)
+        }
 
         throttleWrite()
+
+        if (authManager.isSessionInvalid(mutationEpoch) || !authManager.hasValidToken()) {
+            return@withContext Result.success(Unit)
+        }
+
         val nowIso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("UTC")
         }.format(Date())
@@ -1135,6 +1188,7 @@ object TraktSyncEngine {
             }
             Result.success(Unit)
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Log.e(TAG, "Failed outbound movie watch sync: ${e.message}", e)
             Result.failure(e)
         }
@@ -1145,6 +1199,7 @@ object TraktSyncEngine {
      */
     suspend fun rateItem(context: Context, item: SavedItem, rating: Int): Result<Unit> = withContext(Dispatchers.IO) {
         val authManager = TraktAuthManager.getInstance(context)
+        val mutationEpoch = authManager.currentSessionEpoch()
         val db = AppDatabase.getDatabase(context)
         val dao = db.savedItemDao()
 
@@ -1153,9 +1208,16 @@ object TraktSyncEngine {
             dao.insertItem(entity.copy(userRating = if (rating > 0) rating else null, updatedAt = System.currentTimeMillis()))
         }
 
-        if (!authManager.hasValidToken() || authManager.isDisconnectingActive()) return@withContext Result.success(Unit)
+        if (authManager.isSessionInvalid(mutationEpoch) || !authManager.hasValidToken()) {
+            return@withContext Result.success(Unit)
+        }
 
         throttleWrite()
+
+        if (authManager.isSessionInvalid(mutationEpoch) || !authManager.hasValidToken()) {
+            return@withContext Result.success(Unit)
+        }
+
         val traktId = item.traktId ?: 0L
         val isMovie = item.mediaType?.lowercase() == "movie"
 
@@ -1187,6 +1249,7 @@ object TraktSyncEngine {
             }
             Result.success(Unit)
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Log.e(TAG, "Failed outbound rating sync: ${e.message}", e)
             Result.failure(e)
         }
@@ -1197,6 +1260,7 @@ object TraktSyncEngine {
      */
     suspend fun toggleWatchlist(context: Context, item: SavedItem, inWatchlist: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
         val authManager = TraktAuthManager.getInstance(context)
+        val mutationEpoch = authManager.currentSessionEpoch()
         val db = AppDatabase.getDatabase(context)
         val dao = db.savedItemDao()
 
@@ -1206,9 +1270,16 @@ object TraktSyncEngine {
             dao.insertItem(entity.copy(watchStatus = currentStatus, updatedAt = System.currentTimeMillis()))
         }
 
-        if (!authManager.hasValidToken() || authManager.isDisconnectingActive()) return@withContext Result.success(Unit)
+        if (authManager.isSessionInvalid(mutationEpoch) || !authManager.hasValidToken()) {
+            return@withContext Result.success(Unit)
+        }
 
         throttleWrite()
+
+        if (authManager.isSessionInvalid(mutationEpoch) || !authManager.hasValidToken()) {
+            return@withContext Result.success(Unit)
+        }
+
         val traktId = item.traktId ?: 0L
         val isMovie = item.mediaType?.lowercase() == "movie"
 
@@ -1230,6 +1301,7 @@ object TraktSyncEngine {
             }
             Result.success(Unit)
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Log.e(TAG, "Failed outbound watchlist sync: ${e.message}", e)
             Result.failure(e)
         }
