@@ -85,37 +85,8 @@ import com.example.utils.isRtlText
  * Toggles a checklist task item between unchecked `- [ ]` and checked `- [x]`.
  * Accurately tracks line index outside fenced code blocks to match AST traversal.
  */
-fun toggleTaskListItem(markdown: String, targetTaskIndex: Int): String {
-    val lines = markdown.lines().toMutableList()
-    var inCodeBlock = false
-    var currentTaskIndex = 0
-
-    val taskRegex = Regex("""^(\s*[-*+]|\s*\d+\.)\s+\[([ xX])\](.*)$""")
-
-    for (i in lines.indices) {
-        val line = lines[i]
-        val trimmed = line.trimStart()
-        if (trimmed.startsWith("```")) {
-            inCodeBlock = !inCodeBlock
-            continue
-        }
-        if (!inCodeBlock) {
-            val match = taskRegex.matchEntire(line)
-            if (match != null) {
-                if (currentTaskIndex == targetTaskIndex) {
-                    val prefix = match.groupValues[1]
-                    val status = match.groupValues[2]
-                    val rest = match.groupValues[3]
-                    val newStatus = if (status == " ") "x" else " "
-                    lines[i] = "$prefix [$newStatus]$rest"
-                    return lines.joinToString("\n")
-                }
-                currentTaskIndex++
-            }
-        }
-    }
-    return markdown
-}
+fun toggleTaskListItem(markdown: String, targetTaskIndex: Int): String =
+    com.example.notes.MarkdownTaskEdits.toggle(markdown, targetTaskIndex)
 
 /**
  * A beautiful, fast, and robust Markdown renderer built on top of CommonMark.
