@@ -46,23 +46,42 @@ internal fun ContinuousNoteEditor(viewModel: CobaltViewModel, modifier: Modifier
     var pasteProgress by remember(state.id) { mutableStateOf<Float?>(null) }
     var previewReady by remember(state.id) { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
+    var exportingId by remember(state.id) { mutableStateOf<String?>(null) }
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/markdown")) { uri ->
         val item = activeItem
         val ref = state.generation
-        if (uri != null && item != null && ref != null && item.id == state.id) scope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    val cancellation = kotlin.coroutines.coroutineContext
-                    context.contentResolver.openOutputStream(uri, "wt")?.use { output ->
-                        NoteExport.write(item.copy(contentHash = ref.hash, byteLength = ref.bytes, bodyLocation = "FILE",
-                            content = "", bodyLoaded = false), PrivateMarkdownStore(context), output) { cancellation.ensureActive() }
-                    } ?: error("Destination unavailable")
+        val requested = exportingId
+        exportingId = null
+        if (uri != null && item != null && ref != null && item.id == state.id && item.id == requested) {
+            // Retain the COW snapshot before the editor can close while IO is dispatched.
+            val exportSnapshot = try { state.document?.snapshot() }
+            catch (_: OutOfMemoryError) { message = "Not enough memory to prepare export. Retry after closing other apps."; null }
+            catch (_: Exception) { message = "The editor changed before export. Retry from this note."; null }
+            val requiresSnapshot = state.document != null
+            if (!requiresSnapshot || exportSnapshot != null) {
+                val exportJob = scope.launch {
+                    try {
+                        withContext(Dispatchers.IO) {
+                            val cancellation = kotlin.coroutines.coroutineContext
+                            context.contentResolver.openOutputStream(uri, "wt")?.use { output ->
+                                if (exportSnapshot != null) {
+                                    ContinuousNoteDocument.stream(exportSnapshot).use { input ->
+                                        NoteExport.writeDraft(item, input, output) { cancellation.ensureActive() }
+                                    }
+                                } else NoteExport.write(item.copy(contentHash = ref.hash, byteLength = ref.bytes,
+                                    bodyLocation = "FILE", content = "", bodyLoaded = false),
+                                    PrivateMarkdownStore(context), output) { cancellation.ensureActive() }
+                            } ?: error("Destination unavailable")
+                        }
+                        message = "Markdown exported"
+                    } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+                    catch (_: Exception) { message = "Export did not finish. The original is retained; the destination may be incomplete." }
                 }
-                message = "Markdown exported"
-            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
-            catch (_: Exception) { message = "Export did not finish. The complete note is retained." }
-        }
+                exportJob.invokeOnCompletion { exportSnapshot?.release() }
+            }
+        } else if (uri != null) message = "The selected note changed. Start export again from that note."
     }
+    fun beginExport(name: String) { exportingId = state.id; export.launch(name) }
 
     LaunchedEffect(state.id, state.generation?.hash, state.busy) {
         if (state.document == null && !state.busy && state.error == null) viewModel.enableContinuousEditor()
@@ -78,7 +97,12 @@ internal fun ContinuousNoteEditor(viewModel: CobaltViewModel, modifier: Modifier
 
     Column(modifier.testTag("capture_continuous_editor")) {
         header()
-        state.error?.let { Text(it, color = colors.error, style = MaterialTheme.typography.bodySmall) }
+        state.error?.let {
+            Text(it, color = colors.error, style = MaterialTheme.typography.bodySmall)
+            if (document != null) TextButton(onClick = {
+                beginExport("${activeItem?.title.orEmpty().take(80).ifBlank { "Note" }}-unsaved.md")
+            }) { Text("Export unsaved edits") }
+        }
         message?.let { Text(it, color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall) }
         pasteProgress?.let { progress ->
             Row(Modifier.fillMaxWidth()) {
@@ -101,7 +125,7 @@ internal fun ContinuousNoteEditor(viewModel: CobaltViewModel, modifier: Modifier
                     Column {
                         Row {
                             TextButton(onClick = { plain = true }) { Text("Read plain text") }
-                            TextButton(onClick = { export.launch("${activeItem?.title.orEmpty().take(80).ifBlank { "Note" }}.md") }) { Text("Export") }
+                            TextButton(onClick = { beginExport("${activeItem?.title.orEmpty().take(80).ifBlank { "Note" }}.md") }) { Text("Export") }
                         }
                         TextButton(onClick = viewModel::enableContinuousEditor) { Text("Retry editing") }
                     }

@@ -46,6 +46,7 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
         val writer = ContinuousEditWriter(scope, log) {
             scope.launch(Dispatchers.Main.immediate) {
                 if (mutable.value.document === document) {
+                    document.recoveryReady = false
                     document.freeze(true)
                     document.pendingEdit?.cancel()
                     mutable.value = mutable.value.copy(error =
@@ -54,6 +55,7 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
             }
         }
         editWriter = writer
+        document.recoveryReady = true
         document.awaitRecovery = { writer.flush() }
         document.onEdit = { start, removed, inserted -> writer.record(document.content, start, removed, inserted) }
         return next
@@ -205,7 +207,7 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
     private suspend fun checkpointContinuous(current: State): Pair<NoteBodyRef, Long> = checkpointMutex.withLock {
         val document = current.document ?: error("No continuous document")
         val wasFrozen = document.frozen
-        withContext(Dispatchers.Main.immediate) { document.freeze(true) }
+        withContext(Dispatchers.Main.immediate) { document.recoveryReady = false; document.freeze(true) }
         var completed = false
         try {
             editWriter?.close(); editWriter = null
@@ -267,7 +269,7 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
         failedClosings.remove(item.id)?.let { retained ->
             mutable.value = retained.copy(busy = false,
                 error = "Recovery could not be written when closing. This unsaved editor is retained in memory; retry Save before leaving the app.")
-            retained.document?.freeze(true)
+            retained.document?.let { it.recoveryReady = false; it.freeze(true) }
             return
         }
         mutable.value = State(id = item.id, originalHash = item.contentHash, busy = true)
@@ -307,6 +309,7 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
     /** A large paste is staged privately; it does not save over the original note. */
     suspend fun stage(item: SavedItem, input: InputStream, caretStart: Int = 0, caretEnd: Int = caretStart) = withContext(Dispatchers.IO) {
         closing?.join(); journal?.cancelAndJoin()
+        check(!failedClosings.containsKey(item.id)) { "Unsaved edits are retained. Reopen this note and retry Save or export them before staging another body." }
         failedPaste = null
         val cancellation = currentCoroutineContext()
         val ref = NoteWriteLock.mutex.withLock { store.writeAtomic(item.id, input) { cancellation.ensureActive() } }

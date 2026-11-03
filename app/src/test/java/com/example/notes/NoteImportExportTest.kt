@@ -53,4 +53,21 @@ class NoteImportExportTest {
             assertEquals(body, prepared.body.bufferedReader().use { it.readText() })
         }
     }
+    @Test fun unsavedEditorExportNeedsNoBodyReferenceAndPreservesExactUtf8() {
+        val text = "# Unsaved\r\n😀漢字\u0000\n".repeat(3000)
+        val bytes = text.toByteArray(Charsets.UTF_8)
+        val input = object : java.io.FilterInputStream(ByteArrayInputStream(bytes)) {
+            override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+                assertTrue("Export must use bounded reads", length <= NoteSizePolicy.IO_CHUNK_BYTES)
+                return super.read(buffer, offset, length)
+            }
+        }
+        val note = SavedItem(type = SavedItemType.TEXT, title = "Unsaved draft", content = "", contentHash = null)
+        val exported = ByteArrayOutputStream()
+        input.use { NoteExport.writeDraft(note, it, exported) }
+        val restored = NoteImport.prepare(exported.toByteArray().inputStream(), "Fallback")
+        assertEquals(note.title, restored.note.title)
+        assertArrayEquals(bytes, restored.body.use { it.readBytes() })
+    }
+
 }

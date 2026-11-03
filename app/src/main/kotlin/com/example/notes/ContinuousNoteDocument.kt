@@ -31,10 +31,12 @@ class ContinuousNoteDocument(val content: Content, initialBytes: Long? = null) {
     private var released = false
     internal fun attachView() { check(!released); viewOwners++ }
     internal fun detachView() { check(viewOwners > 0); viewOwners--; releaseIfUnused() }
-    internal fun closeSession() { sessionClosed = true; releaseIfUnused() }
+    internal fun closeSession() { sessionClosed = true; freeze(true); releaseIfUnused() }
     private fun releaseIfUnused() {
         if (sessionClosed && viewOwners == 0 && !released) { released = true; content.release() }
     }
+    var recoveryReady: Boolean = true
+        internal set
     var frozen: Boolean = false
         private set
 
@@ -43,7 +45,7 @@ class ContinuousNoteDocument(val content: Content, initialBytes: Long? = null) {
     /** Called on Main, after a native content modification, never for selection-only events. */
     fun changed() { revision++ }
     fun recordEdit(start: Int, removed: Int, inserted: CharSequence) { onEdit?.invoke(start, removed, inserted) }
-    fun freeze(value: Boolean) { frozen = value; onFreeze?.invoke(value) }
+    fun freeze(value: Boolean) { frozen = value || !recoveryReady; onFreeze?.invoke(frozen) }
 
     /** IO thread only. Caller must close/release the snapshot after streaming it. */
     fun snapshot(): Content = content.copyTextShallow()
