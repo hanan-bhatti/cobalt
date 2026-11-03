@@ -57,6 +57,12 @@ class NotePersistence(
     private val appContext = context.applicationContext
     private val dao = database.savedItemDao()
 
+    private fun compactPrevious(id: String, previous: String?, current: String) {
+        NoteHistoryCompactor.enqueue(store, id, previous, current) {
+            dao.getNoteBodyMetadata(id)?.contentHash == current
+        }
+    }
+
     /** Commit an already staged editor generation without copying/fsyncing the same body again. */
     internal suspend fun commitPrepared(item: SavedItem, ref: NoteBodyRef): SavedItem = withContext(Dispatchers.IO) {
         require(isNote(item))
@@ -74,6 +80,7 @@ class NotePersistence(
                 index(item.id, ref.hash)
             }
             runCatching { store.committed(item.id, ref.hash) }
+            compactPrevious(item.id, previous?.contentHash, ref.hash)
             saved
         }
     }
@@ -109,6 +116,7 @@ class NotePersistence(
             index(item.id, ref.hash)
         }
         runCatching { store.committed(item.id, ref.hash) }
+        compactPrevious(item.id, previous?.contentHash, ref.hash)
         // Retain generations for undo and interrupted-edit recovery; reconciliation never guesses which to delete.
         return saved
     }
@@ -136,12 +144,14 @@ class NotePersistence(
             val metadata = dao.getItemById(id) ?: throw IOException("Note was deleted; recovery file retained")
             check(metadata.contentHash == expectedHash) { "Note changed; reopen before undo" }
             check(store.verify(id, target.hash, target.bytes)) { "Undo generation unavailable; saved note retained" }
+            store.materialize(id, target.hash)
             NoteGenerationHistory.protectReplacement(expectedHash)
             database.withTransaction {
                 check(dao.commitFileBody(id, target.hash, target.bytes, target.preview, metadata.updatedAt,
                     maxOf(System.currentTimeMillis(), metadata.updatedAt + 1)) == 1)
                 index(id, target.hash)
             }
+            runCatching { store.committed(id, target.hash) }
             dao.getItemById(id)!!.toDomainModel()
         }
     }
@@ -243,6 +253,7 @@ class NotePersistence(
                 index(item.id, ref.hash)
             }
             runCatching { store.committed(item.id, ref.hash) }
+            compactPrevious(item.id, old?.contentHash, ref.hash)
 
             saved
         }
@@ -316,6 +327,7 @@ class NotePersistence(
                     index(id, ref.hash)
                 }
                 runCatching { store.committed(id, ref.hash) }
+                compactPrevious(id, hash, ref.hash)
                 // Previous verified generation remains available for undo.
                 dao.getItemById(id)!!.toDomainModel()
             }

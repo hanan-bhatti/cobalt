@@ -34,7 +34,9 @@ class NoteStorageManager(context: Context,
             eligible.mapNotNull { entry ->
                 val id = metadata.getValue(entry.directoryKey).id
                 val note = summaries[id] ?: database.savedItemDao().getItemById(id)?.toDomainModel()?.also { summaries[id] = it }
-                note?.takeUnless { it.isDeleted }?.let { OlderCopy(it, entry.hash!!, entry.bytes, entry.modified) }
+                note?.takeUnless { it.isDeleted }?.let {
+                    OlderCopy(it, entry.hash!!, store.size(id, entry.hash) ?: return@mapNotNull null, entry.modified)
+                }
             }
         }
     }
@@ -100,6 +102,7 @@ class NoteStorageManager(context: Context,
         files.filter { it.name.endsWith(".edits") || it.name.endsWith(".journal") || it.name.endsWith(".tmp") }
             .forEach { protectedDirectories.add(it.directoryKey) }
         val pinned = NoteGenerationHistory.protectedHashes()
+        val anchors = store.historyAnchors()
         val keep = retention()
         val candidates = ArrayList<NoteStorageFile>()
         var current = 0L; var older = 0L; var recovery = 0L
@@ -118,7 +121,7 @@ class NoteStorageManager(context: Context,
             if (store.size(note.id, note.contentHash!!) != note.byteLength) continue
             if (verifyCurrent && !store.verify(note.id, note.contentHash, note.byteLength)) continue
             candidates += previous.sortedWith(compareByDescending<NoteStorageFile> { it.modified }.thenBy { it.name })
-                .drop(keep).filter { it.hash !in pinned }
+                .drop(keep).filter { it.hash !in pinned && (key to it.hash) !in anchors }
             candidates += entries.filter { it.isRetiredJournal }
         }
         fun size(root: File): Long {
