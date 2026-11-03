@@ -397,6 +397,13 @@ fun ProfileMainContent(
                         leadingIconRes = R.drawable.ic_custom_terms,
                         onClick = { onNavigateToLegal("terms") }
                     )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
+                    ClickableRow(
+                        title = "Open Source Licenses",
+                        subtitle = "Third-party libraries & bundled OFL fonts",
+                        leadingIconRes = R.drawable.ic_custom_code,
+                        onClick = { onNavigateToLegal("licenses") }
+                    )
                 }
             }
 

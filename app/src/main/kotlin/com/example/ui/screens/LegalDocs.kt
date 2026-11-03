@@ -162,4 +162,63 @@ object LegalDocs {
 
         Built with Jetpack Compose.
     """.trimIndent()
+
+    val openSourceLicenses = """
+        **Open Source Licenses & Third-Party Assets**
+
+        Cobalt is free and open-source software licensed under AGPL-3.0-or-later. It incorporates third-party open-source components and font software under their respective permissive and copyleft licenses.
+
+        ---
+
+        ### Bundled Local Fonts (SIL Open Font License 1.1)
+
+        The following font software is bundled locally inside Cobalt. All font files are licensed under the SIL Open Font License, Version 1.1 (OFL-1.1).
+
+        **1. Inter**
+        - Copyright 2020 The Inter Project Authors (https://github.com/rsms/inter)
+        - License: SIL Open Font License 1.1
+
+        **2. Literata**
+        - Copyright 2017 The Literata Project Authors (https://github.com/googlefonts/literata)
+        - License: SIL Open Font License 1.1
+
+        **3. Source Serif 4**
+        - Copyright 2014 The Source Serif 4 Project Authors (https://github.com/adobe-fonts/source-serif)
+        - License: SIL Open Font License 1.1
+
+        **4. Atkinson Hyperlegible**
+        - Copyright 2020 Braille Institute of America, Inc.
+        - License: SIL Open Font License 1.1
+
+        **5. Lexend**
+        - Copyright 2018 The Lexend Project Authors (https://github.com/googlefonts/lexend), with Reserved Font Name "RevReading Lexend"
+        - License: SIL Open Font License 1.1
+
+        **6. JetBrains Mono**
+        - Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
+        - License: SIL Open Font License 1.1
+
+        ---
+
+        ### SIL OPEN FONT LICENSE (Version 1.1 - 26 February 2007)
+
+        **PREAMBLE**
+        The goals of the Open Font License (OFL) are to stimulate worldwide development of collaborative font projects, to support the font creation efforts of academic and linguistic communities, and to provide a free and open framework in which fonts may be shared and improved in partnership with others.
+
+        **PERMISSION & CONDITIONS**
+        Permission is hereby granted, free of charge, to any person obtaining a copy of the Font Software, to use, study, copy, merge, embed, modify, redistribute, and sell modified and unmodified copies of the Font Software, subject to the conditions stated in the full license text.
+
+        ---
+
+        ### Third-Party Libraries
+
+        - **Sora Editor**: LGPL-2.1 (https://github.com/Rosemoe/sora-editor)
+        - **AndroidX & Jetpack Compose**: Apache License 2.0
+        - **Kotlin & Coroutines**: Apache License 2.0
+        - **CommonMark**: BSD-2-Clause
+        - **Coil**: Apache License 2.0
+        - **OkHttp**: Apache License 2.0
+        - **Retrofit & Moshi**: Apache License 2.0
+        - **Jsoup**: MIT License
+    """.trimIndent()
 }

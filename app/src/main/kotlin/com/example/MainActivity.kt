@@ -672,6 +672,17 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
                                     }
+                                    composable("licenses") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.LegalScreen(
+                                                title = "Open Source Licenses",
+                                                markdownContent = com.example.ui.screens.LegalDocs.openSourceLicenses,
+                                                onBack = { navController.popBackStack() },
+                                                iconRes = com.example.R.drawable.ic_custom_code,
+                                                subtitle = "THIRD-PARTY LICENSES & FONTS"
+                                            )
+                                        }
+                                    }
                                     composable("faq") {
                                         ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
                                             com.example.ui.screens.FaqScreen(
