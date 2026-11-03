@@ -202,9 +202,8 @@ fun RichTextEditor(
                     placeholder = placeholder,
                     minLines = minLines,
                     maxLines = maxLines,
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                    textStyle = com.example.ui.theme.LocalCobaltTypography.current.body.copy(
                         textDirection = TextDirection.Content,
-                        lineHeight = 24.sp,
                         color = MaterialTheme.colorScheme.onSurface
                     ),
                     visualTransformation = MarkdownVisualTransformation(),

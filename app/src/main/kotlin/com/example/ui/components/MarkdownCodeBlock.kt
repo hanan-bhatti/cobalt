@@ -21,6 +21,7 @@ internal val LocalCodeContinuation = staticCompositionLocalOf { false to false }
 internal fun MarkdownCodeBlock(code: AnnotatedString) {
     val (before, after) = LocalCodeContinuation.current
     val colors = MaterialTheme.colorScheme
+    val typo = com.example.ui.theme.LocalCobaltTypography.current
     Box(Modifier.fillMaxWidth().padding(top = if (before) 0.dp else 4.dp, bottom = if (after) 0.dp else 4.dp)
         .background(colors.surfaceVariant.copy(alpha = 0.4f), RoundedCornerShape(
             topStart = if (before) 0.dp else 8.dp, topEnd = if (before) 0.dp else 8.dp,
@@ -28,8 +29,7 @@ internal fun MarkdownCodeBlock(code: AnnotatedString) {
         .padding(start = 10.dp, end = 10.dp, top = if (before) 0.dp else 10.dp, bottom = if (after) 0.dp else 10.dp)) {
         Text(code,
             modifier = Modifier.testTag("markdown_code"), color = colors.onSurfaceVariant,
-            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace,
-                fontSize = 13.sp, lineHeight = 19.sp, textDirection = TextDirection.Ltr))
+            style = typo.codeBlock.copy(textDirection = TextDirection.Ltr))
     }
 }
 

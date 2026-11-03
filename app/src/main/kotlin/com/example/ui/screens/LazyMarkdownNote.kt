@@ -160,11 +160,16 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
     val context = LocalContext.current
     val store = remember { PrivateMarkdownStore(context) }
     val fontScale = LocalDensity.current.fontScale
+    val typo = com.example.ui.theme.LocalCobaltTypography.current
+    val typographyKey = remember(typo.prefs) {
+        "${typo.prefs.fontSize}_${typo.prefs.lineHeight}_${typo.prefs.fontWeight}_${typo.prefs.textFont.key}"
+    }
     BoxWithConstraints(modifier) {
-        val lineLimit = (maxHeight.value / (24 * fontScale)).toInt().coerceIn(1, 16)
-        val columns = (maxWidth.value / (16 * fontScale)).toInt().coerceAtLeast(1)
+        val lineBaseDp = (typo.body.fontSize.value * typo.lineHeightMultiplier)
+        val lineLimit = (maxHeight.value / (lineBaseDp * fontScale)).toInt().coerceIn(1, 16)
+        val columns = (maxWidth.value / (typo.body.fontSize.value * fontScale)).toInt().coerceAtLeast(1)
         val byteLimit = (columns * lineLimit * 2).coerceIn(16, 1024)
-        val session = remember(id, hash, bytes, byteLimit, lineLimit) { MarkdownReadSession(store, id, hash, byteLimit, lineLimit) }
+        val session = remember(id, hash, bytes, byteLimit, lineLimit, typographyKey) { MarkdownReadSession(store, id, hash, byteLimit, lineLimit) }
         var failure by remember(session) { mutableStateOf(false) }
         var jumping by remember(session) { mutableStateOf(false) }
         val state = rememberLazyListState()
@@ -250,7 +255,7 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
                         // do not show scrolling shimmer/skeleton rows or render raw Markdown.
                         val wraps = ((block.end - block.start + columns - 1) / columns).toInt()
                         val lines = maxOf(block.lines, wraps).coerceIn(1, lineLimit * 2)
-                        Spacer(Modifier.height((lines * 24 * fontScale).dp))
+                        Spacer(Modifier.height((lines * lineBaseDp * fontScale).dp))
                     }
                     else if (loaded.document != null) MarkdownText(
                         markdown = loaded.text,
@@ -266,7 +271,7 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
                         val primary = MaterialTheme.colorScheme.primary
                         Text(
                             text = AnnotatedString(loaded.text).withSearchHighlight(highlight, primary),
-                            lineHeight = 24.sp
+                            style = typo.body
                         )
                     }
                 }

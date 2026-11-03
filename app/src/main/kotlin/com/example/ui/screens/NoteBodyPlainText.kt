@@ -30,6 +30,8 @@ internal fun NoteBodyPlainText(reader: LegacyNoteRecovery, note: RecoveryNote, m
     contentPadding: PaddingValues = PaddingValues(0.dp), body: NoteBodyMetadata? = null,
     searchQuery: String? = null, activeMatchByte: Long? = null) {
     val fontScale = LocalDensity.current.fontScale
+    val typo = com.example.ui.theme.LocalCobaltTypography.current
+    val lineBaseDp = (typo.body.fontSize.value * typo.lineHeightMultiplier)
     var unavailable by remember(reader, note.id, note.byteLength, body?.contentHash) { mutableStateOf(false) }
     val metadata by produceState<NoteBodyMetadata?>(null, reader, note.id, note.byteLength, body?.contentHash) {
         try {
@@ -41,7 +43,7 @@ internal fun NoteBodyPlainText(reader: LegacyNoteRecovery, note: RecoveryNote, m
     }
     BoxWithConstraints(modifier) {
         // A block remains roughly one viewport high even for text consisting only of newlines.
-        val chunkBytes = (maxHeight.value / (24f * fontScale)).toInt().coerceIn(1, 128)
+        val chunkBytes = (maxHeight.value / (lineBaseDp * fontScale)).toInt().coerceIn(1, 128)
         val length = metadata?.byteLength ?: 0
         val count = if (length == 0L) 0 else (length - 1) / chunkBytes + 1
         LaunchedEffect(reader, metadata, chunkBytes, listState) {
@@ -82,7 +84,10 @@ internal fun NoteBodyPlainText(reader: LegacyNoteRecovery, note: RecoveryNote, m
                     } else {
                         AnnotatedString(text)
                     }
-                    Text(displayText, fontFamily = FontFamily.Monospace, lineHeight = 24.sp)
+                    Text(
+                        text = displayText,
+                        style = typo.codeBlock.copy(lineHeight = (typo.body.fontSize.value * typo.lineHeightMultiplier).sp)
+                    )
                 }
             }
         }

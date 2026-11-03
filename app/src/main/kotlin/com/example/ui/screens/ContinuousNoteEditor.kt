@@ -137,13 +137,40 @@ internal fun ContinuousNoteEditor(viewModel: CobaltViewModel, modifier: Modifier
                         viewModel.replaceContinuousNoteRange(start, end, ref.hash, value)
                     })
             } else {
+                val typo = com.example.ui.theme.LocalCobaltTypography.current
+                val isCode = activeItem?.type == com.example.data.model.SavedItemType.CODE
                 key(document) {
                     AndroidView(
                         factory = { context -> ContinuousMarkdownView(context).also { native = it } },
                         modifier = Modifier.fillMaxSize().testTag("capture_content_input"),
                         onRelease = { view -> view.dispose(); if (native === view) native = null },
                         update = { view ->
-                            view.codeTypeface(activeItem?.type == com.example.data.model.SavedItemType.CODE)
+                            if (typo.prefs.useCustomFont) {
+                                val fontRes = if (isCode) {
+                                    if (typo.prefs.codeFont == com.example.data.model.CodeFontFamily.JETBRAINS_MONO) com.example.R.font.jetbrains_mono_variable else 0
+                                } else {
+                                    when (typo.prefs.textFont) {
+                                        com.example.data.model.TextFontFamily.INTER -> com.example.R.font.inter_variable
+                                        com.example.data.model.TextFontFamily.LITERATA -> com.example.R.font.literata_variable
+                                        com.example.data.model.TextFontFamily.SOURCE_SERIF_4 -> com.example.R.font.source_serif_4_variable
+                                        com.example.data.model.TextFontFamily.ATKINSON_HYPERLEGIBLE -> com.example.R.font.atkinson_hyperlegible_regular
+                                        com.example.data.model.TextFontFamily.LEXEND -> com.example.R.font.lexend_variable
+                                        else -> 0
+                                    }
+                                }
+                                val tf = if (fontRes != 0) {
+                                    androidx.core.content.res.ResourcesCompat.getFont(view.context, fontRes)
+                                } else null
+                                if (tf != null) {
+                                    view.setTypefaceText(tf)
+                                } else {
+                                    view.codeTypeface(isCode)
+                                }
+                                view.setTextSize(typo.prefs.fontSize.toFloat())
+                            } else {
+                                view.codeTypeface(isCode)
+                                view.setTextSize(16f)
+                            }
                             view.message = { message = it }
                             view.pasteProgress = { pasteProgress = it; viewModel.continuousEditorBusy(document, it != null) }
                             view.onTool = { tool = it }

@@ -308,7 +308,7 @@ fun TextAndFontsSettingsScreen(
 /**
  * Shared item builder for controls in phone and tablet layouts.
  */
-private fun androidx.compose.foundation.lazy.LazyListScope.textFontsSettingsItems(
+internal fun androidx.compose.foundation.lazy.LazyListScope.textFontsSettingsItems(
     localPrefs: TypographyPrefs,
     onUpdatePrefs: (TypographyPrefs) -> Unit,
     onShowResetDialog: () -> Unit

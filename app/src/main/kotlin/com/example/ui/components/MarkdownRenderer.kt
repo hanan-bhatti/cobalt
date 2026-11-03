@@ -159,9 +159,10 @@ fun MarkdownText(
         LocalMarkdownLinkDecoration provides (parsed?.decorateLinks != false),
         LocalSearchHighlight provides searchHighlight
     ) {
+        val typo = com.example.ui.theme.LocalCobaltTypography.current
         Column(
             modifier = modifier,
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(typo.paragraphSpacingDp)
         ) {
             RenderNode(
                 node = document,
@@ -237,6 +238,7 @@ private fun ColumnScope.RenderNode(
     isInBlockQuote: Boolean = false
 ) {
     val decorateLinks = LocalMarkdownLinkDecoration.current
+    val typo = com.example.ui.theme.LocalCobaltTypography.current
     var child = node.firstChild
     var bulletIndex = 1
     val isOrderedList = node is OrderedList
@@ -246,7 +248,7 @@ private fun ColumnScope.RenderNode(
         when (currentChild) {
             is org.commonmark.node.Paragraph -> {
                 val annotatedString = buildAnnotatedString {
-                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, decorateLinks)
+                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, decorateLinks, typography = typo)
                 }
                 val isRtl = isRtlText(annotatedString.text)
                 val blockDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
@@ -255,10 +257,10 @@ private fun ColumnScope.RenderNode(
                     Text(
                         text = finalString,
                         color = if (isTaskChecked) color.copy(alpha = 0.55f) else color,
-                        style = MaterialTheme.typography.bodyMedium.copy(
+                        style = typo.body.copy(
                             fontStyle = if (isInBlockQuote) FontStyle.Italic else FontStyle.Normal,
                             textDirection = TextDirection.Content,
-                            lineHeight = if (isInBlockQuote) 24.sp else 22.sp,
+                            lineHeight = if (isInBlockQuote) (typo.body.fontSize.value * typo.lineHeightMultiplier * 1.05f).sp else typo.body.lineHeight,
                             textDecoration = if (isTaskChecked) TextDecoration.LineThrough else null
                         ),
                         textAlign = if (isRtl) TextAlign.Right else TextAlign.Left,
@@ -269,26 +271,23 @@ private fun ColumnScope.RenderNode(
             }
             is Heading -> {
                 val annotatedString = buildAnnotatedString {
-                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, decorateLinks = decorateLinks)
+                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, decorateLinks = decorateLinks, typography = typo)
                 }
                 val isRtl = isRtlText(annotatedString.text)
                 val blockDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
-                val (fontSize, fontWeight, topPadding) = when (currentChild.level) {
-                    1 -> Triple(26.sp, FontWeight.ExtraBold, 16.dp)
-                    2 -> Triple(21.sp, FontWeight.Bold, 12.dp)
-                    3 -> Triple(17.sp, FontWeight.SemiBold, 8.dp)
-                    else -> Triple(15.sp, FontWeight.SemiBold, 6.dp)
+                val (headingStyle, topPadding) = when (currentChild.level) {
+                    1 -> typo.h1 to 16.dp
+                    2 -> typo.h2 to 12.dp
+                    3 -> typo.h3 to 8.dp
+                    else -> typo.h4 to 6.dp
                 }
                 val finalString = annotatedString.withSearchHighlight(LocalSearchHighlight.current, primaryColor)
                 CompositionLocalProvider(LocalLayoutDirection provides blockDirection) {
                     Text(
                         text = finalString,
                         color = color,
-                        fontSize = fontSize,
-                        fontWeight = fontWeight,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            textDirection = TextDirection.Content,
-                            lineHeight = (fontSize.value * 1.3f).sp
+                        style = headingStyle.copy(
+                            textDirection = TextDirection.Content
                         ),
                         textAlign = if (isRtl) TextAlign.Right else TextAlign.Left,
                         modifier = Modifier
@@ -351,7 +350,7 @@ private fun ColumnScope.RenderNode(
                             Text(
                                 text = if (isOrderedList) "$bulletIndex." else "•",
                                 color = color,
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                                style = typo.body.copy(fontWeight = FontWeight.Bold)
                             )
                             if (isOrderedList) bulletIndex++
                         }
@@ -487,6 +486,7 @@ private fun MarkdownTable(
     modifier: Modifier = Modifier
 ) {
     val decorateLinks = LocalMarkdownLinkDecoration.current
+    val typo = com.example.ui.theme.LocalCobaltTypography.current
     val rows = remember(tableBlock) {
         val result = mutableListOf<TableRowModel>()
         var child = tableBlock.firstChild
@@ -638,16 +638,18 @@ private fun MarkdownTable(
                                             onLinkClick = onLinkClick,
                                             context = context,
                                             isDark = isDark,
-                                            decorateLinks = decorateLinks
+                                            decorateLinks = decorateLinks,
+                                            typography = typo
                                         )
                                     }
                                     val finalCellText = cellText.withSearchHighlight(LocalSearchHighlight.current, primaryColor)
                                     Text(
                                         text = finalCellText,
                                         color = if (isHeader) MaterialTheme.colorScheme.onSurface else color,
-                                        fontSize = if (isHeader) 13.sp else 12.5.sp,
+                                        fontSize = if (isHeader) (typo.body.fontSize.value * 0.85f).sp else (typo.body.fontSize.value * 0.8f).sp,
                                         fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
-                                        lineHeight = 18.sp
+                                        fontFamily = typo.textFontFamily,
+                                        lineHeight = (typo.body.fontSize.value * 0.85f * typo.lineHeightMultiplier).sp
                                     )
                                 }
                             }
@@ -682,7 +684,8 @@ private fun AnnotatedString.Builder.AppendInlineNodes(
     isDark: Boolean,
     isTaskChecked: Boolean = false,
     stripTaskPrefix: Boolean = false,
-    decorateLinks: Boolean = true
+    decorateLinks: Boolean = true,
+    typography: com.example.ui.theme.CobaltTypography? = null
 ) {
     var child = node.firstChild
     var hasStripped = false
@@ -729,26 +732,28 @@ private fun AnnotatedString.Builder.AppendInlineNodes(
             }
             is Strikethrough -> {
                 withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) {
-                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, decorateLinks)
+                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, decorateLinks, typography)
                 }
             }
             is StrongEmphasis -> {
                 withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, decorateLinks)
+                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, decorateLinks, typography)
                 }
             }
             is Emphasis -> {
                 withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
-                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, decorateLinks)
+                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, decorateLinks, typography)
                 }
             }
             is Code -> {
+                val codeFamily = typography?.codeFontFamily ?: FontFamily.Monospace
+                val codeSize = typography?.inlineCode?.fontSize ?: 13.sp
                 withStyle(
                     SpanStyle(
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = codeFamily,
                         background = color.copy(alpha = 0.08f),
                         color = primaryColor,
-                        fontSize = 13.sp
+                        fontSize = codeSize
                     )
                 ) {
                     append(currentChild.literal)
@@ -756,7 +761,7 @@ private fun AnnotatedString.Builder.AppendInlineNodes(
             }
             is Link -> {
                 if (!decorateLinks) {
-                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, false)
+                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, false, typography)
                     child = currentChild.next
                     continue
                 }
@@ -777,7 +782,7 @@ private fun AnnotatedString.Builder.AppendInlineNodes(
                     }
                 }
                 withLink(LinkAnnotation.Url(url = destination, styles = linkStyles, linkInteractionListener = linkListener)) {
-                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, decorateLinks)
+                    AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, decorateLinks, typography)
                 }
             }
             is HardLineBreak -> {
@@ -787,7 +792,7 @@ private fun AnnotatedString.Builder.AppendInlineNodes(
                 append("\n") // Use clean single line break instead of double space
             }
             else -> {
-                AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, decorateLinks)
+                AppendInlineNodes(currentChild, color, primaryColor, onLinkClick, context, isDark, isTaskChecked, stripTaskPrefix, decorateLinks, typography)
             }
         }
         child = currentChild.next
