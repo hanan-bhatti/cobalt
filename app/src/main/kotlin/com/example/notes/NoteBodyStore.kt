@@ -42,7 +42,23 @@ interface NoteRangeReader : Closeable { fun read(offset: Long, count: Int): Byte
 
 data class NoteBodyRef(val hash: String, val bytes: Long, val preview: String)
 
-class PrivateMarkdownStore(context: Context, private val checkpoint: (WriteStage) -> Unit = {}) : NoteBodyStore {
+/** Platform filesystem seam. Production always uses Android's rename/fsync syscalls. */
+interface NoteFileOperations {
+    fun syncDirectory(directory: File)
+    fun renameAtomic(source: File, destination: File)
+}
+
+private object AndroidNoteFileOperations : NoteFileOperations {
+    override fun renameAtomic(source: File, destination: File) = Os.rename(source.absolutePath, destination.absolutePath)
+    override fun syncDirectory(directory: File) {
+        val descriptor = Os.open(directory.absolutePath, OsConstants.O_RDONLY, 0)
+        try { Os.fsync(descriptor) } finally { Os.close(descriptor) }
+    }
+}
+
+class PrivateMarkdownStore(context: Context,
+    private val fileOperations: NoteFileOperations = AndroidNoteFileOperations,
+    private val checkpoint: (WriteStage) -> Unit = {}) : NoteBodyStore {
     enum class WriteStage { JOURNAL_SYNCED, CHUNK_WRITTEN, DATA_SYNCED, RENAMED, VERIFIED }
     private val root = File(context.applicationContext.filesDir, "notes")
     private val work = File(context.applicationContext.cacheDir, "note-body-work")
@@ -85,7 +101,7 @@ class PrivateMarkdownStore(context: Context, private val checkpoint: (WriteStage
         if (!source.isFile) return
         // Rename only after a durable preference/DB reference owns the verified full replacement.
         // A crash before this step merely retains extra recovery bytes.
-        Os.rename(source.absolutePath, File(source.parentFile, source.name + ".retired").absolutePath)
+        fileOperations.renameAtomic(source, File(source.parentFile, source.name + ".retired"))
         syncDirectory(source.parentFile!!)
     }
 
@@ -199,7 +215,7 @@ class PrivateMarkdownStore(context: Context, private val checkpoint: (WriteStage
                 if (!verify(id, hash, bytes)) throw IOException("Existing body generation failed verification")
                 temp.delete()
             } else {
-                Os.rename(temp.absolutePath, destination.absolutePath)
+                fileOperations.renameAtomic(temp, destination)
                 syncDirectory(dir)
                 checkpoint(WriteStage.RENAMED)
             }
@@ -253,10 +269,7 @@ class PrivateMarkdownStore(context: Context, private val checkpoint: (WriteStage
         dir.listFiles()?.count { it.extension in listOf("tmp", "journal") } ?: 0
     } ?: 0
 
-    private fun syncDirectory(dir: File) {
-        val descriptor = Os.open(dir.absolutePath, OsConstants.O_RDONLY, 0)
-        try { Os.fsync(descriptor) } finally { Os.close(descriptor) }
-    }
+    private fun syncDirectory(dir: File) = fileOperations.syncDirectory(dir)
 
     companion object {
         fun digest(input: InputStream): String {

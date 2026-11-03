@@ -19,7 +19,7 @@ class PreparedNoteCommitTest {
     @Test fun preparedCommitDoesNotSerializeAProjectionOrRewriteTheBody() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        val files = PrivateMarkdownStore(context)
+        val files = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
         var writes = 0
         val store = object : NoteBodyStore by files {
             override fun writeAtomic(id: String, input: java.io.InputStream, allowOversize: Boolean, progress: (Long) -> Unit): NoteBodyRef {
@@ -38,14 +38,19 @@ class PreparedNoteCommitTest {
             assertEquals(before, writes)
             assertEquals("Metadata from projection", result.title)
             assertFalse(result.bodyLoaded)
-            assertEquals("", database.savedItemDao().getItemById(saved.id)!!.content)
+            val summary = database.savedItemDao().getItemById(saved.id)!!
+            assertEquals(result.preview, summary.content)
+            assertTrue(summary.content.length <= NoteSizePolicy.PREVIEW_CHARACTERS)
+            database.openHelper.readableDatabase.query(
+                "SELECT length(CAST(content AS BLOB)) FROM saved_items WHERE id = ?", arrayOf(saved.id)
+            ).use { cursor -> assertTrue(cursor.moveToFirst()); assertEquals(0L, cursor.getLong(0)) }
             assertEquals(updatedBody, store.open(result.id, result.contentHash!!).bufferedReader().use { it.readText() })
         } finally { files.deleteAll(note.id); database.close() }
     }
     @Test fun failedVerificationLeavesTheSavedReferenceAndBodyUntouched() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        val store = PrivateMarkdownStore(context)
+        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
         val persistence = NotePersistence(context, database, store)
         val note = SavedItem(type = SavedItemType.TEXT, title = "Retained", content = "")
         try {
@@ -58,4 +63,32 @@ class PreparedNoteCommitTest {
             assertEquals("keep this body", store.open(saved.id, saved.contentHash!!).bufferedReader().use { it.readText() })
         } finally { store.deleteAll(note.id); database.close() }
     }
+    @Test fun savingAListProjectionCannotReplaceTheRealBodyWithItsPreview() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
+        val files = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
+        var writes = 0
+        val counting = object : NoteBodyStore by files {
+            override fun writeAtomic(id: String, input: java.io.InputStream, allowOversize: Boolean, progress: (Long) -> Unit): NoteBodyRef {
+                writes++; return files.writeAtomic(id, input, allowOversize, progress)
+            }
+        }
+        val persistence = NotePersistence(context, database, counting)
+        val note = SavedItem(type = SavedItemType.TEXT, title = "Projection safety", content = "")
+        val body = "# Complete body\r\n😀 [link](https://example.org/)\n".repeat(2000)
+        try {
+            val saved = body.byteInputStream().use { persistence.saveStream(note, it) }
+            val projection = database.savedItemDao().getAllItems().single().toDomainModel()
+            assertFalse(projection.bodyLoaded)
+            assertTrue(projection.content.length <= NoteSizePolicy.PREVIEW_CHARACTERS)
+            val before = writes
+            val updated = persistence.save(projection.copy(title = "Changed title", folders = listOf("Moved")))
+            assertEquals(before, writes)
+            assertEquals(saved.contentHash, updated.contentHash)
+            assertEquals("Changed title", updated.title)
+            assertEquals(listOf("Moved"), updated.folders)
+            assertEquals(body, files.open(note.id, updated.contentHash!!).bufferedReader().use { it.readText() })
+        } finally { files.deleteAll(note.id); database.close() }
+    }
+
 }
