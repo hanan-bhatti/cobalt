@@ -54,6 +54,7 @@ class NotePersistence(
     private val database: AppDatabase = AppDatabase.getDatabase(context.applicationContext),
     val store: NoteBodyStore = PrivateMarkdownStore(context.applicationContext)
 ) {
+    private val appContext = context.applicationContext
     private val dao = database.savedItemDao()
 
     /** Commit an already staged editor generation without copying/fsyncing the same body again. */
@@ -67,6 +68,7 @@ class NotePersistence(
             currentCoroutineContext().ensureActive()
             val saved = item.copy(content = "", bodyLoaded = false, bodyLocation = "FILE", contentHash = ref.hash,
                 byteLength = ref.bytes, sizeBytes = ref.bytes, preview = ref.preview, formatVersion = 1, bodyMissing = false)
+            NoteGenerationHistory.protectReplacement(previous?.contentHash)
             database.withTransaction {
                 dao.insertItem(SavedItemEntity.fromDomainModel(saved))
                 index(item.id, ref.hash)
@@ -101,6 +103,7 @@ class NotePersistence(
         cancellation.ensureActive()
         val saved = item.copy(content = "", bodyLoaded = false, bodyLocation = "FILE", contentHash = ref.hash,
             byteLength = ref.bytes, sizeBytes = ref.bytes, preview = ref.preview, formatVersion = 1, bodyMissing = false)
+        NoteGenerationHistory.protectReplacement(previous?.contentHash)
         database.withTransaction {
             dao.insertItem(SavedItemEntity.fromDomainModel(saved))
             index(item.id, ref.hash)
@@ -122,11 +125,18 @@ class NotePersistence(
         fun isNote(item: SavedItem) = item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE
     }
 
-    suspend fun restoreGeneration(id: String, expectedHash: String, target: NoteGeneration): SavedItem = withContext(Dispatchers.IO) {
+    suspend fun restoreGeneration(id: String, expectedHash: String, target: NoteGeneration, requireNoDraft: Boolean = false): SavedItem = withContext(Dispatchers.IO) {
         NoteWriteLock.mutex.withLock {
+            if (requireNoDraft) {
+                check(!appContext.getSharedPreferences("capture_file_sessions", Context.MODE_PRIVATE).contains(id) &&
+                    !appContext.getSharedPreferences("note_section_drafts", Context.MODE_PRIVATE).contains(id)) {
+                    "This note has a recovery draft. Finish or recover the draft before restoring an older copy."
+                }
+            }
             val metadata = dao.getItemById(id) ?: throw IOException("Note was deleted; recovery file retained")
             check(metadata.contentHash == expectedHash) { "Note changed; reopen before undo" }
             check(store.verify(id, target.hash, target.bytes)) { "Undo generation unavailable; saved note retained" }
+            NoteGenerationHistory.protectReplacement(expectedHash)
             database.withTransaction {
                 check(dao.commitFileBody(id, target.hash, target.bytes, target.preview, metadata.updatedAt,
                     maxOf(System.currentTimeMillis(), metadata.updatedAt + 1)) == 1)
@@ -227,6 +237,7 @@ class NotePersistence(
             cancellation.ensureActive()
             val saved = item.copy(bodyLocation = "FILE", contentHash = ref.hash, byteLength = ref.bytes,
                 sizeBytes = ref.bytes, preview = ref.preview, formatVersion = 1, bodyMissing = false)
+            NoteGenerationHistory.protectReplacement(old?.contentHash)
             database.withTransaction {
                 dao.insertItem(SavedItemEntity.fromDomainModel(saved))
                 index(item.id, ref.hash)
@@ -298,6 +309,7 @@ class NotePersistence(
                     }
                 }
                 cancellation.ensureActive()
+                NoteGenerationHistory.protectReplacement(hash)
                 database.withTransaction {
                     check(dao.commitFileBody(id, ref.hash, ref.bytes, ref.preview, current.updatedAt,
                         maxOf(System.currentTimeMillis(), current.updatedAt + 1)) == 1)

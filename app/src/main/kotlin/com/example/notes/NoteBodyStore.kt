@@ -33,6 +33,8 @@ interface NoteBodyStore {
     fun retireEditJournal(id: String, token: String, verified: NoteBodyRef) {}
     fun recoverEditJournal(id: String, token: String, base: NoteBodyRef, checkCancelled: () -> Unit = {}): NoteBodyRef =
         throw UnsupportedOperationException("Journal recovery unavailable")
+    fun maintenanceFiles(): List<NoteStorageFile> = emptyList()
+    fun removeMaintenanceFile(entry: NoteStorageFile): Boolean = false
 }
 
 /** A confined random reader; opening/reading/closing all happen off Main. */
@@ -87,19 +89,63 @@ class PrivateMarkdownStore(context: Context, private val checkpoint: (WriteStage
         syncDirectory(source.parentFile!!)
     }
 
+    override fun maintenanceFiles(): List<NoteStorageFile> = root.listFiles().orEmpty()
+        .filter { it.isDirectory && it.name.matches(Regex("[0-9a-f]{64}")) }
+        .flatMap { dir -> dir.listFiles().orEmpty().filter { it.isFile }.map {
+            NoteStorageFile(dir.name, it.name, it.length(), it.lastModified())
+        } }
+
+    override fun removeMaintenanceFile(entry: NoteStorageFile): Boolean {
+        require(entry.directoryKey.matches(Regex("[0-9a-f]{64}")))
+        require(entry.hash != null || (entry.isRetiredJournal && entry.name.matches(Regex("[0-9a-f-]{36}\\.edits\\.retired"))))
+        val dir = File(root, entry.directoryKey)
+        val target = File(dir, entry.name)
+        // A reviewed cleanup plan cannot remove a file that changed after the scan.
+        val removed = NoteBodyLeases.guarded {
+            if (entry.hash != null && (NoteBodyLeases.active(entry.directoryKey, entry.hash!!) ||
+                entry.hash in NoteGenerationHistory.protectedHashes())) return@guarded false
+            if (!target.isFile || target.length() != entry.bytes || target.lastModified() != entry.modified) return@guarded false
+            if (!target.delete()) throw IOException("Cannot remove the reviewed storage copy")
+            true
+        }
+        if (!removed) return false
+        syncDirectory(dir)
+        return true
+    }
+
     override fun size(id: String, hash: String): Long? = file(id, hash).takeIf { it.isFile }?.length()
 
-    override fun open(id: String, hash: String): InputStream = FileInputStream(file(id, hash))
+    override fun open(id: String, hash: String): InputStream = NoteBodyLeases.guarded {
+        val input = FileInputStream(file(id, hash))
+        val identity = key(id)
+        NoteBodyLeases.acquire(identity, hash)
+        object : FilterInputStream(input) {
+            private var closed = false
+            override fun close() {
+                if (closed) return
+                closed = true
+                try { super.close() } finally { NoteBodyLeases.release(identity, hash) }
+            }
+        }
+    }
 
     override fun openRangeReader(id: String, hash: String): NoteRangeReader {
-        val input = RandomAccessFile(file(id, hash), "r")
+        val identity = key(id)
+        val input = NoteBodyLeases.guarded {
+            RandomAccessFile(file(id, hash), "r").also { NoteBodyLeases.acquire(identity, hash) }
+        }
         return object : NoteRangeReader {
             override fun read(offset: Long, count: Int): ByteArray {
                 require(offset >= 0 && count in 0..NoteSizePolicy.IO_CHUNK_BYTES)
                 input.seek(offset)
                 return ByteArray(minOf(count.toLong(), (input.length() - offset).coerceAtLeast(0)).toInt()).also { input.readFully(it) }
             }
-            override fun close() = input.close()
+            private var closed = false
+            override fun close() {
+                if (closed) return
+                closed = true
+                try { input.close() } finally { NoteBodyLeases.release(identity, hash) }
+            }
         }
     }
 
@@ -223,6 +269,7 @@ class PrivateMarkdownStore(context: Context, private val checkpoint: (WriteStage
             }
             return digest.digest().hex()
         }
+        fun storageKey(id: String): String = sha256(id.toByteArray(Charsets.UTF_8))
         private fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).hex()
     }
 }

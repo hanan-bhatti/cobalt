@@ -166,6 +166,11 @@ enum class SettingsCategory(
         subtitle = "Launcher shortcuts, quick capture action, and recent notes",
         iconRes = R.drawable.ic_settings_widgets
     ),
+    STORAGE_RECOVERY(
+        title = "Storage & Recovery",
+        subtitle = "Private notes, older copies, and cleanup",
+        iconRes = R.drawable.ic_custom_text
+    ),
     DATA_MIGRATION(
         title = "Data Migration",
         subtitle = "Markdown storage, conversion results, and recovery",
@@ -191,6 +196,7 @@ fun getSettingsCategoryColors(category: SettingsCategory, isDark: Boolean): Pair
             SettingsCategory.INTELLIGENCE -> Color(0xFF0F2D3F) to Color(0xFF7DD3FC)
             SettingsCategory.FLOATING_DOCK -> Color(0xFF3D141F) to Color(0xFFFDA4AF)
             SettingsCategory.WIDGETS -> Color(0xFF0F3320) to Color(0xFF86EFAC)
+            SettingsCategory.STORAGE_RECOVERY -> Color(0xFF243529) to Color(0xFFA7F3D0)
             SettingsCategory.DATA_MIGRATION -> Color(0xFF243529) to Color(0xFFA7F3D0)
             SettingsCategory.SYSTEM_HEALTH -> Color(0xFF1B2144) to Color(0xFFA5B4FC)
         }
@@ -202,6 +208,7 @@ fun getSettingsCategoryColors(category: SettingsCategory, isDark: Boolean): Pair
             SettingsCategory.INTELLIGENCE -> Color(0xFFE0F2FE) to Color(0xFF0369A1)
             SettingsCategory.FLOATING_DOCK -> Color(0xFFFFE4E6) to Color(0xFFBE123C)
             SettingsCategory.WIDGETS -> Color(0xFFD1FAE5) to Color(0xFF047857)
+            SettingsCategory.STORAGE_RECOVERY -> Color(0xFFD1FAE5) to Color(0xFF065F46)
             SettingsCategory.DATA_MIGRATION -> Color(0xFFD1FAE5) to Color(0xFF065F46)
             SettingsCategory.SYSTEM_HEALTH -> Color(0xFFE0E7FF) to Color(0xFF4338CA)
         }
@@ -439,6 +446,10 @@ fun SettingsCategoryDetailScreen(
     onNavigateToArchiveSettings: () -> Unit = {},
     onNavigateToRemindersSettings: () -> Unit = {}
 ) {
+    if (category == SettingsCategory.STORAGE_RECOVERY) {
+        NoteStorageManagementScreen(onBack = onNavigateBack)
+        return
+    }
     if (category == SettingsCategory.DATA_MIGRATION) {
         NoteMigrationScreen(startup = false, onDone = {}, onBack = onNavigateBack)
         return
@@ -489,7 +500,7 @@ fun SettingsCategoryDetailScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             when (category) {
-                SettingsCategory.DATA_MIGRATION -> Unit
+                SettingsCategory.DATA_MIGRATION, SettingsCategory.STORAGE_RECOVERY -> Unit
                 // ==========================================
                 // SUBPAGE: APPEARANCE & DISPLAY
                 // ==========================================
