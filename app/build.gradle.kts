@@ -101,6 +101,11 @@ tasks.withType<KotlinCompile>().configureEach {
 
 
 dependencies {
+  // Native continuous document/IME/selection engine. LGPL-2.1-or-later; no language packs or network modules.
+  implementation("io.github.rosemoe:editor:0.24.6") {
+    // The Java editor core uses the app's existing Kotlin stdlib; do not upgrade the Kotlin toolchain.
+    exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
+  }
   implementation(libs.jsoup)
   implementation(libs.commonmark)
   implementation(libs.commonmark.strikethrough)

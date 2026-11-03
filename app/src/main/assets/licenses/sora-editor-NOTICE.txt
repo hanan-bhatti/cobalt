@@ -1,0 +1,8 @@
+Cobalt includes the unmodified Sora Editor core 0.24.6.
+Copyright (C) 2020-2026 Rosemoe and contributors.
+Licensed under the GNU Lesser General Public License, version 2.1 or later.
+The accompanying sora-editor-LGPL-2.1.txt contains the full license.
+Source for the included library: https://github.com/Rosemoe/sora-editor/tree/0.24.6
+Source archive: https://github.com/Rosemoe/sora-editor/archive/refs/tags/0.24.6.tar.gz
+Cobalt's source and Gradle dependency declaration allow rebuilding with a modified editor.
+No editor language packs, LSP clients, native regex libraries or network modules are included.

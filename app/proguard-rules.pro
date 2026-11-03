@@ -36,3 +36,9 @@
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
 -keep class kotlin.reflect.jvm.internal.** { *; }
 
+# The pinned editor has optional IME diagnostic messages containing text. Never enable them in release.
+# No class-name keep rule is needed: this is an optimizer input, not reflective application code.
+-assumevalues class io.github.rosemoe.sora.widget.EditorInputConnection {
+    static boolean DEBUG return false;
+}
+
