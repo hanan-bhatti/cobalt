@@ -238,6 +238,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode by viewModel.settingsRepository.themeMode.collectAsState()
             val dynamicColorEnabled by viewModel.settingsRepository.dynamicColor.collectAsState()
+            val typographyPrefs by viewModel.typographyPrefs.collectAsState()
             val isDarkTheme = when (themeMode) {
                 "Dark" -> true
                 "Light" -> false
@@ -251,7 +252,11 @@ class MainActivity : ComponentActivity() {
                     androidx.core.view.WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !isDarkTheme
                 }
             }
-            MyApplicationTheme(darkTheme = isDarkTheme, dynamicColor = dynamicColorEnabled) {
+            MyApplicationTheme(
+                darkTheme = isDarkTheme,
+                dynamicColor = dynamicColorEnabled,
+                typographyPrefs = typographyPrefs
+            ) {
                 val context = androidx.compose.ui.platform.LocalContext.current
                 val customTabsUriHandler = remember(context, isDarkTheme) {
                     object : androidx.compose.ui.platform.UriHandler {
@@ -558,7 +563,8 @@ class MainActivity : ComponentActivity() {
                                                 onNavigateToEdgeAnimSettings = { navController.navigate("edge_anim_settings") },
                                                 onNavigateToGeminiUsage = { navController.navigate("gemini_usage") },
                                                 onNavigateToArchiveSettings = { navController.navigate("archive_organization_settings") },
-                                                onNavigateToRemindersSettings = { navController.navigate("adaptive_reminders_settings") }
+                                                onNavigateToRemindersSettings = { navController.navigate("adaptive_reminders_settings") },
+                                                onNavigateToTextFontsSettings = { navController.navigate("text_fonts_settings") }
                                             )
                                         }
                                     }
@@ -580,7 +586,16 @@ class MainActivity : ComponentActivity() {
                                                 onNavigateToEdgeAnimSettings = { navController.navigate("edge_anim_settings") },
                                                 onNavigateToGeminiUsage = { navController.navigate("gemini_usage") },
                                                 onNavigateToArchiveSettings = { navController.navigate("archive_organization_settings") },
-                                                onNavigateToRemindersSettings = { navController.navigate("adaptive_reminders_settings") }
+                                                onNavigateToRemindersSettings = { navController.navigate("adaptive_reminders_settings") },
+                                                onNavigateToTextFontsSettings = { navController.navigate("text_fonts_settings") }
+                                            )
+                                        }
+                                    }
+                                    composable("text_fonts_settings") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.TextAndFontsSettingsScreen(
+                                                viewModel = viewModel,
+                                                onNavigateBack = { navController.popBackStack() }
                                             )
                                         }
                                     }

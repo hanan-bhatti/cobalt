@@ -305,20 +305,28 @@ fun SettingsScreen(
     onNavigateToEdgeAnimSettings: (() -> Unit)? = null,
     onNavigateToGeminiUsage: (() -> Unit)? = null,
     onNavigateToArchiveSettings: (() -> Unit)? = null,
-    onNavigateToRemindersSettings: (() -> Unit)? = null
+    onNavigateToRemindersSettings: (() -> Unit)? = null,
+    onNavigateToTextFontsSettings: (() -> Unit)? = null
 ) {
     var selectedCategory by remember { mutableStateOf<SettingsCategory?>(null) }
     var showEdgePanelSettings by remember { mutableStateOf(false) }
     var showWidgetSettings by remember { mutableStateOf(false) }
     var showEdgeAnimSettings by remember { mutableStateOf(false) }
+    var showTextFontsSettings by remember { mutableStateOf(false) }
 
-    BackHandler(enabled = (onNavigateToCategory == null && selectedCategory != null) || (onNavigateToEdgePanelSettings == null && showEdgePanelSettings) || (onNavigateToWidgetSettings == null && showWidgetSettings) || (onNavigateToEdgeAnimSettings == null && showEdgeAnimSettings)) {
+    BackHandler(enabled = (onNavigateToCategory == null && selectedCategory != null) || (onNavigateToEdgePanelSettings == null && showEdgePanelSettings) || (onNavigateToWidgetSettings == null && showWidgetSettings) || (onNavigateToEdgeAnimSettings == null && showEdgeAnimSettings) || (onNavigateToTextFontsSettings == null && showTextFontsSettings)) {
         when {
+            showTextFontsSettings -> showTextFontsSettings = false
             showEdgeAnimSettings -> showEdgeAnimSettings = false
             showWidgetSettings -> showWidgetSettings = false
             showEdgePanelSettings -> showEdgePanelSettings = false
             selectedCategory != null -> selectedCategory = null
         }
+    }
+
+    if (showTextFontsSettings && onNavigateToTextFontsSettings == null) {
+        TextAndFontsSettingsScreen(viewModel = viewModel, onNavigateBack = { showTextFontsSettings = false })
+        return
     }
 
     if (showEdgePanelSettings && onNavigateToEdgePanelSettings == null) {
@@ -345,7 +353,8 @@ fun SettingsScreen(
             onNavigateToWidgetSettings = onNavigateToWidgetSettings ?: { showWidgetSettings = true },
             onNavigateToEdgeAnimSettings = onNavigateToEdgeAnimSettings ?: { showEdgeAnimSettings = true },
             onNavigateToGeminiUsage = onNavigateToGeminiUsage ?: {},
-            onNavigateToArchiveSettings = onNavigateToArchiveSettings ?: {}
+            onNavigateToArchiveSettings = onNavigateToArchiveSettings ?: {},
+            onNavigateToTextFontsSettings = onNavigateToTextFontsSettings ?: { showTextFontsSettings = true }
         )
         return
     }
@@ -444,7 +453,8 @@ fun SettingsCategoryDetailScreen(
     onNavigateToEdgeAnimSettings: () -> Unit,
     onNavigateToGeminiUsage: () -> Unit = {},
     onNavigateToArchiveSettings: () -> Unit = {},
-    onNavigateToRemindersSettings: () -> Unit = {}
+    onNavigateToRemindersSettings: () -> Unit = {},
+    onNavigateToTextFontsSettings: () -> Unit = {}
 ) {
     if (category == SettingsCategory.STORAGE_RECOVERY) {
         NoteStorageManagementScreen(onBack = onNavigateBack)
@@ -511,6 +521,30 @@ fun SettingsCategoryDetailScreen(
                             subtitle = "Also blocks screenshots and screen recording while Cobalt is open",
                             checked = hidden, onCheckedChange = viewModel.settingsRepository::setHideRecents,
                             shape = RoundedCornerShape(20.dp))
+                    }
+                    item {
+                        SettingsSubsectionHeader(
+                            title = "Text & Typography",
+                            description = "Local fonts, body font size, line height, and live preview.",
+                            tooltipText = "Configure reading typography for notes and editor with 100% offline FOSS fonts."
+                        )
+
+                        ExpressiveSettingsGroup {
+                            com.example.ui.components.ExpressiveSettingsNavigationItem(
+                                title = "Text & fonts",
+                                subtitle = "Font families, weight, size, line height & live preview",
+                                leadingIcon = {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_text),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                },
+                                onClick = onNavigateToTextFontsSettings,
+                                shape = RoundedCornerShape(24.dp)
+                            )
+                        }
                     }
                     item {
                         SettingsSubsectionHeader(

@@ -4,4 +4,28 @@
     <string name="shortcut_smart_selection_long">Smart Screen Selection</string>
     <string name="shortcut_quick_note_short">Quick Note</string>
     <string name="shortcut_quick_note_long">Create Quick Note</string>
+
+    <!-- Text & Fonts Preview Strings -->
+    <string name="text_fonts_title">Text &amp; fonts</string>
+    <string name="text_fonts_subtitle">Typography, local fonts, size and real-time preview</string>
+    <string name="preview_heading">Typography in Action</string>
+    <string name="preview_paragraph_prefix">Cobalt renders clean notes with </string>
+    <string name="preview_paragraph_bold">bold emphasis</string>
+    <string name="preview_paragraph_middle">, </string>
+    <string name="preview_paragraph_italic">flowing italics</string>
+    <string name="preview_paragraph_strike">deprecated ideas</string>
+    <string name="preview_paragraph_and">, and </string>
+    <string name="preview_paragraph_link">interactive links</string>
+    <string name="preview_inline_code">LocalCobaltTypography.current</string>
+    <string name="preview_checklist">Review local typography metrics</string>
+    <string name="preview_quote">Design is not just what it looks like and feels like. Design is how it works.</string>
+    <string name="preview_code_block">fun calculateMetrics(size: Int) = size * 1.5f</string>
+    <string name="preview_rtl_urdu">یہ ایک اردو جملہ ہے تاکہ متبادل خطاطی کی تصدیق کی جا سکے۔</string>
+
+    <string name="reset_typography_confirm_title">Reset typography settings?</string>
+    <string name="reset_typography_confirm_message">This will restore the default font, size, weight, line height, and spacing.</string>
+    <string name="reset_typography_confirm_action">Reset</string>
+    <string name="reset_typography_cancel_action">Cancel</string>
+    <string name="reset_typography_undo_action">Undo</string>
+    <string name="reset_typography_snackbar">Typography reset to defaults</string>
 </resources>

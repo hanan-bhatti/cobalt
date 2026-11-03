@@ -89,6 +89,7 @@
  fun MyApplicationTheme(
      darkTheme: Boolean = false,
      dynamicColor: Boolean = false,
+     typographyPrefs: com.example.data.model.TypographyPrefs = com.example.data.model.TypographyPrefs.DEFAULT,
      content: @Composable () -> Unit,
  ) {
      val context = LocalContext.current
@@ -98,5 +99,9 @@
          }
          else -> if (darkTheme) DarkColorScheme else LightColorScheme
      }
-     MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+     val cobaltTypography = CobaltTypography.fromPrefs(typographyPrefs)
+     val appTypography = cobaltTypography.toMaterialTypography(Typography)
+     MaterialTheme(colorScheme = colorScheme, typography = appTypography) {
+         CobaltTypographyProvider(typography = cobaltTypography, content = content)
+     }
  }
