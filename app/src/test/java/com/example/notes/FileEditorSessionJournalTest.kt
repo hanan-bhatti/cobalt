@@ -23,6 +23,55 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class FileEditorSessionJournalTest {
+    @Test fun unchangedSaveReusesTheVerifiedBodyAfterOpenOrCheckpoint() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
+        val files = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
+        var writes = 0
+        val counting = object : NoteBodyStore by files {
+            override fun writeAtomic(id: String, input: java.io.InputStream, allowOversize: Boolean, progress: (Long) -> Unit): NoteBodyRef {
+                writes++
+                return files.writeAtomic(id, input, allowOversize, progress)
+            }
+        }
+        val persistence = NotePersistence(context, database, counting)
+        try {
+            for (edit in listOf(false, true)) {
+                val item = SavedItem(type = SavedItemType.TEXT, title = "Checkpoint reuse", content = "")
+                val owner = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+                var document: ContinuousNoteDocument? = null
+                try {
+                    val saved = "before".byteInputStream().use { persistence.saveStream(item, it) }
+                    val initialWrites = writes
+                    val session = FileEditorSession(context, owner, persistence)
+                    session.open(saved); session.enableContinuous()
+                    val opened = session.state.first { !it.busy && (it.document != null || it.error != null) }
+                    val doc = requireNotNull(opened.document) { opened.error.orEmpty() }
+                    document = doc
+                    if (edit) {
+                        doc.content.replace(6, 6, " after")
+                        doc.recordEdit(6, 0, " after")
+                        session.continuousChanged(doc)
+                        session.flushJournal()
+                        assertEquals(initialWrites + 1, writes)
+                    }
+                    val beforeSave = writes
+                    val committed = session.save(saved.copy(title = "Metadata changed"))
+                    assertEquals("Unchanged save streamed the full body", beforeSave, writes)
+                    assertEquals("Metadata changed", committed.title)
+                    assertEquals(if (edit) "before after" else "before",
+                        files.open(item.id, committed.contentHash!!).bufferedReader().use { it.readText() })
+                } finally {
+                    owner.cancel(); owner.coroutineContext[Job]!!.join()
+                    document?.closeSession()
+                    context.getSharedPreferences("capture_file_sessions", Context.MODE_PRIVATE).edit().remove(item.id).commit()
+                    files.deleteAll(item.id)
+                }
+            }
+        } finally { database.close(); Dispatchers.resetMain() }
+    }
+
     @Test fun previewEditSurvivesAFullCheckpointFailureAndNewSession() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val context = ApplicationProvider.getApplicationContext<Context>()

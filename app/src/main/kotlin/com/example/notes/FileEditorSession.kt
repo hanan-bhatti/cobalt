@@ -208,6 +208,11 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
 
     private suspend fun checkpointContinuous(current: State): Pair<NoteBodyRef, Long> = checkpointMutex.withLock {
         val document = current.document ?: error("No continuous document")
+        // Reopening preview or saving metadata must not stream an unchanged body again.
+        // A failed recovery writer still requires a full checkpoint, even when clean.
+        if (!current.dirty && document.revision == document.savedRevision && editWriter?.healthy == true) {
+            return@withLock requireNotNull(current.generation) to document.savedRevision
+        }
         val wasFrozen = document.frozen
         withContext(Dispatchers.Main.immediate) { document.recoveryReady = false; document.freeze(true) }
         var completed = false
@@ -226,7 +231,6 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
                 } finally { frozenContent.release() }
             }
             check(ref.bytes <= document.permittedBytes) { "Note exceeds 55 MB. Draft and original retained." }
-            document.savedRevision = revision
             val previousToken = withContext(Dispatchers.IO) {
                 prefs.getString(current.id, null)?.let { JSONObject(it).optString("editToken") }
                     ?.takeUnless { it == "null" || it.isBlank() }
@@ -246,6 +250,7 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
             withContext(Dispatchers.Main.immediate) {
                 if (mutable.value.document === document) mutable.value = mutable.value.copy(editToken = attached.editToken)
             }
+            document.savedRevision = revision
             completed = true
             ref to revision
         } finally { withContext(NonCancellable + Dispatchers.Main.immediate) { document.freeze(if (completed) wasFrozen else true) } }
