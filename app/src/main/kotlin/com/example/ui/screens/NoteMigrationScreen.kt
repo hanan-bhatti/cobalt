@@ -21,7 +21,6 @@ import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.launch
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.composable
 
 @Composable
@@ -32,8 +31,6 @@ fun NoteMigrationScreen(startup: Boolean, onDone: () -> Unit, onBack: () -> Unit
     var showPrompt by rememberSaveable { mutableStateOf(false) }
     var promptChecked by rememberSaveable { mutableStateOf(false) }
     val navigation = rememberNavController()
-    val entry by navigation.currentBackStackEntryAsState()
-    val recovery = entry?.destination?.route == "recovery"
     var starting by remember { mutableStateOf(false) }
     val running = starting || status.phase == Phase.RUNNING
     val complete = status.phase == Phase.COMPLETE
@@ -60,8 +57,8 @@ fun NoteMigrationScreen(startup: Boolean, onDone: () -> Unit, onBack: () -> Unit
     NoteStorageNavHost(navigation, "migration") {
         composable("migration") {
             NoteStorageRoute(navigation, this) {
-                NoteBackSurface(enabled = startup && !showPrompt && !recovery, onBack = onBack) {
-                    NoteSettingsPage(title = "Data Migration", subtitle = "Markdown storage and recovery", onBack = onBack) {
+                NoteBackSurface(enabled = startup && !showPrompt, onBack = onBack) {
+                    NoteSettingsPage(title = "Data Migration", subtitle = "Markdown storage transition", onBack = onBack) {
                         item {
                             SettingsSubsectionHeader(title = "Note storage",
                                 description = "A verified Markdown copy for every note.")
@@ -126,10 +123,6 @@ fun NoteMigrationScreen(startup: Boolean, onDone: () -> Unit, onBack: () -> Unit
                                 }, fontWeight = FontWeight.SemiBold)
                             }
                         }
-                        item {
-                            ExpressiveSettingsNavigationItem(title = "Note recovery", subtitle = "Read or export a saved note",
-                                enabled = !running, onClick = { navigation.navigate("recovery") { launchSingleTop = true } })
-                        }
                         if (status.errors.isNotEmpty()) item {
                             Column(Modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text("Needs attention", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.error)
@@ -146,13 +139,8 @@ fun NoteMigrationScreen(startup: Boolean, onDone: () -> Unit, onBack: () -> Unit
                 }
             }
         }
-        composable("recovery") {
-            NoteStorageRoute(navigation, this) {
-                NoteRecoveryScreen(onExitSafeMode = { navigation.popBackStack() }, safeMode = false, navigationBack = true)
-            }
-        }
     }
-    if (showPrompt && !recovery) ExpressiveAlertDialog(
+    if (showPrompt) ExpressiveAlertDialog(
         onDismissRequest = { showPrompt = false; onBack() }, title = "Move your notes?",
         text = { Text("Cobalt will save a verified Markdown copy of each note on this device. Your originals are kept until the copy is ready.",
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) },

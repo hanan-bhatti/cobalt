@@ -202,7 +202,7 @@ fun NoteRecoveryScreen(onExitSafeMode: () -> Unit, safeMode: Boolean = StartupCr
         }
     }
     deleteId?.let { id -> ExpressiveConfirmationDialog(onDismissRequest = { deleteId = null },
-        title = "Delete this note?", message = "This permanently removes the note. Export a copy first if you want to keep it.",
+        title = "Delete this note?", message = "This follows your Storage → Trash setting. With Trash enabled, you can restore it for 30 days.",
         confirmButtonText = "Delete note", onConfirm = {
             deleteId = null; busy = true
             scope.launch {

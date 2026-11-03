@@ -50,7 +50,7 @@ fun NoteOlderCopiesScreen(onBack: () -> Unit) {
         catch (_: Exception) { message = "Older copies could not be listed. Your notes are retained." }
         finally { busy = false }
     }
-    NoteSettingsPage("Older Copies", "Restore or export a previous full copy", onBack, itemSpacing = 4.dp) {
+    NoteSettingsPage("Saved versions", "Restore or export an earlier version", onBack, itemSpacing = 4.dp) {
         item {
             Text("Up to 200 recent copies are shown. These may include recovered drafts as well as saved versions.",
                 modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall,

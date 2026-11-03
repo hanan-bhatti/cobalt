@@ -6,149 +6,181 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.notes.NoteStorageManager
+import com.example.notes.*
 import com.example.ui.components.*
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 
-/** Matches Appearance's page header, connected surfaces, dynamic palette and settings transitions. */
-@OptIn(ExperimentalLayoutApi::class)
+/** One storage hub with focused actions; the existing settings shell owns theme and predictive back. */
 @Composable
 fun NoteStorageManagementScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val manager = remember(context) { NoteStorageManager(context) }
+    val trash = remember(context) { TrashManager(context) }
     val scope = rememberCoroutineScope()
     val navigation = rememberNavController()
+    val entry by navigation.currentBackStackEntryAsState()
     var report by remember { mutableStateOf<NoteStorageManager.Report?>(null) }
-    var busy by remember { mutableStateOf(true) }
+    var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
-    var confirming by remember { mutableStateOf(false) }
-    fun refresh() {
-        if (busy && report != null) return
+    var confirmation by remember { mutableStateOf<String?>(null) }
+    var reviewed by remember { mutableLongStateOf(0) }
+    var reviewedFiles by remember { mutableStateOf<List<NoteStorageFile>>(emptyList()) }
+    fun perform(action: suspend () -> String) {
+        if (busy) return
         busy = true
         scope.launch {
-            try { report = manager.scan() }
+            try { message = action(); report = manager.scan() }
             catch (cancel: CancellationException) { throw cancel }
-            catch (_: Exception) { message = "Storage could not be checked. Nothing was removed." }
+            catch (_: Exception) { message = "This action could not finish. Your current notes are retained. Refresh and try again." }
             finally { busy = false }
         }
     }
-    LaunchedEffect(manager) {
-        try { report = manager.scan() }
-        catch (cancel: CancellationException) { throw cancel }
-        catch (_: Exception) { message = "Storage could not be checked. Nothing was removed." }
-        finally { busy = false }
+    fun refresh() = perform { "Storage sizes updated" }
+    LaunchedEffect(entry?.destination?.route) {
+        if (entry?.destination?.route in setOf("storage", "history", "maintenance")) {
+            busy = true
+            try { report = manager.scan() }
+            catch (cancel: CancellationException) { throw cancel }
+            catch (_: Exception) { message = "Storage details could not be loaded. Try Refresh." }
+            finally { busy = false }
+        }
     }
+    fun open(route: String) { navigation.navigate(route) { launchSingleTop = true } }
     NoteStorageNavHost(navigation, "storage") {
         composable("storage") {
             NoteStorageRoute(navigation, this) {
-                NoteSettingsPage("Storage & Recovery", "Private notes, older copies and recovery", onBack) {
+                NoteSettingsPage("Storage", "Notes, retained data and space on this device", onBack,
+                    actions = { TextButton(onClick = ::refresh, enabled = !busy) { Text("Refresh") } }) {
+                    item { StorageUsageCard(report, busy) }
                     item {
-                        SettingsSubsectionHeader("On this device", description = "File sizes, not an estimate of memory use.")
-                        Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
-                            Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                                val value = report
-                                if (value == null) {
-                                    if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                                    else Text("Storage details unavailable", style = MaterialTheme.typography.bodyMedium)
-                                } else {
-                                    StorageSizeRow("Current Markdown notes", formatNoteSize(context, value.current))
-                                    StorageSizeRow("Older full copies", formatNoteSize(context, value.older))
-                                    StorageSizeRow("Drafts & recovery files", formatNoteSize(context, value.recovery))
-                                    StorageSizeRow("Database", formatNoteSize(context, value.database))
-                                    StorageSizeRow("Other private files", formatNoteSize(context, value.media))
-                                    StorageSizeRow("App cache", formatNoteSize(context, value.cache))
-                                    if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-                                }
-                            }
+                        SettingsSubsectionHeader("Your data")
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            ExpressiveSettingsNavigationItem("Manage notes", onClick = { open("recovery") },
+                                subtitle = "Read, export or delete your notes", shape = connectedPillShape(0, 4))
+                            ExpressiveSettingsNavigationItem("Trash", onClick = { open("trash") },
+                                subtitle = "Restore items or delete them forever", trailingBadge = report?.let { "${it.trashCount} · ${formatNoteSize(context, it.trash)}" },
+                                shape = connectedPillShape(1, 4))
+                            ExpressiveSettingsNavigationItem("Version history", onClick = { open("history") },
+                                subtitle = "Restore versions and review history cleanup", trailingBadge = report?.let { formatNoteSize(context, it.older) },
+                                shape = connectedPillShape(2, 4))
+                            ExpressiveSettingsNavigationItem("Unlinked files", onClick = { open("unlinked") },
+                                subtitle = "Retained files without a matching note", trailingBadge = report?.let { formatNoteSize(context, it.unattached) },
+                                shape = connectedPillShape(3, 4))
                         }
                     }
                     item {
-                        SettingsSubsectionHeader("Older copies", description = "Choose how many extra full copies to keep per note when you run cleanup.")
-                        Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
-                            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    NoteStorageManager.RETENTIONS.forEach { count ->
-                                        FilterChip(selected = report?.copiesToKeep == count, enabled = !busy && report != null,
-                                            onClick = {
-                                                busy = true
-                                                scope.launch {
-                                                    try { manager.setRetention(count); report = manager.scan() }
-                                                    catch (cancel: CancellationException) { throw cancel }
-                                                    catch (_: Exception) { message = "Could not update cleanup settings. No files were removed." }
-                                                    finally { busy = false }
-                                                }
-                                            }, label = { Text(if (count < 0) "All" else count.toString()) })
-                                    }
-                                }
-                                Text("This choice does not delete anything. Recovery drafts and undo steps still in use are protected.",
-                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
+                        SettingsSubsectionHeader("Maintenance")
+                        ExpressiveSettingsNavigationItem("Cache & database", onClick = { open("maintenance") },
+                            subtitle = "Clear safe cache and reclaim empty database space")
                     }
-                    item {
-                        val value = report
-                        val amount = value?.removable ?: 0
-                        Button(onClick = { confirming = true }, enabled = !busy && amount > 0,
-                            shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).bounceClick()) {
-                            Text(if (busy) "Checking storage…" else if (amount > 0) "Review cleanup · ${formatNoteSize(context, amount)}" else "No older copies to clean")
-                        }
-                        TextButton(onClick = ::refresh, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text("Refresh sizes") }
-                    }
-                    message?.let { text -> item { Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 12.dp)) } }
-                    item {
-                        ExpressiveSettingsNavigationItem(title = "Older copies", subtitle = "Restore or export a previous full copy",
-                            enabled = !busy, onClick = { navigation.navigate("copies") { launchSingleTop = true } })
-                    }
-                    item {
-                        ExpressiveSettingsNavigationItem(title = "Note recovery", subtitle = "Read or export your notes",
-                            enabled = !busy, onClick = { navigation.navigate("recovery") { launchSingleTop = true } })
-                    }
-                    item {
-                        NoteStorageNotice("Cleanup protects your notes",
-                            "Current notes are kept. Active drafts, interrupted writes and files that cannot be safely identified are kept too. Older full copies removed here cannot be restored. Export important notes first.")
-                    }
+                    message?.let { text -> item { StorageMessage(text) } }
                 }
             }
         }
-        composable("copies") {
-            NoteStorageRoute(navigation, this) { NoteOlderCopiesScreen(onBack = { navigation.popBackStack() }) }
+        composable("trash") {
+            NoteStorageRoute(navigation, this) { NoteTrashScreen(trash, onBack = { navigation.popBackStack() }) }
         }
+        composable("unlinked") {
+            NoteStorageRoute(navigation, this) { NoteUnlinkedFilesScreen(manager, onBack = { navigation.popBackStack() }) }
+        }
+        composable("history") {
+            NoteStorageRoute(navigation, this) {
+                NoteSettingsPage("Version history", "Earlier versions, with current notes kept intact", { navigation.popBackStack() }) {
+                    item {
+                        StorageActionCard("Saved history", report?.let { formatNoteSize(context, it.older) } ?: "—",
+                            "Previous versions use space even when the current note is small. Cleanup removes only the versions you review.")
+                    }
+                    item {
+                        ExpressiveSettingsSelectorItem("Versions to keep",
+                            NoteStorageManager.RETENTIONS.associate { it.toString() to if (it < 0) "All versions" else if (it == 0) "No extra versions" else "$it extra versions" },
+                            report?.copiesToKeep?.toString() ?: "5", onSelectionChanged = { key ->
+                                if (!busy) perform { manager.setRetention(key.toInt()); "History preference updated" }
+                            }, description = "Applied when you review cleanup. Versions still needed by recovery or Undo remain protected.")
+                    }
+                    item { ExpressiveSettingsNavigationItem("Browse versions", onClick = { open("copies") }, subtitle = "Restore or export an earlier version") }
+                    item {
+                        val amount = report?.removable ?: 0
+                        Button(onClick = { perform {
+                            reviewedFiles = manager.reviewHistory(); reviewed = reviewedFiles.sumOf { it.bytes }
+                            confirmation = "history"; "Review the versions selected for removal"
+                        } }, enabled = !busy && amount > 0,
+                            shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
+                            Text(if (amount > 0) "Review cleanup · ${formatNoteSize(context, amount)}" else "No history ready to clean")
+                        }
+                    }
+                    if (busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+                    message?.let { text -> item { StorageMessage(text) } }
+                }
+            }
+        }
+        composable("maintenance") {
+            NoteStorageRoute(navigation, this) {
+                NoteSettingsPage("Cache & database", "Temporary data and reusable database space", { navigation.popBackStack() },
+                    actions = { TextButton(onClick = ::refresh, enabled = !busy) { Text("Refresh") } }) {
+                    item {
+                        StorageActionCard("App cache", report?.let { formatNoteSize(context, it.cache) } ?: "—",
+                            "Clear rebuildable previews, idle workspace and temporary exports older than 24 hours. Notes, history, active edits, recordings and recent shares stay intact.")
+                    }
+                    item {
+                        val amount = report?.clearableCache ?: 0
+                        Button(onClick = { perform { manager.clearCache(); "Safe cache cleared. Previews rebuild as you browse." } }, enabled = !busy && amount > 0,
+                            shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
+                            Text(if (amount > 0) "Clear safe cache · ${formatNoteSize(context, amount)}" else "No safe cache to clear")
+                        }
+                    }
+                    item {
+                        StorageActionCard("Database", report?.let { formatNoteSize(context, it.database) } ?: "—",
+                            "Deleted records can leave reserved space. Optimize compacts the database without removing notes or preferences.")
+                    }
+                    item {
+                        val amount = report?.freeDatabase ?: 0
+                        OutlinedButton(onClick = { reviewed = amount; confirmation = "database" }, enabled = !busy && amount > 0,
+                            shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
+                            Text(if (amount > 0) "Optimize · up to ${formatNoteSize(context, amount)}" else "Database is compact")
+                        }
+                    }
+                    if (busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+                    message?.let { text -> item { StorageMessage(text) } }
+                }
+            }
+        }
+        composable("copies") { NoteStorageRoute(navigation, this) { NoteOlderCopiesScreen { navigation.popBackStack() } } }
         composable("recovery") {
             NoteStorageRoute(navigation, this) {
                 NoteRecoveryScreen(onExitSafeMode = { navigation.popBackStack() }, safeMode = false, navigationBack = true)
             }
         }
     }
-    if (confirming) ExpressiveAlertDialog(onDismissRequest = { confirming = false },
-        title = "Remove older copies?",
-        text = { Text("Remove up to ${formatNoteSize(context, report?.removable ?: 0)} of older copies and completed recovery logs? Current notes and recoverable drafts are kept. This cannot be undone.") },
-        confirmButtonText = "Remove copies", onConfirm = {
-            confirming = false; busy = true
-            val reviewed = report?.removable ?: 0
-            scope.launch {
-                try {
-                    val removed = manager.cleanup(reviewed)
-                    message = "Removed ${formatNoteSize(context, removed.bytes)} · ${removed.files} files"
-                    report = manager.scan()
-                } catch (cancel: CancellationException) { throw cancel }
-                catch (_: Exception) { message = "Cleanup could not finish. Some reviewed copies may have been removed; current notes are retained. Refresh sizes before retrying." }
-                finally { busy = false }
+    confirmation?.let { kind -> ExpressiveAlertDialog(onDismissRequest = { confirmation = null },
+        title = if (kind == "history") "Remove older versions?" else "Optimize the database?",
+        text = { Text(if (kind == "history") "Remove up to ${formatNoteSize(context, reviewed)} of reviewed history and completed recovery logs? Your current notes and active drafts stay intact. Removed versions cannot be restored."
+            else "Rebuild SQLite to reclaim empty pages. Keep Cobalt open while this runs. Temporary free space is required; your notes and settings are kept.") },
+        confirmButtonText = if (kind == "history") "Remove versions" else "Optimize", onConfirm = {
+            confirmation = null
+            perform {
+                if (kind == "history") { val removed = manager.cleanup(reviewed, reviewedEntries = reviewedFiles); "Removed ${formatNoteSize(context, removed.bytes)} of history" }
+                else { manager.optimizeDatabase(); "Database optimized" }
             }
-        }, dismissButtonText = "Cancel", onDismiss = { confirming = false })
+        }, dismissButtonText = "Cancel", onDismiss = { confirmation = null }) }
 }
 
 @Composable
-private fun StorageSizeRow(title: String, value: String) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface)
+internal fun StorageMessage(text: String) {
+    Text(text, Modifier.padding(horizontal = 12.dp), style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable
+internal fun StorageActionCard(title: String, amount: String, description: String) {
+    Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(amount, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
+            Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }

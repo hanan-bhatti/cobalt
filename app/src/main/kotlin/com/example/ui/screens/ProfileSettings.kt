@@ -167,13 +167,13 @@ enum class SettingsCategory(
         iconRes = R.drawable.ic_settings_widgets
     ),
     STORAGE_RECOVERY(
-        title = "Storage & Recovery",
-        subtitle = "Private notes, older copies, and cleanup",
-        iconRes = R.drawable.ic_custom_text
+        title = "Storage",
+        subtitle = "Notes, Trash, version history and cache",
+        iconRes = R.drawable.ic_custom_storage
     ),
     DATA_MIGRATION(
         title = "Data Migration",
-        subtitle = "Markdown storage, conversion results, and recovery",
+        subtitle = "Markdown storage and conversion results",
         iconRes = R.drawable.ic_custom_sync
     ),
     SYSTEM_HEALTH(
