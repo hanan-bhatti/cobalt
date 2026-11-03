@@ -46,4 +46,15 @@ class ContinuousNoteDocumentTest {
         assertEquals(changed, document.content.toString())
         document.content.release()
     }
+    @Test fun aSessionCloseWaitsForTheLastNativeViewBeforeReleasingTheModel() {
+        val document = ContinuousNoteDocument(Content("still displayed"))
+        document.attachView()
+        document.closeSession()
+        assertEquals("still displayed", document.content.toString())
+        document.detachView()
+        try { document.attachView(); fail("A released model cannot be rebound") }
+        catch (_: IllegalStateException) { }
+        document.closeSession() // Idempotent, no second release.
+    }
+
 }
