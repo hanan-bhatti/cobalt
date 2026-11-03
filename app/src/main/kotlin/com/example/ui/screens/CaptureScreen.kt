@@ -1562,7 +1562,8 @@ fun CaptureScreen(
             if (!com.example.notes.NoteEditorWindows.sectionNeedsStreaming(updated.text)) textContent = updated
             viewModel.editFileWindow(updated.text)
         } else if (com.example.notes.NoteEditorWindows.requiresWindow(item.content) || com.example.notes.NoteEditorWindows.requiresWindow(updated.text)) {
-            viewModel.prepareNoteWindow(item.id, normalWindow.start, normalWindow.end, updated.text)
+            viewModel.prepareNoteWindow(item.id, normalWindow.start, normalWindow.end, updated.text,
+                updated.selection.min + normalWindow.start, updated.selection.max + normalWindow.start)
         } else {
             textContent = updated
             viewModel.updateActiveCaptureItem { it.copy(content = updated.text, bodyLoaded = true) }

@@ -1640,7 +1640,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     private var noteTextRevision = 0L
     private var saveAfterNoteInput = false
 
-    fun prepareNoteWindow(id: String, start: Int, end: Int, replacement: String) {
+    fun prepareNoteWindow(id: String, start: Int, end: Int, replacement: String,
+        caretStart: Int? = null, caretEnd: Int? = caretStart) {
         val source = _activeCaptureItem.value?.takeIf { it.id == id } ?: return
         val revision = ++noteTextRevision
         noteTextJob?.cancel()
@@ -1656,7 +1657,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     throw java.io.IOException("Note exceeds 55 MB. Split the paste or import smaller Markdown files.")
                 }
                 if (com.example.notes.NotePersistence.isNote(source)) {
-                    plan.openStream().use { input -> fileEditor.stage(source, input) }
+                    plan.openStream().use { input -> fileEditor.stage(source, input, caretStart ?: (start + replacement.length), caretEnd ?: (start + replacement.length)) }
                     if (revision == noteTextRevision && _activeCaptureItem.value?.id == id) {
                         saveAfterNoteInput = false
                         _activeCaptureItem.value = source.copy(content = "", bodyLoaded = false)

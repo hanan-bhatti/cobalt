@@ -23,8 +23,9 @@ class ContinuousMarkdownViewTest {
         val original = "a".repeat(500) + "\n" + "b".repeat(600)
         val document = ContinuousNoteDocument(Content(original), original.toByteArray(Charsets.UTF_8).size.toLong())
         try {
+            document.selectionStart = 490
+            document.selectionEnd = 530
             editor.bind(document) { document.changed() }
-            editor.select(490, 530)
             assertEquals(490, editor.cursor.left)
             assertEquals(530, editor.cursor.right)
             val ime = editor.onCreateInputConnection(EditorInfo())!!

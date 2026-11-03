@@ -132,7 +132,19 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
         value.onFormat = format
         freeze(value.frozen)
         // Restore cursor/selection without forcing the keyboard open when returning from another screen.
-        post { if (!isReleased && document === value) { restoreViewport(x, y, value); warmStyles() } }
+        post {
+            if (!isReleased && document === value) {
+                if (x == 0 && y == 0 && end > 0 && value.revision == 0L) revealInitialSelection(value)
+                else restoreViewport(x, y, value)
+                warmStyles()
+            }
+        }
+    }
+
+    private fun revealInitialSelection(expected: ContinuousNoteDocument, attempt: Int = 0) {
+        if (isReleased || document !== expected || expected.frozen) return
+        if (isEditable) ensureSelectionVisible()
+        else if (attempt < 120) postDelayed({ revealInitialSelection(expected, attempt + 1) }, 16)
     }
 
     private fun restoreViewport(x: Int, y: Int, expected: ContinuousNoteDocument, attempt: Int = 0) {
@@ -532,9 +544,9 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
 
     @androidx.annotation.RequiresApi(33)
     private class ModernInputConnection(target: InputConnection) : InputConnectionWrapper(target, false) {
-        override fun commitText(text: CharSequence?, newCursorPosition: Int, textAttribute: android.view.inputmethod.TextAttribute?): Boolean =
+        override fun commitText(text: CharSequence, newCursorPosition: Int, textAttribute: android.view.inputmethod.TextAttribute?): Boolean =
             super.commitText(text, newCursorPosition)
-        override fun setComposingText(text: CharSequence?, newCursorPosition: Int, textAttribute: android.view.inputmethod.TextAttribute?): Boolean =
+        override fun setComposingText(text: CharSequence, newCursorPosition: Int, textAttribute: android.view.inputmethod.TextAttribute?): Boolean =
             super.setComposingText(text, newCursorPosition)
         @androidx.annotation.RequiresApi(34)
         override fun replaceText(start: Int, end: Int, text: CharSequence, newCursorPosition: Int,

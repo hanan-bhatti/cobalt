@@ -17,7 +17,7 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
     data class State(val id: String? = null, val originalHash: String? = null, val generation: NoteBodyRef? = null,
         val window: EditableNoteWindow = EditableNoteWindow(0, 0, ""), val text: String = "", val dirty: Boolean = false,
         val busy: Boolean = false, val error: String? = null, val previous: List<Long> = emptyList(),
-        val document: ContinuousNoteDocument? = null)
+        val document: ContinuousNoteDocument? = null, val caretStart: Int = 0, val caretEnd: Int = 0)
     private val context = context.applicationContext
     private val mutable = MutableStateFlow(State())
     val state = mutable.asStateFlow()
@@ -62,7 +62,10 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
                             }
                             override fun read(): Int { cancellation.ensureActive(); return super.read() }
                         }
-                        ContinuousNoteDocument(ContentIO.createFrom(checked, Charsets.UTF_8), table.size)
+                        ContinuousNoteDocument(ContentIO.createFrom(checked, Charsets.UTF_8), table.size).also {
+                            it.selectionStart = source.caretStart.coerceIn(0, it.content.length)
+                            it.selectionEnd = source.caretEnd.coerceIn(it.selectionStart, it.content.length)
+                        }
                     }
                 }
                 if (mutable.value.id == opening.id && mutable.value.generation?.hash == opening.generation?.hash) {
@@ -155,15 +158,11 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
             // The same recovery preference format is understood by the existing startup path.
             val previousJournal = prefs.getString(current.id, null)?.let { JSONObject(it) }
             val previousDraft = previousJournal?.optString("hash")
-            val olderDraft = previousJournal?.optString("previousCheckpoint")?.takeUnless { it == "null" }
             snapshot(current.copy(generation = ref, window = EditableNoteWindow(0, 0, ""), dirty = false),
                 previousCheckpoint = previousDraft)
-            // A durable preference now owns this verified generation. Reclaim only a superseded
-            // session checkpoint, never the saved original or the new recovery reference.
+            // The preference now owns a verified recovery generation. Do not infer that an older
+            // content hash is disposable: it may also be a saved undo/history generation.
             runCatching { store.committed(current.id!!, ref.hash) }
-            if (!olderDraft.isNullOrBlank() && olderDraft != current.originalHash && olderDraft != ref.hash && olderDraft != previousDraft) {
-                runCatching { store.delete(current.id!!, olderDraft) }
-            }
             ref to revision
         }
     }
@@ -175,6 +174,8 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
             .put("bytes", ref.bytes).put("preview", ref.preview).put("start", s.window.start).put("end", s.window.end)
             .put("patch", patch?.hash ?: JSONObject.NULL).put("patchBytes", patch?.bytes ?: 0)
             .put("previousCheckpoint", previousCheckpoint ?: JSONObject.NULL)
+            .put("caretStart", s.document?.selectionStart ?: s.caretStart)
+            .put("caretEnd", s.document?.selectionEnd ?: s.caretEnd)
         check(prefs.edit().putString(id, json.toString()).commit()) { "Could not journal edits; retry before closing" }
     }
     private suspend fun readWindow(id: String, ref: NoteBodyRef, start: Long) = persistence.window(id, ref.hash, start)
@@ -207,7 +208,8 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
                     }
                 }
                 val window = readWindow(item.id, ref, start)
-                State(item.id, hash, ref, if (patchEnd != null) window.copy(end = patchEnd) else window, patchText ?: window.text, patchText != null)
+                State(item.id, hash, ref, if (patchEnd != null) window.copy(end = patchEnd) else window, patchText ?: window.text, patchText != null,
+                    caretStart = saved?.optInt("caretStart", 0) ?: 0, caretEnd = saved?.optInt("caretEnd", 0) ?: 0)
             }
             if (mutable.value.id == item.id) mutable.value = loaded
         } catch (cancel: CancellationException) { throw cancel }
@@ -215,13 +217,14 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
     }
 
     /** A large paste is staged privately; it does not save over the original note. */
-    suspend fun stage(item: SavedItem, input: InputStream) = withContext(Dispatchers.IO) {
+    suspend fun stage(item: SavedItem, input: InputStream, caretStart: Int = 0, caretEnd: Int = caretStart) = withContext(Dispatchers.IO) {
         closing?.join(); journal?.cancelAndJoin()
         failedPaste = null
         val cancellation = currentCoroutineContext()
         val ref = NoteWriteLock.mutex.withLock { store.writeAtomic(item.id, input) { cancellation.ensureActive() } }
         val window = readWindow(item.id, ref, 0)
-        val next = State(item.id, item.contentHash, ref, window, window.text)
+        val next = State(item.id, item.contentHash, ref, window, window.text,
+            caretStart = caretStart.coerceAtLeast(0), caretEnd = maxOf(caretStart, caretEnd, 0))
         snapshot(next)
         // Closing capture is serialized on Main. Never reopen its state after cancellation during fsync.
         withContext(Dispatchers.Main.immediate) {
