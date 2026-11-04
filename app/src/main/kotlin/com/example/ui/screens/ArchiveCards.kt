@@ -21,6 +21,8 @@ package com.example.ui.screens
 import android.content.Intent
 import androidx.compose.foundation.isSystemInDarkTheme
 import com.example.util.CobaltCustomTabsLauncher
+import com.example.util.ItemTitleResolver
+import com.example.util.displayTitle
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -244,7 +246,7 @@ fun ArchiveItemCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = item.title.ifBlank { "Untitled Item" },
+                        text = item.displayTitle(context),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 2,
@@ -255,7 +257,6 @@ fun ArchiveItemCard(
                     )
 
                     if (item.type == SavedItemType.LINK) {
-                        val context = LocalContext.current
                         val isDark = isSystemInDarkTheme()
                         IconButton(
                             onClick = {
@@ -264,7 +265,7 @@ fun ArchiveItemCard(
                                     url = item.content,
                                     isDarkTheme = isDark,
                                     itemId = item.id,
-                                    itemTitle = item.title
+                                    itemTitle = item.displayTitle(context)
                                 )
                             },
                             modifier = Modifier.size(24.dp)
@@ -280,12 +281,13 @@ fun ArchiveItemCard(
                 }
 
                 // Sub-description
-                val cDesc = if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO) {
+                val rawDesc = if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO) {
                     item.extractedText?.trim() ?: ""
                 } else {
                     item.linkDescription?.trim() ?: item.content.trim()
                 }
-                if (cDesc.isNotBlank() && cDesc.lowercase() != item.title.trim().lowercase()) {
+                val cDesc = ItemTitleResolver.getDisplaySafeDescription(rawDesc, item.type)
+                if (cDesc.isNotBlank() && cDesc.lowercase() != item.displayTitle(context).trim().lowercase()) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = parseMarkdown(cDesc, MaterialTheme.colorScheme.primary),
@@ -769,7 +771,7 @@ fun ArchiveItemRow(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = item.title.ifBlank { "Untitled Item" },
+                        text = item.displayTitle(context),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -777,12 +779,13 @@ fun ArchiveItemRow(
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    val cDesc = if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO) {
+                    val rawDesc = if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO) {
                         item.extractedText?.trim() ?: ""
                     } else {
                         item.linkDescription?.trim() ?: item.content.trim()
                     }
-                    if (cDesc.isNotBlank() && cDesc.lowercase() != item.title.trim().lowercase()) {
+                    val cDesc = ItemTitleResolver.getDisplaySafeDescription(rawDesc, item.type)
+                    if (cDesc.isNotBlank() && cDesc.lowercase() != item.displayTitle(context).trim().lowercase()) {
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = parseMarkdown(cDesc, MaterialTheme.colorScheme.primary),

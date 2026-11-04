@@ -29,6 +29,7 @@ import androidx.core.app.NotificationManagerCompat
 import com.example.MainActivity
 import com.example.R
 import com.example.data.model.SavedItem
+import com.example.data.model.SavedItemType
 
 object AdaptiveReminderNotificationHelper {
 
@@ -80,10 +81,15 @@ object AdaptiveReminderNotificationHelper {
         )
 
         val subtext = item.folders.firstOrNull() ?: reason ?: "From your archive"
-        val displayTitle = item.title.ifBlank { item.linkTitle ?: "Saved Note" }
-        val previewBody = item.linkDescription?.takeIf { it.isNotBlank() }
+        val displayTitle = item.displayTitle(context)
+        val rawPreviewBody = item.linkDescription?.takeIf { it.isNotBlank() }
             ?: item.extractedText?.takeIf { it.isNotBlank() }
-            ?: item.content.lines().firstOrNull { it.isNotBlank() }
+            ?: if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO) {
+                null
+            } else {
+                item.content.lines().firstOrNull { it.isNotBlank() }
+            }
+        val previewBody = ItemTitleResolver.getDisplaySafeDescription(rawPreviewBody.orEmpty(), item.type).takeIf { it.isNotBlank() }
             ?: "Tap to review this item from your Cobalt archive."
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)

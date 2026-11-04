@@ -66,6 +66,8 @@ import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.data.repository.CobaltRepository
 import com.example.ui.theme.*
+import com.example.util.ItemTitleResolver
+import com.example.util.displayTitle
 
 class RecentItemsWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = RecentItemsWidget()
@@ -331,7 +333,7 @@ fun RecentItemRow(item: SavedItem) {
 
         Column(modifier = GlanceModifier.defaultWeight()) {
             Text(
-                text = item.title.ifBlank { item.type.displayName },
+                text = item.displayTitle(context),
                 maxLines = 1,
                 style = TextStyle(
                     fontFamily = FontFamily.SansSerif,
@@ -340,7 +342,12 @@ fun RecentItemRow(item: SavedItem) {
                     fontSize = 14.sp
                 )
             )
-            val subText = item.content.ifBlank { item.extractedText ?: "" }
+            val rawSubText = if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO) {
+                item.extractedText ?: ""
+            } else {
+                item.linkDescription ?: item.content
+            }
+            val subText = ItemTitleResolver.getDisplaySafeDescription(rawSubText, item.type)
             if (subText.isNotBlank()) {
                 Spacer(modifier = GlanceModifier.height(2.dp))
                 Text(

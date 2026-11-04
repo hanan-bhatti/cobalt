@@ -57,7 +57,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.data.model.SavedItemType
 import com.example.ui.theme.*
+import com.example.util.ItemTitleResolver
+import com.example.util.displayTitle
 import com.example.ui.viewmodel.CobaltViewModel
 import com.example.widget.QuickCaptureWidgetReceiver
 import com.example.widget.RecentItemsWidgetReceiver
@@ -563,14 +566,19 @@ private fun RecentItemsCustomizationSection(
                                         }
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(
-                                                text = item.title.ifBlank { item.type.displayName },
+                                                text = item.displayTitle(context),
                                                 fontSize = 12.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
                                                 color = MaterialTheme.colorScheme.onSurface
                                             )
-                                            val snippet = item.content.ifBlank { item.extractedText ?: "" }
+                                            val rawSnippet = if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO) {
+                                                item.extractedText ?: ""
+                                            } else {
+                                                item.linkDescription ?: item.content
+                                            }
+                                            val snippet = ItemTitleResolver.getDisplaySafeDescription(rawSnippet, item.type)
                                             if (snippet.isNotBlank()) {
                                                 Text(
                                                     text = snippet,

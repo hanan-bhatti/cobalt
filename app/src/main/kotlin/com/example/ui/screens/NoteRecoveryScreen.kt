@@ -98,7 +98,8 @@ fun NoteRecoveryScreen(onExitSafeMode: () -> Unit, safeMode: Boolean = StartupCr
     }
     fun export(note: RecoveryNote) {
         exportId = note.id; exportTitle = note.title; exportBytes = note.byteLength
-        val name = note.title.replace(Regex("[^\\p{L}\\p{N} ._-]"), "_").take(80)
+        val safeTitle = if (com.example.util.ItemTitleResolver.isInternalPathOrGeneratedName(note.title)) "" else note.title
+        val name = safeTitle.replace(Regex("[^\\p{L}\\p{N} ._-]"), "_").take(80)
         exporter.launch("${name.ifBlank { "note" }}.md")
     }
     fun back() {

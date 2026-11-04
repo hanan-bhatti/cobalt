@@ -61,6 +61,8 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import com.example.util.ItemTitleResolver
+import com.example.util.displayTitle
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
@@ -1150,7 +1152,8 @@ private fun QuickActionItem(
 private fun isRawUrlOrPath(text: String?): Boolean {
     if (text.isNullOrBlank()) return false
     val t = text.trim()
-    return t.startsWith("/") ||
+    return ItemTitleResolver.isInternalPathOrGeneratedName(t) ||
+            t.startsWith("/") ||
             t.startsWith("file://") ||
             t.startsWith("content://") ||
             t.startsWith("https://firebasestorage.") ||
@@ -1158,21 +1161,12 @@ private fun isRawUrlOrPath(text: String?): Boolean {
             t.startsWith("https://")
 }
 
-private fun getCleanItemTitle(item: SavedItem): String {
-    val rawTitle = item.title.trim()
-    if (rawTitle.isNotBlank() && !isRawUrlOrPath(rawTitle)) {
-        return rawTitle
-    }
-    // Title is blank or a raw file path / storage url
-    if (item.type == SavedItemType.LINK && !item.linkTitle.isNullOrBlank() && !isRawUrlOrPath(item.linkTitle)) {
-        return item.linkTitle.trim()
-    }
-    // Exactly matches the home card default in ArchiveCards.kt and DetailScreen.kt
-    return "Untitled Item"
+private fun getCleanItemTitle(item: SavedItem, context: android.content.Context? = null): String {
+    return item.displayTitle(context)
 }
 
 private fun getCleanItemDescription(item: SavedItem): String {
-    return when (item.type) {
+    val raw = when (item.type) {
         SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.AUDIO -> {
             // For images and videos, NEVER show raw file paths or storage URLs!
             // Only show clean extracted OCR text / transcription if available.
@@ -1209,6 +1203,7 @@ private fun getCleanItemDescription(item: SavedItem): String {
             }
         }
     }
+    return ItemTitleResolver.getDisplaySafeDescription(raw, item.type)
 }
 
 @Composable
@@ -1229,7 +1224,7 @@ private fun RecentItemRow(
     }
 
     val thumbUrl = remember(item) { item.getBestImagePath() ?: item.linkImage }
-    val displayTitle = remember(item) { getCleanItemTitle(item) }
+    val displayTitle = remember(item) { getCleanItemTitle(item, context) }
     val displayDescription = remember(item) { getCleanItemDescription(item) }
 
     Surface(
@@ -1359,7 +1354,7 @@ private fun DockItemDetailContent(
         else -> Triple(R.drawable.ic_custom_text, MaterialTheme.colorScheme.primary, item.type.displayName)
     }
 
-    val displayTitle = remember(item) { getCleanItemTitle(item) }
+    val displayTitle = remember(item) { getCleanItemTitle(item, context) }
 
     val copyContent = {
         val textToCopy = when {

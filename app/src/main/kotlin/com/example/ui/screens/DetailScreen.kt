@@ -64,6 +64,8 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.ClipEntry
 import android.content.ClipData
 import androidx.compose.ui.platform.LocalContext
+import com.example.util.ItemTitleResolver
+import com.example.util.displayTitle
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -238,7 +240,7 @@ fun DetailScreen(
             if (item.type != SavedItemType.MEDIA) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     // Title
-                    val displayTitle = item.title.ifBlank { item.linkTitle ?: "Untitled Item" }
+                    val displayTitle = item.displayTitle(context)
                     val isTitleRtl = remember(displayTitle) { isRtlText(displayTitle) }
                     CompositionLocalProvider(
                         LocalLayoutDirection provides if (isTitleRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
@@ -611,7 +613,7 @@ fun DetailScreen(
                 } else {
                     AsyncImage(
                         model = item.getBestImagePath(),
-                        contentDescription = item.title,
+                        contentDescription = item.displayTitle(context),
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
@@ -652,7 +654,7 @@ fun DetailScreen(
             }
 
             // DESCRIPTION / LINK META
-            val descriptionToShow = when (item.type) {
+            val rawDescription = when (item.type) {
                 SavedItemType.LINK -> item.linkDescription
                 SavedItemType.IMAGE, SavedItemType.VIDEO -> {
                     item.extractedText?.takeIf { it.isNotBlank() }
@@ -660,11 +662,11 @@ fun DetailScreen(
                 }
                 SavedItemType.AUDIO -> {
                     item.extractedText?.takeIf { it.isNotBlank() }
-                        ?: item.content.takeIf { it.isNotBlank() }
                 }
                 SavedItemType.CODE, SavedItemType.MEDIA -> null
                 else -> item.content.takeIf { it.isNotBlank() }
             }
+            val descriptionToShow = ItemTitleResolver.getDisplaySafeDescription(rawDescription.orEmpty(), item.type).takeIf { it.isNotBlank() }
 
             if (!descriptionToShow.isNullOrBlank()) {
                 Column(
@@ -791,7 +793,7 @@ fun DetailScreen(
                                                         url = item.content,
                                                         isDarkTheme = isDark,
                                                         itemId = item.id,
-                                                        itemTitle = item.title
+                                                        itemTitle = item.displayTitle(context)
                                                     )
                                                 },
                                             tint = MaterialTheme.colorScheme.primary
@@ -869,7 +871,7 @@ fun DetailScreen(
                             url = urlToOpen,
                             isDarkTheme = isDark,
                             itemId = item.id,
-                            itemTitle = item.title
+                            itemTitle = item.displayTitle(context)
                         )
                     },
                     dismissButtonText = "Cancel",

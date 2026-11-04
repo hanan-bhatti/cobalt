@@ -22,6 +22,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.activity.compose.BackHandler
 import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
+import com.example.util.displayTitle
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.animation.*
@@ -961,7 +962,7 @@ fun HomeScreen(
 
         com.example.ui.components.MoveToFolderDialog(
             title = "Move / Assign Folders",
-            subtitle = "Assign folders to \"${liveItem.title.ifBlank { "Untitled Item" }}\"",
+            subtitle = "Assign folders to \"${liveItem.displayTitle(context)}\"",
             customFolders = customFolders,
             customFolderEntities = customFolderEntities,
             allItems = items,
@@ -1705,6 +1706,7 @@ fun RecentCaptureMicroCard(
     item: SavedItem,
     onClick: () -> Unit
 ) {
+    val context = LocalContext.current
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     Surface(
         onClick = onClick,
@@ -1787,7 +1789,7 @@ fun RecentCaptureMicroCard(
 
             // Title
             Text(
-                text = item.title.ifBlank { "Untitled" },
+                text = item.displayTitle(context),
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 2,

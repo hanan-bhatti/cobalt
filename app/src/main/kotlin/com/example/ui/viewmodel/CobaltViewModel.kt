@@ -31,6 +31,7 @@ import com.example.data.model.SavedItemType
 import com.example.data.repository.CobaltRepository
 import com.example.data.remote.MediaSearchResultItem
 import com.example.util.ItemTitleResolver
+import com.example.util.displayTitle
 import com.example.util.loadTitleFallbacks
 import com.example.widget.WidgetUpdater
 import kotlinx.coroutines.Dispatchers
@@ -2333,13 +2334,19 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
             type = "text/plain"
             val shareText = buildString {
-                appendLine("Title: ${item.title}")
+                appendLine("Title: ${item.displayTitle(context)}")
                 appendLine("Type: ${item.type.displayName}")
-                appendLine("Content: ${if (item.type == com.example.data.model.SavedItemType.VIDEO) "Video media" else item.content}")
-                if (item.type == com.example.data.model.SavedItemType.AUDIO && !item.thumbnailPath.isNullOrBlank()) {
+                val contentText = when (item.type) {
+                    com.example.data.model.SavedItemType.IMAGE -> item.extractedText ?: "Image media"
+                    com.example.data.model.SavedItemType.VIDEO -> item.extractedText ?: "Video media"
+                    com.example.data.model.SavedItemType.AUDIO -> item.extractedText ?: "Audio memo"
+                    else -> item.content
+                }
+                appendLine("Content: $contentText")
+                if (item.type == com.example.data.model.SavedItemType.AUDIO && !item.thumbnailPath.isNullOrBlank() && (item.thumbnailPath.startsWith("http://") || item.thumbnailPath.startsWith("https://"))) {
                     appendLine("Audio Link: ${item.thumbnailPath}")
                 }
-                if (item.extractedText != null) {
+                if (item.extractedText != null && (item.type == com.example.data.model.SavedItemType.TEXT || item.type == com.example.data.model.SavedItemType.LINK)) {
                     appendLine("Extracted Text: ${item.extractedText}")
                 }
             }

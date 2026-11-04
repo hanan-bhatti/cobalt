@@ -47,6 +47,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import com.example.util.displayTitle
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -97,6 +98,7 @@ fun NoteActionsBottomSheet(
     onDelete: () -> Unit,
     onDismissRequest: () -> Unit
 ) {
+    val context = LocalContext.current
     val sheetState = rememberBottomSheetState(
         initialValue = SheetValue.Hidden,
         enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
@@ -133,7 +135,7 @@ fun NoteActionsBottomSheet(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = item.title.ifBlank { item.linkTitle ?: "Untitled Note" },
+                    text = item.displayTitle(context),
                     fontSize = 19.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -274,6 +276,7 @@ fun NoteOutlineBottomSheet(
     onSelectHeading: (Long) -> Unit,
     onDismissRequest: () -> Unit
 ) {
+    val context = LocalContext.current
     val sheetState = rememberBottomSheetState(
         initialValue = SheetValue.Hidden,
         enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)

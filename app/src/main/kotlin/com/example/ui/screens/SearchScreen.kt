@@ -47,6 +47,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
+import com.example.util.ItemTitleResolver
+import com.example.util.displayTitle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -571,12 +573,14 @@ fun SearchItemRow(
 
         Spacer(modifier = Modifier.width(12.dp))
 
+        val context = LocalContext.current
+
         // Center Content
         Column(
             modifier = Modifier.weight(1f)
         ) {
             Text(
-                text = item.title.ifBlank { "Untitled" },
+                text = item.displayTitle(context),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp
@@ -586,7 +590,7 @@ fun SearchItemRow(
                 overflow = TextOverflow.Ellipsis
             )
 
-            val subtitle = when (item.type) {
+            val rawSubtitle = when (item.type) {
                 SavedItemType.LINK -> {
                     try {
                         java.net.URL(item.content).host
@@ -594,8 +598,12 @@ fun SearchItemRow(
                         item.content
                     }
                 }
+                SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.AUDIO, SavedItemType.MEDIA -> {
+                    item.extractedText?.trim().orEmpty()
+                }
                 else -> item.content
             }
+            val subtitle = ItemTitleResolver.getDisplaySafeDescription(rawSubtitle, item.type)
 
             if (subtitle.isNotBlank()) {
                 Text(

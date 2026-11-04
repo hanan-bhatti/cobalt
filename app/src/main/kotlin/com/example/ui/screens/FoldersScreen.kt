@@ -46,6 +46,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.animation.core.spring
+import com.example.util.ItemTitleResolver
+import com.example.util.displayTitle
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -1127,7 +1129,7 @@ fun FolderBrowseItemRow(
                         ) {
                             AsyncImage(
                                 model = displayImage,
-                                contentDescription = item.title,
+                                contentDescription = item.displayTitle(context),
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
                             )
@@ -1169,19 +1171,20 @@ fun FolderBrowseItemRow(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = item.title.ifBlank { "Untitled Item" },
+                            text = item.displayTitle(context),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        val cDesc = if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO) {
+                        val rawDesc = if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO) {
                             item.extractedText?.trim() ?: ""
                         } else {
                             item.linkDescription?.trim() ?: item.content.trim()
                         }
-                        if (cDesc.isNotBlank() && cDesc.lowercase() != item.title.trim().lowercase()) {
+                        val cDesc = ItemTitleResolver.getDisplaySafeDescription(rawDesc, item.type)
+                        if (cDesc.isNotBlank() && cDesc.lowercase() != item.displayTitle(context).trim().lowercase()) {
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = cDesc,
@@ -1224,7 +1227,7 @@ fun FolderBrowseItemRow(
                                 if (!item.linkImage.isNullOrBlank()) {
                                     AsyncImage(
                                         model = item.linkImage,
-                                        contentDescription = item.title,
+                                        contentDescription = item.displayTitle(context),
                                         contentScale = ContentScale.Crop,
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -1255,7 +1258,7 @@ fun FolderBrowseItemRow(
                                 if (hasImage) {
                                     AsyncImage(
                                         model = displayImage,
-                                        contentDescription = item.title,
+                                        contentDescription = item.displayTitle(context),
                                         contentScale = ContentScale.Crop,
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -1470,7 +1473,7 @@ fun FolderBrowseItemRow(
                                     url = item.content,
                                     isDarkTheme = isDark,
                                     itemId = item.id,
-                                    itemTitle = item.title
+                                    itemTitle = item.displayTitle(context)
                                 )
                             },
                             colors = MenuDefaults.itemColors(
@@ -1633,9 +1636,10 @@ fun FolderMoveDialog(
     val allItems by viewModel.allItems.collectAsState()
     val isFolderRankingEnabled by viewModel.isFolderRankingEnabled.collectAsState()
 
+    val context = LocalContext.current
     com.example.ui.components.MoveToFolderDialog(
         title = "Move / Assign Folders",
-        subtitle = "Assign folders for \"${item.title.take(28)}\"",
+        subtitle = "Assign folders for \"${item.displayTitle(context).take(28)}\"",
         customFolders = customFolders,
         customFolderEntities = customFolderEntities,
         allItems = allItems,
