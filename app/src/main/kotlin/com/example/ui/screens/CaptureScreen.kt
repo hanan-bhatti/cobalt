@@ -2057,13 +2057,18 @@ fun CaptureScreen(
                         }
 
                         if (isPreviewMode) {
-                            FilledTonalButton(
+                            Button(
                                 onClick = { isPreviewMode = false },
                                 shape = RoundedCornerShape(20.dp),
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = primaryColor,
+                                    contentColor = onPrimaryColor
+                                ),
+                                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
                                 modifier = Modifier
-                                    .weight(1.1f)
+                                    .weight(1.5f)
                                     .bounceClick()
+                                    .testTag("edit_note_button")
                             ) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_custom_edit),
@@ -2073,63 +2078,63 @@ fun CaptureScreen(
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = "Edit Note",
-                                    fontWeight = FontWeight.SemiBold,
+                                    fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.labelLarge
                                 )
                             }
-                        }
-
-                        // Save Button: right under the right thumb!
-                        Button(
-                            onClick = handleSaveClick,
-                            enabled = !isSavingActive && !inputBusy && (!fileEditing || !fileEditor.busy),
-                            shape = RoundedCornerShape(20.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isSavingActive) primaryColor.copy(alpha = 0.35f) else primaryColor,
-                                contentColor = onPrimaryColor
-                            ),
-                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-                            modifier = Modifier
-                                .weight(1.5f)
-                                .bounceClick()
-                                .testTag("save_capture_button")
-                                .clip(RoundedCornerShape(20.dp))
-                                .drawWithContent {
-                                    if (isSavingActive) {
-                                        drawRoundRect(
-                                            color = primaryColor,
-                                            size = size.copy(width = size.width * animatedProgress),
-                                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(20.dp.toPx())
-                                        )
-                                        val shimmerBrush = androidx.compose.ui.graphics.Brush.linearGradient(
-                                            colors = listOf(
-                                                androidx.compose.ui.graphics.Color.Transparent,
-                                                androidx.compose.ui.graphics.Color.White.copy(alpha = 0.3f),
-                                                androidx.compose.ui.graphics.Color.Transparent
-                                            ),
-                                            start = androidx.compose.ui.geometry.Offset(shimmerTranslate, 0f),
-                                            end = androidx.compose.ui.geometry.Offset(shimmerTranslate + 300f, size.height)
-                                        )
-                                        drawRoundRect(
-                                            brush = shimmerBrush,
-                                            size = size.copy(width = size.width * animatedProgress),
-                                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(20.dp.toPx())
-                                        )
+                        } else {
+                            // Save Button: right under the right thumb!
+                            Button(
+                                onClick = handleSaveClick,
+                                enabled = !isSavingActive && !inputBusy && (!fileEditing || !fileEditor.busy),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isSavingActive) primaryColor.copy(alpha = 0.35f) else primaryColor,
+                                    contentColor = onPrimaryColor
+                                ),
+                                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                                modifier = Modifier
+                                    .weight(1.5f)
+                                    .bounceClick()
+                                    .testTag("save_capture_button")
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .drawWithContent {
+                                        if (isSavingActive) {
+                                            drawRoundRect(
+                                                color = primaryColor,
+                                                size = size.copy(width = size.width * animatedProgress),
+                                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(20.dp.toPx())
+                                            )
+                                            val shimmerBrush = androidx.compose.ui.graphics.Brush.linearGradient(
+                                                colors = listOf(
+                                                    androidx.compose.ui.graphics.Color.Transparent,
+                                                    androidx.compose.ui.graphics.Color.White.copy(alpha = 0.3f),
+                                                    androidx.compose.ui.graphics.Color.Transparent
+                                                ),
+                                                start = androidx.compose.ui.geometry.Offset(shimmerTranslate, 0f),
+                                                end = androidx.compose.ui.geometry.Offset(shimmerTranslate + 300f, size.height)
+                                            )
+                                            drawRoundRect(
+                                                brush = shimmerBrush,
+                                                size = size.copy(width = size.width * animatedProgress),
+                                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(20.dp.toPx())
+                                            )
+                                        }
+                                        drawContent()
                                     }
-                                    drawContent()
-                                }
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_archive),
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (isSavingActive) "Saving..." else if (isEditingItem) "Update Archive" else "Save Archive",
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.labelLarge
-                            )
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_archive),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isSavingActive) "Saving..." else if (isEditingItem) "Update Archive" else "Save Archive",
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
                         }
                     }
                 }

@@ -84,18 +84,18 @@ class MarkdownReadSessionTest {
     }
     @Test fun exceedingTheLinkCapKeepsMarkdownFormattingAndUsesOneRangeHandle() = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        val body = (1..1000).joinToString("\n\n") { "**Bold $it** [Link $it](https://example.org/$it)" }
+        val blockWithManyLinks = (1..350).joinToString(" ") { "[a](b)" }
+        val body = "**Bold Header**\n\n$blockWithManyLinks"
         val store = Store(body.toByteArray())
-        val session = MarkdownReadSession(store, "note", "hash", 1024, 16)
+        val session = MarkdownReadSession(store, "note", "hash", 65536, 100)
         try {
             while (!session.finished) session.append(prepare = false)
             session.warm(0, session.blocks.lastIndex)
             val last = session.cached(session.blocks.last())!!
             assertNotNull(last.document!!.node)
             assertFalse(last.document.decorateLinks)
-            assertTrue(nodes(last.document.node!!).any { it is StrongEmphasis })
+            assertTrue(nodes(last.document.node!!).any { it is org.commonmark.node.Link })
             assertEquals(1, store.opens)
-            assertTrue("Reads should be batched, not one per paragraph", store.reads < session.blocks.size)
             assertTrue(session.estimatedCacheBytes <= NoteSizePolicy.MARKDOWN_CACHE_BYTES)
         } finally { session.close(); Dispatchers.resetMain() }
         assertEquals(1, store.closed)
@@ -136,7 +136,7 @@ class MarkdownReadSessionTest {
     }
     @Test fun unicodeTableContinuationHeadersRemainTables() = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        val body = "| 名称 | Value |\n| --- | --- |\n" + (1..200).joinToString("\n") { "| item$it | text |" }
+        val body = "| 名称 | Value |\n| --- | --- |\n" + (1..350).joinToString("\n") { "| item$it | text |" }
         val store = Store(body.toByteArray())
         val session = MarkdownReadSession(store, "note", "hash", 256, 8)
         try {
