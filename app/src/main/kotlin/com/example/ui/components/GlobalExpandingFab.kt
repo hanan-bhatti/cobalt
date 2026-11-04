@@ -100,6 +100,7 @@ fun GlobalExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
     var showAddFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
     var showQuickNoteOverlay by remember { mutableStateOf(false) }
+    var userHasEditedInSession by remember(showQuickNoteOverlay) { mutableStateOf(false) }
     val importText = rememberTextImportAction(viewModel)
     val quickDraft by viewModel.quickDraft.collectAsState()
     val captureTitle = quickDraft.title
@@ -225,11 +226,17 @@ fun GlobalExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
             showQuickNoteOverlay = false
         },
         captureTitle = captureTitle,
-        onTitleChange = viewModel::updateQuickDraftTitle,
+        onTitleChange = {
+            userHasEditedInSession = true
+            viewModel.updateQuickDraftTitle(it)
+        },
         captureContent = captureContent,
-        onContentChange = viewModel::updateQuickDraft,
+        onContentChange = {
+            userHasEditedInSession = true
+            viewModel.updateQuickDraft(it)
+        },
         isSaving = isSaving || !quickDraft.ready || quickDraft.busy,
-        savedDraftPreview = quickDraft.snapshot?.takeIf { captureContent.isEmpty() && it.bytes > 0 }?.preview,
+        savedDraftPreview = if (userHasEditedInSession) null else quickDraft.snapshot?.takeIf { captureContent.isEmpty() && it.bytes > 0 }?.preview,
         draftError = quickDraft.error,
         onRetryDraft = viewModel::loadQuickDraft,
         hasPendingDraft = quickDraft.pending || quickDraft.snapshot != null,
@@ -418,6 +425,7 @@ fun ClassicExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
     var showAddFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
     var showQuickNoteOverlay by remember { mutableStateOf(false) }
+    var userHasEditedInSession by remember(showQuickNoteOverlay) { mutableStateOf(false) }
     val importText = rememberTextImportAction(viewModel)
     val quickDraft by viewModel.quickDraft.collectAsState()
     val captureTitle = quickDraft.title
@@ -640,11 +648,17 @@ fun ClassicExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
             showQuickNoteOverlay = false
         },
         captureTitle = captureTitle,
-        onTitleChange = viewModel::updateQuickDraftTitle,
+        onTitleChange = {
+            userHasEditedInSession = true
+            viewModel.updateQuickDraftTitle(it)
+        },
         captureContent = captureContent,
-        onContentChange = viewModel::updateQuickDraft,
+        onContentChange = {
+            userHasEditedInSession = true
+            viewModel.updateQuickDraft(it)
+        },
         isSaving = isSaving || !quickDraft.ready || quickDraft.busy,
-        savedDraftPreview = quickDraft.snapshot?.takeIf { captureContent.isEmpty() && it.bytes > 0 }?.preview,
+        savedDraftPreview = if (userHasEditedInSession) null else quickDraft.snapshot?.takeIf { captureContent.isEmpty() && it.bytes > 0 }?.preview,
         draftError = quickDraft.error,
         onRetryDraft = viewModel::loadQuickDraft,
         hasPendingDraft = quickDraft.pending || quickDraft.snapshot != null,

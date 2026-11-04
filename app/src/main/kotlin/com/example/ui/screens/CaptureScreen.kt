@@ -602,7 +602,8 @@ fun TextCapturePage(
     isKeyboardOpen: Boolean,
     bottomPadding: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
-    rankedFolders: List<com.example.util.RankedFolder>? = null
+    rankedFolders: List<com.example.util.RankedFolder>? = null,
+    localHazeState: HazeState? = null
 ) {
     var showNewFolderCreator by remember { mutableStateOf(false) }
     val file by viewModel.fileEditorState.collectAsState()
@@ -782,7 +783,8 @@ fun TextCapturePage(
     }
     if (fileEditing) {
         ContinuousNoteEditor(viewModel, modifier.fillMaxSize().padding(horizontal = 20.dp)
-            .padding(top = 10.dp, bottom = bottomPadding + 24.dp), noteHeader, noteFooter, preview = isPreviewMode)
+            .padding(top = 10.dp, bottom = bottomPadding + 24.dp), noteHeader, noteFooter, preview = isPreviewMode,
+            localHazeState = localHazeState)
     } else BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val minContentHeight = maxHeight
         Column(Modifier.fillMaxWidth().heightIn(min = minContentHeight).verticalScroll(rememberScrollState())
@@ -812,7 +814,8 @@ fun AudioCapturePage(
     isKeyboardOpen: Boolean,
     bottomPadding: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
-    rankedFolders: List<com.example.util.RankedFolder>? = null
+    rankedFolders: List<com.example.util.RankedFolder>? = null,
+    localHazeState: HazeState? = null
 ) {
     var showNewFolderCreator by remember { mutableStateOf(false) }
 
@@ -1055,7 +1058,8 @@ fun LinkCapturePage(
     isKeyboardOpen: Boolean,
     bottomPadding: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
-    rankedFolders: List<com.example.util.RankedFolder>? = null
+    rankedFolders: List<com.example.util.RankedFolder>? = null,
+    localHazeState: HazeState? = null
 ) {
     var showNewFolderCreator by remember { mutableStateOf(false) }
     val isExtracting by viewModel.isMetadataExtracting.collectAsState()
@@ -1596,16 +1600,17 @@ fun CaptureScreen(
 
     val safeClearFocus = {
         try {
+            keyboardController?.hide()
             localView.findFocus()?.clearFocus()
             localView.clearFocus()
-            focusManager.clearFocus(force = true)
-            keyboardController?.hide()
         } catch (_: Exception) {}
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            safeClearFocus()
+            try {
+                keyboardController?.hide()
+            } catch (_: Exception) {}
         }
     }
 
@@ -1641,7 +1646,11 @@ fun CaptureScreen(
     val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
     val clipboard = LocalClipboard.current
 
-    val item = activeItem ?: return
+    var lastActiveItem by remember { mutableStateOf(activeItem) }
+    if (activeItem != null) {
+        lastActiveItem = activeItem
+    }
+    val item = activeItem ?: lastActiveItem ?: return
 
     var clipboardRawText by remember { mutableStateOf("", referentialEqualityPolicy()) }
     // Read clipboard when sheet/screen mounts
@@ -2047,6 +2056,29 @@ fun CaptureScreen(
                             )
                         }
 
+                        if (isPreviewMode) {
+                            FilledTonalButton(
+                                onClick = { isPreviewMode = false },
+                                shape = RoundedCornerShape(20.dp),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                                modifier = Modifier
+                                    .weight(1.1f)
+                                    .bounceClick()
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_edit),
+                                    contentDescription = "Edit Mode",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Edit Note",
+                                    fontWeight = FontWeight.SemiBold,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
+                        }
+
                         // Save Button: right under the right thumb!
                         Button(
                             onClick = handleSaveClick,
@@ -2140,7 +2172,8 @@ fun CaptureScreen(
                         clipboardDomain = clipboardDomain,
                         isKeyboardOpen = isKeyboardOpen,
                         bottomPadding = innerPadding.calculateBottomPadding(),
-                        rankedFolders = rankedFolders
+                        rankedFolders = rankedFolders,
+                        localHazeState = localHazeState
                     )
                 } else if (pageType == SavedItemType.AUDIO) {
                     AudioCapturePage(
@@ -2156,7 +2189,8 @@ fun CaptureScreen(
                         isOcrLoading = isOcrLoading,
                         isKeyboardOpen = isKeyboardOpen,
                         bottomPadding = innerPadding.calculateBottomPadding(),
-                        rankedFolders = rankedFolders
+                        rankedFolders = rankedFolders,
+                        localHazeState = localHazeState
                     )
                 } else if (pageType == SavedItemType.LINK) {
                     LinkCapturePage(
@@ -2169,7 +2203,8 @@ fun CaptureScreen(
                         clipboardDomain = clipboardDomain,
                         isKeyboardOpen = isKeyboardOpen,
                         bottomPadding = innerPadding.calculateBottomPadding(),
-                        rankedFolders = rankedFolders
+                        rankedFolders = rankedFolders,
+                        localHazeState = localHazeState
                     )
                 } else {
                     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {

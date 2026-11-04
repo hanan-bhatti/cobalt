@@ -262,10 +262,10 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
         requestFocus()
     }
 
-    fun select(start: Int, end: Int) {
+    fun select(start: Int, end: Int, requestFocus: Boolean = false) {
         val left = text.indexer.getCharPosition(start.coerceIn(0, text.length))
         val right = text.indexer.getCharPosition(end.coerceIn(0, text.length))
-        setSelectionRegion(left.line, left.column, right.line, right.column)
+        setSelectionRegion(left.line, left.column, right.line, right.column, requestFocus)
     }
 
     private fun insertAt(index: Int, value: CharSequence) {
@@ -463,7 +463,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
                 if (all && matches.size > ContinuousTextSearch.MAX_REPLACEMENTS) {
                     message("More than 10,000 matches. Narrow the search or use Replace next."); return@launch
                 }
-                if (replacement == null) { select(matches.first(), matches.first() + query.length); return@launch }
+                if (replacement == null) { select(matches.first(), matches.first() + query.length, false); return@launch }
                 if (doc.frozen || paste?.isActive == true) return@launch
                 isEditable = false
                 applying = true
@@ -477,7 +477,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
                     }
                 }
                 text.endBatchEdit(); batch = false
-                select(matches.first(), matches.first() + replacement.length)
+                select(matches.first(), matches.first() + replacement.length, false)
                 message(if (all) "${matches.size} matches replaced" else "Match replaced")
             } catch (cancel: CancellationException) {
                 if (batch) { text.endBatchEdit(); batch = false }

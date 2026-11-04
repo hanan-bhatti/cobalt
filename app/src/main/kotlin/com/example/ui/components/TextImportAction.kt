@@ -165,6 +165,14 @@ fun rememberTextImportAction(viewModel: CobaltViewModel): () -> Unit {
                     TextButton(onClick = viewModel::cancelMarkdownImport) {
                         Text("Cancel")
                     }
+                } else if (state.importedItem != null) {
+                    Button(onClick = {
+                        val item = state.importedItem
+                        visible = false
+                        if (item != null) viewModel.showDetailItem(item)
+                    }) {
+                        Text("Open note")
+                    }
                 } else {
                     Button(onClick = { visible = false }) {
                         Text("Done")

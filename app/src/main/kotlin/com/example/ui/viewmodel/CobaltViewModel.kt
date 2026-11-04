@@ -1520,7 +1520,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     private val _quickDraft = MutableStateFlow(QuickDraftState())
     val quickDraft = _quickDraft.asStateFlow()
     data class MarkdownImportState(val running: Boolean = false, val bytes: Long = 0, val message: String? = null,
-        val canSplit: Boolean = false, val partsSaved: Int = 0)
+        val canSplit: Boolean = false, val partsSaved: Int = 0, val importedItem: SavedItem? = null)
     private val _markdownImport = MutableStateFlow(MarkdownImportState())
     val markdownImport = _markdownImport.asStateFlow()
     private var markdownImportJob: kotlinx.coroutines.Job? = null
@@ -1548,12 +1548,16 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                         "ℹ️ Large Document (${com.example.notes.NoteSizePolicy.formatBytes(saved.byteLength)}): Saved successfully. High-performance streaming mode is active. Real-time rich formatting is restricted to prevent typing lag."
                     else -> "Text document imported successfully (${com.example.notes.NoteSizePolicy.formatBytes(saved.byteLength)})."
                 }
+                val isLargeOrWarning = saved.byteLength > com.example.notes.NoteSizePolicy.TIER_B_MAX_BYTES
                 _markdownImport.value = MarkdownImportState(
                     bytes = saved.byteLength,
                     canSplit = saved.byteLength > com.example.notes.NoteSizePolicy.TIER_B_MAX_BYTES,
-                    message = warning
+                    message = warning,
+                    importedItem = saved
                 )
-                showDetailItem(saved)
+                if (!isLargeOrWarning) {
+                    showDetailItem(saved)
+                }
                 com.example.widget.WidgetUpdater.update(context)
             } catch (cancel: kotlinx.coroutines.CancellationException) {
                 _markdownImport.value = MarkdownImportState(message = "Import cancelled. The source document was not changed.")
@@ -1676,6 +1680,14 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     fun updateQuickDraft(text: String) {
         if (!_quickDraft.value.ready || _quickDraft.value.busy || quickDraftSaving) return
         quickDraftJob?.cancel()
+        if (text.isEmpty()) {
+            quickDraftPendingText = null
+            _quickDraft.update { it.copy(text = "", pending = false, snapshot = null, busy = false, error = null) }
+            viewModelScope.launch {
+                try { com.example.notes.QuickNoteDraftStore(context).clear() } catch (_: Exception) {}
+            }
+            return
+        }
         quickDraftPendingText = text
         val large = com.example.notes.NoteEditorWindows.requiresWindow(text)
         _quickDraft.update { it.copy(text = if (large) it.text else text, busy = large, error = null, pending = true) }

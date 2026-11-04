@@ -99,5 +99,11 @@ class QuickNoteDraftStore(context: Context, private val persistenceFactory: (Con
         }
     }
 
+    suspend fun clear() = withContext(Dispatchers.IO) {
+        NoteWriteLock.mutex.withLock {
+            prefs.edit().clear().commit()
+        }
+    }
+
     companion object { private const val DRAFT_ID = "quick-note-draft" }
 }

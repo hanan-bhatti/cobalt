@@ -45,6 +45,13 @@ import com.example.ui.components.applyCobaltTypography
 import com.example.ui.components.NoteBodySkeleton
 import com.example.ui.components.NoteOutlineBottomSheet
 import com.example.ui.viewmodel.CobaltViewModel
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -53,7 +60,8 @@ import kotlinx.coroutines.launch
 /** One frameless native editor, with a viewport independent of the document's total height. */
 @Composable
 internal fun ContinuousNoteEditor(viewModel: CobaltViewModel, modifier: Modifier,
-    header: @Composable () -> Unit, footer: @Composable () -> Unit, preview: Boolean = false) {
+    header: @Composable () -> Unit, footer: @Composable () -> Unit, preview: Boolean = false,
+    localHazeState: HazeState? = null) {
     val state by viewModel.fileEditorState.collectAsState()
     val activeItem by viewModel.activeCaptureItem.collectAsState()
     val context = LocalContext.current
@@ -203,10 +211,10 @@ internal fun ContinuousNoteEditor(viewModel: CobaltViewModel, modifier: Modifier
                 exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(horizontal = 4.dp, vertical = 6.dp)
-                    .imePadding()
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
                 EditorFloatingSearchReplaceBar(
+                    localHazeState = localHazeState,
                     onFind = { query, backwards ->
                         if (document?.disk != null) diskNative?.find(query, backwards)
                         else native?.find(query, backwards)
@@ -254,6 +262,7 @@ internal fun ContinuousNoteEditor(viewModel: CobaltViewModel, modifier: Modifier
 
 @Composable
 private fun EditorFloatingSearchReplaceBar(
+    localHazeState: HazeState?,
     onFind: (String, Boolean) -> Unit,
     onReplace: (String, String, Boolean) -> Unit,
     onClose: () -> Unit,
@@ -270,19 +279,56 @@ private fun EditorFloatingSearchReplaceBar(
         focusRequester.requestFocus()
     }
 
-    Surface(
+    LaunchedEffect(query) {
+        if (query.isNotEmpty()) {
+            kotlinx.coroutines.delay(250)
+            onFind(query, false)
+        }
+    }
+
+    val containerModifier = if (localHazeState != null) {
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.65f))
+            .hazeEffect(
+                state = localHazeState,
+                style = HazeStyle(
+                    backgroundColor = MaterialTheme.colorScheme.surface,
+                    tint = HazeTint(MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)),
+                    blurRadius = 24.dp,
+                    noiseFactor = 0.02f
+                )
+            )
+            .border(
+                1.dp,
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (isDark) 0.35f else 0.5f),
+                RoundedCornerShape(24.dp)
+            )
+    } else {
+        Modifier
+            .fillMaxWidth()
+            .background(
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = RoundedCornerShape(24.dp)
+            )
+            .border(
+                1.dp,
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (isDark) 0.25f else 0.4f),
+                RoundedCornerShape(24.dp)
+            )
+    }
+
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(12.dp, RoundedCornerShape(22.dp)),
-        shape = RoundedCornerShape(22.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f),
-        tonalElevation = 6.dp,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (isDark) 0.35f else 0.45f))
+            .shadow(12.dp, RoundedCornerShape(24.dp))
+            .then(containerModifier)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             // Find Row
@@ -315,7 +361,6 @@ private fun EditorFloatingSearchReplaceBar(
                             if (it.length <= 256) {
                                 query = it
                                 validation = null
-                                if (it.isNotEmpty()) onFind(it, false)
                             } else {
                                 validation = "Search terms are limited to 256 characters."
                             }
