@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms and Conditions — Cobalt</title>
+  <meta name="description" content="Cobalt Terms and Conditions. Free and open source software under the GNU Affero General Public License.">
+  <meta name="theme-color" content="#FF6F1E">
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="header-container">
+      <a href="./" class="brand-link">
+        <img src="./favicon.svg" alt="Cobalt Logo" class="brand-icon">
+        <span>Cobalt</span>
+      </a>
+      <nav class="site-nav" aria-label="Main Navigation">
+        <a href="./">Home</a>
+        <a href="./privacy.html">Privacy</a>
+        <a href="./terms.html" class="active" aria-current="page">Terms</a>
+        <a href="https://github.com/hanan-bhatti/cobalt" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle dark/light theme" title="Toggle theme">◐</button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <div class="container-prose">
+      <header class="legal-header">
+        <h1>Terms and Conditions</h1>
+        <p class="meta">Last updated: 3 November 2026</p>
+      </header>
+
+      <article class="legal-content">
+        <h2>1. Agreement and Open Source License</h2>
+        <p>
+          By using Cobalt, you agree to these terms. Cobalt is free and open-source software licensed under the GNU Affero General Public License (AGPL-3.0-or-later). Nothing in these terms limits your rights under that license. Source code and full license text are available at <a href="https://github.com/hanan-bhatti/cobalt" target="_blank" rel="noopener noreferrer">github.com/hanan-bhatti/cobalt</a>.
+        </p>
+
+        <h2>2. Your Content and Responsibility</h2>
+        <p>
+          You retain full ownership of the notes, links, images, media, and other content you store in Cobalt. Because Cobalt stores your information locally without a cloud note backup service, you are responsible for maintaining your own backups and exports of important content.
+        </p>
+
+        <h2>3. Third-Party Services and API Keys</h2>
+        <p>
+          Cobalt includes optional integrations with external services such as Google Gemini, The Movie Database (TMDb), Jikan, Trakt, and YouTube. You may choose to provide your own API keys or link third-party accounts.
+        </p>
+        <p>
+          Cobalt uses Trakt but is not endorsed or certified by Trakt. Cobalt uses the TMDB API but is not endorsed or certified by TMDB.
+        </p>
+        <p>
+          You are responsible for obtaining any required personal keys, keeping them secure, and complying with the terms of use established by each third-party provider. Cobalt is independent and is not affiliated with or endorsed by these third-party services.
+        </p>
+
+        <h2>4. Service Availability and Offline Use</h2>
+        <p>
+          Cobalt is designed as an offline-first capture tool for your locally saved data. However, external integrations—such as AI OCR, audio transcription, online media searches, remote image loading, link preview scraping, trailer playback, and Trakt synchronization—require an active internet connection and depend on the operational availability of third-party APIs and servers.
+        </p>
+
+        <h2>5. Disclaimer of Warranties</h2>
+        <p>
+          As provided in the GNU Affero General Public License, Cobalt is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for full details.
+        </p>
+
+        <h2>6. External Accounts and Service Terms</h2>
+        <p>
+          When you connect an external service or send data to an external provider through Cobalt, your relationship with that provider is governed by their respective terms of service and policies. You may disconnect integrations or revoke account authorizations at any time.
+        </p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-container">
+      <nav class="footer-nav" aria-label="Footer Navigation">
+        <a href="./">Home</a>
+        <a href="./privacy.html">Privacy Policy</a>
+        <a href="./terms.html">Terms &amp; Conditions</a>
+        <a href="https://github.com/hanan-bhatti/cobalt" target="_blank" rel="noopener noreferrer">Source Code</a>
+        <a href="mailto:hannanbhatti2006@gmail.com">Contact Support</a>
+      </nav>
+      <p class="footer-copy">
+        &copy; 2026 Hanan Bhatti. Licensed under AGPL-3.0-or-later.
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      const toggleBtn = document.getElementById('theme-toggle');
+      const savedTheme = localStorage.getItem('cobalt-theme');
+      if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+      toggleBtn.addEventListener('click', function() {
+        const current = document.documentElement.getAttribute('data-theme') ||
+          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('cobalt-theme', next);
+      });
+    })();
+  </script>
+</body>
+</html>

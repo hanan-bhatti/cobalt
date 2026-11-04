@@ -44,7 +44,7 @@ object LegalDocs {
 
         **4. Trakt Synchronization**
 
-        Connecting Trakt is optional. Authentication uses Trakt's Device Code flow, where you approve access at trakt.tv/activate; Cobalt does not handle or store your Trakt password or use PKCE browser redirects.
+        Connecting Trakt is optional. Authentication primarily uses the OAuth 2.0 Authorization Code flow with Proof Key for Code Exchange (PKCE) via your web browser and a verified HTTPS App Link callback (`https://cobalt.hanan-bhatti.site/callback`), or alternatively the Device Code flow at `trakt.tv/activate`. Cobalt never handles, sees, or stores your Trakt password.
 
         When connected, Cobalt reads your Trakt profile, watched movie and TV history (including episode plays), ratings, and watchlist. Cobalt sends updates to Trakt when you mark movies or episodes as watched, rate items, or change watchlist status. Cobalt runs an initial sync upon connecting and updates when you tap "Sync Now". Cobalt does not run scheduled periodic background sync.
 
@@ -76,7 +76,9 @@ object LegalDocs {
 
         **9. Third Parties and Contact**
 
-        Third-party services—including Google Gemini, TMDb, Jikan, Trakt, YouTube, and GitHub—operate independently of Cobalt. Their own terms and privacy policies govern how they handle connection metadata and request content.
+        Third-party services—including Google Gemini, The Movie Database (TMDb), Jikan, Trakt, YouTube, and GitHub—operate independently of Cobalt. Their own terms and privacy policies govern how they handle connection metadata and request content.
+
+        Cobalt uses Trakt but is not endorsed or certified by Trakt. Cobalt uses the TMDB API but is not endorsed or certified by TMDB.
 
         For privacy questions, contact hannanbhatti2006@gmail.com.
 
@@ -100,6 +102,8 @@ object LegalDocs {
         **3. Third-Party Services and API Keys**
 
         Cobalt includes optional integrations with external services such as Google Gemini, The Movie Database (TMDb), Jikan, Trakt, and YouTube. You may choose to provide your own API keys or link third-party accounts.
+
+        Cobalt uses Trakt but is not endorsed or certified by Trakt. Cobalt uses the TMDB API but is not endorsed or certified by TMDB.
 
         You are responsible for obtaining any required personal keys, keeping them secure, and complying with the terms of use established by each third-party provider. Cobalt is independent and is not affiliated with or endorsed by these third-party services.
 
@@ -141,6 +145,9 @@ object LegalDocs {
         Q: What happens if I uninstall Cobalt or clear storage?
         A: Uninstalling Cobalt or clearing app storage deletes your local notes, media, and stored API keys. Android backup is disabled, so export any notes you wish to keep before uninstalling.
 
+        Q: How does Trakt sign-in work?
+        A: Cobalt signs in securely via your web browser using OAuth 2.0 with PKCE (Proof Key for Code Exchange) and redirects back to Cobalt through a verified HTTPS callback (cobalt.hanan-bhatti.site/callback). Alternatively, you can use the Device Code flow at trakt.tv/activate. Cobalt never asks for, sees, or stores your Trakt password.
+
         Q: Does disconnecting Trakt or deleting items in Cobalt remove them from Trakt?
         A: No. Disconnecting Trakt clears your local session and attempts server-side token revocation, but it does not delete your remote data on Trakt. If offline, local disconnect still finishes. Deleting local items in Cobalt also does not delete your watch history or ratings on Trakt.
 
@@ -157,6 +164,8 @@ object LegalDocs {
         Cobalt is a free, open-source capture app for links, notes, images, and code snippets, built to get things out of your head and into a personal local archive with as little friction as possible.
 
         I built it because I wanted a fast, no-nonsense capture tool without ads, subscriptions, or tracking. Notes and media remain stored locally on your device, while optional online integrations provide AI transcription and media metadata when needed.
+
+        Cobalt uses Trakt but is not endorsed or certified by Trakt. Cobalt uses the TMDB API but is not endorsed or certified by TMDB.
 
         The full source code is on GitHub at [github.com/hanan-bhatti/cobalt](https://github.com/hanan-bhatti/cobalt), licensed under AGPL-3.0-or-later. Read the code, file an issue, or fork it and make it your own.
 

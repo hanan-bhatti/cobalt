@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="32" height="32">
+  <rect width="108" height="108" rx="24" fill="#171717"/>
+  <!-- "2" - Atomic number 27 -->
+  <path fill="#00E5FF" d="M30,24 h6 v2 h-6 z M30,28 h6 v2 h-6 z M30,32 h6 v2 h-6 z M34,26 h2 v2 h-2 z M30,30 h2 v2 h-2 z"/>
+  <!-- "7" -->
+  <path fill="#00E5FF" d="M38,24 h6 v2 h-6 z M42,26 h2 v8 h-2 z"/>
+  <!-- "C" -->
+  <path fill="#FF6F1E" d="M52,38 H30 V70 H52 V62 H38 V46 H52 Z"/>
+  <!-- "o" -->
+  <path fill="#FF6F1E" fill-rule="evenodd" d="M58,46 H78 V70 H58 Z M66,54 H70 V62 H66 Z"/>
+</svg>

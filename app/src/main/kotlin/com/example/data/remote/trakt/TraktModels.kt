@@ -56,9 +56,19 @@ data class TraktTokenResponse(
 )
 
 @JsonClass(generateAdapter = true)
+data class TraktTokenRequest(
+    val code: String,
+    val client_id: String,
+    val code_verifier: String,
+    val redirect_uri: String,
+    val grant_type: String = "authorization_code"
+)
+
+@JsonClass(generateAdapter = true)
 data class TraktRefreshTokenRequest(
     val client_id: String,
     val refresh_token: String,
+    val redirect_uri: String? = null,
     val grant_type: String = "refresh_token"
 )
 

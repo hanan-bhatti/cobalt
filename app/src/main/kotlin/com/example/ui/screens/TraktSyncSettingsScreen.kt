@@ -431,7 +431,7 @@ fun TraktSyncSettingsScreen(
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "Sign in using device activation. No passwords stored on device.",
+                                        text = "Sign in securely using PKCE OAuth. No passwords stored on device.",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -439,7 +439,7 @@ fun TraktSyncSettingsScreen(
                             }
 
                             Button(
-                                onClick = { authManager.startDeviceAuth() },
+                                onClick = { authManager.startPkceAuth(context) },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Color(0xFFED1C24)
                                 ),
@@ -454,6 +454,17 @@ fun TraktSyncSettingsScreen(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 15.sp,
                                     color = Color.White
+                                )
+                            }
+
+                            TextButton(
+                                onClick = { authManager.startDeviceAuth() },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = "Or use Device Code activation (TV / secondary)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -558,7 +569,7 @@ fun TraktSyncSettingsScreen(
     if (authState !is TraktDeviceAuthState.Idle) {
         Dialog(
             onDismissRequest = {
-                authManager.cancelDeviceAuth()
+                authManager.cancelAuth()
             },
             properties = DialogProperties(
                 dismissOnBackPress = true,
@@ -596,7 +607,7 @@ fun TraktSyncSettingsScreen(
                     }
 
                     Text(
-                        text = "Activate Trakt",
+                        text = "Connect Trakt",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -616,9 +627,72 @@ fun TraktSyncSettingsScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(12.dp))
-                            TextButton(onClick = { authManager.cancelDeviceAuth() }) {
+                            TextButton(onClick = { authManager.cancelAuth() }) {
                                 Text("Cancel", color = MaterialTheme.colorScheme.outline)
                             }
+                        }
+
+                        is TraktDeviceAuthState.AuthorizingBrowser -> {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Please approve access in your web browser. Cobalt will automatically connect when authorized.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = Color(0xFFED1C24)
+                                )
+                                Text(
+                                    text = authState.statusMessage,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                TextButton(
+                                    onClick = { authManager.cancelAuth() },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Cancel", color = MaterialTheme.colorScheme.outline)
+                                }
+                                Button(
+                                    onClick = {
+                                        CobaltCustomTabsLauncher.launch(context, authState.authUri.toString())
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFED1C24)),
+                                    shape = RoundedCornerShape(14.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("Open Browser", fontWeight = FontWeight.Bold, color = Color.White)
+                                }
+                            }
+                        }
+
+                        is TraktDeviceAuthState.ExchangingToken -> {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            CircularProgressIndicator(
+                                color = Color(0xFFED1C24),
+                                modifier = Modifier.size(40.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Exchanging authorization code with Trakt...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
                         }
 
                         is TraktDeviceAuthState.PendingApproval -> {
@@ -700,7 +774,7 @@ fun TraktSyncSettingsScreen(
                             }
 
                             TextButton(
-                                onClick = { authManager.cancelDeviceAuth() },
+                                onClick = { authManager.cancelAuth() },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text("Cancel", color = MaterialTheme.colorScheme.outline)
@@ -742,13 +816,13 @@ fun TraktSyncSettingsScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 TextButton(
-                                    onClick = { authManager.cancelDeviceAuth() },
+                                    onClick = { authManager.cancelAuth() },
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Text("Dismiss", color = MaterialTheme.colorScheme.outline)
                                 }
                                 Button(
-                                    onClick = { authManager.startDeviceAuth() },
+                                    onClick = { authManager.startPkceAuth(context) },
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFED1C24)),
                                     shape = RoundedCornerShape(14.dp),
                                     modifier = Modifier.weight(1f)
@@ -771,6 +845,7 @@ fun TraktSyncSettingsScreen(
     if (showAdvancedDialog) {
         var customClientIdInput by remember { mutableStateOf(authManager.getCustomClientId() ?: "") }
         var customBaseUrlInput by remember { mutableStateOf(authManager.getCustomBaseUrl() ?: "") }
+        var customRedirectUriInput by remember { mutableStateOf(authManager.getCustomRedirectUri() ?: "") }
 
         Dialog(
             onDismissRequest = { showAdvancedDialog = false },
@@ -822,6 +897,16 @@ fun TraktSyncSettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
 
+                    OutlinedTextField(
+                        value = customRedirectUriInput,
+                        onValueChange = { customRedirectUriInput = it },
+                        label = { Text("Redirect URI") },
+                        placeholder = { Text("https://cobalt.hanan-bhatti.site/callback") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -832,6 +917,7 @@ fun TraktSyncSettingsScreen(
                                 authManager.resetToDefaults()
                                 customClientIdInput = ""
                                 customBaseUrlInput = ""
+                                customRedirectUriInput = ""
                                 Toast.makeText(context, "Reset to default credentials", Toast.LENGTH_SHORT).show()
                                 showAdvancedDialog = false
                             }
@@ -847,6 +933,7 @@ fun TraktSyncSettingsScreen(
                                 onClick = {
                                     authManager.setCustomClientId(customClientIdInput)
                                     authManager.setCustomBaseUrl(customBaseUrlInput)
+                                    authManager.setCustomRedirectUri(customRedirectUriInput)
                                     Toast.makeText(context, "Credentials saved", Toast.LENGTH_SHORT).show()
                                     showAdvancedDialog = false
                                 },

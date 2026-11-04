@@ -959,7 +959,11 @@ class MainActivity : ComponentActivity() {
                 if (linkStr.startsWith("cobalt://item/")) {
                     val itemId = linkStr.substringAfter("cobalt://item/")
                     viewModel.openItemById(itemId)
-                } else {
+                } else if (data.scheme == "https" &&
+                    data.host == "cobalt.hanan-bhatti.site" &&
+                    (data.path == "/callback" || data.path?.startsWith("/callback/") == true)
+                ) {
+                    com.example.data.remote.trakt.TraktAuthManager.getInstance(applicationContext).handleAuthCallback(data)
                 }
             }
         } else if ("com.example.ACTION_QUICK_TEXT" == action) {

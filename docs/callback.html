@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <title>Connecting to Cobalt — Trakt Authorization</title>
+  <meta name="description" content="Trakt authorization callback for Cobalt.">
+  <meta name="theme-color" content="#FF6F1E">
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="header-container">
+      <a href="./" class="brand-link">
+        <img src="./favicon.svg" alt="Cobalt Logo" class="brand-icon">
+        <span>Cobalt</span>
+      </a>
+      <nav class="site-nav" aria-label="Main Navigation">
+        <a href="./">Home</a>
+        <a href="./privacy.html">Privacy</a>
+        <a href="./terms.html">Terms</a>
+        <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle dark/light theme" title="Toggle theme">◐</button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <div class="container">
+      <div class="callback-card">
+        <div class="callback-icon" id="status-icon" aria-hidden="true">✓</div>
+        <h1 id="status-title">Authorization Received</h1>
+        <p id="status-desc">
+          Your authorization response has been received. If Cobalt did not open automatically, tap the button below to return to the app.
+        </p>
+
+        <div style="margin-top: 24px;">
+          <a id="open-app-btn" href="#" class="btn btn-primary" style="min-width: 200px;">
+            Open Cobalt
+          </a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-container">
+      <nav class="footer-nav" aria-label="Footer Navigation">
+        <a href="./">Home</a>
+        <a href="./privacy.html">Privacy Policy</a>
+        <a href="./terms.html">Terms &amp; Conditions</a>
+        <a href="https://github.com/hanan-bhatti/cobalt" target="_blank" rel="noopener noreferrer">Source Code</a>
+      </nav>
+      <p class="footer-copy">
+        &copy; 2026 Hanan Bhatti. Licensed under AGPL-3.0-or-later.
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      // Theme handling
+      const toggleBtn = document.getElementById('theme-toggle');
+      const savedTheme = localStorage.getItem('cobalt-theme');
+      if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+      toggleBtn.addEventListener('click', function() {
+        const current = document.documentElement.getAttribute('data-theme') ||
+          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('cobalt-theme', next);
+      });
+
+      // Parse parameters securely without logging or persisting
+      const params = new URLSearchParams(window.location.search);
+      const error = params.get('error');
+      const code = params.get('code');
+      const state = params.get('state');
+
+      const titleEl = document.getElementById('status-title');
+      const descEl = document.getElementById('status-desc');
+      const iconEl = document.getElementById('status-icon');
+      const btnEl = document.getElementById('open-app-btn');
+
+      if (error) {
+        iconEl.textContent = '!';
+        iconEl.style.backgroundColor = 'rgba(239, 83, 80, 0.15)';
+        iconEl.style.color = '#EF5350';
+        titleEl.textContent = 'Authorization Cancelled';
+        descEl.textContent = 'Authorization was not completed on Trakt. You can close this window and return to Cobalt.';
+        btnEl.textContent = 'Return to Cobalt';
+        btnEl.href = 'intent://cobalt.hanan-bhatti.site/callback?error=' + encodeURIComponent(error) + (state ? '&state=' + encodeURIComponent(state) : '') + '#Intent;scheme=https;package=com.hanan_bhatti.cobalt;end';
+      } else if (code) {
+        titleEl.textContent = 'Authorization Successful';
+        descEl.textContent = 'Trakt approved access. Tap the button below to complete the connection inside Cobalt.';
+        const targetUrl = 'intent://cobalt.hanan-bhatti.site/callback?code=' + encodeURIComponent(code) + (state ? '&state=' + encodeURIComponent(state) : '') + '#Intent;scheme=https;package=com.hanan_bhatti.cobalt;end';
+        btnEl.href = targetUrl;
+
+        // Attempt automatic redirect to the Android app intent
+        setTimeout(function() {
+          try {
+            window.location.href = targetUrl;
+          } catch (_) {}
+        }, 100);
+      } else {
+        iconEl.textContent = 'ℹ';
+        titleEl.textContent = 'Trakt Authentication Callback';
+        descEl.textContent = 'This page handles OAuth callback responses for the Cobalt Android application.';
+        btnEl.textContent = 'Go to Homepage';
+        btnEl.href = './';
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -393,6 +393,24 @@ class FakeTraktApiService : TraktApiService {
         return retrofit2.Response.success(Unit)
     }
 
+    var exchangeTokenCalled = false
+    var lastExchangeTokenRequest: TraktTokenRequest? = null
+    var shouldFailExchange = false
+    var mockExchangeTokenResponse = TraktTokenResponse(
+        access_token = "pkce_access_token_123",
+        refresh_token = "pkce_refresh_token_123",
+        expires_in = 7200L
+    )
+
+    override suspend fun exchangeToken(request: TraktTokenRequest): retrofit2.Response<TraktTokenResponse> {
+        exchangeTokenCalled = true
+        lastExchangeTokenRequest = request
+        if (shouldFailExchange) {
+            return retrofit2.Response.error(400, "Bad Request".toResponseBody(null))
+        }
+        return retrofit2.Response.success(mockExchangeTokenResponse)
+    }
+
     override suspend fun refreshToken(request: TraktRefreshTokenRequest): TraktTokenResponse {
         refreshTokenCalled = true
         if (refreshTokenDelayMs > 0) {

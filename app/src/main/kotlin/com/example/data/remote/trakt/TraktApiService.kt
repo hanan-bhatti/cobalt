@@ -41,6 +41,11 @@ interface TraktApiService {
     ): Response<TraktTokenResponse>
 
     @POST("oauth/token")
+    suspend fun exchangeToken(
+        @Body request: TraktTokenRequest
+    ): Response<TraktTokenResponse>
+
+    @POST("oauth/token")
     suspend fun refreshToken(
         @Body request: TraktRefreshTokenRequest
     ): TraktTokenResponse

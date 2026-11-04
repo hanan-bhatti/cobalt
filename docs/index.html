@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cobalt — Universal Capture & Personal Knowledge Vault</title>
+  <meta name="description" content="A minimalist, offline-first personal knowledge base and universal capture suite for Android. Fast, private, open-source with zero telemetry.">
+  <meta name="theme-color" content="#FF6F1E">
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="header-container">
+      <a href="./" class="brand-link">
+        <img src="./favicon.svg" alt="Cobalt Logo" class="brand-icon">
+        <span>Cobalt</span>
+      </a>
+      <nav class="site-nav" aria-label="Main Navigation">
+        <a href="./" class="active" aria-current="page">Home</a>
+        <a href="./privacy.html">Privacy</a>
+        <a href="./terms.html">Terms</a>
+        <a href="https://github.com/hanan-bhatti/cobalt" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle dark/light theme" title="Toggle theme">◐</button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <div class="container">
+      <section class="hero">
+        <div class="hero-badge">Free &amp; Open Source • AGPL-3.0 • Offline-First</div>
+        <h1>Universal capture &amp; personal knowledge archive for Android.</h1>
+        <p class="hero-lead">
+          Eliminate digital fragmentation. Cobalt is your private vault for notes, media, audio memos, and links—featuring the 60/120fps SideDock, Gemini AI OCR region marking, and zero-telemetry local storage.
+        </p>
+
+        <div class="hero-actions">
+          <a href="https://github.com/hanan-bhatti/cobalt/releases/latest" class="btn btn-primary" target="_blank" rel="noopener noreferrer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download APK (v2.2.3)
+          </a>
+          <a href="https://f-droid.org/en/packages/com.hanan_bhatti.cobalt/" class="btn btn-secondary" target="_blank" rel="noopener noreferrer">
+            Get it on F-Droid
+          </a>
+          <a href="https://github.com/hanan-bhatti/cobalt" class="btn btn-secondary" target="_blank" rel="noopener noreferrer">
+            View Source Code
+          </a>
+        </div>
+
+        <div class="hero-banner-wrap">
+          <img src="./assets/banner.png" alt="Cobalt App Interface &amp; Feature Banner" loading="eager" width="980" height="420">
+        </div>
+      </section>
+
+      <section class="features-section" aria-labelledby="features-heading">
+        <div class="section-title">
+          <h2 id="features-heading">Engineered for focus and privacy</h2>
+          <p>Everything you capture stays on your device. No user accounts, no cloud sync lock-in.</p>
+        </div>
+
+        <div class="features-grid">
+          <article class="feature-card">
+            <div class="feature-icon-wrap" style="background: rgba(255, 111, 30, 0.15); color: #FF6F1E;">⚡</div>
+            <h3>Cobalt SideDock</h3>
+            <p>Summon instant capture from any app with a gentle screen-edge swipe. Renders at 60/90/120fps on the GPU RenderThread with 0% CPU footprint when resting.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon-wrap" style="background: rgba(66, 165, 245, 0.15); color: #42A5F5;">🔍</div>
+            <h3>Gemini AI OCR &amp; Region Marking</h3>
+            <p>Select any rectangle on your screen to extract text, code, or links directly over running apps. Uses your own Gemini API key with zero image storage on remote servers.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon-wrap" style="background: rgba(102, 187, 106, 0.15); color: #66BB6A;">📝</div>
+            <h3>Markdown &amp; Continuous Editor</h3>
+            <p>Write notes with standard Markdown syntax, real-time preview, code syntax highlighting, and fast search. Saved as private files in local storage.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon-wrap" style="background: rgba(38, 166, 154, 0.15); color: #26A69A;">🎙️</div>
+            <h3>Voice Memos &amp; Audio</h3>
+            <p>Record quick audio clips with live waveform visualization. Optional Gemini transcription converts spoken thoughts to clean, formatted Markdown notes.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon-wrap" style="background: rgba(233, 30, 99, 0.15); color: #E91E63;">🎬</div>
+            <h3>Media Hub &amp; Trakt Sync</h3>
+            <p>Search movies, TV shows, and anime via TMDb and Jikan. Connect Trakt using secure PKCE authorization to sync watch history, ratings, and watchlists.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon-wrap" style="background: rgba(171, 71, 188, 0.15); color: #AB47BC;">🛡️</div>
+            <h3>Zero-Telemetry Privacy</h3>
+            <p>No analytics SDKs, no tracking pixels, and no automatic crash uploads. Optional third-party API keys and OAuth tokens are protected via Android Keystore (AES-GCM).</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="screenshots-section" aria-labelledby="screenshots-heading">
+        <div class="section-title">
+          <h2 id="screenshots-heading">Screenshots</h2>
+          <p>Real captures from Cobalt on Android</p>
+        </div>
+
+        <div class="screenshots-grid">
+          <figure class="screenshot-item">
+            <img src="./assets/dashboard_home.png" alt="Cobalt Dashboard Home" loading="lazy" width="280" height="580">
+            <figcaption>Dashboard Vault</figcaption>
+          </figure>
+
+          <figure class="screenshot-item">
+            <img src="./assets/floating_edge_panel.png" alt="Cobalt SideDock Edge Panel" loading="lazy" width="280" height="580">
+            <figcaption>SideDock Edge Panel</figcaption>
+          </figure>
+
+          <figure class="screenshot-item">
+            <img src="./assets/ocr_extracted_links.png" alt="Gemini AI OCR Text Extraction" loading="lazy" width="280" height="580">
+            <figcaption>AI OCR Extraction</figcaption>
+          </figure>
+
+          <figure class="screenshot-item">
+            <img src="./assets/voice_memo_recording.png" alt="Voice Memo Recording Screen" loading="lazy" width="280" height="580">
+            <figcaption>Voice Memo Capture</figcaption>
+          </figure>
+
+          <figure class="screenshot-item">
+            <img src="./assets/folders_screen.png" alt="Folders and Categories" loading="lazy" width="280" height="580">
+            <figcaption>Folders &amp; Categories</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="attribution-card" aria-label="Third-Party Attribution">
+        <h4>Service Disclaimers &amp; Attribution</h4>
+        <p>Cobalt uses Trakt but is not endorsed or certified by Trakt.</p>
+        <p>Cobalt uses the TMDB API but is not endorsed or certified by TMDB.</p>
+        <p>Anime metadata is powered by Jikan (Unofficial MyAnimeList API). YouTube trailer playback uses the embedded player subject to YouTube’s Terms of Service.</p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-container">
+      <nav class="footer-nav" aria-label="Footer Navigation">
+        <a href="./">Home</a>
+        <a href="./privacy.html">Privacy Policy</a>
+        <a href="./terms.html">Terms &amp; Conditions</a>
+        <a href="https://github.com/hanan-bhatti/cobalt" target="_blank" rel="noopener noreferrer">Source Code</a>
+        <a href="https://github.com/hanan-bhatti/cobalt/releases" target="_blank" rel="noopener noreferrer">Releases</a>
+        <a href="mailto:hannanbhatti2006@gmail.com">Contact Support</a>
+      </nav>
+      <p class="footer-copy">
+        &copy; 2026 Hanan Bhatti. Licensed under the GNU Affero General Public License (AGPL-3.0-or-later).
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      const toggleBtn = document.getElementById('theme-toggle');
+      const savedTheme = localStorage.getItem('cobalt-theme');
+      if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+      toggleBtn.addEventListener('click', function() {
+        const current = document.documentElement.getAttribute('data-theme') ||
+          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('cobalt-theme', next);
+      });
+    })();
+  </script>
+</body>
+</html>

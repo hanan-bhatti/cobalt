@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Cobalt</title>
+  <meta name="description" content="Cobalt Privacy Policy. Learn how your data stays private and local on your Android device.">
+  <meta name="theme-color" content="#FF6F1E">
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="header-container">
+      <a href="./" class="brand-link">
+        <img src="./favicon.svg" alt="Cobalt Logo" class="brand-icon">
+        <span>Cobalt</span>
+      </a>
+      <nav class="site-nav" aria-label="Main Navigation">
+        <a href="./">Home</a>
+        <a href="./privacy.html" class="active" aria-current="page">Privacy</a>
+        <a href="./terms.html">Terms</a>
+        <a href="https://github.com/hanan-bhatti/cobalt" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle dark/light theme" title="Toggle theme">◐</button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <div class="container-prose">
+      <header class="legal-header">
+        <h1>Privacy Policy</h1>
+        <p class="meta">Last updated: 3 November 2026</p>
+      </header>
+
+      <article class="legal-content">
+        <h2>1. Overview and Local Storage</h2>
+        <p>
+          Cobalt is a free, open-source personal capture and knowledge archive. Your notes, captured media, and organizational data are stored locally on your device. Cobalt does not operate a user account system, and there is no Cobalt cloud note synchronization service.
+        </p>
+        <p>
+          Saved notes, Markdown files, media recordings, and database tables are stored in Cobalt's private application storage without separate app-level encryption. Optional service credentials—specifically your Gemini API key, TMDb API key, and Trakt OAuth tokens—are stored encrypted using Android Keystore (AES-256-GCM). Hardware backing for this storage depends on your device hardware and Android platform support.
+        </p>
+
+        <h2>2. Optional AI Features</h2>
+        <p>
+          When you use Gemini-powered OCR, Cobalt transmits the cropped screenshot region you selected. If you do not select a crop region, the entire captured screenshot is transmitted. When you use voice memo transcription, Cobalt sends the recorded audio file. When you format speech text, Cobalt sends the transcribed text and formatting instructions.
+        </p>
+        <p>
+          These requests are sent to Google's Gemini API over HTTPS using the Gemini API key you provide. Cobalt tracks aggregate token counts and request counts locally on your device to show your usage; these counters are never uploaded or shared.
+        </p>
+
+        <h2>3. Media and Remote Content</h2>
+        <p>
+          When you search for movies and TV shows, Cobalt contacts The Movie Database (TMDb) using your configured API key. When you search for anime, Cobalt contacts Jikan; new anime searches require an active internet connection, though previously saved anime details can be viewed offline. Uncached remote images will not load while offline.
+        </p>
+        <p>
+          Posters, backdrops, cast photos, user avatars, and other remote images load automatically when media cards or details are displayed. When you save or share a URL, Cobalt automatically contacts the host website to fetch page titles and preview metadata. Opening saved items that reference remote media may download and cache those media files locally. Cobalt does not contact OMDb; that integration is unused.
+        </p>
+
+        <h2>4. Trakt Synchronization</h2>
+        <p>
+          Connecting Trakt is optional. Authentication uses OAuth 2.0 Authorization Code Flow with PKCE (Proof Key for Code Exchange) via an external browser or Chrome Custom Tab redirecting to <code>https://cobalt.hanan-bhatti.site/callback</code>, with an alternative Device Code flow (<code>trakt.tv/activate</code>) supported for convenience. Cobalt never handles or stores your Trakt password and never embeds a client secret in distributed software.
+        </p>
+        <p>
+          When connected, Cobalt reads your Trakt profile, watched movie and TV history (including episode plays), ratings, and watchlist. Cobalt sends updates to Trakt when you mark movies or episodes as watched, rate items, or change watchlist status. Cobalt runs an initial sync upon connecting and updates when you tap "Sync Now". Cobalt does not run scheduled periodic background sync.
+        </p>
+        <p>
+          Disconnecting Trakt clears your stored Trakt tokens and session details locally and attempts server-side revocation on Trakt's servers. If your device is offline or the revocation request fails, local disconnect still completes, and you can revoke Cobalt's access at any time through your Trakt account settings on trakt.tv. Previously synchronized items remain in your local Cobalt library. Disconnecting Trakt, uninstalling Cobalt, or deleting local items does not remove your watch history, ratings, or watchlist from your Trakt account.
+        </p>
+
+        <h2>5. YouTube Trailers</h2>
+        <p>
+          Trailer playback in media details uses an embedded Android WebView that loads the YouTube embed player. Network requests to YouTube and Google begin automatically whenever you open the detail screen of a movie or TV show that includes a trailer link.
+        </p>
+        <p>
+          The embedded player runs with JavaScript, web storage, and third-party cookies enabled. YouTube and Google process these requests under their own terms and privacy practices. This external web playback is independent of Cobalt, which contains no analytics or tracking SDKs.
+        </p>
+
+        <h2>6. Crash Reports and Feedback</h2>
+        <p>
+          Cobalt does not include an analytics SDK and does not automatically upload crash reports.
+        </p>
+        <p>
+          When an unexpected crash occurs, Cobalt writes a report locally. Crash reports include the app version, device manufacturer, device model, Android OS version, thread name, timestamp, exception message, and technical stack trace. Because exception messages and stack traces are not redacted, they may contain sensitive details such as file paths, identifiers, or URLs associated with the crash.
+        </p>
+        <p>
+          Selecting "Send" opens an external email chooser. The report is sent only if you complete the action inside your email application. The developer receives the report and your email address. If you use in-app feedback export, a Markdown copy is saved to the app's cache directory and shared through your chosen application. Crash report and feedback files in cache are not automatically deleted.
+        </p>
+
+        <h2>7. Sharing, Retention, and Deletion</h2>
+        <p>
+          Exporting or sharing content is initiated by you. Note exports are generated as plaintext Markdown; app settings and API credentials are excluded, but any personal information or secrets written inside your notes will be included in the export. Shared copies are handled by the destination app you choose. Temporary share copies remain in the app cache until cleared.
+        </p>
+        <p>
+          Deleted items move to Trash and are kept for 30 days before automatic removal, or you can delete them permanently at any time. Automatic Android backup and device-to-device transfers are disabled in Cobalt's configuration, though behavior can vary across customized operating system builds. Clearing app storage or uninstalling Cobalt removes your local notes, media, and credentials permanently. Externally saved exports and data stored on third-party services like Trakt remain unaffected.
+        </p>
+
+        <h2>8. App Updates</h2>
+        <p>
+          Cobalt can check GitHub for application releases. Automatic release checks are disabled by default. Manual checks in the Release Updates screen contact GitHub's API. Cobalt sends standard HTTP request headers without user identifiers or personal data. Cobalt does not automatically download or install app updates; update links open the GitHub releases page in your browser.
+        </p>
+
+        <h2>9. Third Parties, Website Hosting, and Contact</h2>
+        <p>
+          Third-party services—including Google Gemini, TMDb, Jikan, Trakt, YouTube, and GitHub—operate independently of Cobalt. Their own terms and privacy policies govern how they handle connection metadata and request content.
+        </p>
+        <p>
+          Cobalt uses Trakt but is not endorsed or certified by Trakt. Cobalt uses the TMDB API but is not endorsed or certified by TMDB.
+        </p>
+        <p>
+          This public website is hosted as a static site on GitHub Pages. The website serves static files only, sets no tracking cookies, loads no external fonts or tracking scripts, and collects no personal data or login credentials.
+        </p>
+        <p>
+          For privacy questions or concerns, contact <a href="mailto:hannanbhatti2006@gmail.com">hannanbhatti2006@gmail.com</a>.
+        </p>
+        <p>
+          Cobalt's source code is publicly inspectable at:
+          <br>
+          <a href="https://github.com/hanan-bhatti/cobalt" target="_blank" rel="noopener noreferrer">github.com/hanan-bhatti/cobalt</a>
+        </p>
+      </article>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-container">
+      <nav class="footer-nav" aria-label="Footer Navigation">
+        <a href="./">Home</a>
+        <a href="./privacy.html">Privacy Policy</a>
+        <a href="./terms.html">Terms &amp; Conditions</a>
+        <a href="https://github.com/hanan-bhatti/cobalt" target="_blank" rel="noopener noreferrer">Source Code</a>
+        <a href="mailto:hannanbhatti2006@gmail.com">Contact Support</a>
+      </nav>
+      <p class="footer-copy">
+        &copy; 2026 Hanan Bhatti. Licensed under AGPL-3.0-or-later.
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      const toggleBtn = document.getElementById('theme-toggle');
+      const savedTheme = localStorage.getItem('cobalt-theme');
+      if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+      toggleBtn.addEventListener('click', function() {
+        const current = document.documentElement.getAttribute('data-theme') ||
+          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('cobalt-theme', next);
+      });
+    })();
+  </script>
+</body>
+</html>

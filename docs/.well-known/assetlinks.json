@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.hanan_bhatti.cobalt",
+      "sha256_cert_fingerprints": [
+        "9A:F1:92:BC:18:65:C3:15:59:15:39:BD:40:22:E6:9E:6A:35:E5:97:38:4B:84:6D:3B:3F:27:2E:74:C6:E2:CB",
+        "06:A1:D8:F4:91:4D:A1:F4:38:42:9E:80:41:CE:A9:CC:91:FC:02:FB:19:F9:16:AE:82:E5:C9:A0:91:FC:A9:1B"
+      ]
+    }
+  }
+]

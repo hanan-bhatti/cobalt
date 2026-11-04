@@ -20,6 +20,7 @@ package com.example.data.remote.trakt
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.net.Uri
 import com.example.util.SafeLogger as Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -36,6 +37,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import java.security.MessageDigest
+import java.security.SecureRandom
 import java.util.concurrent.atomic.AtomicLong
 
 sealed class TraktDeviceAuthState {
@@ -47,6 +50,11 @@ sealed class TraktDeviceAuthState {
         val deviceCode: String,
         val statusMessage: String = "Waiting for approval at trakt.tv/activate..."
     ) : TraktDeviceAuthState()
+    data class AuthorizingBrowser(
+        val authUri: Uri,
+        val statusMessage: String = "Opening Trakt sign-in in browser..."
+    ) : TraktDeviceAuthState()
+    object ExchangingToken : TraktDeviceAuthState()
     data class Success(val user: TraktUser?) : TraktDeviceAuthState()
     data class Error(val message: String) : TraktDeviceAuthState()
 }
@@ -182,14 +190,41 @@ class TraktAuthManager(
         TraktClient.resetClient()
     }
 
+    fun getAuthorizeUrl(): String {
+        val custom = getCustomBaseUrl()
+        return if (custom != null && !custom.contains("api.trakt.tv")) {
+            val root = custom.removeSuffix("/")
+            "$root/oauth/authorize"
+        } else {
+            DEFAULT_AUTHORIZE_URL
+        }
+    }
+
+    fun getRedirectUri(): String {
+        return prefs.getString(KEY_CUSTOM_REDIRECT_URI, null)?.takeIf { it.isNotBlank() } ?: DEFAULT_REDIRECT_URI
+    }
+
+    fun getCustomRedirectUri(): String? {
+        return prefs.getString(KEY_CUSTOM_REDIRECT_URI, null)?.takeIf { it.isNotBlank() }
+    }
+
+    fun setCustomRedirectUri(uri: String?) {
+        if (uri.isNullOrBlank()) {
+            prefs.edit().remove(KEY_CUSTOM_REDIRECT_URI).apply()
+        } else {
+            prefs.edit().putString(KEY_CUSTOM_REDIRECT_URI, uri.trim()).apply()
+        }
+    }
+
     fun isCustomConfigured(): Boolean {
-        return !getCustomClientId().isNullOrBlank() || !getCustomBaseUrl().isNullOrBlank()
+        return !getCustomClientId().isNullOrBlank() || !getCustomBaseUrl().isNullOrBlank() || !getCustomRedirectUri().isNullOrBlank()
     }
 
     fun resetToDefaults() {
         prefs.edit()
             .remove(KEY_CUSTOM_CLIENT_ID)
             .remove(KEY_CUSTOM_BASE_URL)
+            .remove(KEY_CUSTOM_REDIRECT_URI)
             .apply()
         TraktClient.resetClient()
     }
@@ -410,14 +445,238 @@ class TraktAuthManager(
         }
     }
 
+    private val secureRandom = SecureRandom()
+
+    private fun base64UrlEncode(bytes: ByteArray): String {
+        return try {
+            android.util.Base64.encodeToString(
+                bytes,
+                android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
+            )
+        } catch (e: Exception) {
+            java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
+        }
+    }
+
+    fun generateCodeVerifier(): String {
+        val randomBytes = ByteArray(32)
+        secureRandom.nextBytes(randomBytes)
+        return base64UrlEncode(randomBytes)
+    }
+
+    fun generateCodeChallenge(verifier: String): String {
+        val bytes = verifier.toByteArray(Charsets.US_ASCII)
+        val digest = MessageDigest.getInstance("SHA-256").digest(bytes)
+        return base64UrlEncode(digest)
+    }
+
+    fun generateState(): String {
+        val randomBytes = ByteArray(16)
+        secureRandom.nextBytes(randomBytes)
+        return base64UrlEncode(randomBytes)
+    }
+
+    /**
+     * Creates the authorization URI and persists the verifier, state, timestamp, and redirect URI
+     * for process-death resilience during browser authorization.
+     */
+    fun createPkceAuthorizationUri(
+        clientId: String = getClientId(),
+        redirectUri: String = getRedirectUri()
+    ): Pair<Uri, String> {
+        val verifier = generateCodeVerifier()
+        val challenge = generateCodeChallenge(verifier)
+        val state = generateState()
+
+        prefs.edit()
+            .putString(KEY_PKCE_CODE_VERIFIER, verifier)
+            .putString(KEY_PKCE_STATE, state)
+            .putLong(KEY_PKCE_TIMESTAMP, System.currentTimeMillis())
+            .putString(KEY_PKCE_REDIRECT_URI, redirectUri)
+            .apply()
+
+        val uri = Uri.parse(getAuthorizeUrl()).buildUpon()
+            .appendQueryParameter("response_type", "code")
+            .appendQueryParameter("client_id", clientId)
+            .appendQueryParameter("redirect_uri", redirectUri)
+            .appendQueryParameter("state", state)
+            .appendQueryParameter("code_challenge", challenge)
+            .appendQueryParameter("code_challenge_method", "S256")
+            .build()
+
+        return Pair(uri, state)
+    }
+
+    /**
+     * Starts PKCE Authorization Code flow: generates cryptographic parameters,
+     * sets state to [TraktDeviceAuthState.AuthorizingBrowser], and opens the Trakt authorization
+     * URL in Chrome Custom Tabs / external browser.
+     */
+    fun startPkceAuth(context: Context) {
+        pollingJob?.cancel()
+        pollingJob = null
+        val (authUri, _) = createPkceAuthorizationUri()
+        _deviceAuthState.value = TraktDeviceAuthState.AuthorizingBrowser(authUri)
+        try {
+            com.example.util.CobaltCustomTabsLauncher.launch(context, authUri.toString())
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to launch custom tab for PKCE: ${e.message}", e)
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, authUri).apply {
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        }
+    }
+
+    /**
+     * Validates and handles an OAuth redirect callback intent from Trakt.
+     * Prevents replay attacks by invalidating pending PKCE state immediately.
+     * Returns true if the callback was recognized and processed, false otherwise.
+     */
+    fun handleAuthCallback(uri: Uri): Boolean {
+        val currentEpoch = sessionEpoch.get()
+        if (isSessionInvalid(currentEpoch)) return false
+
+        val error = uri.getQueryParameter("error")
+        val errorDescription = uri.getQueryParameter("error_description")
+        val code = uri.getQueryParameter("code")
+        val state = uri.getQueryParameter("state")
+
+        val savedVerifier = prefs.getString(KEY_PKCE_CODE_VERIFIER, null)
+        val savedState = prefs.getString(KEY_PKCE_STATE, null)
+        val savedTimestamp = prefs.getLong(KEY_PKCE_TIMESTAMP, 0L)
+        val savedRedirectUri = prefs.getString(KEY_PKCE_REDIRECT_URI, null) ?: getRedirectUri()
+
+        // Invalidate pending PKCE state immediately to prevent replay attacks
+        clearPendingPkce()
+
+        if (error != null) {
+            val userMsg = if (error == "access_denied") {
+                "Authorization was cancelled or denied on Trakt."
+            } else {
+                errorDescription ?: "Trakt authorization error: $error"
+            }
+            _deviceAuthState.value = TraktDeviceAuthState.Error(userMsg)
+            return false
+        }
+
+        if (savedVerifier.isNullOrBlank() || savedState.isNullOrBlank()) {
+            _deviceAuthState.value = TraktDeviceAuthState.Error("No pending Trakt authorization request found.")
+            return false
+        }
+
+        if (System.currentTimeMillis() - savedTimestamp > PKCE_EXPIRATION_MS) {
+            _deviceAuthState.value = TraktDeviceAuthState.Error("Trakt authorization session expired. Please try again.")
+            return false
+        }
+
+        if (savedState != state) {
+            _deviceAuthState.value = TraktDeviceAuthState.Error("Invalid authorization state (possible CSRF). Authorization rejected.")
+            return false
+        }
+
+        if (code.isNullOrBlank()) {
+            _deviceAuthState.value = TraktDeviceAuthState.Error("No authorization code received from Trakt.")
+            return false
+        }
+
+        _deviceAuthState.value = TraktDeviceAuthState.ExchangingToken
+
+        authScope.launch {
+            try {
+                if (isSessionInvalid(currentEpoch)) return@launch
+                val response = apiServiceProvider().exchangeToken(
+                    TraktTokenRequest(
+                        code = code,
+                        client_id = getClientId(),
+                        code_verifier = savedVerifier,
+                        redirect_uri = savedRedirectUri,
+                        grant_type = "authorization_code"
+                    )
+                )
+
+                if (isSessionInvalid(currentEpoch)) return@launch
+
+                if (response.isSuccessful) {
+                    val tokenResponse = response.body()
+                    if (tokenResponse != null && tokenResponse.access_token.isNotBlank()) {
+                        saveTokens(tokenResponse)
+                        val postAuthEpoch = sessionEpoch.get()
+                        Log.i(TAG, "PKCE Trakt tokens successfully saved! (expires in: ${tokenResponse.expires_in}s)")
+
+                        _deviceAuthState.value = TraktDeviceAuthState.Success(_currentUser.value)
+
+                        authScope.launch {
+                            try {
+                                if (isSessionInvalid(postAuthEpoch)) return@launch
+                                val userResult = fetchAndSaveUserProfile()
+                                val user = userResult.getOrNull()
+                                if (user != null && !isSessionInvalid(postAuthEpoch)) {
+                                    _deviceAuthState.value = TraktDeviceAuthState.Success(user)
+                                }
+                            } catch (e: Exception) {
+                                if (e is CancellationException) throw e
+                                Log.w(TAG, "Non-fatal: failed to fetch profile: ${e.message}")
+                            }
+
+                            try {
+                                if (isSessionInvalid(postAuthEpoch)) return@launch
+                                com.example.util.TraktSyncWorker.enqueueOneTimeSync(context)
+                            } catch (e: Exception) {
+                                if (e is CancellationException) throw e
+                                Log.w(TAG, "Failed to enqueue initial sync: ${e.message}")
+                            }
+                        }
+
+                        delay(1800)
+                        if (!isSessionInvalid(postAuthEpoch)) {
+                            _deviceAuthState.value = TraktDeviceAuthState.Idle
+                        }
+                    } else {
+                        val errStr = response.errorBody()?.string() ?: "Empty body"
+                        Log.e(TAG, "exchangeToken returned 200 OK but token body is empty: $errStr")
+                        _deviceAuthState.value = TraktDeviceAuthState.Error("Failed to parse Trakt token response.")
+                    }
+                } else {
+                    val errStr = response.errorBody()?.string() ?: "HTTP ${response.code()}"
+                    Log.e(TAG, "exchangeToken failed with HTTP ${response.code()}: $errStr")
+                    _deviceAuthState.value = TraktDeviceAuthState.Error("Trakt sign-in failed (${response.code()}). Please try again.")
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (!isSessionInvalid(currentEpoch)) {
+                    Log.e(TAG, "PKCE token exchange exception: ${e.message}", e)
+                    _deviceAuthState.value = TraktDeviceAuthState.Error(e.localizedMessage ?: "Failed to complete Trakt connection.")
+                }
+            }
+        }
+        return true
+    }
+
+    fun clearPendingPkce() {
+        prefs.edit()
+            .remove(KEY_PKCE_CODE_VERIFIER)
+            .remove(KEY_PKCE_STATE)
+            .remove(KEY_PKCE_TIMESTAMP)
+            .remove(KEY_PKCE_REDIRECT_URI)
+            .apply()
+    }
+
+    /**
+     * Cancels active authentication (device code polling or PKCE pending state) and resets state to Idle.
+     */
+    fun cancelAuth() {
+        pollingJob?.cancel()
+        pollingJob = null
+        clearPendingPkce()
+        _deviceAuthState.value = TraktDeviceAuthState.Idle
+    }
+
     /**
      * Cancels active device authentication and resets state to Idle.
      */
-    fun cancelDeviceAuth() {
-        pollingJob?.cancel()
-        pollingJob = null
-        _deviceAuthState.value = TraktDeviceAuthState.Idle
-    }
+    fun cancelDeviceAuth() = cancelAuth()
 
     fun saveTokens(token: TraktTokenResponse) {
         if (isDisconnecting) return
@@ -479,7 +738,8 @@ class TraktAuthManager(
             val response = apiServiceProvider().refreshToken(
                 TraktRefreshTokenRequest(
                     client_id = getClientId(),
-                    refresh_token = refreshToken
+                    refresh_token = refreshToken,
+                    redirect_uri = getRedirectUri()
                 )
             )
             if (isSessionInvalid(startEpoch)) {
@@ -500,7 +760,7 @@ class TraktAuthManager(
      * Executes in NonCancellable context so local credential clearing completes even if
      * the caller coroutine is cancelled.
      * Attempts server-side token revocation with bounded timeout.
-     * Preserves custom client ID and custom base URL if configured.
+     * Preserves custom client ID, base URL, and redirect URI if configured.
      */
     suspend fun disconnect(): TraktDisconnectResult = withContext(Dispatchers.IO + NonCancellable) {
         disconnectMutex.withLock {
@@ -508,6 +768,7 @@ class TraktAuthManager(
             val clientId = getClientId()
             val customClientId = getCustomClientId()
             val customBaseUrl = getCustomBaseUrl()
+            val customRedirectUri = getCustomRedirectUri()
 
             if (tokenToRevoke.isNullOrBlank() && !hasValidToken() && _currentUser.value == null) {
                 return@withContext TraktDisconnectResult(
@@ -523,8 +784,8 @@ class TraktAuthManager(
                 sessionMutex.withLock {
                     sessionEpoch.incrementAndGet()
 
-                    // 1. Cancel active in-flight authentication polling
-                    cancelDeviceAuth()
+                    // 1. Cancel active in-flight authentication polling or PKCE pending state
+                    cancelAuth()
 
                     // 2. Stop and cancel all WorkManager background sync jobs
                     try {
@@ -542,6 +803,7 @@ class TraktAuthManager(
                     secrets.putAll(mapOf(KEY_ACCESS_TOKEN to null, KEY_REFRESH_TOKEN to null))
                     if (customClientId != null) setCustomClientId(customClientId)
                     if (customBaseUrl != null) setCustomBaseUrl(customBaseUrl)
+                    if (customRedirectUri != null) setCustomRedirectUri(customRedirectUri)
                     _isConnected.value = false
                     _currentUser.value = null
                 }
@@ -593,6 +855,10 @@ class TraktAuthManager(
     companion object {
         const val DEFAULT_CLIENT_ID = "dj1F8ZeR5jYd9_Bs8ZeKRJOP-B3kydXanE43vwHW9tQ"
         const val DEFAULT_BASE_URL = "https://api.trakt.tv/"
+        const val DEFAULT_AUTHORIZE_URL = "https://trakt.tv/oauth/authorize"
+        const val DEFAULT_REDIRECT_URI = "https://cobalt.hanan-bhatti.site/callback"
+        const val PKCE_EXPIRATION_MS = 10 * 60 * 1000L // 10 minutes
+
         private const val TAG = "TraktAuthManager"
         private const val PREFS_NAME = "cobalt_trakt_prefs"
         private const val KEY_ACCESS_TOKEN = "trakt_access_token"
@@ -604,6 +870,12 @@ class TraktAuthManager(
 
         private const val KEY_CUSTOM_CLIENT_ID = "trakt_custom_client_id"
         private const val KEY_CUSTOM_BASE_URL = "trakt_custom_base_url"
+        private const val KEY_CUSTOM_REDIRECT_URI = "trakt_custom_redirect_uri"
+
+        private const val KEY_PKCE_CODE_VERIFIER = "trakt_pkce_code_verifier"
+        private const val KEY_PKCE_STATE = "trakt_pkce_state"
+        private const val KEY_PKCE_TIMESTAMP = "trakt_pkce_timestamp"
+        private const val KEY_PKCE_REDIRECT_URI = "trakt_pkce_redirect_uri"
 
         private const val KEY_SYNC_WATCHED = "trakt_sync_watched"
         private const val KEY_SYNC_WATCHLIST = "trakt_sync_watchlist"
