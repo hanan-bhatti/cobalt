@@ -1,8 +1,12 @@
 package com.example.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.runtime.collectAsState
+import com.example.ui.viewmodel.CobaltViewModel
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -1120,6 +1124,241 @@ fun ExpressiveTypographySliderItem(
                         contentAlignment = Alignment.Center
                     ) {
                         endHint()
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Modern selector tile with pill status badge and full ModalBottomSheet picker for Floating Scrollbar destinations.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FloatingScrollbarSettingsItem(
+    viewModel: CobaltViewModel,
+    modifier: Modifier = Modifier,
+    shape: Shape = RoundedCornerShape(24.dp)
+) {
+    var showSheet by remember { mutableStateOf(false) }
+    val enabled by viewModel.floatingScrollbarEnabled.collectAsState()
+    val notes by viewModel.floatingScrollbarNotes.collectAsState()
+    val home by viewModel.floatingScrollbarHome.collectAsState()
+    val mediaHub by viewModel.floatingScrollbarMediaHub.collectAsState()
+
+    val activeCount = listOf(notes, home, mediaHub).count { it }
+    val summaryBadge = when {
+        !enabled -> "Disabled"
+        activeCount == 3 -> "All screens (3)"
+        activeCount == 0 -> "Disabled"
+        notes && activeCount == 1 -> "Notes only"
+        home && activeCount == 1 -> "Home only"
+        mediaHub && activeCount == 1 -> "Media Hub only"
+        else -> "$activeCount screens"
+    }
+
+    Surface(
+        onClick = { showSheet = true },
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = shape,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Box(
+                    modifier = Modifier.size(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_custom_list),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Floating Scrollbar",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Tactile glassmorphic pill for rapid drag-scrubbing and jumps",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                        shape = CircleShape,
+                        modifier = Modifier.align(Alignment.Start)
+                    ) {
+                        Text(
+                            text = summaryBadge,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (enabled && activeCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_custom_chevron_right),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+
+    if (showSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp)
+            ) {
+                Text(
+                    text = "Floating Scrollbar",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                )
+                Text(
+                    text = "Configure fast-scroll pill appearance and destinations",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 2.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    ExpressiveSettingsSwitchItem(
+                        title = "Enable Floating Scrollbar",
+                        subtitle = "Master switch for floating drag pill",
+                        checked = enabled,
+                        onCheckedChange = { viewModel.setFloatingScrollbarEnabled(it) },
+                        shape = RoundedCornerShape(20.dp)
+                    )
+
+                    AnimatedVisibility(
+                        visible = enabled,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "ACTIVE DESTINATIONS",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp)
+                            )
+
+                            // 1. Notes & Detail Screen
+                            ExpressiveSettingsSwitchItem(
+                                title = "Notes & Detail Screen",
+                                subtitle = "Fast scroll through long notes, articles, and markdown",
+                                checked = notes,
+                                onCheckedChange = { viewModel.setFloatingScrollbarNotes(it) },
+                                leadingIcon = {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_text),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                },
+                                shape = connectedPillShape(0, 3)
+                            )
+
+                            // 2. Home Feed
+                            ExpressiveSettingsSwitchItem(
+                                title = "Home Feed",
+                                subtitle = "Scrub through saved cards and bookmarks",
+                                checked = home,
+                                onCheckedChange = { viewModel.setFloatingScrollbarHome(it) },
+                                leadingIcon = {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_home),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                },
+                                shape = connectedPillShape(1, 3)
+                            )
+
+                            // 3. Media Hub
+                            ExpressiveSettingsSwitchItem(
+                                title = "Media Hub",
+                                subtitle = "Navigate video, audio, image galleries, and links",
+                                checked = mediaHub,
+                                onCheckedChange = { viewModel.setFloatingScrollbarMediaHub(it) },
+                                leadingIcon = {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_movie),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                },
+                                shape = connectedPillShape(2, 3)
+                            )
+                        }
+                    }
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = "Floating scrollbar is never displayed in Settings to keep preferences clean and distraction-free.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }

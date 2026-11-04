@@ -156,7 +156,8 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
     onBlockChange: ((Long, Long, String) -> Unit)? = null,
     header: (@Composable () -> Unit)? = null,
     searchQuery: String? = null,
-    activeMatchByte: Long? = null) {
+    activeMatchByte: Long? = null,
+    state: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState()) {
     val context = LocalContext.current
     val store = remember { PrivateMarkdownStore(context) }
     val fontScale = LocalDensity.current.fontScale
@@ -172,7 +173,6 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
         val session = remember(id, hash, bytes, byteLimit, lineLimit, typographyKey) { MarkdownReadSession(store, id, hash, byteLimit, lineLimit) }
         var failure by remember(session) { mutableStateOf(false) }
         var jumping by remember(session) { mutableStateOf(false) }
-        val state = rememberLazyListState()
         val headerItems = if (header == null) 0 else 1
         LaunchedEffect(session) {
             try {

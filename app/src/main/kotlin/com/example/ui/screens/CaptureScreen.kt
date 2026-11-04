@@ -102,6 +102,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.TextRange
@@ -1587,9 +1590,31 @@ fun CaptureScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val localView = LocalView.current
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    val safeClearFocus = {
+        try {
+            localView.findFocus()?.clearFocus()
+            localView.clearFocus()
+            focusManager.clearFocus(force = true)
+            keyboardController?.hide()
+        } catch (_: Exception) {}
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            safeClearFocus()
+        }
+    }
+
     val activeItem by viewModel.activeCaptureItem.collectAsState()
 
-    BackHandler { viewModel.cancelCapture() }
+    BackHandler {
+        safeClearFocus()
+        viewModel.cancelCapture()
+    }
     val capturedBitmap by viewModel.capturedBitmap.collectAsState()
     val isOcrLoading by viewModel.isOcrLoading.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
@@ -1597,7 +1622,10 @@ fun CaptureScreen(
     val customFolders by viewModel.customFolders.collectAsState()
     val extractedLinks by viewModel.extractedLinksToReview.collectAsState()
 
-    val handleSaveClick = { viewModel.saveActiveItem() }
+    val handleSaveClick = {
+        safeClearFocus()
+        viewModel.saveActiveItem()
+    }
 
     LaunchedEffect(ocrError) {
         ocrError?.let {
@@ -1991,7 +2019,10 @@ fun CaptureScreen(
 
                         // Cancel Button: right under the left thumb!
                         OutlinedButton(
-                            onClick = { viewModel.cancelCapture() },
+                            onClick = {
+                                safeClearFocus()
+                                viewModel.cancelCapture()
+                            },
                             shape = RoundedCornerShape(20.dp),
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                             colors = ButtonDefaults.outlinedButtonColors(
@@ -3256,6 +3287,7 @@ fun CaptureScreen(
             confirmButtonText = "Delete",
             onConfirm = {
                 showDeleteConfirm = false
+                safeClearFocus()
                 viewModel.deleteEditingItem()
             },
             dismissButtonText = "Cancel",

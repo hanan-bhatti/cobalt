@@ -586,6 +586,18 @@ fun SettingsCategoryDetailScreen(
                     }
 
                     item {
+                        SettingsSubsectionHeader(
+                            title = "Navigation & Fast Scroll",
+                            description = "Tactile floating pill for rapid scrolling across long screens.",
+                            tooltipText = "The floating scrollbar appears on scroll and lets you drag up/down or tap arrows to jump instantly."
+                        )
+
+                        ExpressiveSettingsGroup {
+                            com.example.ui.components.FloatingScrollbarSettingsItem(viewModel = viewModel)
+                        }
+                    }
+
+                    item {
                         val isBlurCapable = DevicePerformance.isDeviceCapableOfBlur(context)
                         val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
                         val blurRadius by viewModel.blurRadius.collectAsState()

@@ -444,6 +444,8 @@ fun NoteFloatingSearchBar(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     useBlur: Boolean = true,
+    blurRadius: Int = 25,
+    blurOpacity: Float = 0.55f,
     onSearchStateChanged: (query: String, activeOffset: Long?, totalMatches: Int, currentIndex: Int) -> Unit = { _, _, _, _ -> }
 ) {
     val context = LocalContext.current
@@ -527,12 +529,13 @@ fun NoteFloatingSearchBar(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(26.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = blurOpacity.coerceAtLeast(0.4f)))
             .hazeEffect(
                 state = localHazeState,
                 style = HazeStyle(
                     backgroundColor = MaterialTheme.colorScheme.surface,
-                    tint = HazeTint(MaterialTheme.colorScheme.surface.copy(alpha = if (isDark) 0.65f else 0.55f)),
-                    blurRadius = 24.dp,
+                    tint = HazeTint(MaterialTheme.colorScheme.surface.copy(alpha = blurOpacity)),
+                    blurRadius = blurRadius.dp,
                     noiseFactor = 0.02f
                 )
             )
@@ -545,7 +548,7 @@ fun NoteFloatingSearchBar(
         Modifier
             .fillMaxWidth()
             .background(
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 shape = RoundedCornerShape(26.dp)
             )
             .border(

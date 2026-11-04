@@ -55,6 +55,10 @@ import androidx.compose.animation.core.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.example.ui.components.FloatingScrollPill
+import com.example.ui.components.rememberLazyListScrollAdapter
+import com.example.ui.components.rememberScrollStateAdapter
 import com.example.ui.components.bounceClick
 import com.example.ui.components.MarkdownText
 import com.example.ui.components.NoteFloatingSearchBar
@@ -184,11 +188,14 @@ fun DetailScreen(
     }
 
     val scrollState = rememberScrollState()
+    val noteListState = rememberLazyListState()
     val clipboard = LocalClipboard.current
     val coroutineScope = rememberCoroutineScope()
     val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
     val blurRadius by viewModel.blurRadius.collectAsState()
     val blurOpacity by viewModel.blurOpacity.collectAsState()
+    val floatingScrollbarEnabled by viewModel.floatingScrollbarEnabled.collectAsState()
+    val floatingScrollbarNotes by viewModel.floatingScrollbarNotes.collectAsState()
 
     var showLeaveAppDialog by remember { mutableStateOf(false) }
     var urlToOpen by remember { mutableStateOf("") }
@@ -383,6 +390,7 @@ fun DetailScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             Box(
                 modifier = Modifier
@@ -570,11 +578,13 @@ fun DetailScreen(
                     plain = plainNote,
                     jump = noteJump,
                     modifier = Modifier.fillMaxSize()
+                        .hazeSource(state = localHazeState)
                         .padding(top = innerPadding.calculateTopPadding(), bottom = innerPadding.calculateBottomPadding())
                         .padding(horizontal = 24.dp, vertical = 8.dp),
                     header = detailHeader,
                     searchQuery = if (isSearchingNote) activeSearchQuery else null,
-                    activeMatchByte = if (isSearchingNote) activeMatchOffset else null
+                    activeMatchByte = if (isSearchingNote) activeMatchOffset else null,
+                    noteListState = noteListState
                 )
             } else SelectionContainer {
                     Column(
@@ -954,7 +964,7 @@ fun DetailScreen(
             val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
             val isImeOpen = WindowInsets.ime.asPaddingValues().calculateBottomPadding() > 0.dp
             val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-            val bottomPadding = if (isImeOpen) 12.dp else (navBottom + 12.dp)
+            val bottomPadding = if (isImeOpen) 10.dp else (navBottom + 12.dp)
 
             Box(
                 modifier = Modifier
@@ -996,6 +1006,8 @@ fun DetailScreen(
                             activeMatchOffset = null
                         },
                         useBlur = useBlur,
+                        blurRadius = blurRadius,
+                        blurOpacity = blurOpacity,
                         onSearchStateChanged = { query, offset, _, _ ->
                             activeSearchQuery = query
                             activeMatchOffset = offset
@@ -1004,6 +1016,24 @@ fun DetailScreen(
                 }
             }
         }
+
+        val isNote = com.example.notes.NotePersistence.isNote(item)
+        val scrollAdapter = if (isNote) {
+            rememberLazyListScrollAdapter(noteListState)
+        } else {
+            rememberScrollStateAdapter(scrollState)
+        }
+
+        FloatingScrollPill(
+            adapter = scrollAdapter,
+            localHazeState = localHazeState,
+            enabled = floatingScrollbarEnabled && floatingScrollbarNotes,
+            useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur,
+            blurRadius = blurRadius,
+            blurOpacity = blurOpacity,
+            topPadding = innerPadding.calculateTopPadding() + 8.dp,
+            bottomPadding = innerPadding.calculateBottomPadding() + 16.dp
+        )
         }
     }
     }

@@ -148,6 +148,18 @@ class SettingsRepository(private val context: Context) {
     private val _dynamicColor = MutableStateFlow(prefs.getBoolean(KEY_DYNAMIC_COLOR, true))
     val dynamicColor: StateFlow<Boolean> = _dynamicColor.asStateFlow()
 
+    private val _floatingScrollbarEnabled = MutableStateFlow(prefs.getBoolean(KEY_FLOATING_SCROLLBAR_ENABLED, true))
+    val floatingScrollbarEnabled: StateFlow<Boolean> = _floatingScrollbarEnabled.asStateFlow()
+
+    private val _floatingScrollbarNotes = MutableStateFlow(prefs.getBoolean(KEY_FLOATING_SCROLLBAR_NOTES, true))
+    val floatingScrollbarNotes: StateFlow<Boolean> = _floatingScrollbarNotes.asStateFlow()
+
+    private val _floatingScrollbarHome = MutableStateFlow(prefs.getBoolean(KEY_FLOATING_SCROLLBAR_HOME, true))
+    val floatingScrollbarHome: StateFlow<Boolean> = _floatingScrollbarHome.asStateFlow()
+
+    private val _floatingScrollbarMediaHub = MutableStateFlow(prefs.getBoolean(KEY_FLOATING_SCROLLBAR_MEDIA_HUB, true))
+    val floatingScrollbarMediaHub: StateFlow<Boolean> = _floatingScrollbarMediaHub.asStateFlow()
+
     private val _widgetTheme = MutableStateFlow(prefs.getString(KEY_WIDGET_THEME, "System") ?: "System")
     val widgetTheme: StateFlow<String> = _widgetTheme.asStateFlow()
 
@@ -398,6 +410,26 @@ class SettingsRepository(private val context: Context) {
         _isAutoUpdateCheckEnabled.value = enabled
     }
 
+    fun setFloatingScrollbarEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_FLOATING_SCROLLBAR_ENABLED, enabled).apply()
+        _floatingScrollbarEnabled.value = enabled
+    }
+
+    fun setFloatingScrollbarNotes(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_FLOATING_SCROLLBAR_NOTES, enabled).apply()
+        _floatingScrollbarNotes.value = enabled
+    }
+
+    fun setFloatingScrollbarHome(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_FLOATING_SCROLLBAR_HOME, enabled).apply()
+        _floatingScrollbarHome.value = enabled
+    }
+
+    fun setFloatingScrollbarMediaHub(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_FLOATING_SCROLLBAR_MEDIA_HUB, enabled).apply()
+        _floatingScrollbarMediaHub.value = enabled
+    }
+
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
             "hide_recents" -> _hideRecents.value = prefs.getBoolean("hide_recents", false)
@@ -428,6 +460,10 @@ class SettingsRepository(private val context: Context) {
             KEY_BLUR_RADIUS -> _blurRadius.value = prefs.getInt(KEY_BLUR_RADIUS, 25)
             KEY_BLUR_OPACITY -> _blurOpacity.value = prefs.getFloat(KEY_BLUR_OPACITY, 0.30f)
             KEY_DYNAMIC_COLOR -> _dynamicColor.value = prefs.getBoolean(KEY_DYNAMIC_COLOR, true)
+            KEY_FLOATING_SCROLLBAR_ENABLED -> _floatingScrollbarEnabled.value = prefs.getBoolean(KEY_FLOATING_SCROLLBAR_ENABLED, true)
+            KEY_FLOATING_SCROLLBAR_NOTES -> _floatingScrollbarNotes.value = prefs.getBoolean(KEY_FLOATING_SCROLLBAR_NOTES, true)
+            KEY_FLOATING_SCROLLBAR_HOME -> _floatingScrollbarHome.value = prefs.getBoolean(KEY_FLOATING_SCROLLBAR_HOME, true)
+            KEY_FLOATING_SCROLLBAR_MEDIA_HUB -> _floatingScrollbarMediaHub.value = prefs.getBoolean(KEY_FLOATING_SCROLLBAR_MEDIA_HUB, true)
             KEY_AUTO_UPDATE_CHECK -> _isAutoUpdateCheckEnabled.value = prefs.getBoolean(KEY_AUTO_UPDATE_CHECK, false)
             KEY_WIDGET_THEME -> _widgetTheme.value = prefs.getString(KEY_WIDGET_THEME, "System") ?: "System"
             KEY_WIDGET_OPACITY -> _widgetOpacity.value = prefs.getFloat(KEY_WIDGET_OPACITY, 0.85f)
@@ -489,6 +525,10 @@ URL EXTRACTION RULES for urls:
         private const val KEY_BLUR_RADIUS = "blur_radius"
         private const val KEY_BLUR_OPACITY = "blur_opacity"
         private const val KEY_DYNAMIC_COLOR = "dynamic_color"
+        private const val KEY_FLOATING_SCROLLBAR_ENABLED = "floating_scrollbar_enabled"
+        private const val KEY_FLOATING_SCROLLBAR_NOTES = "floating_scrollbar_notes"
+        private const val KEY_FLOATING_SCROLLBAR_HOME = "floating_scrollbar_home"
+        private const val KEY_FLOATING_SCROLLBAR_MEDIA_HUB = "floating_scrollbar_media_hub"
         private const val KEY_AUTO_UPDATE_CHECK = "auto_update_check_enabled"
         private const val KEY_WIDGET_THEME = "widget_theme"
         private const val KEY_WIDGET_OPACITY = "widget_opacity"

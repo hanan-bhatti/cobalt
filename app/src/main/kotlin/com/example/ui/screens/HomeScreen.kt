@@ -23,6 +23,12 @@ import androidx.activity.compose.BackHandler
 import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
 import com.example.util.displayTitle
+import com.example.utils.DevicePerformance
+import com.example.ui.components.FloatingScrollPill
+import com.example.ui.components.rememberLazyListScrollAdapter
+import com.example.ui.components.rememberLazyStaggeredGridScrollAdapter
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.animation.*
@@ -212,6 +218,13 @@ fun HomeScreen(
 
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val gridState = rememberLazyStaggeredGridState()
+    val hazeState = remember { HazeState() }
+    val floatingScrollbarEnabled by viewModel.floatingScrollbarEnabled.collectAsState()
+    val floatingScrollbarHome by viewModel.floatingScrollbarHome.collectAsState()
+    val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
+    val blurRadius by viewModel.blurRadius.collectAsState()
+    val blurOpacity by viewModel.blurOpacity.collectAsState()
+    val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
 
     val homeVisibleItemIds by remember(listState, gridState, isListView) {
         derivedStateOf {
@@ -646,7 +659,9 @@ fun HomeScreen(
                         if (targetIsList) {
                             LazyColumn(
                                 state = listState,
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .hazeSource(state = hazeState),
                                 contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 100.dp),
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
@@ -733,7 +748,9 @@ fun HomeScreen(
                             LazyVerticalStaggeredGrid(
                                 columns = StaggeredGridCells.Fixed(2),
                                 state = gridState,
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .hazeSource(state = hazeState),
                                 contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 100.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 verticalItemSpacing = 12.dp
@@ -803,6 +820,24 @@ fun HomeScreen(
                     }
             }
         }
+
+        val homeScrollAdapter = if (isListView) {
+            rememberLazyListScrollAdapter(listState)
+        } else {
+            rememberLazyStaggeredGridScrollAdapter(gridState)
+        }
+
+        FloatingScrollPill(
+            adapter = homeScrollAdapter,
+            localHazeState = hazeState,
+            enabled = floatingScrollbarEnabled && floatingScrollbarHome,
+            useBlur = useBlur,
+            blurRadius = blurRadius,
+            blurOpacity = blurOpacity,
+            topPadding = 72.dp,
+            bottomPadding = 96.dp
+        )
+
         // Sleek interactive Undo Toast UI overlay (half height, auto-dismiss, swipe-to-dismiss)
         AnimatedVisibility(
             visible = lastDeletedItem != null,

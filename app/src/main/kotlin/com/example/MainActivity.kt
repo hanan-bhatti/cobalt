@@ -812,6 +812,10 @@ class MainActivity : ComponentActivity() {
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null
                                     ) {
+                                        try {
+                                            view.findFocus()?.clearFocus()
+                                            view.clearFocus()
+                                        } catch (_: Exception) {}
                                         viewModel.cancelCapture()
                                     }
                             )

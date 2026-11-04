@@ -26,7 +26,8 @@ import kotlinx.coroutines.*
 @Composable
 fun UnifiedNoteBody(item: SavedItem, viewModel: CobaltViewModel, plain: Boolean, jump: Long,
     modifier: Modifier, header: @Composable () -> Unit,
-    searchQuery: String? = null, activeMatchByte: Long? = null) {
+    searchQuery: String? = null, activeMatchByte: Long? = null,
+    noteListState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState()) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var busy by remember(item.id) { mutableStateOf(false) }
@@ -62,7 +63,7 @@ fun UnifiedNoteBody(item: SavedItem, viewModel: CobaltViewModel, plain: Boolean,
             }
         }
         val hash = item.contentHash
-        if (item.bodyMissing || hash == null) LazyColumn(Modifier.fillMaxSize()) {
+        if (item.bodyMissing || hash == null) LazyColumn(Modifier.fillMaxSize(), state = noteListState) {
             item { header() }
             item { Text("The note body is unavailable. Its record is retained. See Settings → Data Migration.") }
         } else key(item.id, hash, plain) {
@@ -84,9 +85,11 @@ fun UnifiedNoteBody(item: SavedItem, viewModel: CobaltViewModel, plain: Boolean,
                     }
                 },
                 searchQuery = searchQuery,
-                activeMatchByte = activeMatchByte)
+                activeMatchByte = activeMatchByte,
+                state = noteListState)
             else NoteBodyPlainText(remember { LegacyNoteRecovery(context) }, RecoveryNote(item.id, item.title, item.byteLength),
                 Modifier.weight(1f).fillMaxWidth(), jump, header,
+                listState = noteListState,
                 searchQuery = searchQuery,
                 activeMatchByte = activeMatchByte)
         }

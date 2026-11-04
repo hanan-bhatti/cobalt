@@ -28,8 +28,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import com.example.ui.components.FloatingScrollPill
+import com.example.ui.components.rememberLazyGridScrollAdapter
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -78,9 +82,12 @@ fun MediaHubScreen(
 
     val context = LocalContext.current
     val hazeState = remember { HazeState() }
+    val gridState = rememberLazyGridState()
     val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
     val blurRadius by viewModel.blurRadius.collectAsState()
     val blurOpacity by viewModel.blurOpacity.collectAsState()
+    val floatingScrollbarEnabled by viewModel.floatingScrollbarEnabled.collectAsState()
+    val floatingScrollbarMediaHub by viewModel.floatingScrollbarMediaHub.collectAsState()
 
     val fabColor = MaterialTheme.colorScheme.surfaceVariant
     val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
@@ -183,7 +190,19 @@ fun MediaHubScreen(
                 viewModel = viewModel,
                 onMediaClick = onMediaClick,
                 sharedTransitionScope = sharedTransitionScope,
-                animatedVisibilityScope = animatedVisibilityScope
+                animatedVisibilityScope = animatedVisibilityScope,
+                gridState = gridState
+            )
+
+            FloatingScrollPill(
+                adapter = rememberLazyGridScrollAdapter(gridState),
+                localHazeState = hazeState,
+                enabled = floatingScrollbarEnabled && floatingScrollbarMediaHub,
+                useBlur = useBlur,
+                blurRadius = blurRadius,
+                blurOpacity = blurOpacity,
+                topPadding = 80.dp,
+                bottomPadding = 120.dp
             )
         }
     }
@@ -196,6 +215,7 @@ fun MediaHubContent(
     onMediaClick: (SavedItem) -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
+    gridState: LazyGridState = rememberLazyGridState(),
     modifier: Modifier = Modifier
 ) {
     val traktSyncStatus by com.example.data.remote.trakt.TraktSyncEngine.syncStatus.collectAsState()
@@ -426,6 +446,7 @@ fun MediaHubContent(
             }
         } else {
             LazyVerticalGrid(
+                state = gridState,
                 columns = GridCells.Adaptive(minSize = 150.dp),
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 120.dp),

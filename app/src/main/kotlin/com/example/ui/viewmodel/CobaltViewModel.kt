@@ -168,6 +168,18 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         settingsRepository.setBlurOpacity(opacity)
     }
 
+    val floatingScrollbarEnabled = settingsRepository.floatingScrollbarEnabled
+    fun setFloatingScrollbarEnabled(enabled: Boolean) = settingsRepository.setFloatingScrollbarEnabled(enabled)
+
+    val floatingScrollbarNotes = settingsRepository.floatingScrollbarNotes
+    fun setFloatingScrollbarNotes(enabled: Boolean) = settingsRepository.setFloatingScrollbarNotes(enabled)
+
+    val floatingScrollbarHome = settingsRepository.floatingScrollbarHome
+    fun setFloatingScrollbarHome(enabled: Boolean) = settingsRepository.setFloatingScrollbarHome(enabled)
+
+    val floatingScrollbarMediaHub = settingsRepository.floatingScrollbarMediaHub
+    fun setFloatingScrollbarMediaHub(enabled: Boolean) = settingsRepository.setFloatingScrollbarMediaHub(enabled)
+
     val isRecentCapturesExpanded = settingsRepository.isRecentCapturesExpanded
     fun setRecentCapturesExpanded(expanded: Boolean) {
         settingsRepository.setRecentCapturesExpanded(expanded)
