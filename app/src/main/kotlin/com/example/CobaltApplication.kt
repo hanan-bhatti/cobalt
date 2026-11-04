@@ -9,6 +9,9 @@ import android.app.Application
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.decode.VideoFrameDecoder
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class CobaltApplication : Application(), ImageLoaderFactory {
     override fun onCreate() {
@@ -28,6 +31,11 @@ class CobaltApplication : Application(), ImageLoaderFactory {
         com.example.notes.StartupCrashGuard.install(this)
         // Defer expiry if WorkManager is temporarily unavailable; opening Trash also retries.
         runCatching { com.example.notes.TrashCleanupWorker.schedule(this) }
+
+        // Trigger one-time legacy path title cleanup off the main thread (Issue #21)
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            com.example.data.cleanup.LegacyPathTitleCleanup.runCleanup(this@CobaltApplication)
+        }
     }
 
     override fun newImageLoader(): ImageLoader {

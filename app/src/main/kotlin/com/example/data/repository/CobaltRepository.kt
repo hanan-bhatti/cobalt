@@ -54,14 +54,16 @@ import java.io.FileOutputStream
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
-class CobaltRepository(private val context: Context) {
+class CobaltRepository(
+    private val context: Context,
+    private val db: AppDatabase = AppDatabase.getDatabase(context)
+) {
 
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
         .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
         .build()
 
-    private val db = AppDatabase.getDatabase(context)
     private val savedItemDao = db.savedItemDao()
     private val customFolderDao = db.customFolderDao()
 
@@ -218,6 +220,7 @@ class CobaltRepository(private val context: Context) {
         try {
             savedItemDao.getAllItems().map { it.toDomain() }
         } catch (e: Exception) {
+            Log.e("CobaltRepository", "getAllItems failed", e)
             emptyList()
         }
     }
@@ -572,6 +575,14 @@ class CobaltRepository(private val context: Context) {
         items.forEach {
             notePersistence.save(it)
         }
+    }
+
+    suspend fun updateItemTitleAndDescription(id: String, title: String, linkDescription: String?): Int = withContext(Dispatchers.IO) {
+        val count = savedItemDao.updateTitleAndDescription(id, title, linkDescription, System.currentTimeMillis())
+        try {
+            savedItemDao.updateNoteSearchTitle(id, title)
+        } catch (_: Exception) {}
+        count
     }
     private fun sanitizeItemTitle(item: SavedItem): SavedItem {
         val sanitized = ItemTitleResolver.resolveItemTitle(

@@ -40,6 +40,9 @@ interface SavedItemDao {
     suspend fun activeMediaIds(): List<String>
     @Query("UPDATE saved_items SET content = :content, thumbnailPath = :thumbnail WHERE id = :id AND isDeleted = 0")
     suspend fun updateMediaPaths(id: String, content: String, thumbnail: String?): Int
+
+    @Query("UPDATE saved_items SET title = :title, linkDescription = :linkDescription, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun updateTitleAndDescription(id: String, title: String, linkDescription: String?, updatedAt: Long): Int
     @Query("SELECT id, COALESCE(NULLIF(substr(title, 1, 160), ''), 'Untitled note') AS title, CASE WHEN bodyLocation = 'FILE' THEN byteLength ELSE length(CAST(content AS BLOB)) END AS byteLength FROM saved_items WHERE isDeleted = 0 AND upper(type) NOT IN ('LINK', 'IMAGE', 'VIDEO', 'AUDIO', 'MEDIA') ORDER BY timestamp DESC")
     fun observeRecoveryNotes(): Flow<List<com.example.notes.RecoveryNote>>
 
