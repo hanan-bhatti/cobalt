@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.sp
 import com.example.notes.LegacyNoteRecovery
 import com.example.notes.RecoveryNote
 import com.example.notes.NoteBodyMetadata
+import com.example.notes.NoteSizePolicy
 import com.example.ui.components.NoteBodySkeleton
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collect
@@ -42,8 +43,8 @@ internal fun NoteBodyPlainText(reader: LegacyNoteRecovery, note: RecoveryNote, m
         catch (_: Exception) { unavailable = true }
     }
     BoxWithConstraints(modifier) {
-        // A block remains roughly one viewport high even for text consisting only of newlines.
-        val chunkBytes = (maxHeight.value / (lineBaseDp * fontScale)).toInt().coerceIn(1, 128)
+        // Stream text in bounded 16 KB chunks allowing natural full-width paragraph wrapping
+        val chunkBytes = NoteSizePolicy.IO_CHUNK_BYTES
         val length = metadata?.byteLength ?: 0
         val count = if (length == 0L) 0 else (length - 1) / chunkBytes + 1
         LaunchedEffect(reader, metadata, chunkBytes, listState) {
@@ -86,7 +87,8 @@ internal fun NoteBodyPlainText(reader: LegacyNoteRecovery, note: RecoveryNote, m
                     }
                     Text(
                         text = displayText,
-                        style = typo.codeBlock.copy(lineHeight = (typo.body.fontSize.value * typo.lineHeightMultiplier).sp)
+                        modifier = Modifier.fillMaxWidth(),
+                        style = typo.body.copy(lineHeight = (typo.body.fontSize.value * typo.lineHeightMultiplier).sp)
                     )
                 }
             }

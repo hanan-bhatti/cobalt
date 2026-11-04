@@ -39,7 +39,7 @@ class LegacyNoteRecovery(
 
     /** Memory-only lookup for first composition; never waits for disk or a worker lock. */
     fun cachedChunk(note: RecoveryNote, index: Int, chunkBytes: Int, metadata: NoteBodyMetadata): String? {
-        require(chunkBytes in 1..128)
+        require(chunkBytes in 1..NoteSizePolicy.IO_CHUNK_BYTES)
         val start = index.toLong() * chunkBytes
         val end = minOf(metadata.byteLength, start + chunkBytes)
         if (start >= end) return ""
