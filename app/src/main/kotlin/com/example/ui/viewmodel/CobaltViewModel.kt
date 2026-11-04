@@ -30,6 +30,8 @@ import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.data.repository.CobaltRepository
 import com.example.data.remote.MediaSearchResultItem
+import com.example.util.ItemTitleResolver
+import com.example.util.loadTitleFallbacks
 import com.example.widget.WidgetUpdater
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -689,6 +691,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
     // Temporary bytes for the active capture (pending local save)
     private var pendingMediaBytes: ByteArray? = null
+    private var pendingMediaDisplayName: String? = null
 
     // ----------------------------------------------------
     // INITIAL LOADING STATE
@@ -734,6 +737,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     fun startManualCapture(type: SavedItemType, initialFolders: List<String> = emptyList()) {
         _capturedBitmap.value = null
         pendingMediaBytes = null
+        pendingMediaDisplayName = null
         _extractedLinksToReview.value = emptyList()
         _isMetadataExtracting.value = false
         _metadataError.value = null
@@ -759,6 +763,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         _activeCaptureItem.value = null
         _capturedBitmap.value = null
         pendingMediaBytes = null
+        pendingMediaDisplayName = null
         _extractedLinksToReview.value = emptyList()
         _isMetadataExtracting.value = false
         _metadataError.value = null
@@ -822,6 +827,14 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     try {
                         val bytes = readUriBytes(mediaUri) ?: return@launch
                         pendingMediaBytes = bytes
+                        val originalName = ItemTitleResolver.queryDisplayName(context, mediaUri)
+                        pendingMediaDisplayName = originalName
+                        val resolvedTitle = ItemTitleResolver.resolveItemTitle(
+                            userTitle = subject?.takeIf { it.isNotBlank() },
+                            displayName = originalName,
+                            type = SavedItemType.IMAGE,
+                            fallbacks = context.loadTitleFallbacks()
+                        )
                         val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                         _capturedBitmap.value = bitmap
 
@@ -830,7 +843,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
                         _activeCaptureItem.value = SavedItem(
                             type = SavedItemType.IMAGE,
-                            title = "Shared Screenshot/Image",
+                            title = resolvedTitle,
                             content = localPath,
                             thumbnailPath = localPath
                         )
@@ -845,13 +858,21 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     try {
                         val bytes = readUriBytes(mediaUri) ?: return@launch
                         pendingMediaBytes = bytes
+                        val originalName = ItemTitleResolver.queryDisplayName(context, mediaUri)
+                        pendingMediaDisplayName = originalName
+                        val resolvedTitle = ItemTitleResolver.resolveItemTitle(
+                            userTitle = subject?.takeIf { it.isNotBlank() },
+                            displayName = originalName,
+                            type = SavedItemType.VIDEO,
+                            fallbacks = context.loadTitleFallbacks()
+                        )
 
                         // Save to cache file
                         val localPath = repository.saveToLocalCache("shared_vid_${UUID.randomUUID()}.mp4", bytes)
 
                         _activeCaptureItem.value = SavedItem(
                             type = SavedItemType.VIDEO,
-                            title = "Shared Video",
+                            title = resolvedTitle,
                             content = localPath,
                             thumbnailPath = localPath // we can use localPath to play/display
                         )
@@ -903,10 +924,18 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 Log.d("CobaltVM", "Audio cached at $localPath (${bytes.size} bytes)")
 
                 // Attach thumbnailPath immediately so the recording can be played/saved regardless of API result
-                val timeStamp = java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
+                val fallbacks = context.loadTitleFallbacks()
+                val readableMemoTitle = ItemTitleResolver.resolveItemTitle(
+                    userTitle = _activeCaptureItem.value?.title?.takeIf { it.isNotBlank() && it != "New Item" },
+                    displayName = null,
+                    type = SavedItemType.AUDIO,
+                    isVoiceMemo = true,
+                    timestamp = System.currentTimeMillis(),
+                    fallbacks = fallbacks
+                )
                 _activeCaptureItem.value = _activeCaptureItem.value?.copy(
                     thumbnailPath = localPath,
-                    title = _activeCaptureItem.value?.title?.takeIf { it.isNotBlank() && it != "New Item" } ?: "Voice Memo ($timeStamp)"
+                    title = readableMemoTitle
                 )
                 _activeCaptureItem.value?.let { captureDrafts[SavedItemType.AUDIO] = it }
 
@@ -932,9 +961,14 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
                 if (result != null && !result.startsWith("Error")) {
                     val extractedTitle = extractTitleFromMarkdown(result)
+                    val finalMemoTitle = if (!extractedTitle.isNullOrBlank() && !ItemTitleResolver.isInternalPathOrGeneratedName(extractedTitle)) {
+                        extractedTitle
+                    } else {
+                        readableMemoTitle
+                    }
                     _activeCaptureItem.value = _activeCaptureItem.value?.copy(
                         content = result,
-                        title = extractedTitle ?: _activeCaptureItem.value?.title ?: "Voice Memo ($timeStamp)",
+                        title = finalMemoTitle,
                         thumbnailPath = localPath
                     )
                     _activeCaptureItem.value?.let { captureDrafts[SavedItemType.AUDIO] = it }
@@ -1321,7 +1355,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 val loaded = repository.getItemForOpen(item.id)
                 if (loaded != null && loaded.bodyLoaded && !loaded.bodyMissing && !com.example.notes.NoteEditorWindows.requiresWindow(loaded.content)) startEditItem(loaded)
                 else if (loaded != null && !loaded.bodyMissing) {
-                    _capturedBitmap.value = null; pendingMediaBytes = null
+                    _capturedBitmap.value = null; pendingMediaBytes = null; pendingMediaDisplayName = null
                     editOriginalId = loaded.id; _isEditingItem.value = true
                     _activeCaptureItem.value = loaded.copy(content = "", bodyLoaded = false)
                     fileEditor.open(loaded)
@@ -1332,6 +1366,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
         _capturedBitmap.value = null
         pendingMediaBytes = null
+        pendingMediaDisplayName = null
         _extractedLinksToReview.value = emptyList()
         _isMetadataExtracting.value = false
         _metadataError.value = null
@@ -1369,6 +1404,10 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     fun handleMediaSelected(uri: android.net.Uri, type: SavedItemType) {
         viewModelScope.launch {
             try {
+                val originalDisplayName = ItemTitleResolver.queryDisplayName(context, uri)
+                pendingMediaDisplayName = originalDisplayName
+                val fallbacks = context.loadTitleFallbacks()
+
                 if (type == SavedItemType.VIDEO) {
                     val cacheFile = File(context.cacheDir, "media_${UUID.randomUUID()}.mp4")
                     withContext(Dispatchers.IO) {
@@ -1417,7 +1456,12 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
                     pendingMediaBytes = null
                     val finalPath = if (cacheFile.exists() && cacheFile.length() > 0) cacheFile.absolutePath else uri.toString()
-                    updateActiveCaptureItem { it.copy(content = finalPath, thumbnailPath = thumbPath, type = type) }
+                    updateActiveCaptureItem { cur ->
+                        val newTitle = if (cur.title.isBlank() || ItemTitleResolver.isInternalPathOrGeneratedName(cur.title)) {
+                            ItemTitleResolver.resolveItemTitle(userTitle = null, displayName = originalDisplayName, type = type, fallbacks = fallbacks)
+                        } else cur.title
+                        cur.copy(content = finalPath, thumbnailPath = thumbPath, type = type, title = newTitle)
+                    }
                 } else {
                     val bytes = readUriBytes(uri)
                     if (bytes != null) {
@@ -1426,14 +1470,30 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                         _capturedBitmap.value = bitmap
 
                         val localPath = repository.saveToLocalCache("media_${UUID.randomUUID()}.jpg", bytes)
-                        updateActiveCaptureItem { it.copy(content = localPath, thumbnailPath = localPath, type = type) }
+                        updateActiveCaptureItem { cur ->
+                            val newTitle = if (cur.title.isBlank() || ItemTitleResolver.isInternalPathOrGeneratedName(cur.title)) {
+                                ItemTitleResolver.resolveItemTitle(userTitle = null, displayName = originalDisplayName, type = type, fallbacks = fallbacks)
+                            } else cur.title
+                            cur.copy(content = localPath, thumbnailPath = localPath, type = type, title = newTitle)
+                        }
                     } else {
-                        updateActiveCaptureItem { it.copy(content = uri.toString(), thumbnailPath = uri.toString(), type = type) }
+                        updateActiveCaptureItem { cur ->
+                            val newTitle = if (cur.title.isBlank() || ItemTitleResolver.isInternalPathOrGeneratedName(cur.title)) {
+                                ItemTitleResolver.resolveItemTitle(userTitle = null, displayName = originalDisplayName, type = type, fallbacks = fallbacks)
+                            } else cur.title
+                            cur.copy(content = uri.toString(), thumbnailPath = uri.toString(), type = type, title = newTitle)
+                        }
                     }
                 }
             } catch (e: Exception) {
                 Log.e("CobaltVM", "Error in handleMediaSelected: ${e.message}")
-                updateActiveCaptureItem { it.copy(content = uri.toString(), thumbnailPath = uri.toString(), type = type) }
+                val fallbacks = context.loadTitleFallbacks()
+                updateActiveCaptureItem { cur ->
+                    val newTitle = if (cur.title.isBlank() || ItemTitleResolver.isInternalPathOrGeneratedName(cur.title)) {
+                        ItemTitleResolver.resolveItemTitle(userTitle = null, displayName = pendingMediaDisplayName, type = type, fallbacks = fallbacks)
+                    } else cur.title
+                    cur.copy(content = uri.toString(), thumbnailPath = uri.toString(), type = type, title = newTitle)
+                }
             }
         }
     }
@@ -1818,16 +1878,30 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 if (finalItem.type == SavedItemType.LINK && finalItem.linkTitle.isNullOrBlank()) {
                     finalItem = buildItemWithFetchedMetadata(finalItem)
                 }
-                if (finalItem.title.isBlank()) {
-                    val fallback = finalItem.content.lineSequence()
+                val fallbacks = context.loadTitleFallbacks()
+                val isAudioMemo = finalItem.type == SavedItemType.AUDIO && (!finalItem.thumbnailPath.isNullOrBlank() || pendingMediaBytes != null)
+                val resolvedTitle = ItemTitleResolver.resolveItemTitle(
+                    userTitle = finalItem.title,
+                    displayName = pendingMediaDisplayName,
+                    type = finalItem.type,
+                    isVoiceMemo = isAudioMemo,
+                    timestamp = finalItem.timestamp,
+                    fallbacks = fallbacks
+                )
+                val safeTitle = if (finalItem.title.isBlank() && (finalItem.type == SavedItemType.TEXT || finalItem.type == SavedItemType.CODE)) {
+                    val firstLine = finalItem.content.lineSequence()
                         .map { it.trim() }
                         .firstOrNull { it.isNotBlank() }
                         ?.removePrefix("#")?.trim()
-                        ?.take(60)
-                    if (!fallback.isNullOrBlank()) {
-                        finalItem = finalItem.copy(title = fallback)
+                    if (!firstLine.isNullOrBlank() && !ItemTitleResolver.isInternalPathOrGeneratedName(firstLine)) {
+                        ItemTitleResolver.truncateSafely(firstLine, ItemTitleResolver.MAX_TITLE_LENGTH)
+                    } else {
+                        resolvedTitle
                     }
+                } else {
+                    resolvedTitle
                 }
+                finalItem = finalItem.copy(title = safeTitle)
                 val isEdit = allItems.value.any { it.id == finalItem.id } || editOriginalId != null
                 val persisted = if (fileEditorState.value.id == finalItem.id) {
                     val original = finalItem
@@ -1860,6 +1934,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             } finally {
                 _isSaving.value = false
                 _saveProgress.value = null
+                pendingMediaDisplayName = null
             }
         }
     }

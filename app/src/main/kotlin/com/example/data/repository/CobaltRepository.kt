@@ -37,6 +37,8 @@ import com.example.data.remote.GenerationConfig
 import com.example.data.remote.ResponseSchema
 import com.example.data.remote.MediaApiClient
 import com.example.data.remote.MediaSearchResultItem
+import com.example.util.ItemTitleResolver
+import com.example.util.loadTitleFallbacks
 import androidx.room.withTransaction
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.Dispatchers
@@ -571,16 +573,28 @@ class CobaltRepository(private val context: Context) {
             notePersistence.save(it)
         }
     }
+    private fun sanitizeItemTitle(item: SavedItem): SavedItem {
+        val sanitized = ItemTitleResolver.resolveItemTitle(
+            userTitle = item.title,
+            displayName = null,
+            type = item.type,
+            timestamp = item.timestamp,
+            fallbacks = context.loadTitleFallbacks()
+        )
+        return if (sanitized != item.title) item.copy(title = sanitized) else item
+    }
+
     suspend fun saveItemLocallyOnly(item: SavedItem) = withContext(Dispatchers.IO) {
+        val guarded = sanitizeItemTitle(item)
         fun prepare(): SavedItem {
-            val itemToSave = persistLocalMedia(item)
+            val itemToSave = persistLocalMedia(guarded)
             val updatedItem = itemToSave.copy(timestamp = System.currentTimeMillis())
             return updatedItem
         }
-        if (com.example.notes.NotePersistence.isNote(item)) notePersistence.save(prepare()) else {
+        if (com.example.notes.NotePersistence.isNote(guarded)) notePersistence.save(prepare()) else {
             com.example.notes.NoteWriteLock.mutex.withLock {
-                com.example.notes.NoteDeletionFence(context).requireAlive(item.id)
-                check(savedItemDao.isItemDeleted(item.id) != true) { "This item is in Trash." }
+                com.example.notes.NoteDeletionFence(context).requireAlive(guarded.id)
+                check(savedItemDao.isItemDeleted(guarded.id) != true) { "This item is in Trash." }
                 notePersistence.saveNonNoteLocked(prepare())
             }
         }
@@ -669,8 +683,9 @@ class CobaltRepository(private val context: Context) {
     }
 
     suspend fun saveItem(item: SavedItem, mediaBytes: ByteArray? = null, onProgress: (Float) -> Unit = {}): SavedItem = withContext(Dispatchers.IO) {
+        val guarded = sanitizeItemTitle(item)
         suspend fun persist(): SavedItem {
-            val itemToSave = persistLocalMedia(item)
+            val itemToSave = persistLocalMedia(guarded)
             val itemSize = when {
                 mediaBytes != null -> mediaBytes.size.toLong()
                 (itemToSave.thumbnailPath ?: itemToSave.content).startsWith("/") -> java.io.File(itemToSave.thumbnailPath ?: itemToSave.content).length()
@@ -682,10 +697,10 @@ class CobaltRepository(private val context: Context) {
             val saved = if (com.example.notes.NotePersistence.isNote(finalItem)) notePersistence.save(finalItem) else notePersistence.saveNonNoteLocked(finalItem)
             return saved
         }
-        val saved = if (com.example.notes.NotePersistence.isNote(item)) persist() else {
+        val saved = if (com.example.notes.NotePersistence.isNote(guarded)) persist() else {
             com.example.notes.NoteWriteLock.mutex.withLock {
-                com.example.notes.NoteDeletionFence(context).requireAlive(item.id)
-                check(savedItemDao.isItemDeleted(item.id) != true) { "This item is in Trash." }
+                com.example.notes.NoteDeletionFence(context).requireAlive(guarded.id)
+                check(savedItemDao.isItemDeleted(guarded.id) != true) { "This item is in Trash." }
                 persist()
             }
         }

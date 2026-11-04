@@ -30,6 +30,8 @@ import androidx.core.content.IntentCompat
 import com.example.data.local.AppDatabase
 import com.example.data.local.SavedItemEntity
 import com.example.data.model.SavedItemType
+import com.example.util.ItemTitleResolver
+import com.example.util.loadTitleFallbacks
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -151,10 +153,26 @@ class QuickShareActivity : ComponentActivity() {
                     }
                 } else {
                     val isCode = textContent.contains("class ") || textContent.contains("fun ") || textContent.contains("{") || textContent.contains("import ")
-                    val title = subject?.takeIf { it.isNotBlank() } ?: if (isCode) "Captured Code" else "Captured Note"
+                    val itemType = if (isCode) SavedItemType.CODE else SavedItemType.TEXT
+                    val resolvedTitle = ItemTitleResolver.resolveItemTitle(
+                        userTitle = subject?.takeIf { it.isNotBlank() },
+                        displayName = null,
+                        type = itemType,
+                        fallbacks = appContext.loadTitleFallbacks()
+                    )
+                    val title = if (subject.isNullOrBlank()) {
+                        val firstLine = textContent.lineSequence().firstOrNull { it.isNotBlank() }?.trim()?.removePrefix("#")?.trim()
+                        if (!firstLine.isNullOrBlank() && !ItemTitleResolver.isInternalPathOrGeneratedName(firstLine)) {
+                            ItemTitleResolver.truncateSafely(firstLine, ItemTitleResolver.MAX_TITLE_LENGTH)
+                        } else {
+                            resolvedTitle
+                        }
+                    } else {
+                        resolvedTitle
+                    }
                     val entity = SavedItemEntity(
                         id = id,
-                        type = if (isCode) SavedItemType.CODE.name else SavedItemType.TEXT.name,
+                        type = itemType.name,
                         title = title,
                         content = textContent,
                         timestamp = now,
@@ -168,10 +186,17 @@ class QuickShareActivity : ComponentActivity() {
 
             // 2. Image Shared
             mimeType.startsWith("image/") && mediaUri != null -> {
+                val displayName = ItemTitleResolver.queryDisplayName(appContext, mediaUri)
+                val resolvedTitle = ItemTitleResolver.resolveItemTitle(
+                    userTitle = subject?.takeIf { it.isNotBlank() },
+                    displayName = displayName,
+                    type = SavedItemType.IMAGE,
+                    fallbacks = appContext.loadTitleFallbacks()
+                )
                 val entity = SavedItemEntity(
                     id = id,
                     type = SavedItemType.IMAGE.name,
-                    title = subject?.takeIf { it.isNotBlank() } ?: "Shared Image",
+                    title = resolvedTitle,
                     content = mediaUri.toString(),
                     timestamp = now,
                     foldersJson = "[]",
@@ -211,10 +236,17 @@ class QuickShareActivity : ComponentActivity() {
 
             // 3. Video Shared
             mimeType.startsWith("video/") && mediaUri != null -> {
+                val displayName = ItemTitleResolver.queryDisplayName(appContext, mediaUri)
+                val resolvedTitle = ItemTitleResolver.resolveItemTitle(
+                    userTitle = subject?.takeIf { it.isNotBlank() },
+                    displayName = displayName,
+                    type = SavedItemType.VIDEO,
+                    fallbacks = appContext.loadTitleFallbacks()
+                )
                 val entity = SavedItemEntity(
                     id = id,
                     type = SavedItemType.VIDEO.name,
-                    title = subject?.takeIf { it.isNotBlank() } ?: "Shared Video",
+                    title = resolvedTitle,
                     content = mediaUri.toString(),
                     timestamp = now,
                     foldersJson = "[]",
