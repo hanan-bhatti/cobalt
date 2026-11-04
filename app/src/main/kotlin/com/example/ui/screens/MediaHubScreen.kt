@@ -184,14 +184,16 @@ fun MediaHubScreen(
     ) { innerPadding ->
         Box(modifier = Modifier
                 .padding(innerPadding)
-                .fillMaxSize()
-                .hazeSource(state = hazeState)) {
+                .fillMaxSize()) {
             MediaHubContent(
                 viewModel = viewModel,
                 onMediaClick = onMediaClick,
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
-                gridState = gridState
+                gridState = gridState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .hazeSource(state = hazeState)
             )
 
             FloatingScrollPill(

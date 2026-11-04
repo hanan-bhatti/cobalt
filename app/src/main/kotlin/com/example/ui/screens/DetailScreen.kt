@@ -556,7 +556,6 @@ fun DetailScreen(
         Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .hazeSource(state = localHazeState)
                 .maybeSharedBounds(
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,

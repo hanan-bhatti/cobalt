@@ -1,6 +1,8 @@
 package com.example.ui.components
 
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
@@ -20,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -30,6 +33,7 @@ import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -51,35 +55,51 @@ fun rememberLazyListScrollAdapter(state: LazyListState): ScrollAdapter {
         object : ScrollAdapter {
             override val scrollFraction: Float
                 get() {
-                    val total = state.layoutInfo.totalItemsCount
-                    val visible = state.layoutInfo.visibleItemsInfo.size
-                    if (total <= visible || total == 0) return 0f
+                    val layout = state.layoutInfo
+                    val total = layout.totalItemsCount
+                    val visible = layout.visibleItemsInfo
+                    if (total <= visible.size || total == 0 || visible.isEmpty()) return 0f
+
                     val first = state.firstVisibleItemIndex
                     val offset = state.firstVisibleItemScrollOffset
-                    val maxFirst = (total - visible).coerceAtLeast(1)
-                    val base = first.toFloat() / maxFirst.toFloat()
-                    val fractionalItem = if (visible > 0) {
-                        val itemSize = state.layoutInfo.visibleItemsInfo.firstOrNull()?.size ?: 1
-                        (offset.toFloat() / itemSize.coerceAtLeast(1).toFloat()) / maxFirst.toFloat()
-                    } else 0f
-                    return (base + fractionalItem).coerceIn(0f, 1f)
+                    val avgItemSize = visible.map { it.size }.average().toFloat().coerceAtLeast(1f)
+                    val maxScrollable = (total - visible.size).coerceAtLeast(1)
+
+                    val exactPosition = first.toFloat() + (offset.toFloat() / avgItemSize)
+                    return (exactPosition / maxScrollable.toFloat()).coerceIn(0f, 1f)
                 }
+
             override val isScrolling: Boolean
                 get() = state.isScrollInProgress
+
             override val isScrollable: Boolean
                 get() = state.layoutInfo.totalItemsCount > state.layoutInfo.visibleItemsInfo.size
+
             override suspend fun scrollToFraction(fraction: Float) {
-                val total = state.layoutInfo.totalItemsCount
+                val layout = state.layoutInfo
+                val total = layout.totalItemsCount
                 if (total == 0) return
-                val targetIndex = (fraction.coerceIn(0f, 1f) * (total - 1)).roundToInt()
-                state.scrollToItem(targetIndex)
+                val visible = layout.visibleItemsInfo
+                val avgItemSize = if (visible.isNotEmpty()) {
+                    visible.map { it.size }.average().toInt().coerceAtLeast(1)
+                } else 100
+
+                val maxScrollable = (total - visible.size).coerceAtLeast(1)
+                val targetFloat = fraction.coerceIn(0f, 1f) * maxScrollable
+                val targetIndex = targetFloat.toInt().coerceIn(0, total - 1)
+                val remainder = targetFloat - targetIndex
+                val offsetPx = (remainder * avgItemSize).roundToInt()
+
+                state.scrollToItem(targetIndex, offsetPx)
             }
+
             override suspend fun scrollToTop() {
-                state.animateScrollToItem(0)
+                state.animateScrollToItem(0, 0)
             }
+
             override suspend fun scrollToBottom() {
                 val total = state.layoutInfo.totalItemsCount
-                if (total > 0) state.animateScrollToItem(total - 1)
+                if (total > 0) state.animateScrollToItem(total - 1, 0)
             }
         }
     }
@@ -91,28 +111,63 @@ fun rememberLazyGridScrollAdapter(state: LazyGridState): ScrollAdapter {
         object : ScrollAdapter {
             override val scrollFraction: Float
                 get() {
-                    val total = state.layoutInfo.totalItemsCount
-                    val visible = state.layoutInfo.visibleItemsInfo.size
-                    if (total <= visible || total == 0) return 0f
-                    val maxFirst = (total - visible).coerceAtLeast(1)
-                    return (state.firstVisibleItemIndex.toFloat() / maxFirst.toFloat()).coerceIn(0f, 1f)
+                    val layout = state.layoutInfo
+                    val total = layout.totalItemsCount
+                    val visible = layout.visibleItemsInfo
+                    if (total <= visible.size || total == 0 || visible.isEmpty()) return 0f
+
+                    val itemsPerRow = visible.groupBy { it.offset.y }.values.maxOfOrNull { it.size }?.coerceAtLeast(1) ?: 2
+                    val totalRows = (total + itemsPerRow - 1) / itemsPerRow
+                    val visibleRows = (visible.size + itemsPerRow - 1) / itemsPerRow
+                    val maxScrollableRows = (totalRows - visibleRows).coerceAtLeast(1)
+
+                    val firstRow = state.firstVisibleItemIndex / itemsPerRow
+                    val firstOffset = state.firstVisibleItemScrollOffset
+                    val avgRowHeight = visible.map { it.size.height }.average().toFloat().coerceAtLeast(1f)
+
+                    val exactRow = firstRow.toFloat() + (firstOffset.toFloat() / avgRowHeight)
+                    return (exactRow / maxScrollableRows.toFloat()).coerceIn(0f, 1f)
                 }
+
             override val isScrolling: Boolean
                 get() = state.isScrollInProgress
+
             override val isScrollable: Boolean
                 get() = state.layoutInfo.totalItemsCount > state.layoutInfo.visibleItemsInfo.size
+
             override suspend fun scrollToFraction(fraction: Float) {
-                val total = state.layoutInfo.totalItemsCount
+                val layout = state.layoutInfo
+                val total = layout.totalItemsCount
                 if (total == 0) return
-                val targetIndex = (fraction.coerceIn(0f, 1f) * (total - 1)).roundToInt()
-                state.scrollToItem(targetIndex)
+                val visible = layout.visibleItemsInfo
+                val itemsPerRow = if (visible.isNotEmpty()) {
+                    visible.groupBy { it.offset.y }.values.maxOfOrNull { it.size }?.coerceAtLeast(1) ?: 2
+                } else 2
+
+                val totalRows = (total + itemsPerRow - 1) / itemsPerRow
+                val visibleRows = if (visible.isNotEmpty()) (visible.size + itemsPerRow - 1) / itemsPerRow else 1
+                val maxScrollableRows = (totalRows - visibleRows).coerceAtLeast(1)
+
+                val avgRowHeight = if (visible.isNotEmpty()) {
+                    visible.map { it.size.height }.average().toInt().coerceAtLeast(1)
+                } else 200
+
+                val targetFloatRow = fraction.coerceIn(0f, 1f) * maxScrollableRows
+                val targetRow = targetFloatRow.toInt().coerceIn(0, totalRows - 1)
+                val remainder = targetFloatRow - targetRow
+                val offsetPx = (remainder * avgRowHeight).roundToInt()
+
+                val targetItemIndex = (targetRow * itemsPerRow).coerceIn(0, total - 1)
+                state.scrollToItem(targetItemIndex, offsetPx)
             }
+
             override suspend fun scrollToTop() {
-                state.animateScrollToItem(0)
+                state.animateScrollToItem(0, 0)
             }
+
             override suspend fun scrollToBottom() {
                 val total = state.layoutInfo.totalItemsCount
-                if (total > 0) state.animateScrollToItem(total - 1)
+                if (total > 0) state.animateScrollToItem(total - 1, 0)
             }
         }
     }
@@ -124,28 +179,60 @@ fun rememberLazyStaggeredGridScrollAdapter(state: LazyStaggeredGridState): Scrol
         object : ScrollAdapter {
             override val scrollFraction: Float
                 get() {
-                    val total = state.layoutInfo.totalItemsCount
-                    val visible = state.layoutInfo.visibleItemsInfo.size
-                    if (total <= visible || total == 0) return 0f
-                    val maxFirst = (total - visible).coerceAtLeast(1)
-                    return (state.firstVisibleItemIndex.toFloat() / maxFirst.toFloat()).coerceIn(0f, 1f)
+                    val layout = state.layoutInfo
+                    val total = layout.totalItemsCount
+                    val visible = layout.visibleItemsInfo
+                    if (total <= visible.size || total == 0 || visible.isEmpty()) return 0f
+
+                    val lanes = visible.map { it.lane }.distinct().size.coerceAtLeast(2)
+                    val totalRows = (total + lanes - 1) / lanes
+                    val visibleRows = (visible.size + lanes - 1) / lanes
+                    val maxScrollableRows = (totalRows - visibleRows).coerceAtLeast(1)
+
+                    val firstRow = state.firstVisibleItemIndex / lanes
+                    val firstOffset = state.firstVisibleItemScrollOffset
+                    val avgHeight = visible.map { it.size.height }.average().toFloat().coerceAtLeast(1f)
+
+                    val exactRow = firstRow.toFloat() + (firstOffset.toFloat() / avgHeight)
+                    return (exactRow / maxScrollableRows.toFloat()).coerceIn(0f, 1f)
                 }
+
             override val isScrolling: Boolean
                 get() = state.isScrollInProgress
+
             override val isScrollable: Boolean
                 get() = state.layoutInfo.totalItemsCount > state.layoutInfo.visibleItemsInfo.size
+
             override suspend fun scrollToFraction(fraction: Float) {
-                val total = state.layoutInfo.totalItemsCount
+                val layout = state.layoutInfo
+                val total = layout.totalItemsCount
                 if (total == 0) return
-                val targetIndex = (fraction.coerceIn(0f, 1f) * (total - 1)).roundToInt()
-                state.scrollToItem(targetIndex)
+                val visible = layout.visibleItemsInfo
+                val lanes = if (visible.isNotEmpty()) visible.map { it.lane }.distinct().size.coerceAtLeast(2) else 2
+                val totalRows = (total + lanes - 1) / lanes
+                val visibleRows = if (visible.isNotEmpty()) (visible.size + lanes - 1) / lanes else 1
+                val maxScrollableRows = (totalRows - visibleRows).coerceAtLeast(1)
+
+                val avgHeight = if (visible.isNotEmpty()) {
+                    visible.map { it.size.height }.average().toInt().coerceAtLeast(1)
+                } else 180
+
+                val targetFloatRow = fraction.coerceIn(0f, 1f) * maxScrollableRows
+                val targetRow = targetFloatRow.toInt().coerceIn(0, totalRows - 1)
+                val remainder = targetFloatRow - targetRow
+                val offsetPx = (remainder * avgHeight).roundToInt()
+
+                val targetItemIndex = (targetRow * lanes).coerceIn(0, total - 1)
+                state.scrollToItem(targetItemIndex, offsetPx)
             }
+
             override suspend fun scrollToTop() {
-                state.animateScrollToItem(0)
+                state.animateScrollToItem(0, 0)
             }
+
             override suspend fun scrollToBottom() {
                 val total = state.layoutInfo.totalItemsCount
-                if (total > 0) state.animateScrollToItem(total - 1)
+                if (total > 0) state.animateScrollToItem(total - 1, 0)
             }
         }
     }
@@ -180,6 +267,7 @@ fun rememberScrollStateAdapter(state: ScrollState): ScrollAdapter {
 
 /**
  * Animated tactile glassmorphic floating pill scrollbar with drag-scrubbing and top/bottom jump buttons.
+ * Uses frame-paced 60fps/120fps display refresh synchronization matching the native editor logic.
  */
 @Composable
 fun FloatingScrollPill(
@@ -199,6 +287,8 @@ fun FloatingScrollPill(
     var isDragging by remember { mutableStateOf(false) }
     var isVisible by remember { mutableStateOf(false) }
     var hideJob by remember { mutableStateOf<Job?>(null) }
+    var dragFraction by remember { mutableFloatStateOf(0f) }
+    var scrubTargetFraction by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(adapter.isScrolling, isDragging) {
         if (adapter.isScrolling || isDragging) {
@@ -209,6 +299,16 @@ fun FloatingScrollPill(
             hideJob = launch {
                 delay(1500)
                 isVisible = false
+            }
+        }
+    }
+
+    // Frame-paced scrubbing loop matching the native editor: continuously syncs with display refresh
+    LaunchedEffect(isDragging) {
+        if (isDragging) {
+            while (isActive && isDragging) {
+                adapter.scrollToFraction(scrubTargetFraction)
+                withFrameMillis { }
             }
         }
     }
@@ -230,11 +330,22 @@ fun FloatingScrollPill(
             .fillMaxSize()
             .graphicsLayer { this.alpha = alpha }
     ) {
-        val density = androidx.compose.ui.platform.LocalDensity.current
+        val density = LocalDensity.current
         val availableTrackHeight = maxHeight - topPadding - bottomPadding - pillHeight
         val trackHeightPx = with(density) { availableTrackHeight.coerceAtLeast(0.dp).toPx() }
 
-        val targetOffsetY = topPadding + (availableTrackHeight.coerceAtLeast(0.dp) * adapter.scrollFraction)
+        val smoothFraction by animateFloatAsState(
+            targetValue = adapter.scrollFraction,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessHigh
+            ),
+            label = "floating_pill_fraction"
+        )
+
+        // When dragging, follow the user's touch instantly; when scrolling naturally, use smooth spring
+        val displayFraction = if (isDragging) dragFraction else smoothFraction
+        val targetOffsetY = topPadding + (availableTrackHeight.coerceAtLeast(0.dp) * displayFraction)
 
         val scale by animateFloatAsState(
             targetValue = if (isDragging) 1.08f else 1.0f,
@@ -286,6 +397,8 @@ fun FloatingScrollPill(
                     detectDragGestures(
                         onDragStart = {
                             isDragging = true
+                            dragFraction = adapter.scrollFraction
+                            scrubTargetFraction = dragFraction
                         },
                         onDragEnd = {
                             isDragging = false
@@ -296,12 +409,9 @@ fun FloatingScrollPill(
                         onDrag = { change, dragAmount ->
                             change.consume()
                             if (trackHeightPx > 0) {
-                                val currentFrac = adapter.scrollFraction
-                                val deltaFrac = dragAmount.y / trackHeightPx
-                                val newFrac = (currentFrac + deltaFrac).coerceIn(0f, 1f)
-                                coroutineScope.launch {
-                                    adapter.scrollToFraction(newFrac)
-                                }
+                                val delta = dragAmount.y / trackHeightPx
+                                dragFraction = (dragFraction + delta).coerceIn(0f, 1f)
+                                scrubTargetFraction = dragFraction
                             }
                         }
                     )
