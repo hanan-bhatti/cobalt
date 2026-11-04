@@ -496,6 +496,10 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
     }
 
     fun jumpToHeading(line: Int) { jumpToLine(line.coerceIn(0, text.lineCount - 1)); requestFocus() }
+    fun jumpToCharacter(position: Int) {
+        val pos = text.indexer.getCharPosition(position.coerceIn(0, text.length))
+        jumpToHeading(pos.line)
+    }
     override fun beginSearchMode() { onTool("find") }
 
     /** null means the selection needs a worker count; false means the size limit refuses it. */
