@@ -157,7 +157,8 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
     header: (@Composable () -> Unit)? = null,
     searchQuery: String? = null,
     activeMatchByte: Long? = null,
-    state: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState()) {
+    state: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
+    contentPadding: PaddingValues = PaddingValues(0.dp)) {
     val context = LocalContext.current
     val store = remember { PrivateMarkdownStore(context) }
     val fontScale = LocalDensity.current.fontScale
@@ -221,7 +222,7 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
             catch (_: Exception) { failure = true }
             finally { jumping = false }
         }
-        LazyColumn(Modifier.fillMaxSize(), state = state) {
+        LazyColumn(Modifier.fillMaxSize(), state = state, contentPadding = contentPadding) {
             if (header != null) item(key = "note_header") { header(); Spacer(Modifier.height(28.dp)) }
             items(session.blocks.size, key = { session.blocks[it].start }, contentType = { "note_block" }) { index ->
                 val block = session.blocks[index]

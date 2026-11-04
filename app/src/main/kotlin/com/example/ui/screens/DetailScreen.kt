@@ -509,25 +509,31 @@ fun DetailScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            IconButton(
-                                onClick = {
-                                    viewModel.shareItem(item, context)
-                                },
-                                modifier = Modifier.bounceClick().testTag("detail_bottom_share_button")
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.size(48.dp)
                             ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_share),
-                                    contentDescription = "Share",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(24.dp)
-                                )
+                                IconButton(
+                                    onClick = {
+                                        viewModel.shareItem(item, context)
+                                    },
+                                    modifier = Modifier.fillMaxSize().bounceClick().testTag("detail_bottom_share_button")
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_share),
+                                        contentDescription = "Share",
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
                             }
 
                             Button(
                                 onClick = { onEdit(item) },
                                 modifier = Modifier
                                     .weight(1f)
-                                    .padding(start = 24.dp)
+                                    .padding(start = 16.dp)
                                     .height(48.dp)
                                     .bounceClick()
                                     .testTag("detail_bottom_edit_button"),
@@ -578,8 +584,9 @@ fun DetailScreen(
                     jump = noteJump,
                     modifier = Modifier.fillMaxSize()
                         .hazeSource(state = localHazeState)
-                        .padding(top = innerPadding.calculateTopPadding(), bottom = innerPadding.calculateBottomPadding())
-                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                        .padding(top = innerPadding.calculateTopPadding())
+                        .padding(horizontal = 24.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = innerPadding.calculateBottomPadding() + 24.dp),
                     header = detailHeader,
                     searchQuery = if (isSearchingNote) activeSearchQuery else null,
                     activeMatchByte = if (isSearchingNote) activeMatchOffset else null,
@@ -591,11 +598,9 @@ fun DetailScreen(
                             .fillMaxSize()
                             .hazeSource(state = localHazeState)
                             .verticalScroll(scrollState)
-                            .padding(
-                                top = innerPadding.calculateTopPadding(),
-                                bottom = innerPadding.calculateBottomPadding()
-                            )
-                            .padding(horizontal = 24.dp, vertical = 8.dp),
+                            .padding(top = innerPadding.calculateTopPadding())
+                            .padding(horizontal = 24.dp)
+                            .padding(bottom = innerPadding.calculateBottomPadding() + 24.dp),
                         verticalArrangement = Arrangement.spacedBy(28.dp)
                     ) {
             detailHeader()
