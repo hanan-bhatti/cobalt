@@ -75,7 +75,7 @@ object MarkdownBlocks {
         private var pending = -1
         private var pendingCr = false
         private var finished = false
-        init { require(maxBytes in 16..4096 && maxLines in 1..48) }
+        init { require(maxBytes in 16..65536 && maxLines in 1..256) }
 
         private fun fencePrefix() = fenceOpening
         private fun lineText(): String = ByteArray(prefix.length) { prefix[it].code.toByte() }.toString(Charsets.UTF_8)
@@ -144,12 +144,15 @@ object MarkdownBlocks {
         }
         private fun endLine(): Boolean {
             val endedBlank = blankLine
+            val inTableBefore = table != null
             lines++
             finishLine()
             // A closing fence ends its bounded render segment immediately. Continuations
             // cannot accidentally style a later, unrelated code block as the same box.
             if (continuedCode && fence == null) return true
-            return endedBlank && fence == null && nonBlank &&
+            // If we just finished a table (blank line or line without pipes), emit the completed table intact
+            if (inTableBefore && table == null && nonBlank) return true
+            return endedBlank && fence == null && table == null && nonBlank &&
                 (hasHeading || offset - start >= maxBytes * 3 / 4 || renderLines >= maxLines * 3 / 4)
         }
         fun next(): Block? {
@@ -173,6 +176,9 @@ object MarkdownBlocks {
                     // fences remain bounded and join visually across adjacent lazy rows.
                     (prefix.isEmpty() && byte != fence?.code && (offset - start >= maxOf(maxBytes, 4096) || lines >= maxOf(maxLines * 2, 24))) ||
                         (offset - start >= maxOf(maxBytes, 4096) && lineBytes >= 4096)
+                } else if (table != null) {
+                    // Keep table rows together in a single block so the table is never split mid-table!
+                    (prefix.isEmpty() && (offset - start >= 65536 || lines >= 256))
                 } else offset - start >= maxBytes || measuredLines >= maxLines
                 if (!(pendingCr && byte == 10) && limitReached && (byte and 0xC0) != 0x80) {
                     inline.finish(byte)
