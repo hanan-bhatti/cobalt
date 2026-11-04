@@ -232,22 +232,9 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
                     catch (_: Exception) { value = PreparedNoteBlock("This part could not be read. The saved note is retained.", null) }
                 }
                 val loaded = ready
-                val blockModifier = if (isBlockActive) {
-                    Modifier
-                        .fillMaxWidth()
-                        .background(
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f),
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                } else {
-                    Modifier.fillMaxWidth().padding(top = if (index > 0 && !block.codeContinuesBefore && session.blocks[index - 1].markdown) 6.dp else 0.dp)
-                }
+                val blockModifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = if (index > 0 && !block.codeContinuesBefore && session.blocks[index - 1].markdown) 6.dp else 0.dp)
 
                 Box(modifier = blockModifier) {
                     if (loaded == null) {

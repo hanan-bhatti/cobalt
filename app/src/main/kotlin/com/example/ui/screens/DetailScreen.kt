@@ -970,23 +970,6 @@ fun DetailScreen(
                     .fillMaxSize()
                     .imePadding()
             ) {
-                if (isSearchingNote) {
-                    // Dismiss search when tapping outside the search bar
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .pointerInput(Unit) {
-                                detectTapGestures(
-                                    onTap = {
-                                        isSearchingNote = false
-                                        activeSearchQuery = ""
-                                        activeMatchOffset = null
-                                    }
-                                )
-                            }
-                    )
-                }
-
                 AnimatedVisibility(
                     visible = isSearchingNote,
                     enter = slideInVertically(initialOffsetY = { fullHeight -> fullHeight }) + fadeIn(),
