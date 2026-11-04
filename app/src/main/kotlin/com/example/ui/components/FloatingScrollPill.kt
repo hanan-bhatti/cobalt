@@ -116,14 +116,29 @@ fun rememberLazyGridScrollAdapter(state: LazyGridState): ScrollAdapter {
                     val visible = layout.visibleItemsInfo
                     if (total <= visible.size || total == 0 || visible.isEmpty()) return 0f
 
-                    val itemsPerRow = visible.groupBy { it.offset.y }.values.maxOfOrNull { it.size }?.coerceAtLeast(1) ?: 2
+                    var maxItemsInRow = 1
+                    var currentY = Int.MIN_VALUE
+                    var countInCurrentY = 0
+                    var totalHeight = 0L
+                    for (i in visible.indices) {
+                        val item = visible[i]
+                        totalHeight += item.size.height
+                        if (item.offset.y == currentY) {
+                            countInCurrentY++
+                            if (countInCurrentY > maxItemsInRow) maxItemsInRow = countInCurrentY
+                        } else {
+                            currentY = item.offset.y
+                            countInCurrentY = 1
+                        }
+                    }
+                    val itemsPerRow = maxItemsInRow.coerceAtLeast(1)
                     val totalRows = (total + itemsPerRow - 1) / itemsPerRow
                     val visibleRows = (visible.size + itemsPerRow - 1) / itemsPerRow
                     val maxScrollableRows = (totalRows - visibleRows).coerceAtLeast(1)
 
                     val firstRow = state.firstVisibleItemIndex / itemsPerRow
                     val firstOffset = state.firstVisibleItemScrollOffset
-                    val avgRowHeight = visible.map { it.size.height }.average().toFloat().coerceAtLeast(1f)
+                    val avgRowHeight = (totalHeight.toFloat() / visible.size).coerceAtLeast(1f)
 
                     val exactRow = firstRow.toFloat() + (firstOffset.toFloat() / avgRowHeight)
                     return (exactRow / maxScrollableRows.toFloat()).coerceIn(0f, 1f)
@@ -140,16 +155,29 @@ fun rememberLazyGridScrollAdapter(state: LazyGridState): ScrollAdapter {
                 val total = layout.totalItemsCount
                 if (total == 0) return
                 val visible = layout.visibleItemsInfo
-                val itemsPerRow = if (visible.isNotEmpty()) {
-                    visible.groupBy { it.offset.y }.values.maxOfOrNull { it.size }?.coerceAtLeast(1) ?: 2
-                } else 2
+                var maxItemsInRow = 1
+                var currentY = Int.MIN_VALUE
+                var countInCurrentY = 0
+                var totalHeight = 0L
+                for (i in visible.indices) {
+                    val item = visible[i]
+                    totalHeight += item.size.height
+                    if (item.offset.y == currentY) {
+                        countInCurrentY++
+                        if (countInCurrentY > maxItemsInRow) maxItemsInRow = countInCurrentY
+                    } else {
+                        currentY = item.offset.y
+                        countInCurrentY = 1
+                    }
+                }
+                val itemsPerRow = if (visible.isNotEmpty()) maxItemsInRow.coerceAtLeast(1) else 2
 
                 val totalRows = (total + itemsPerRow - 1) / itemsPerRow
                 val visibleRows = if (visible.isNotEmpty()) (visible.size + itemsPerRow - 1) / itemsPerRow else 1
                 val maxScrollableRows = (totalRows - visibleRows).coerceAtLeast(1)
 
                 val avgRowHeight = if (visible.isNotEmpty()) {
-                    visible.map { it.size.height }.average().toInt().coerceAtLeast(1)
+                    (totalHeight / visible.size).toInt().coerceAtLeast(1)
                 } else 200
 
                 val targetFloatRow = fraction.coerceIn(0f, 1f) * maxScrollableRows
@@ -184,14 +212,21 @@ fun rememberLazyStaggeredGridScrollAdapter(state: LazyStaggeredGridState): Scrol
                     val visible = layout.visibleItemsInfo
                     if (total <= visible.size || total == 0 || visible.isEmpty()) return 0f
 
-                    val lanes = visible.map { it.lane }.distinct().size.coerceAtLeast(2)
+                    var maxLane = 1
+                    var totalHeight = 0L
+                    for (i in visible.indices) {
+                        val item = visible[i]
+                        if (item.lane > maxLane) maxLane = item.lane
+                        totalHeight += item.size.height
+                    }
+                    val lanes = (maxLane + 1).coerceAtLeast(2)
                     val totalRows = (total + lanes - 1) / lanes
                     val visibleRows = (visible.size + lanes - 1) / lanes
                     val maxScrollableRows = (totalRows - visibleRows).coerceAtLeast(1)
 
                     val firstRow = state.firstVisibleItemIndex / lanes
                     val firstOffset = state.firstVisibleItemScrollOffset
-                    val avgHeight = visible.map { it.size.height }.average().toFloat().coerceAtLeast(1f)
+                    val avgHeight = (totalHeight.toFloat() / visible.size).coerceAtLeast(1f)
 
                     val exactRow = firstRow.toFloat() + (firstOffset.toFloat() / avgHeight)
                     return (exactRow / maxScrollableRows.toFloat()).coerceIn(0f, 1f)
@@ -208,13 +243,20 @@ fun rememberLazyStaggeredGridScrollAdapter(state: LazyStaggeredGridState): Scrol
                 val total = layout.totalItemsCount
                 if (total == 0) return
                 val visible = layout.visibleItemsInfo
-                val lanes = if (visible.isNotEmpty()) visible.map { it.lane }.distinct().size.coerceAtLeast(2) else 2
+                var maxLane = 1
+                var totalHeight = 0L
+                for (i in visible.indices) {
+                    val item = visible[i]
+                    if (item.lane > maxLane) maxLane = item.lane
+                    totalHeight += item.size.height
+                }
+                val lanes = if (visible.isNotEmpty()) (maxLane + 1).coerceAtLeast(2) else 2
                 val totalRows = (total + lanes - 1) / lanes
                 val visibleRows = if (visible.isNotEmpty()) (visible.size + lanes - 1) / lanes else 1
                 val maxScrollableRows = (totalRows - visibleRows).coerceAtLeast(1)
 
                 val avgHeight = if (visible.isNotEmpty()) {
-                    visible.map { it.size.height }.average().toInt().coerceAtLeast(1)
+                    (totalHeight / visible.size).toInt().coerceAtLeast(1)
                 } else 180
 
                 val targetFloatRow = fraction.coerceIn(0f, 1f) * maxScrollableRows

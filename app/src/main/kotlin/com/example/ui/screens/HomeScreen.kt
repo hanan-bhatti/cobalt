@@ -49,6 +49,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.lazy.staggeredgrid.itemsIndexed
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.animation.scaleIn
@@ -97,6 +98,7 @@ import com.example.ui.viewmodel.CobaltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
@@ -226,28 +228,35 @@ fun HomeScreen(
     val blurOpacity by viewModel.blurOpacity.collectAsState()
     val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
 
-    val homeVisibleItemIds by remember(listState, gridState, isListView) {
-        derivedStateOf {
+    LaunchedEffect(listState, gridState, isListView) {
+        snapshotFlow {
             if (isListView) {
+                val layout = listState.layoutInfo
+                layout.visibleItemsInfo.firstOrNull()?.index to layout.visibleItemsInfo.lastOrNull()?.index
+            } else {
+                val layout = gridState.layoutInfo
+                layout.visibleItemsInfo.firstOrNull()?.index to layout.visibleItemsInfo.lastOrNull()?.index
+            }
+        }
+        .distinctUntilChanged()
+        .collect {
+            val ids = if (isListView) {
                 val layout = listState.layoutInfo
                 val vStart = layout.viewportStartOffset
                 val vEnd = layout.viewportEndOffset
-                layout.visibleItemsInfo.filter { info ->
-                    info.offset >= vStart && (info.offset + info.size) <= vEnd
-                }.mapNotNull { it.key as? String }.toSet()
+                layout.visibleItemsInfo.mapNotNull { info ->
+                    if (info.offset >= vStart && (info.offset + info.size) <= vEnd) info.key as? String else null
+                }.toSet()
             } else {
                 val layout = gridState.layoutInfo
                 val vStart = layout.viewportStartOffset
                 val vEnd = layout.viewportEndOffset
-                layout.visibleItemsInfo.filter { info ->
-                    info.offset.y >= vStart && (info.offset.y + info.size.height) <= vEnd
-                }.mapNotNull { it.key as? String }.toSet()
+                layout.visibleItemsInfo.mapNotNull { info ->
+                    if (info.offset.y >= vStart && (info.offset.y + info.size.height) <= vEnd) info.key as? String else null
+                }.toSet()
             }
+            TransitionCoordinator.homeVisibleItemIds = ids
         }
-    }
-
-    LaunchedEffect(homeVisibleItemIds) {
-        TransitionCoordinator.homeVisibleItemIds = homeVisibleItemIds
     }
 
     LaunchedEffect(listState, gridState, isListView, items) {
@@ -665,26 +674,7 @@ fun HomeScreen(
                                 contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 100.dp),
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
-                                    val animDelay = (index % 10) * 50
-                                    val entryAlpha = remember { Animatable(0f) }
-                                    val entryOffsetY = remember { Animatable(40f) }
-                                    LaunchedEffect(item.id) {
-                                        delay(animDelay.toLong())
-                                        launch {
-                                            entryAlpha.animateTo(
-                                                targetValue = 1f,
-                                                animationSpec = tween(durationMillis = 350, easing = LinearOutSlowInEasing)
-                                            )
-                                        }
-                                        launch {
-                                            entryOffsetY.animateTo(
-                                                targetValue = 0f,
-                                                animationSpec = tween(durationMillis = 350, easing = LinearOutSlowInEasing)
-                                            )
-                                        }
-                                    }
-
+                                items(items, key = { it.id }) { item ->
                                     SwipeToDismissWrapper(
                                         item = item,
                                         enable = !isSelectionMode,
@@ -700,12 +690,7 @@ fun HomeScreen(
                                                 viewModel.archiveItem(item)
                                             }
                                         },
-                                        modifier = Modifier
-                                            .graphicsLayer {
-                                                alpha = entryAlpha.value
-                                                translationY = entryOffsetY.value
-                                            }
-                                            .animateItem(),
+                                        modifier = Modifier.animateItem(),
                                         content = {
                                             ArchiveItemRow(
                                                 item = item,
@@ -755,26 +740,7 @@ fun HomeScreen(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 verticalItemSpacing = 12.dp
                             ) {
-                                itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
-                                    val animDelay = (index % 10) * 50
-                                    val entryAlpha = remember { Animatable(0f) }
-                                    val entryOffsetY = remember { Animatable(40f) }
-                                    LaunchedEffect(item.id) {
-                                        delay(animDelay.toLong())
-                                        launch {
-                                            entryAlpha.animateTo(
-                                                targetValue = 1f,
-                                                animationSpec = tween(durationMillis = 350, easing = LinearOutSlowInEasing)
-                                            )
-                                        }
-                                        launch {
-                                            entryOffsetY.animateTo(
-                                                targetValue = 0f,
-                                                animationSpec = tween(durationMillis = 350, easing = LinearOutSlowInEasing)
-                                            )
-                                        }
-                                    }
-
+                                items(items, key = { it.id }) { item ->
                                     ArchiveItemCard(
                                         item = item,
                                         onClick = {
@@ -807,12 +773,7 @@ fun HomeScreen(
                                         },
                                         sharedTransitionScope = sharedTransitionScope,
                                         animatedVisibilityScope = animatedVisibilityScope,
-                                        modifier = Modifier
-                                            .graphicsLayer {
-                                                alpha = entryAlpha.value
-                                                translationY = entryOffsetY.value
-                                            }
-                                            .animateItem()
+                                        modifier = Modifier.animateItem()
                                     )
                                 }
                             }
