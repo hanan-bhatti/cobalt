@@ -28,4 +28,17 @@
     <string name="reset_typography_cancel_action">Cancel</string>
     <string name="reset_typography_undo_action">Undo</string>
     <string name="reset_typography_snackbar">Typography reset to defaults</string>
+
+    <!-- Title resolution and fallbacks (Issue #21) -->
+    <string name="title_untitled_image">Untitled image</string>
+    <string name="title_untitled_video">Untitled video</string>
+    <string name="title_untitled_audio">Untitled audio</string>
+    <string name="title_untitled_voice_memo">Untitled voice memo</string>
+    <string name="title_untitled_file">Untitled file</string>
+    <string name="title_untitled_screenshot">Untitled screenshot</string>
+    <string name="title_untitled_note">Untitled note</string>
+    <string name="title_untitled_link">Untitled link</string>
+    <string name="title_untitled_item">Untitled item</string>
+    <string name="title_voice_memo_timestamp">Voice memo, %s</string>
+    <string name="title_photo_timestamp">Photo, %s</string>
 </resources>
