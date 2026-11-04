@@ -26,7 +26,7 @@ class NoteTextNavigatorTest {
     }
 
     @Test fun headingCountAndLineMemoryAreBounded() {
-        val text = (1..1_000).joinToString("\n") { "# Heading $it" }
+        val text = (1..NoteTextNavigator.MAX_HEADINGS + 100).joinToString("\n") { "# Heading $it" }
         assertEquals(NoteTextNavigator.MAX_HEADINGS, text.byteInputStream().use { NoteTextNavigator.headings(it) }.size)
         assertTrue("x".repeat(100_000).byteInputStream().use { NoteTextNavigator.headings(it) }.isEmpty())
     }

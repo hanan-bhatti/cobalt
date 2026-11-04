@@ -229,7 +229,20 @@ internal fun ContinuousNoteEditor(viewModel: CobaltViewModel, modifier: Modifier
                         if (document?.disk != null) diskNative?.find(query, replacement = replacement, all = all)
                         else native?.find(query, replacement = replacement, all = all)
                     },
-                    onClose = { tool = null }
+                    onQueryChange = { query ->
+                        if (query.isBlank()) {
+                            diskNative?.clearSearch()
+                            native?.clearSearch()
+                        } else {
+                            diskNative?.highlightMatches(query)
+                            native?.highlightMatches(query)
+                        }
+                    },
+                    onClose = {
+                        diskNative?.clearSearch()
+                        native?.clearSearch()
+                        tool = null
+                    }
                 )
             }
         }
@@ -271,6 +284,7 @@ private fun EditorFloatingSearchReplaceBar(
     localHazeState: HazeState?,
     onFind: (String, Boolean) -> Unit,
     onReplace: (String, String, Boolean) -> Unit,
+    onQueryChange: (String) -> Unit = {},
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -283,6 +297,10 @@ private fun EditorFloatingSearchReplaceBar(
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
+    }
+
+    LaunchedEffect(query) {
+        onQueryChange(query)
     }
 
     val containerModifier = if (localHazeState != null) {

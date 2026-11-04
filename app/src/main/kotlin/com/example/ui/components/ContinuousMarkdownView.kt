@@ -171,13 +171,27 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
     }
 
     fun applyColors(background: Int, foreground: Int, accent: Int, muted: Int, selection: Int) {
+        val matchedDim = android.graphics.Color.argb(
+            40,
+            android.graphics.Color.red(accent),
+            android.graphics.Color.green(accent),
+            android.graphics.Color.blue(accent)
+        )
+        val activeBright = android.graphics.Color.argb(
+            120,
+            android.graphics.Color.red(accent),
+            android.graphics.Color.green(accent),
+            android.graphics.Color.blue(accent)
+        )
         colorScheme.apply {
             setColor(EditorColorScheme.WHOLE_BACKGROUND, background)
             setColor(EditorColorScheme.TEXT_NORMAL, foreground)
             setColor(EditorColorScheme.TEXT_SELECTED, foreground)
             setColor(EditorColorScheme.SELECTION_INSERT, accent)
             setColor(EditorColorScheme.SELECTION_HANDLE, accent)
-            setColor(EditorColorScheme.SELECTED_TEXT_BACKGROUND, selection)
+            setColor(EditorColorScheme.SELECTED_TEXT_BACKGROUND, activeBright)
+            setColor(EditorColorScheme.MATCHED_TEXT_BACKGROUND, matchedDim)
+            setColor(EditorColorScheme.MATCHED_TEXT_BORDER, android.graphics.Color.TRANSPARENT)
             setColor(EditorColorScheme.KEYWORD, accent)
             setColor(EditorColorScheme.LITERAL, muted)
             setColor(EditorColorScheme.SCROLL_BAR_THUMB, muted)
@@ -396,6 +410,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
     fun find(query: String, backwards: Boolean = false, replacement: String? = null, all: Boolean = false) {
         val doc = document ?: return
         if (query.isEmpty() || query.length > ContinuousTextSearch.MAX_QUERY || doc.pendingEdit?.isActive == true) return
+        highlightMatches(query)
         if (replacement != null && !isEditable) return
         if (replacement == query) {
             if (all) message("No changes needed") else find(query, backwards)
@@ -493,6 +508,25 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
                 if (doc.pendingEdit === currentCoroutineContext()[Job]) doc.pendingEdit = null
             }
         }.also { if (replacement != null) doc.pendingEdit = it }
+    }
+
+    fun highlightMatches(query: String) {
+        if (query.isBlank()) {
+            clearSearch()
+            return
+        }
+        try {
+            searcher.search(query, io.github.rosemoe.sora.widget.EditorSearcher.SearchOptions(true, false))
+        } catch (_: Exception) {}
+    }
+
+    fun clearSearch() {
+        try {
+            if (searcher.hasQuery()) {
+                searcher.stopSearch()
+            }
+        } catch (_: Exception) {}
+        postInvalidate()
     }
 
     fun jumpToHeading(line: Int) { jumpToLine(line.coerceIn(0, text.lineCount - 1)); requestFocus() }

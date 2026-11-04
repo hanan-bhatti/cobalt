@@ -169,8 +169,12 @@ class DiskEditorSession internal constructor(private val scope: CoroutineScope, 
     fun close() {
         if (closing) return
         closing = true
-        queue.close()
         delivery?.cancel()
+        while (outbox.isNotEmpty()) {
+            val cmd = outbox.removeFirst()
+            queue.trySend(cmd)
+        }
+        queue.close()
     }
     private fun releaseIfUnused() { if (workerFinished && readers == 0 && !disposed) { disposed = true; model.close(); retirement?.let { action -> scope.launch(NonCancellable + Dispatchers.IO) { runCatching(action) } } } }
 }

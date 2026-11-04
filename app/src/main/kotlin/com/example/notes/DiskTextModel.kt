@@ -77,9 +77,12 @@ class DiskTextModel private constructor(
     /** Native IME replacement and format wrappers publish as one durable Undo transaction. */
     fun replaceBatch(edits: List<Replacement>, before: Position = selection, after: Position? = null,
         checkCancelled: () -> Unit = {}): Status {
-        ready(); require(edits.isNotEmpty() && edits.size <= 100_000)
+        ready(); require(edits.isNotEmpty() && edits.size <= 10_000)
         return editGroup(before, after, checkCancelled) {
-            for (edit in edits) StringReader(edit.text).use { replaceRange(edit.start, edit.end, it, checkCancelled) }
+            for (chunk in edits.chunked(500)) {
+                checkCancelled()
+                for (edit in chunk) StringReader(edit.text).use { replaceRange(edit.start, edit.end, it, checkCancelled) }
+            }
         }
     }
     fun replace(start: Int, end: Int, reader: Reader, after: Position? = null, checkCancelled: () -> Unit = {}): Status {
@@ -161,10 +164,13 @@ class DiskTextModel private constructor(
         }
         return found
     }
-    fun replaceAll(query: String, replacement: String, limit: Int = 100_000, checkCancelled: () -> Unit = {}): Int {
+    fun replaceAll(query: String, replacement: String, limit: Int = 10_000, checkCancelled: () -> Unit = {}): Int {
         val positions = ArrayList<Int>()
         scanMatches(query, 0, status.characters, checkCancelled) { positions.add(it); positions.size < limit }
-        if (positions.isNotEmpty()) replaceBatch(positions.asReversed().map { Replacement(it, it + query.length, replacement) }, checkCancelled = checkCancelled)
+        if (positions.isNotEmpty()) {
+            val edits = positions.asReversed().map { Replacement(it, it + query.length, replacement) }
+            replaceBatch(edits, checkCancelled = checkCancelled)
+        }
         return positions.size
     }
     private fun scanMatches(query: String, start: Int, end: Int, checkCancelled: () -> Unit, match: (Int) -> Boolean) {

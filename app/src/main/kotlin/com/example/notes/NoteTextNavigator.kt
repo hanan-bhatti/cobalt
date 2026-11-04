@@ -5,7 +5,7 @@ import java.io.InputStream
 /** Bounded-memory, case-sensitive UTF-8 search and heading extraction. */
 object NoteTextNavigator {
     data class Heading(val offset: Long, val level: Int, val title: String)
-    const val MAX_HEADINGS = 500
+    const val MAX_HEADINGS = 10_000
 
     fun find(input: InputStream, query: String, start: Long = 0, checkCancelled: () -> Unit = {}): Long? {
         require(start >= 0 && query.isNotEmpty() && query.length <= 256)
@@ -39,7 +39,7 @@ object NoteTextNavigator {
     /**
      * Bounded-memory case-insensitive UTF-8 search that collects all matching byte offsets.
      */
-    fun findAll(input: InputStream, query: String, limit: Int = 1000, checkCancelled: () -> Unit = {}): List<Long> {
+    fun findAll(input: InputStream, query: String, limit: Int = 100_000, checkCancelled: () -> Unit = {}): List<Long> {
         if (query.isEmpty() || query.length > 256) return emptyList()
         val results = ArrayList<Long>()
         val queryLower = query.lowercase(java.util.Locale.ROOT)

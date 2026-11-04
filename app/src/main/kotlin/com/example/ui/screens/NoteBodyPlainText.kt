@@ -78,7 +78,12 @@ internal fun NoteBodyPlainText(reader: LegacyNoteRecovery, note: RecoveryNote, m
                 val isChunkActive = activeMatchByte != null && (index.toLong() * chunkBytes <= activeMatchByte && activeMatchByte < (index + 1).toLong() * chunkBytes)
                 if (text == null) NoteBodySkeleton(lines = 1)
                 else SelectionContainer {
-                    val highlight = if (!searchQuery.isNullOrBlank()) SearchHighlight(searchQuery, isChunkActive) else null
+                    val highlight = if (!searchQuery.isNullOrBlank()) SearchHighlight(
+                        query = searchQuery,
+                        isActive = isChunkActive,
+                        activeMatchOffset = activeMatchByte,
+                        blockStart = index.toLong() * chunkBytes
+                    ) else null
                     val primary = MaterialTheme.colorScheme.primary
                     val displayText = if (highlight != null) {
                         AnnotatedString(text).withSearchHighlight(highlight, primary)

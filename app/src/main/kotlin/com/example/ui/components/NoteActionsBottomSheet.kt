@@ -619,6 +619,7 @@ fun NoteFloatingSearchBar(
                 isSearching -> null
                 query.isBlank() -> null
                 matches.isEmpty() -> "0/0"
+                matches.size >= 100_000 -> "${currentIndex + 1}/100k+"
                 else -> "${currentIndex + 1}/${matches.size}"
             }
             if (isSearching) {

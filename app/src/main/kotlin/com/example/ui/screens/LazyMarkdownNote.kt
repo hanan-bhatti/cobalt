@@ -247,11 +247,18 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
                         onMarkdownChange = onBlockChange?.let { change -> { updated -> change(block.start, block.end, updated) } },
                         highlightQuery = searchQuery,
                         isHighlightActive = isBlockActive,
+                        activeMatchOffset = activeMatchByte,
+                        blockStart = block.start,
                         codeContinuesBefore = block.codeContinuesBefore,
                         codeContinuesAfter = block.codeContinuesAfter
                     )
                     else SelectionContainer {
-                        val highlight = if (!searchQuery.isNullOrBlank()) SearchHighlight(searchQuery, isBlockActive) else null
+                        val highlight = if (!searchQuery.isNullOrBlank()) SearchHighlight(
+                            query = searchQuery,
+                            isActive = isBlockActive,
+                            activeMatchOffset = activeMatchByte,
+                            blockStart = block.start
+                        ) else null
                         val primary = MaterialTheme.colorScheme.primary
                         Text(
                             text = AnnotatedString(loaded.text).withSearchHighlight(highlight, primary),

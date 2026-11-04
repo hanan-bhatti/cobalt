@@ -25,6 +25,22 @@ object ContinuousTextSearch {
             }
         }
     }
+    /** Streaming equivalent for byte ranges from a disk-backed formatted preview. */
+    fun utf16Range(source: java.io.InputStream, byteStart: Long, byteEnd: Long, checkCancelled: () -> Unit = {}): Pair<Int, Int> {
+        require(byteStart >= 0 && byteEnd >= byteStart)
+        val input = source.buffered(NoteSizePolicy.IO_CHUNK_BYTES)
+        var bytes = 0L; var units = 0; var start = -1
+        while (true) {
+            checkCancelled()
+            if (bytes == byteStart) start = units
+            if (bytes == byteEnd) { require(start >= 0); return start to units }
+            require(bytes < byteEnd)
+            val first = input.read(); require(first >= 0)
+            val width = when { first < 0x80 -> 1; first in 0xC2..0xDF -> 2; first in 0xE0..0xEF -> 3; first in 0xF0..0xF4 -> 4; else -> error("Invalid UTF-8 boundary") }
+            repeat(width - 1) { require(input.read() in 0x80..0xBF) }
+            bytes += width; units += if (width == 4) 2 else 1
+        }
+    }
     fun matches(text: CharSequence, query: String, start: Int = 0,
         limit: Int = MAX_REPLACEMENTS + 1, checkCancelled: () -> Unit = {}): List<Int> {
         require(query.isNotEmpty() && query.length <= MAX_QUERY && start in 0..text.length && limit > 0)

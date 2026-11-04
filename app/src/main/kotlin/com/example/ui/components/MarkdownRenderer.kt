@@ -89,7 +89,12 @@ import com.example.utils.isRtlText
 fun toggleTaskListItem(markdown: String, targetTaskIndex: Int): String =
     com.example.notes.MarkdownTaskEdits.toggle(markdown, targetTaskIndex)
 
-data class SearchHighlight(val query: String, val isActive: Boolean)
+data class SearchHighlight(
+    val query: String,
+    val isActive: Boolean = false,
+    val activeMatchOffset: Long? = null,
+    val blockStart: Long = 0L
+)
 val LocalSearchHighlight = compositionLocalOf<SearchHighlight?> { null }
 
 fun AnnotatedString.withSearchHighlight(highlight: SearchHighlight?, primaryColor: Color): AnnotatedString {
@@ -98,15 +103,28 @@ fun AnnotatedString.withSearchHighlight(highlight: SearchHighlight?, primaryColo
     val queryLower = highlight.query.lowercase(java.util.Locale.ROOT)
     var startIndex = 0
     val builder = AnnotatedString.Builder(this)
-    val highlightStyle = SpanStyle(
-        background = if (highlight.isActive) primaryColor.copy(alpha = 0.38f) else primaryColor.copy(alpha = 0.18f),
+    val currentHighlightStyle = SpanStyle(
+        background = primaryColor.copy(alpha = 0.45f),
         fontWeight = FontWeight.Bold
     )
+    val dimHighlightStyle = SpanStyle(
+        background = primaryColor.copy(alpha = 0.16f),
+        fontWeight = FontWeight.Medium
+    )
+    var occurrence = 0
     while (true) {
         val index = textLower.indexOf(queryLower, startIndex)
         if (index < 0) break
-        builder.addStyle(highlightStyle, index, index + highlight.query.length)
+        val isCurrent = if (highlight.activeMatchOffset != null) {
+            val approxByteOffset = highlight.blockStart + this.text.substring(0, index).toByteArray(Charsets.UTF_8).size
+            Math.abs(approxByteOffset - highlight.activeMatchOffset) <= highlight.query.length * 2
+        } else {
+            highlight.isActive && occurrence == 0
+        }
+        val style = if (isCurrent) currentHighlightStyle else dimHighlightStyle
+        builder.addStyle(style, index, index + highlight.query.length)
         startIndex = index + highlight.query.length
+        occurrence++
     }
     return builder.toAnnotatedString()
 }
@@ -128,6 +146,8 @@ fun MarkdownText(
     prepared: SafeMarkdownDocument? = null,
     highlightQuery: String? = null,
     isHighlightActive: Boolean = false,
+    activeMatchOffset: Long? = null,
+    blockStart: Long = 0L,
     codeContinuesBefore: Boolean = false,
     codeContinuesAfter: Boolean = false
 ) {
@@ -153,7 +173,12 @@ fun MarkdownText(
     val taskCounter = remember(markdown) { AtomicInteger(0) }
     taskCounter.set(0)
 
-    val searchHighlight = if (!highlightQuery.isNullOrBlank()) SearchHighlight(highlightQuery, isHighlightActive) else null
+    val searchHighlight = if (!highlightQuery.isNullOrBlank()) SearchHighlight(
+        query = highlightQuery,
+        isActive = isHighlightActive,
+        activeMatchOffset = activeMatchOffset,
+        blockStart = blockStart
+    ) else null
     CompositionLocalProvider(
         LocalCodeContinuation provides (codeContinuesBefore to codeContinuesAfter),
         LocalMarkdownLinkDecoration provides (parsed?.decorateLinks != false),
