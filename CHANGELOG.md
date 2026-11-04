@@ -1,5 +1,15 @@
 ## Unreleased — single application cleanup
 
+### Fixes
+
+- **Prevent internal cache paths and URIs as user-facing titles and descriptions (Issue #21):**
+  - Read original file display names (`OpenableColumns.DISPLAY_NAME`) at pick time across gallery, camera, and share intents before copying into app cache.
+  - Added pure `ItemTitleResolver` that sanitizes file names, strips extensions, bounds string lengths without splitting surrogate pairs, and provides localized fallbacks ("Untitled image", "Untitled video", "Untitled audio", etc.) for untitled captures.
+  - Reject internal cache paths (`/cache/`, `/data/user/`), URIs (`file:`, `content:`), and generated temporary cache names (`media_<uuid>`) across all capture pathways.
+  - Enforced single defense-in-depth sanitization choke point in `CobaltRepository` (`saveItem`, `saveItemLocallyOnly`, `saveNewMediaItem`).
+  - Added display-time guards and eliminated path leaks across card subtitles, search rows, detail headers/descriptions, folder pickers, home micro-cards, widgets, Side Dock peek rows, notifications, and share sheets.
+  - Added one-time, idempotent, crash-safe background cleanup (`LegacyPathTitleCleanup`) guarded by SharedPreferences to rename existing path-titled items and recover metadata without altering Room DB schema or note bodies.
+
 - Compact eligible older note versions into verified compressed copy/insert deltas,
   retain complete history anchors, and reconstruct/export/restore without whole-body
   Strings. Keep the current note as Markdown and retain originals on conversion failure.
