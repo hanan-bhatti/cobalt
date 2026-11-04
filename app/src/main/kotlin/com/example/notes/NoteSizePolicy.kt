@@ -10,7 +10,7 @@ object NoteSizePolicy {
     const val IMPORT_MAX_BYTES = 55_000_000L
     const val SPLIT_TARGET_BYTES = 50_000_000L
     const val PREVIEW_CHARACTERS = 200
-    const val DECORATED_LINK_LIMIT = 5000
+    const val DECORATED_LINK_LIMIT = 300
     const val IO_CHUNK_BYTES = 16 * 1024
     const val SEARCH_PREFIX_BYTES = 32 * 1024
     const val MARKDOWN_BLOCK_CHARACTERS = 32 * 1024

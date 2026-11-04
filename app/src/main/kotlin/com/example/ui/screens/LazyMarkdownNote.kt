@@ -41,8 +41,6 @@ internal class MarkdownReadSession(private val store: NoteBodyStore, private val
     private var reader: NoteRangeReader? = null
     private var pending: MarkdownBlocks.Block? = null
     private var closed = false
-    private val decorated = HashSet<Long>()
-    private var linkCount = 0
     private var cacheBytes = 0L
     private data class Cached(val value: PreparedNoteBlock, val bytes: Long)
     private val cache = LinkedHashMap<Long, Cached>(256, 0.75f, true)
@@ -54,9 +52,7 @@ internal class MarkdownReadSession(private val store: NoteBodyStore, private val
     private fun parsed(block: MarkdownBlocks.Block, text: String): PreparedNoteBlock {
         val source = block.renderSource(text)
         val document = documents[source] ?: parseSafeMarkdown(source).also { documents[source] = it }
-        val decorate = document.links == 0 || block.start in decorated ||
-            linkCount + document.links <= NoteSizePolicy.DECORATED_LINK_LIMIT
-        if (decorate && document.links > 0 && decorated.add(block.start)) linkCount += document.links
+        val decorate = document.links <= NoteSizePolicy.DECORATED_LINK_LIMIT
         val value = PreparedNoteBlock(text, document.copy(decorateLinks = decorate))
         val cost = 128L + text.length * 2L + source.length * 2L + document.nodeCount * 96L
         synchronized(cache) {
