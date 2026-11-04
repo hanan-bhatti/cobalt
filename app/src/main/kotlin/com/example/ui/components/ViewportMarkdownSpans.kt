@@ -63,10 +63,14 @@ internal class ViewportMarkdownSpans(private val content: Content) : Spans {
     }
     private fun spans(line: Int): List<Span> {
         val current = prepared
-        return if (current != null && current.version == content.documentVersion) current.lines[line] ?: plain else plain
+        return current?.lines?.get(line) ?: plain
     }
-    override fun adjustOnInsert(start: CharPosition, end: CharPosition) = clear()
-    override fun adjustOnDelete(start: CharPosition, end: CharPosition) = clear()
+    override fun adjustOnInsert(start: CharPosition, end: CharPosition) {
+        // Retain existing styled spans during typing to prevent 1-frame unstyled flicker
+    }
+    override fun adjustOnDelete(start: CharPosition, end: CharPosition) {
+        // Retain existing styled spans during typing to prevent 1-frame unstyled flicker
+    }
     override fun getLineCount(): Int = content.lineCount
     override fun supportsModify() = false
     override fun modify(): Spans.Modifier = throw UnsupportedOperationException("Viewport spans are immutable")
