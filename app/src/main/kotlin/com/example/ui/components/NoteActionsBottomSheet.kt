@@ -330,7 +330,7 @@ fun NoteOutlineBottomSheet(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "${outline.size} headings found",
+                            text = if (outline.size >= NoteTextNavigator.MAX_HEADINGS) "${NoteTextNavigator.MAX_HEADINGS}+ headings found" else "${outline.size} headings found",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -619,7 +619,7 @@ fun NoteFloatingSearchBar(
                 isSearching -> null
                 query.isBlank() -> null
                 matches.isEmpty() -> "0/0"
-                matches.size >= 100_000 -> "${currentIndex + 1}/100k+"
+                matches.size >= NoteTextNavigator.MAX_SEARCH_MATCHES -> "${currentIndex + 1}/1000+"
                 else -> "${currentIndex + 1}/${matches.size}"
             }
             if (isSearching) {

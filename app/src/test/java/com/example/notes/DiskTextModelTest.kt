@@ -98,6 +98,66 @@ class DiskTextModelTest {
             println("HOST_LIVE_DESCRIPTOR_FIXTURE: original=${original.size}, append=${File(directory, "append").length()}, state=${File(directory, "state").length()}, maxSourceRead=$maximumRead")
         } finally { model.close(); directory.deleteRecursively() }
     }
+    @Test fun emergencyExportIncludesUnpublishedAndQueuedEditsWithoutAnotherInternalWrite() {
+        val directory = Files.createTempDirectory("cobalt-live-export-").toFile()
+        val original = source("original"); val ref = base.copy(bytes = original.size)
+        var failWrites = false
+        val operations = object : NoteFileOperations by HostTestNoteFileOperations {
+            override fun renameAtomic(source: File, destination: File) {
+                if (failWrites) throw IOException("Internal storage unavailable")
+                HostTestNoteFileOperations.renameAtomic(source, destination)
+            }
+        }
+        val append = File(directory, "append"); val state = File(directory, "state")
+        val model = DiskTextModel.open(original, ref, append, state, operations)
+        try {
+            model.replace(0, 0, "kept "); val durable = state.readBytes()
+            failWrites = true
+            try { model.replace(0, 4, "unsaved"); fail("Expected failure") } catch (_: IOException) {}
+            val pending = listOf(listOf(DiskTextModel.Replacement(0, 0, "queued ")))
+            assertEquals("queued unsaved original", model.openRecoveryUtf8(pending).bufferedReader().use { it.readText() })
+            assertArrayEquals(durable, state.readBytes())
+        } finally { model.close(); directory.deleteRecursively() }
+    }
+    @Test fun streamedToolsFindFarContentAndReplaceAllAsOneUndoOperation() {
+        val directory = Files.createTempDirectory("cobalt-live-tools-").toFile()
+        val text = "# Start\r\n" + "paragraph\n".repeat(5_000) + "# Far heading\nTARGET😀 TARGET😀\n"
+        val original = source(text)
+        val model = DiskTextModel.open(original, base.copy(bytes = original.size), File(directory, "append"), File(directory, "state"), HostTestNoteFileOperations)
+        try {
+            assertEquals(text.indexOf("TARGET"), model.find("TARGET", 0))
+            assertEquals(text.lastIndexOf("TARGET"), model.find("TARGET", text.length, true))
+            assertEquals(listOf(0 to "Start", text.indexOf("# Far") to "Far heading"), model.outline())
+            assertEquals(2, model.replaceAll("TARGET😀", "replaced"))
+            assertEquals(text.replace("TARGET😀", "replaced"), model.openUtf8().bufferedReader().use { it.readText() })
+            assertTrue(model.undo()); assertEquals(text, model.openUtf8().bufferedReader().use { it.readText() })
+        } finally { model.close(); directory.deleteRecursively() }
+    }
+    @Test fun replaceAllAcrossBatchesHandlesExpandingContractingAndSingleUndo() {
+        val directory = Files.createTempDirectory("cobalt-live-batch-").toFile()
+        val text = "foo bar foo bar foo bar foo"
+        val original = source(text)
+        val model = DiskTextModel.open(original, base.copy(bytes = original.size), File(directory, "append"), File(directory, "state"), HostTestNoteFileOperations)
+        try {
+            // Test expanding replacement with batch size = 2 (forces 2 batches for 4 occurrences)
+            assertEquals(4, model.replaceAll("foo", "foobar", batchSize = 2))
+            assertEquals("foobar bar foobar bar foobar bar foobar", model.openUtf8().bufferedReader().use { it.readText() })
+            assertTrue(model.undo())
+            assertEquals(text, model.openUtf8().bufferedReader().use { it.readText() })
+
+            // Test contracting replacement with batch size = 2
+            assertEquals(4, model.replaceAll("foo", "f", batchSize = 2))
+            assertEquals("f bar f bar f bar f", model.openUtf8().bufferedReader().use { it.readText() })
+            assertTrue(model.undo())
+            assertEquals(text, model.openUtf8().bufferedReader().use { it.readText() })
+
+            // Test deletion replacement with batch size = 2
+            assertEquals(4, model.replaceAll("foo", "", batchSize = 2))
+            assertEquals(" bar  bar  bar ", model.openUtf8().bufferedReader().use { it.readText() })
+            assertTrue(model.undo())
+            assertEquals(text, model.openUtf8().bufferedReader().use { it.readText() })
+        } finally { model.close(); directory.deleteRecursively() }
+    }
     @Test fun failedStatePublicationKeepsLastDurableEditAndRejectsCorruptMetadata() {
         val directory = Files.createTempDirectory("cobalt-live-fail-").toFile()
         val original = source("original"); val ref = base.copy(bytes = original.size)

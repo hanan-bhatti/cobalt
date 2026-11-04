@@ -350,7 +350,7 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
             val cancellation = currentCoroutineContext()
             if (all && replacement != null) {
                 val count = session.execute { it.replaceAll(query, replacement) { cancellation.ensureActive() } }
-                message(if (count >= 10_000) "10,000 matches replaced (max 10,000 at once)" else "$count matches replaced")
+                message("$count matches replaced")
                 restoreModelSelection()
             } else {
                 val from = if (backwards) minOf(anchor, caret) else maxOf(anchor, caret)

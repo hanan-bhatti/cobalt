@@ -42,7 +42,7 @@ object ContinuousTextSearch {
         }
     }
     fun matches(text: CharSequence, query: String, start: Int = 0,
-        limit: Int = MAX_REPLACEMENTS + 1, checkCancelled: () -> Unit = {}): List<Int> {
+        limit: Int = Int.MAX_VALUE, checkCancelled: () -> Unit = {}): List<Int> {
         require(query.isNotEmpty() && query.length <= MAX_QUERY && start in 0..text.length && limit > 0)
         val prefix = IntArray(query.length)
         var matched = 0

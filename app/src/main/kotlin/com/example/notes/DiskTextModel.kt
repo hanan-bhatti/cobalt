@@ -164,14 +164,36 @@ class DiskTextModel private constructor(
         }
         return found
     }
-    fun replaceAll(query: String, replacement: String, limit: Int = 10_000, checkCancelled: () -> Unit = {}): Int {
-        val positions = ArrayList<Int>()
-        scanMatches(query, 0, status.characters, checkCancelled) { positions.add(it); positions.size < limit }
-        if (positions.isNotEmpty()) {
-            val edits = positions.asReversed().map { Replacement(it, it + query.length, replacement) }
-            replaceBatch(edits, checkCancelled = checkCancelled)
+    fun replaceAll(query: String, replacement: String, batchSize: Int = 10_000, checkCancelled: () -> Unit = {}): Int {
+        ready(); require(query.isNotEmpty() && query.length <= ContinuousTextSearch.MAX_QUERY)
+        if (query == replacement) return 0
+        if (find(query, 0, false, checkCancelled) == null) return 0
+        var totalReplaced = 0
+        val before = selection
+        editGroup(before, null, checkCancelled) {
+            var searchFrom = 0
+            val delta = replacement.length - query.length
+            while (searchFrom < status.characters) {
+                checkCancelled()
+                val positions = ArrayList<Int>()
+                scanMatches(query, searchFrom, status.characters, checkCancelled) { pos ->
+                    positions.add(pos)
+                    positions.size < batchSize
+                }
+                if (positions.isEmpty()) break
+                val edits = positions.asReversed().map { Replacement(it, it + query.length, replacement) }
+                for (chunk in edits.chunked(500)) {
+                    checkCancelled()
+                    for (edit in chunk) StringReader(edit.text).use { replaceRange(edit.start, edit.end, it, checkCancelled) }
+                }
+                val count = positions.size
+                totalReplaced += count
+                val lastPos = positions.last()
+                val nextStart = lastPos + (count - 1) * delta + replacement.length
+                searchFrom = maxOf(searchFrom + 1, nextStart)
+            }
         }
-        return positions.size
+        return totalReplaced
     }
     private fun scanMatches(query: String, start: Int, end: Int, checkCancelled: () -> Unit, match: (Int) -> Boolean) {
         ready(); require(query.isNotEmpty() && query.length <= ContinuousTextSearch.MAX_QUERY)

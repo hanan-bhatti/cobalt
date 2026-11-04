@@ -475,9 +475,6 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
                 }
                 if (doc.revision != version || isReleased) { message("The note changed. Run the search again."); return@launch }
                 if (matches.isEmpty()) { message("No matches"); return@launch }
-                if (all && matches.size > ContinuousTextSearch.MAX_REPLACEMENTS) {
-                    message("More than 10,000 matches. Narrow the search or use Replace next."); return@launch
-                }
                 if (replacement == null) { select(matches.first(), matches.first() + query.length, false); return@launch }
                 if (doc.frozen || paste?.isActive == true) return@launch
                 isEditable = false
