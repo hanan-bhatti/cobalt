@@ -285,13 +285,6 @@ private fun EditorFloatingSearchReplaceBar(
         focusRequester.requestFocus()
     }
 
-    LaunchedEffect(query) {
-        if (query.isNotEmpty()) {
-            kotlinx.coroutines.delay(250)
-            onFind(query, false)
-        }
-    }
-
     val containerModifier = if (localHazeState != null) {
         Modifier
             .fillMaxWidth()
