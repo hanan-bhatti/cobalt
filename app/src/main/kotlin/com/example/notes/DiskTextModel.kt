@@ -12,6 +12,7 @@ class DiskTextModel private constructor(
     private val stateFile: File,
     private val fileOperations: NoteFileOperations,
     val base: NoteBodyRef,
+    private val ownerId: String,
     private val checkAlive: () -> Unit,
     private val release: () -> Unit
 ) : Closeable {
@@ -48,6 +49,22 @@ class DiskTextModel private constructor(
         return DiskJournalRecovery.ReaderUtf8Stream(DiskJournalRecovery.Utf16UnitReader(
             table.openStream(start.toLong() * 2, end.toLong() * 2)), checkCancelled)
     }
+    /** Export remains possible when an internal state write failed. Never mutates or fsyncs. */
+    fun openRecoveryUtf8(pending: List<List<Replacement>> = emptyList()): InputStream {
+        check(!closed); checkAlive()
+        val snapshot = table.forkForRead()
+        for (batch in pending) for (edit in batch) {
+            require(edit.start in 0..edit.end && edit.end.toLong() * 2 <= snapshot.size)
+            val bytes = ByteArray(edit.text.length * 2)
+            edit.text.forEachIndexed { index, char -> bytes[index * 2] = (char.code ushr 8).toByte(); bytes[index * 2 + 1] = char.code.toByte() }
+            val source = object : NoteByteSource {
+                override val size = bytes.size.toLong()
+                override fun read(offset: Long, count: Int) = bytes.copyOfRange(offset.toInt(), offset.toInt() + count)
+            }
+            snapshot.replace(edit.start.toLong() * 2, edit.end.toLong() * 2, source)
+        }
+        return DiskJournalRecovery.ReaderUtf8Stream(DiskJournalRecovery.Utf16UnitReader(snapshot.openStream())) {}
+    }
     private fun utf8Size(start: Int, end: Int, checkCancelled: () -> Unit): Long {
         var bytes = 0L
         openUtf8(start, end, checkCancelled).use { input ->
@@ -60,7 +77,7 @@ class DiskTextModel private constructor(
     /** Native IME replacement and format wrappers publish as one durable Undo transaction. */
     fun replaceBatch(edits: List<Replacement>, before: Position = selection, after: Position? = null,
         checkCancelled: () -> Unit = {}): Status {
-        ready(); require(edits.isNotEmpty() && edits.size <= 10_000)
+        ready(); require(edits.isNotEmpty() && edits.size <= 100_000)
         return editGroup(before, after, checkCancelled) {
             for (edit in edits) StringReader(edit.text).use { replaceRange(edit.start, edit.end, it, checkCancelled) }
         }
@@ -77,6 +94,7 @@ class DiskTextModel private constructor(
         try {
             table.editGroup {
                 action(); checkCancelled()
+                RandomAccessFile(appendFile, "rw").use { it.fd.sync() }
                 require(NoteSizePolicy.acceptsEdit(byteLength, base.bytes)) { "Note exceeds 55 MB. Split the insertion; original and Undo are retained." }
                 if (after != null) selection = after
                 require(selection.anchor in 0..status.characters && selection.caret in 0..status.characters)
@@ -96,7 +114,7 @@ class DiskTextModel private constructor(
         // Include neighbouring code units so split-surrogate IME updates count exact UTF-8 bytes.
         val contextStart = (start - 1).coerceAtLeast(0)
         val contextEnd = minOf(status.characters, end + 1)
-        val oldContextBytes = utf8Size(contextStart, contextEnd, checkCancelled)
+        val oldContextBytes = if (contextStart == 0 && contextEnd == status.characters) byteLength else utf8Size(contextStart, contextEnd, checkCancelled)
         val offset = appendFile.length()
         var units = 0L
         RandomAccessFile(appendFile, "rw").use { output ->
@@ -111,7 +129,6 @@ class DiskTextModel private constructor(
                 repeat(count) { bytes[it * 2] = (chars[it].code ushr 8).toByte(); bytes[it * 2 + 1] = chars[it].code.toByte() }
                 output.write(bytes, 0, count * 2)
             }
-            output.fd.sync()
         }
         table.replace(start.toLong() * 2, end.toLong() * 2, NoteByteSlice(added, offset, units * 2))
         byteLength += utf8Size(contextStart, contextEnd - (end - start) + units.toInt(), checkCancelled) - oldContextBytes
@@ -131,6 +148,91 @@ class DiskTextModel private constructor(
             selection = change.after; byteLength = change.afterBytes; revision++; publish(); return true
         } catch (error: Throwable) { failed = true; throw error }
     }
+    fun find(query: String, from: Int, backwards: Boolean = false, checkCancelled: () -> Unit = {}): Int? {
+        require(query.isNotEmpty() && query.length <= ContinuousTextSearch.MAX_QUERY)
+        val pivot = from.coerceIn(0, status.characters)
+        var found: Int? = null
+        if (backwards) {
+            scanMatches(query, 0, pivot, checkCancelled) { found = it; true }
+            if (found == null) scanMatches(query, pivot, status.characters, checkCancelled) { found = it; true }
+        } else {
+            scanMatches(query, pivot, status.characters, checkCancelled) { found = it; false }
+            if (found == null) scanMatches(query, 0, pivot, checkCancelled) { found = it; false }
+        }
+        return found
+    }
+    fun replaceAll(query: String, replacement: String, limit: Int = 100_000, checkCancelled: () -> Unit = {}): Int {
+        val positions = ArrayList<Int>()
+        scanMatches(query, 0, status.characters, checkCancelled) { positions.add(it); positions.size < limit }
+        if (positions.isNotEmpty()) replaceBatch(positions.asReversed().map { Replacement(it, it + query.length, replacement) }, checkCancelled = checkCancelled)
+        return positions.size
+    }
+    private fun scanMatches(query: String, start: Int, end: Int, checkCancelled: () -> Unit, match: (Int) -> Boolean) {
+        ready(); require(query.isNotEmpty() && query.length <= ContinuousTextSearch.MAX_QUERY)
+        val prefix = IntArray(query.length)
+        var matched = 0
+        for (index in 1 until query.length) {
+            while (matched > 0 && query[index] != query[matched]) matched = prefix[matched - 1]
+            if (query[index] == query[matched]) matched++
+            prefix[index] = matched
+        }
+        matched = 0
+        var position = start
+        DiskJournalRecovery.Utf16UnitReader(table.openStream(start.toLong() * 2, end.toLong() * 2)).use { reader ->
+            val buffer = CharArray(4096)
+            while (true) {
+                checkCancelled(); val count = reader.read(buffer); if (count < 0) break
+                repeat(count) { index ->
+                    val char = buffer[index]
+                    while (matched > 0 && char != query[matched]) matched = prefix[matched - 1]
+                    if (char == query[matched]) matched++
+                    if (matched == query.length) {
+                        if (!match(position - query.length + 1)) return
+                        matched = 0
+                    }
+                    position++
+                }
+            }
+        }
+    }
+    fun outline(checkCancelled: () -> Unit = {}): List<Pair<Int, String>> {
+        val headings = ArrayList<Pair<Int, String>>()
+        val prefix = StringBuilder(1024)
+        var position = 0; var lineStart = 0; var cr = false
+        var fence: Char? = null; var fenceLength = 0
+        fun line() {
+            val raw = prefix.toString(); prefix.setLength(0)
+            val indent = raw.takeWhile { it == ' ' }.length
+            if (indent > 3) return
+            val body = raw.drop(indent)
+            val marker = body.firstOrNull()
+            val run = if (marker == '`' || marker == '~') body.takeWhile { it == marker }.length else 0
+            if (run >= 3) {
+                if (fence == null) { fence = marker; fenceLength = run }
+                else if (fence == marker && run >= fenceLength && body.drop(run).isBlank()) fence = null
+            } else if (fence == null) {
+                val level = body.takeWhile { it == '#' }.length
+                if (level in 1..6 && body.getOrNull(level)?.isWhitespace() == true) headings.add(lineStart to body.drop(level).trim())
+            }
+        }
+        DiskJournalRecovery.Utf16UnitReader(table.openStream()).use { reader ->
+            val buffer = CharArray(4096)
+            while (true) {
+                checkCancelled(); val count = reader.read(buffer); if (count < 0) break
+                repeat(count) { index ->
+                    val char = buffer[index]
+                    if (char == '\n' && cr) { lineStart = position + 1; cr = false }
+                    else if (char == '\n' || char == '\r') {
+                        line(); lineStart = position + 1; cr = char == '\r'
+                        if (headings.size == 500) return headings
+                    } else { if (prefix.length < 1024) prefix.append(char); cr = false }
+                    position++
+                }
+            }
+            if (prefix.isNotEmpty()) line()
+        }
+        return headings
+    }
     fun flush() { ready(); publish() }
     private fun publish() {
         checkAlive()
@@ -140,7 +242,7 @@ class DiskTextModel private constructor(
                 val hash = MessageDigest.getInstance("SHA-256")
                 val digest = DigestOutputStream(raw, hash)
                 val out = DataOutputStream(BufferedOutputStream(digest, NoteSizePolicy.IO_CHUNK_BYTES))
-                out.writeInt(MAGIC); out.writeInt(VERSION); out.writeUTF(base.hash); out.writeLong(base.bytes)
+                out.writeInt(MAGIC); out.writeInt(VERSION); out.writeUTF(base.hash); out.writeLong(base.bytes); out.writeUTF(ownerId)
                 out.writeLong(revision); out.writeLong(byteLength)
                 fun position(value: Position) { out.writeInt(value.anchor); out.writeInt(value.caret) }
                 position(selection)
@@ -163,8 +265,10 @@ class DiskTextModel private constructor(
         val metadata = inspect(stateFile)
         check(metadata.hash == base.hash && metadata.bytes == base.bytes) { "Editor state belongs to another original" }
         DataInputStream(BufferedInputStream(FileInputStream(stateFile), NoteSizePolicy.IO_CHUNK_BYTES)).use { input ->
-            check(input.readInt() == MAGIC && input.readInt() == VERSION)
+            check(input.readInt() == MAGIC)
+            val version = input.readInt(); check(version in 1..VERSION)
             input.readUTF(); input.readLong()
+            if (version >= 2) input.readUTF()
             revision = input.readLong(); byteLength = input.readLong()
             require(revision >= 0 && byteLength >= 0)
             fun position(): Position = Position(input.readInt(), input.readInt())
@@ -204,29 +308,36 @@ class DiskTextModel private constructor(
     companion object {
         const val MAX_VIEW_CHARACTERS = 32_768
         private const val MAGIC = 0x434C4956
-        private const val VERSION = 1
-        fun inspect(state: File): NoteBodyRef {
-            require(state.length() in 100..64L * 1024 * 1024) { "Invalid live editor state" }
+        private const val VERSION = 2
+        data class Metadata(val base: NoteBodyRef, val ownerId: String, val revision: Long, val bytes: Long)
+        fun inspect(state: File): NoteBodyRef = metadata(state).base
+        fun metadata(state: File): Metadata = RandomAccessFile(state, "r").use { input ->
+            val length = input.length()
+            require(length in 100..64L * 1024 * 1024) { "Invalid live editor state" }
             val digest = MessageDigest.getInstance("SHA-256")
-            FileInputStream(state).use { raw ->
-                val buffer = ByteArray(NoteSizePolicy.IO_CHUNK_BYTES)
-                var remaining = state.length() - 32
-                while (remaining > 0) { val count = raw.read(buffer, 0, minOf(buffer.size.toLong(), remaining).toInt()); if (count < 0) throw EOFException(); digest.update(buffer, 0, count); remaining -= count }
-                val expected = ByteArray(32); DataInputStream(raw).readFully(expected)
-                check(MessageDigest.isEqual(digest.digest(), expected)) { "Live editor checksum failed; files retained" }
+            val buffer = ByteArray(NoteSizePolicy.IO_CHUNK_BYTES)
+            var remaining = length - 32
+            while (remaining > 0) {
+                val count = input.read(buffer, 0, minOf(buffer.size.toLong(), remaining).toInt())
+                if (count < 0) throw EOFException()
+                digest.update(buffer, 0, count); remaining -= count
             }
-            return DataInputStream(FileInputStream(state)).use {
-                check(it.readInt() == MAGIC && it.readInt() == VERSION) { "Unknown live editor format" }
-                val hash = it.readUTF(); val bytes = it.readLong()
-                require(hash.matches(Regex("[0-9a-f]{64}")) && bytes >= 0)
-                NoteBodyRef(hash, bytes, "")
-            }
+            val expected = ByteArray(32); input.readFully(expected)
+            check(MessageDigest.isEqual(digest.digest(), expected)) { "Live editor checksum failed; files retained" }
+            input.seek(0)
+            check(input.readInt() == MAGIC) { "Unknown live editor format" }
+            val version = input.readInt(); check(version in 1..VERSION) { "Unknown live editor format" }
+            val hash = input.readUTF(); val bytes = input.readLong()
+            val owner = if (version >= 2) input.readUTF() else ""
+            val revision = input.readLong(); val currentBytes = input.readLong()
+            require(hash.matches(Regex("[0-9a-f]{64}")) && bytes >= 0 && revision >= 0 && currentBytes >= 0 && owner.length <= 1024)
+            Metadata(NoteBodyRef(hash, bytes, ""), owner, revision, currentBytes)
         }
         fun open(source: NoteByteSource, base: NoteBodyRef, append: File, state: File,
-            operations: NoteFileOperations, checkAlive: () -> Unit = {}, release: () -> Unit = {}, checkCancelled: () -> Unit = {}): DiskTextModel {
+            operations: NoteFileOperations, checkAlive: () -> Unit = {}, release: () -> Unit = {}, checkCancelled: () -> Unit = {}, ownerId: String = ""): DiskTextModel {
             val original = IndexedUtf8Units.build(source, checkCancelled)
             check(append.isFile || append.createNewFile())
-            return DiskTextModel(original, append, state, operations, base, checkAlive, release).also {
+            return DiskTextModel(original, append, state, operations, base, ownerId, checkAlive, release).also {
                 try { if (state.exists()) it.restore() else it.publish() }
                 catch (error: Throwable) { it.close(); throw error }
             }
