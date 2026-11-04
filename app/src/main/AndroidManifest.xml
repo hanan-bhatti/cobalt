@@ -43,7 +43,8 @@
             android:exported="true"
             android:label="${appName}"
             android:theme="@style/Theme.MyApplication"
-            android:launchMode="singleTop">
+            android:launchMode="singleTop"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

@@ -224,6 +224,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
             (if (from == until && type == FormatType.Link) 9 else 0) else when (type) {
             FormatType.Heading1, FormatType.Quote, FormatType.BulletList -> 2
             FormatType.Heading2, FormatType.NumberedList -> 3
+            FormatType.Heading3 -> 4
             FormatType.Checklist -> 6
             else -> 0
         }
@@ -245,6 +246,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
                 val prefix = when (type) {
                     FormatType.Heading1 -> "# "
                     FormatType.Heading2 -> "## "
+                    FormatType.Heading3 -> "### "
                     FormatType.Quote -> "> "
                     FormatType.BulletList -> "- "
                     FormatType.NumberedList -> "1. "

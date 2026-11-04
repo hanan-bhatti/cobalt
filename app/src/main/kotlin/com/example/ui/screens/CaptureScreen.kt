@@ -174,20 +174,36 @@ fun MarkdownAccessoryToolbar(
 ) {
     val toolsScrollState = rememberScrollState()
 
-    val toolbarActions = remember {
+    val headingActions = remember {
         listOf(
-            MarkdownToolbarAction("H1", "Heading 1", FormatType.Heading1),
-            MarkdownToolbarAction("H2", "Heading 2", FormatType.Heading2),
-            MarkdownToolbarAction("B", "Bold", FormatType.Bold, isBoldLabel = true),
-            MarkdownToolbarAction("I", "Italic", FormatType.Italic, isItalicLabel = true),
-            MarkdownToolbarAction("S", "Strikethrough", FormatType.Strikethrough),
-            MarkdownToolbarAction("[ ]", "Task list", FormatType.Checklist),
-            MarkdownToolbarAction("”", "Quote", FormatType.Quote),
-            MarkdownToolbarAction("•", "Bullet List", FormatType.BulletList),
-            MarkdownToolbarAction("1.", "Numbered List", FormatType.NumberedList),
-            MarkdownToolbarAction("<>", "Code Inline", FormatType.CodeInline),
-            MarkdownToolbarAction("```", "Code Block", FormatType.CodeBlock),
-            MarkdownToolbarAction("🔗", "Link", FormatType.Link)
+            MarkdownToolbarAction("H1", "Heading 1", FormatType.Heading1, R.drawable.ic_format_h1),
+            MarkdownToolbarAction("H2", "Heading 2", FormatType.Heading2, R.drawable.ic_format_h2),
+            MarkdownToolbarAction("H3", "Heading 3", FormatType.Heading3, R.drawable.ic_format_h3)
+        )
+    }
+
+    val inlineActions = remember {
+        listOf(
+            MarkdownToolbarAction("B", "Bold", FormatType.Bold, R.drawable.ic_format_bold),
+            MarkdownToolbarAction("I", "Italic", FormatType.Italic, R.drawable.ic_format_italic),
+            MarkdownToolbarAction("S", "Strikethrough", FormatType.Strikethrough, R.drawable.ic_format_strikethrough)
+        )
+    }
+
+    val listActions = remember {
+        listOf(
+            MarkdownToolbarAction("[ ]", "Task list", FormatType.Checklist, R.drawable.ic_format_checklist),
+            MarkdownToolbarAction("•", "Bullet List", FormatType.BulletList, R.drawable.ic_format_list_bullet),
+            MarkdownToolbarAction("1.", "Numbered List", FormatType.NumberedList, R.drawable.ic_format_list_numbered),
+            MarkdownToolbarAction("”", "Quote", FormatType.Quote, R.drawable.ic_format_quote)
+        )
+    }
+
+    val codeAndLinkActions = remember {
+        listOf(
+            MarkdownToolbarAction("<>", "Code Inline", FormatType.CodeInline, R.drawable.ic_format_code_inline),
+            MarkdownToolbarAction("```", "Code Block", FormatType.CodeBlock, R.drawable.ic_format_code_block),
+            MarkdownToolbarAction("🔗", "Link", FormatType.Link, R.drawable.ic_format_link)
         )
     }
 
@@ -209,16 +225,73 @@ fun MarkdownAccessoryToolbar(
             if (onNativeCommand != null) {
                 listOf(
                     Triple("undo", R.drawable.ic_custom_undo, "Undo"),
-                    Triple("redo", R.drawable.ic_custom_redo, "Redo"),
+                    Triple("redo", R.drawable.ic_custom_redo, "Redo")
+                ).forEach { (command, icon, description) ->
+                    Surface(
+                        onClick = { onNativeCommand(command) },
+                        enabled = enabled,
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                        modifier = Modifier
+                            .size(32.dp)
+                            .bounceClick()
+                            .testTag("markdown_action_$command")
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            Icon(
+                                painter = painterResource(icon),
+                                contentDescription = description,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 2.dp)
+                        .width(1.dp)
+                        .height(16.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+                )
+
+                listOf(
                     Triple("find", R.drawable.ic_custom_search, "Find in note"),
                     Triple("outline", R.drawable.ic_custom_outline, "Outline")
                 ).forEach { (command, icon, description) ->
-                    IconButton(onClick = { onNativeCommand(command) }, enabled = enabled, modifier = Modifier.size(32.dp)) {
-                        Icon(painterResource(icon), description, modifier = Modifier.size(18.dp))
+                    Surface(
+                        onClick = { onNativeCommand(command) },
+                        enabled = enabled,
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                        modifier = Modifier
+                            .size(32.dp)
+                            .bounceClick()
+                            .testTag("markdown_action_$command")
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            Icon(
+                                painter = painterResource(icon),
+                                contentDescription = description,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
                     }
                 }
+
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 2.dp)
+                        .width(1.dp)
+                        .height(16.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+                )
             }
-            toolbarActions.forEach { action ->
+
+            @Composable
+            fun ToolbarActionItem(action: MarkdownToolbarAction) {
                 Surface(
                     onClick = {
                         if (onNativeCommand != null) onNativeCommand(action.type.name)
@@ -228,8 +301,7 @@ fun MarkdownAccessoryToolbar(
                     },
                     enabled = enabled,
                     shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
                     modifier = Modifier
                         .size(32.dp)
                         .bounceClick()
@@ -239,16 +311,51 @@ fun MarkdownAccessoryToolbar(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        Text(
-                            text = action.label,
-                            fontSize = 11.5.sp,
-                            fontWeight = if (action.isBoldLabel) FontWeight.ExtraBold else FontWeight.SemiBold,
-                            fontStyle = if (action.isItalicLabel) androidx.compose.ui.text.font.FontStyle.Italic else androidx.compose.ui.text.font.FontStyle.Normal,
-                            color = MaterialTheme.colorScheme.onSurface
+                        Icon(
+                            painter = painterResource(id = action.iconRes),
+                            contentDescription = action.description,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
             }
+
+            // Headings Group
+            headingActions.forEach { ToolbarActionItem(it) }
+
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 2.dp)
+                    .width(1.dp)
+                    .height(16.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+            )
+
+            // Typography Group
+            inlineActions.forEach { ToolbarActionItem(it) }
+
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 2.dp)
+                    .width(1.dp)
+                    .height(16.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+            )
+
+            // Lists & Quotes Group
+            listActions.forEach { ToolbarActionItem(it) }
+
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 2.dp)
+                    .width(1.dp)
+                    .height(16.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
+            )
+
+            // Code & Links Group
+            codeAndLinkActions.forEach { ToolbarActionItem(it) }
         }
 
         Spacer(modifier = Modifier.width(4.dp))
@@ -1655,6 +1762,7 @@ fun CaptureScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             val topBarModifier = if (useBlur) {
                 Modifier

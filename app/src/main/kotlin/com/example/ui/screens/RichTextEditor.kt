@@ -294,18 +294,19 @@ fun MarkdownAccessoryToolbar(
 
         if (!isPreviewMode) {
             val toolbarActions = listOf(
-                MarkdownToolbarAction("H1", "Header 1", FormatType.Heading1),
-                MarkdownToolbarAction("H2", "Header 2", FormatType.Heading2),
-                MarkdownToolbarAction("B", "Bold", FormatType.Bold, isBoldLabel = true),
-                MarkdownToolbarAction("I", "Italic", FormatType.Italic, isItalicLabel = true),
-                MarkdownToolbarAction("S", "Strikethrough", FormatType.Strikethrough),
-                MarkdownToolbarAction("”", "Quote", FormatType.Quote),
-                MarkdownToolbarAction("•", "Bullet List", FormatType.BulletList),
-                MarkdownToolbarAction("1.", "Numbered List", FormatType.NumberedList),
-                MarkdownToolbarAction("☑", "Checklist", FormatType.Checklist),
-                MarkdownToolbarAction("<>", "Code Inline", FormatType.CodeInline),
-                MarkdownToolbarAction("```", "Code Block", FormatType.CodeBlock),
-                MarkdownToolbarAction("🔗", "Link", FormatType.Link)
+                MarkdownToolbarAction("H1", "Heading 1", FormatType.Heading1, R.drawable.ic_format_h1),
+                MarkdownToolbarAction("H2", "Heading 2", FormatType.Heading2, R.drawable.ic_format_h2),
+                MarkdownToolbarAction("H3", "Heading 3", FormatType.Heading3, R.drawable.ic_format_h3),
+                MarkdownToolbarAction("B", "Bold", FormatType.Bold, R.drawable.ic_format_bold),
+                MarkdownToolbarAction("I", "Italic", FormatType.Italic, R.drawable.ic_format_italic),
+                MarkdownToolbarAction("S", "Strikethrough", FormatType.Strikethrough, R.drawable.ic_format_strikethrough),
+                MarkdownToolbarAction("[ ]", "Checklist", FormatType.Checklist, R.drawable.ic_format_checklist),
+                MarkdownToolbarAction("•", "Bullet List", FormatType.BulletList, R.drawable.ic_format_list_bullet),
+                MarkdownToolbarAction("1.", "Numbered List", FormatType.NumberedList, R.drawable.ic_format_list_numbered),
+                MarkdownToolbarAction("”", "Quote", FormatType.Quote, R.drawable.ic_format_quote),
+                MarkdownToolbarAction("<>", "Code Inline", FormatType.CodeInline, R.drawable.ic_format_code_inline),
+                MarkdownToolbarAction("```", "Code Block", FormatType.CodeBlock, R.drawable.ic_format_code_block),
+                MarkdownToolbarAction("🔗", "Link", FormatType.Link, R.drawable.ic_format_link)
             )
 
             toolbarActions.forEach { action ->
@@ -316,25 +317,32 @@ fun MarkdownAccessoryToolbar(
                         }
                     },
                     shape = RoundedCornerShape(10.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
                     modifier = Modifier
-                        .height(34.dp)
-                        .defaultMinSize(minWidth = 36.dp)
+                        .size(34.dp)
                         .bounceClick()
                         .testTag("markdown_action_${action.label}")
                 ) {
                     Box(
                         contentAlignment = Alignment.Center,
-                        modifier = Modifier.padding(horizontal = 8.dp)
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        Text(
-                            text = action.label,
-                            fontSize = 13.sp,
-                            fontWeight = if (action.isBoldLabel) FontWeight.ExtraBold else FontWeight.SemiBold,
-                            fontStyle = if (action.isItalicLabel) androidx.compose.ui.text.font.FontStyle.Italic else androidx.compose.ui.text.font.FontStyle.Normal,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        if (action.iconRes != 0) {
+                            Icon(
+                                painter = painterResource(id = action.iconRes),
+                                contentDescription = action.description,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        } else {
+                            Text(
+                                text = action.label,
+                                fontSize = 12.sp,
+                                fontWeight = if (action.isBoldLabel) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                fontStyle = if (action.isItalicLabel) androidx.compose.ui.text.font.FontStyle.Italic else androidx.compose.ui.text.font.FontStyle.Normal,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
             }
@@ -346,12 +354,13 @@ data class MarkdownToolbarAction(
     val label: String,
     val description: String,
     val type: FormatType,
+    val iconRes: Int = 0,
     val isBoldLabel: Boolean = false,
     val isItalicLabel: Boolean = false
 )
 
 enum class FormatType {
-    Bold, Italic, Strikethrough, Heading1, Heading2, Quote, BulletList, NumberedList, Checklist, CodeInline, CodeBlock, Link
+    Bold, Italic, Strikethrough, Heading1, Heading2, Heading3, Quote, BulletList, NumberedList, Checklist, CodeInline, CodeBlock, Link
 }
 
 fun applyMarkdownFormat(
@@ -395,6 +404,13 @@ fun applyMarkdownFormat(
         FormatType.Heading2 -> {
             val isLineStart = selection.start == 0 || text.getOrNull(selection.start - 1) == '\n'
             val prefix = if (isLineStart) "## " else "\n## "
+            val updated = text.substring(0, selection.start) + prefix + selectedText + text.substring(selection.end)
+            val pos = selection.start + prefix.length + selectedText.length
+            updated to TextRange(pos, pos)
+        }
+        FormatType.Heading3 -> {
+            val isLineStart = selection.start == 0 || text.getOrNull(selection.start - 1) == '\n'
+            val prefix = if (isLineStart) "### " else "\n### "
             val updated = text.substring(0, selection.start) + prefix + selectedText + text.substring(selection.end)
             val pos = selection.start + prefix.length + selectedText.length
             updated to TextRange(pos, pos)
