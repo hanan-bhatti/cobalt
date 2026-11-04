@@ -52,6 +52,7 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -144,7 +145,12 @@ internal fun ContinuousNoteEditor(viewModel: CobaltViewModel, modifier: Modifier
                 TextButton(onClick = { if (document?.disk != null) diskNative?.cancelPaste() else native?.cancelPaste() }) { Text("Cancel") }
             }
         }
-        Box(Modifier.weight(1f).fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .then(if (localHazeState != null) Modifier.hazeSource(state = localHazeState) else Modifier)
+        ) {
             val body = state.generation
             if (document == null && plain && body != null) {
                 NoteBodyPlainText(recovery, RecoveryNote(state.id!!, activeItem?.title.orEmpty(), body.bytes), Modifier.fillMaxSize(),
@@ -290,12 +296,12 @@ private fun EditorFloatingSearchReplaceBar(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.65f))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.78f))
             .hazeEffect(
                 state = localHazeState,
                 style = HazeStyle(
                     backgroundColor = MaterialTheme.colorScheme.surface,
-                    tint = HazeTint(MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)),
+                    tint = HazeTint(MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)),
                     blurRadius = 24.dp,
                     noiseFactor = 0.02f
                 )
