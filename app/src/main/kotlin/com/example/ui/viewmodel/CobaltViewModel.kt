@@ -386,12 +386,18 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     private val _activeDetailItem = MutableStateFlow<SavedItem?>(null)
     val activeDetailItem: StateFlow<SavedItem?> = _activeDetailItem.asStateFlow()
 
+    /** A verified checklist save updates metadata without reopening the note. */
+    fun acceptDetailTaskSave(item: com.example.data.model.SavedItem, previousHash: String) {
+        val current = _activeDetailItem.value
+        if (current?.id == item.id && current.contentHash == previousHash) _activeDetailItem.value = item
+    }
+
     fun showDetailItem(item: com.example.data.model.SavedItem) {
         _activeDetailItem.value = item
         if (com.example.notes.NotePersistence.isNote(item)) {
             viewModelScope.launch {
                 val loaded = repository.getItemForOpen(item.id)
-                if (_activeDetailItem.value?.id == item.id && loaded != null) _activeDetailItem.value = loaded
+                if (_activeDetailItem.value?.id == item.id && _activeDetailItem.value?.contentHash == item.contentHash && loaded != null) _activeDetailItem.value = loaded
             }
             return
         }

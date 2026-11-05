@@ -27,16 +27,18 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class MarkdownReadSessionTest {
-    private class Store(val bytes: ByteArray) : NoteBodyStore {
+    private class Store(var bytes: ByteArray) : NoteBodyStore {
         var beforeRead: ((Long) -> Unit)? = null
         var opens = 0
         var closed = 0
         var reads = 0
+        val openedHashes = ArrayList<String>()
         override fun open(id: String, hash: String): InputStream = ByteArrayInputStream(bytes)
         override fun readRange(id: String, hash: String, offset: Long, count: Int): ByteArray =
             bytes.copyOfRange(offset.toInt(), minOf(bytes.size, offset.toInt() + count))
         override fun openRangeReader(id: String, hash: String): NoteRangeReader {
             opens++
+            openedHashes.add(hash)
             return object : NoteRangeReader {
                 override fun read(offset: Long, count: Int): ByteArray {
                     reads++; beforeRead?.invoke(offset); return readRange(id, hash, offset, count)
@@ -49,6 +51,46 @@ class MarkdownReadSessionTest {
         override fun delete(id: String, hash: String) = Unit
         override fun size(id: String, hash: String): Long = bytes.size.toLong()
         override fun deleteAll(id: String) = Unit
+    }
+    @Test fun taskSaveRetainsBlocksAndOtherPreparedContentAndSwitchesFutureReads() = runBlocking {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        val body = "# Tasks\n\n" + (1..100).joinToString("\n\n") { "- [ ] Task $it 😀" }
+        val store = Store(body.toByteArray())
+        val session = MarkdownReadSession(store, "note", "before", 128, 4)
+        try {
+            while (!session.finished) session.append(prepare = false)
+            session.warm(0, session.blocks.lastIndex)
+            val blocks = session.blocks.toList()
+            val target = blocks[blocks.size / 2]
+            val old = requireNotNull(session.cached(target))
+            val untouched = requireNotNull(session.cached(blocks.first()))
+            val updated = MarkdownTaskEdits.toggle(old.text, 0)
+            assertTrue(MarkdownTaskEdits.isMarkerToggle(old.text, updated))
+            val ready = session.replaceTask(target, updated)
+            val beforeReads = store.opens
+            val next = store.bytes.copyOf()
+            updated.toByteArray().copyInto(next, target.start.toInt())
+            store.bytes = next
+            session.adoptTaskGeneration("after")
+            assertEquals("after", session.generationHash)
+            assertEquals(blocks, session.blocks.toList())
+            assertSame(untouched, session.cached(blocks.first()))
+            assertSame(ready, session.cached(target))
+            // A later uncached read must use the new generation, not the old open reader.
+            val range = target.copy(start = target.start + 1)
+            session.prepare(range)
+            assertEquals(beforeReads + 1, store.opens)
+            assertEquals("after", store.openedHashes.last())
+            session.replaceTask(target, old.text)
+            assertEquals(old.text, session.cached(target)!!.text)
+        } finally { session.close(); Dispatchers.resetMain() }
+    }
+    @Test fun onlySingleAsciiTaskMarkerChangesCanReuseTheReader() {
+        assertTrue(MarkdownTaskEdits.isMarkerToggle("- [ ] 😀\r\n", "- [x] 😀\r\n"))
+        assertTrue(MarkdownTaskEdits.isMarkerToggle("- [X] Done", "- [ ] Done"))
+        assertFalse(MarkdownTaskEdits.isMarkerToggle("- [ ] A", "- [x] B"))
+        assertFalse(MarkdownTaskEdits.isMarkerToggle("- [ ] A", "- [x] A\n"))
+        assertFalse(MarkdownTaskEdits.isMarkerToggle("- [ ] A", "- [ ] A"))
     }
     @Test fun visiblePreparationDoesNotWaitForTheEntireSpeculativeRange() = runBlocking {
         Dispatchers.setMain(UnconfinedTestDispatcher())

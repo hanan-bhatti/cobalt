@@ -8,6 +8,17 @@ import org.commonmark.parser.Parser
 
 /** A checkbox changes exactly one source code unit; line endings and all other bytes survive. */
 object MarkdownTaskEdits {
+    /** Only this edit shape can reuse existing byte offsets and reader layout. */
+    fun isMarkerToggle(before: String, after: String): Boolean {
+        if (before.length != after.length) return false
+        var changed = -1
+        for (index in before.indices) if (before[index] != after[index]) {
+            if (changed >= 0) return false
+            changed = index
+        }
+        return changed > 0 && changed < before.lastIndex && before[changed - 1] == '[' && before[changed + 1] == ']' &&
+            ((before[changed] == ' ' && after[changed] in "xX") || (before[changed] in "xX" && after[changed] == ' '))
+    }
     private val parsers = object : ThreadLocal<Parser>() {
         override fun initialValue(): Parser = Parser.builder()
             .extensions(listOf(StrikethroughExtension.create(), TablesExtension.create()))

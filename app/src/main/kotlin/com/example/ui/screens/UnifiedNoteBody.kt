@@ -30,11 +30,8 @@ fun UnifiedNoteBody(item: SavedItem, viewModel: CobaltViewModel, plain: Boolean,
     noteListState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
     contentPadding: PaddingValues = PaddingValues(0.dp)) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var busy by remember(item.id) { mutableStateOf(false) }
     var failure by remember(item.id) { mutableStateOf<String?>(null) }
     Column(modifier) {
-        if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         if (item.byteLength >= NoteSizePolicy.SOFT_MAX_BYTES) {
             Surface(
@@ -67,23 +64,24 @@ fun UnifiedNoteBody(item: SavedItem, viewModel: CobaltViewModel, plain: Boolean,
         if (item.bodyMissing || hash == null) LazyColumn(Modifier.fillMaxSize(), state = noteListState, contentPadding = contentPadding) {
             item { header() }
             item { Text("The note body is unavailable. Its record is retained. See Settings → Data Migration.") }
-        } else key(item.id, hash, plain) {
+        } else key(item.id, plain) {
             if (!plain) LazyMarkdownNote(item.id, hash,
                 item.byteLength, jump, Modifier.weight(1f).fillMaxWidth(), header = header,
-                onBlockChange = if (busy) null else { start, end, updated ->
-                    busy = true
-                    scope.launch {
+                onBlockChange = { start, end, updated, adopt ->
                         try {
                             val drafts = SectionDraftStore(context)
                             val entry = drafts.save(item.id, hash, start, end, updated)
                             val saved = drafts.apply(item.id, entry)
+                            adopt(saved.contentHash!!)
                             viewModel.noteGenerationHistory(item.id).record(NoteGeneration(hash, item.byteLength, item.preview),
                                 NoteGeneration(saved.contentHash!!, saved.byteLength, saved.preview))
-                            viewModel.showDetailItem(saved)
+                            viewModel.acceptDetailTaskSave(saved, hash)
+                            failure = null
                         } catch (cancel: CancellationException) { throw cancel }
-                        catch (_: Exception) { failure = "Could not save this change. The note and recovery draft are retained." }
-                        finally { busy = false }
-                    }
+                        catch (error: Exception) {
+                            failure = "Could not save this change. The note and recovery draft are retained."
+                            throw error
+                        }
                 },
                 searchQuery = searchQuery,
                 activeMatchByte = activeMatchByte,

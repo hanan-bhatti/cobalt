@@ -32,7 +32,9 @@ internal data class PreparedNoteBlock(val text: String, val document: SafeMarkdo
 
 /** One serialized reader, bounded IO batches and parsed-block LRU; never a job per link. */
 internal class MarkdownReadSession(private val store: NoteBodyStore, private val id: String,
-    private val hash: String, private val byteLimit: Int, private val lineLimit: Int) {
+    hash: String, private val byteLimit: Int, private val lineLimit: Int) {
+    var generationHash: String = hash
+        private set
     val blocks = mutableStateListOf<MarkdownBlocks.Block>()
     var finished by mutableStateOf(false)
         private set
@@ -66,7 +68,7 @@ internal class MarkdownReadSession(private val store: NoteBodyStore, private val
         return value
     }
     private suspend fun range(start: Long, count: Int): ByteArray = withContext(Dispatchers.IO) {
-        val input = reader ?: store.openRangeReader(id, hash).also { reader = it }
+        val input = reader ?: store.openRangeReader(id, generationHash).also { reader = it }
         input.read(start, count)
     }
     private suspend fun prepareBatch(batch: List<MarkdownBlocks.Block>) {
@@ -93,7 +95,7 @@ internal class MarkdownReadSession(private val store: NoteBodyStore, private val
         withContext(NonCancellable) {
             var eof = false
             val batch = withContext(Dispatchers.IO) {
-                val source = cursor ?: MarkdownBlocks.Cursor(store.open(id, hash), byteLimit, lineLimit).also { cursor = it }
+                val source = cursor ?: MarkdownBlocks.Cursor(store.open(id, generationHash), byteLimit, lineLimit).also { cursor = it }
                 val blockLimit = if (prepare) 128 else 512
                 val spanLimit = if (prepare) NoteSizePolicy.IO_CHUNK_BYTES else 128 * 1024
                 buildList<MarkdownBlocks.Block> {
@@ -139,6 +141,14 @@ internal class MarkdownReadSession(private val store: NoteBodyStore, private val
         val text = range(block.start, (block.end - block.start).toInt()).toString(Charsets.UTF_8)
         withContext(Dispatchers.Default) { parsed(block, text) }
     }
+    suspend fun replaceTask(block: MarkdownBlocks.Block, text: String): PreparedNoteBlock = mutex.withLock {
+        withContext(Dispatchers.Default) { parsed(block, text) }
+    }
+    /** Task markers have identical byte lengths and cannot change block boundaries. */
+    suspend fun adoptTaskGeneration(hash: String) = mutex.withLock {
+        withContext(Dispatchers.IO) { reader?.close(); reader = null }
+        generationHash = hash
+    }
     suspend fun close() = mutex.withLock {
         closed = true
         withContext(Dispatchers.IO) { try { cursor?.close() } finally { reader?.close() } }
@@ -149,7 +159,7 @@ internal class MarkdownReadSession(private val store: NoteBodyStore, private val
 /** First content is prepared from a small prefix; indexing and parsing advance with the viewport. */
 @Composable
 fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modifier: Modifier,
-    onBlockChange: ((Long, Long, String) -> Unit)? = null,
+    onBlockChange: (suspend (Long, Long, String, suspend (String) -> Unit) -> Unit)? = null,
     header: (@Composable () -> Unit)? = null,
     searchQuery: String? = null,
     activeMatchByte: Long? = null,
@@ -157,6 +167,8 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
     contentPadding: PaddingValues = PaddingValues(0.dp)) {
     val context = LocalContext.current
     val store = remember { PrivateMarkdownStore(context) }
+    val edits = rememberCoroutineScope()
+    var taskSaving by remember(id) { mutableStateOf(false) }
     val fontScale = LocalDensity.current.fontScale
     val typo = com.example.ui.theme.LocalCobaltTypography.current
     val typographyKey = remember(typo.prefs) {
@@ -167,7 +179,11 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
         val lineLimit = ((maxHeight.value / (lineBaseDp * fontScale)) * 2).toInt().coerceIn(16, 64)
         val columns = (maxWidth.value / (typo.body.fontSize.value * fontScale)).toInt().coerceAtLeast(1)
         val byteLimit = (columns * lineLimit * 3).coerceIn(1024, 8192)
-        val session = remember(id, hash, bytes, byteLimit, lineLimit, typographyKey) { MarkdownReadSession(store, id, hash, byteLimit, lineLimit) }
+        val retained = remember(id, bytes, byteLimit, lineLimit, typographyKey) { arrayOfNulls<MarkdownReadSession>(1) }
+        val session = remember(id, hash, bytes, byteLimit, lineLimit, typographyKey, taskSaving) {
+            retained[0]?.takeIf { it.generationHash == hash || taskSaving }
+                ?: MarkdownReadSession(store, id, hash, byteLimit, lineLimit).also { retained[0] = it }
+        }
         var failure by remember(session) { mutableStateOf(false) }
         var jumping by remember(session) { mutableStateOf(false) }
         val headerItems = if (header == null) 0 else 1
@@ -223,10 +239,11 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
             items(session.blocks.size, key = { session.blocks[it].start }, contentType = { "note_block" }) { index ->
                 val block = session.blocks[index]
                 val isBlockActive = activeMatchByte != null && (activeMatchByte in block.start until block.end || (block.start == block.end && activeMatchByte == block.start))
-                val ready by produceState(session.cached(block), session, block.start) {
-                    if (value == null) try { value = session.prepare(block) }
+                var ready by remember(session, block.start) { mutableStateOf(session.cached(block)) }
+                LaunchedEffect(session, block.start) {
+                    if (ready == null) try { ready = session.prepare(block) }
                     catch (cancel: CancellationException) { throw cancel }
-                    catch (_: Exception) { value = PreparedNoteBlock("This part could not be read. The saved note is retained.", null) }
+                    catch (_: Exception) { ready = PreparedNoteBlock("This part could not be read. The saved note is retained.", null) }
                 }
                 val loaded = ready
                 val blockModifier = Modifier
@@ -244,7 +261,19 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
                     else if (loaded.document != null) MarkdownText(
                         markdown = loaded.text,
                         prepared = loaded.document,
-                        onMarkdownChange = onBlockChange?.let { change -> { updated -> change(block.start, block.end, updated) } },
+                        onMarkdownChange = onBlockChange?.let { change -> { updated ->
+                            if (!taskSaving && MarkdownTaskEdits.isMarkerToggle(loaded.text, updated)) {
+                                taskSaving = true
+                                edits.launch {
+                                    try {
+                                        ready = session.replaceTask(block, updated)
+                                        change(block.start, block.end, updated) { next -> session.adoptTaskGeneration(next) }
+                                    } catch (cancel: CancellationException) { throw cancel }
+                                    catch (_: Exception) { ready = session.replaceTask(block, loaded.text) }
+                                    finally { taskSaving = false }
+                                }
+                            }
+                        } },
                         highlightQuery = searchQuery,
                         isHighlightActive = isBlockActive,
                         activeMatchOffset = activeMatchByte,
