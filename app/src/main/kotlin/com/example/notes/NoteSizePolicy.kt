@@ -22,7 +22,6 @@ object NoteSizePolicy {
     const val MARKDOWN_CACHE_BLOCKS = 16_384
     const val MARKDOWN_PREFETCH_BLOCKS = 256
     const val DOCK_RECENT_ITEMS = 15
-    const val DOCK_PREVIEW_LINES = 2
 
     enum class Tier { A, B, C }
     enum class Location { INLINE, FILE }

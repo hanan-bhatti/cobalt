@@ -604,7 +604,7 @@ fun SideDockContent(
                                     modifier = Modifier.size(28.dp)
                                 ) {
                                     Icon(
-                                        painter = painterResource(id = R.drawable.ic_custom_close),
+                                        painter = painterResource(id = R.drawable.ic_dock_close),
                                         contentDescription = "Close",
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(16.dp)
@@ -671,139 +671,141 @@ fun SideDockContent(
                         }
 
                         val dockInputField = @Composable {
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .animateContentSize(animationSpec = tween(150)),
-                                shape = RoundedCornerShape(14.dp),
-                                color = if (useBlur) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.75f) else MaterialTheme.colorScheme.surfaceContainer,
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                            ) {
-                                val currentText = if (dockInputMode == DockInputMode.LINK) linkText else noteText
-                                Column(
+                            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+                                Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 8.dp)
+                                        .animateContentSize(animationSpec = tween(150)),
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = if (useBlur) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.75f) else MaterialTheme.colorScheme.surfaceContainer,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                                 ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().height(48.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                    val currentText = if (dockInputMode == DockInputMode.LINK) linkText else noteText
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 8.dp, vertical = 3.dp)
                                     ) {
-                                        // Leading Mode Icon
-                                        Icon(
-                                            painter = painterResource(
-                                                id = if (dockInputMode == DockInputMode.LINK) R.drawable.ic_custom_link else R.drawable.ic_custom_text
-                                            ),
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(15.dp)
-                                        )
-
-                                        Spacer(modifier = Modifier.width(8.dp))
-
-                                        Box(
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .padding(vertical = 2.dp)
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp),
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            if (currentText.isEmpty()) {
-                                                val clipboardValue = if (dockInputMode == DockInputMode.LINK) clipboardUrl.orEmpty() else clipboardText
-                                                val placeholderText = if (clipboardValue.isNotBlank()) {
-                                                    "Paste " + com.example.util.ItemTitleResolver.truncateSafely(
-                                                        clipboardValue.take(160).replace(Regex("\\s+"), " ").trim(), 80)
-                                                } else if (dockInputMode == DockInputMode.LINK) "Paste a link…" else "Write a note…"
-                                                Text(
-                                                    text = placeholderText,
-                                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                            // Leading Mode Icon
+                                            Icon(
+                                                painter = painterResource(
+                                                    id = if (dockInputMode == DockInputMode.LINK) R.drawable.ic_custom_link else R.drawable.ic_custom_text
+                                                ),
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(15.dp)
+                                            )
+
+                                            Spacer(modifier = Modifier.width(8.dp))
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .padding(vertical = 2.dp)
+                                            ) {
+                                                if (currentText.isEmpty()) {
+                                                    val clipboardValue = if (dockInputMode == DockInputMode.LINK) clipboardUrl.orEmpty() else clipboardText
+                                                    val placeholderText = if (clipboardValue.isNotBlank()) {
+                                                        "Paste " + com.example.util.ItemTitleResolver.truncateSafely(
+                                                            clipboardValue.take(160).replace(Regex("\\s+"), " ").trim(), 80)
+                                                    } else if (dockInputMode == DockInputMode.LINK) "Paste a link…" else "Write a note…"
+                                                    Text(
+                                                        text = placeholderText,
+                                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                            fontSize = 12.sp,
+                                                            lineHeight = 16.sp
+                                                        ),
+                                                        maxLines = 1,
+                                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                                    )
+                                                }
+                                                BasicTextField(
+                                                    value = currentText,
+                                                    enabled = !dockSaving && pendingDockNote == null,
+                                                    onValueChange = { newText ->
+                                                        if (com.example.notes.NoteEditorWindows.requiresWindow(newText)) {
+                                                            dockInputMode = DockInputMode.NOTE
+                                                            pendingDockNote = newText
+                                                            noteText = com.example.util.ItemTitleResolver.truncateSafely(newText, 512)
+                                                        } else if (dockInputMode == DockInputMode.LINK) linkText = newText
+                                                        else noteText = newText
+                                                    },
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .focusRequester(inputFocusRequester),
+                                                    textStyle = TextStyle(
+                                                        color = MaterialTheme.colorScheme.onSurface,
                                                         fontSize = 12.sp,
+                                                        fontWeight = FontWeight.Normal,
                                                         lineHeight = 16.sp
                                                     ),
-                                                    maxLines = 1,
-                                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                                    singleLine = false,
+                                                    minLines = 1,
+                                                    maxLines = 3,
+                                                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                                    keyboardOptions = KeyboardOptions(
+                                                        keyboardType = if (dockInputMode == DockInputMode.LINK) KeyboardType.Uri else KeyboardType.Text,
+                                                        imeAction = if (dockInputMode == DockInputMode.LINK) ImeAction.Done else ImeAction.Default
+                                                    ),
+                                                    keyboardActions = KeyboardActions(
+                                                        onDone = {
+                                                            submitInput()
+                                                        }
+                                                    )
                                                 )
                                             }
-                                            BasicTextField(
-                                                value = currentText,
-                                                enabled = !dockSaving && pendingDockNote == null,
-                                                onValueChange = { newText ->
-                                                    if (com.example.notes.NoteEditorWindows.requiresWindow(newText)) {
-                                                        dockInputMode = DockInputMode.NOTE
-                                                        pendingDockNote = newText
-                                                        noteText = com.example.util.ItemTitleResolver.truncateSafely(newText, 512)
-                                                    } else if (dockInputMode == DockInputMode.LINK) linkText = newText
-                                                    else noteText = newText
+
+                                            if (currentText.isNotEmpty() || pendingDockNote != null) {
+                                                IconButton(onClick = {
+                                                    if (dockInputMode == DockInputMode.LINK) linkText = "" else { noteText = ""; pendingDockNote = null }
+                                                }, enabled = !dockSaving, modifier = Modifier.size(24.dp)) {
+                                                    Icon(painterResource(R.drawable.ic_dock_close), "Clear input",
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                                                }
+                                            } else if (if (dockInputMode == DockInputMode.LINK) hasClipboardUrl else clipboardText.isNotBlank()) {
+                                                IconButton(onClick = {
+                                                    if (dockInputMode == DockInputMode.LINK) linkText = clipboardUrl.orEmpty()
+                                                    else if (com.example.notes.NoteEditorWindows.requiresWindow(clipboardText)) {
+                                                        pendingDockNote = clipboardText
+                                                        noteText = com.example.util.ItemTitleResolver.truncateSafely(clipboardText, 512)
+                                                    } else noteText = clipboardText
+                                                    inputFocusRequester.requestFocus()
+                                                }, enabled = !dockSaving, modifier = Modifier.size(24.dp)) {
+                                                    Icon(painterResource(R.drawable.ic_custom_paste), "Paste from clipboard",
+                                                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                                }
+                                            }
+                                            Spacer(Modifier.width(4.dp))
+
+                                            // Send Button
+                                            val isSendable = !dockSaving && (if (dockInputMode == DockInputMode.LINK) linkText.isNotBlank() else pendingDockNote != null || noteText.isNotEmpty())
+                                            if (currentText.isNotBlank() || pendingDockNote != null) FilledIconButton(
+                                                onClick = {
+                                                    submitInput()
                                                 },
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .focusRequester(inputFocusRequester),
-                                                textStyle = TextStyle(
-                                                    color = MaterialTheme.colorScheme.onSurface,
-                                                    fontSize = 12.sp,
-                                                    fontWeight = FontWeight.Normal,
-                                                    lineHeight = 16.sp
-                                                ),
-                                                singleLine = true,
-                                                minLines = 1,
-                                                maxLines = 1,
-                                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                                                keyboardOptions = KeyboardOptions(
-                                                    keyboardType = if (dockInputMode == DockInputMode.LINK) KeyboardType.Uri else KeyboardType.Text,
-                                                    imeAction = ImeAction.Done
-                                                ),
-                                                keyboardActions = KeyboardActions(
-                                                    onDone = {
-                                                        submitInput()
-                                                    }
+                                                enabled = isSendable,
+                                                modifier = Modifier.size(24.dp),
+                                                shape = RoundedCornerShape(8.dp),
+                                                colors = IconButtonDefaults.filledIconButtonColors(
+                                                    containerColor = MaterialTheme.colorScheme.primary,
+                                                    contentColor = MaterialTheme.colorScheme.onPrimary)
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(id = R.drawable.ic_custom_send),
+                                                    contentDescription = if (dockInputMode == DockInputMode.LINK) "Save Link" else "Save Note",
+                                                    tint = if (isSendable) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                                    modifier = Modifier.size(18.dp)
                                                 )
-                                            )
-                                        }
-
-                                        if (currentText.isNotEmpty() || pendingDockNote != null) {
-                                            IconButton(onClick = {
-                                                if (dockInputMode == DockInputMode.LINK) linkText = "" else { noteText = ""; pendingDockNote = null }
-                                            }, enabled = !dockSaving, modifier = Modifier.size(40.dp)) {
-                                                Icon(painterResource(R.drawable.ic_custom_close), "Clear input",
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
-                                            }
-                                        } else if (if (dockInputMode == DockInputMode.LINK) hasClipboardUrl else clipboardText.isNotBlank()) {
-                                            IconButton(onClick = {
-                                                if (dockInputMode == DockInputMode.LINK) linkText = clipboardUrl.orEmpty()
-                                                else if (com.example.notes.NoteEditorWindows.requiresWindow(clipboardText)) {
-                                                    pendingDockNote = clipboardText
-                                                    noteText = com.example.util.ItemTitleResolver.truncateSafely(clipboardText, 512)
-                                                } else noteText = clipboardText
-                                                inputFocusRequester.requestFocus()
-                                            }, enabled = !dockSaving, modifier = Modifier.size(40.dp)) {
-                                                Icon(painterResource(R.drawable.ic_custom_paste), "Paste from clipboard",
-                                                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
                                             }
                                         }
-                                        Spacer(Modifier.width(4.dp))
 
-                                        // Send Button
-                                        val isSendable = !dockSaving && (if (dockInputMode == DockInputMode.LINK) linkText.isNotBlank() else pendingDockNote != null || noteText.isNotEmpty())
-                                        FilledIconButton(
-                                            onClick = {
-                                                submitInput()
-                                            },
-                                            enabled = isSendable,
-                                            modifier = Modifier.size(40.dp),
-                                            shape = RoundedCornerShape(16.dp),
-                                            colors = IconButtonDefaults.filledIconButtonColors(
-                                                containerColor = MaterialTheme.colorScheme.primary,
-                                                contentColor = MaterialTheme.colorScheme.onPrimary)
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(id = R.drawable.ic_custom_send),
-                                                contentDescription = if (dockInputMode == DockInputMode.LINK) "Save Link" else "Save Note",
-                                                tint = if (isSendable) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                                modifier = Modifier.size(22.dp)
-                                            )
-                                        }
+
                                     }
-
-
                                 }
                             }
                         }
@@ -1184,11 +1186,19 @@ private fun DockItemDetailContent(
     }
 
     val displayTitle = remember(item) { getCleanItemTitle(item, context) }
+    val notePreview by produceState(item.preview.ifEmpty { item.content }.take(DOCK_NOTE_PREVIEW_CHARACTERS),
+        item.id, item.contentHash, item.updatedAt) {
+        if (item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE) {
+            try { value = loadDockNotePreview(context, item) }
+            catch (cancel: CancellationException) { throw cancel }
+            catch (_: Exception) { /* Retain the metadata preview if the body is unavailable. */ }
+        }
+    }
 
     val copyContent = {
         val textToCopy = when {
             item.type == SavedItemType.LINK -> item.content
-            item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE -> item.preview.ifEmpty { item.content }.take(com.example.notes.NoteSizePolicy.PREVIEW_CHARACTERS)
+            item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE -> notePreview
             !item.extractedText.isNullOrBlank() -> item.extractedText
             else -> item.content
         }
@@ -1271,7 +1281,7 @@ private fun DockItemDetailContent(
                 modifier = Modifier.size(28.dp)
             ) {
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_custom_close),
+                    painter = painterResource(id = R.drawable.ic_dock_close),
                     contentDescription = "Close",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(16.dp)
@@ -1502,9 +1512,8 @@ private fun DockItemDetailContent(
                 }
 
                 SavedItemType.TEXT, SavedItemType.CODE -> {
-                    val preview = item.preview.ifEmpty { item.content }.take(com.example.notes.NoteSizePolicy.PREVIEW_CHARACTERS)
-                    Text(preview, maxLines = com.example.notes.NoteSizePolicy.DOCK_PREVIEW_LINES,
-                        overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+                    Text(notePreview, style = MaterialTheme.typography.bodySmall,
+                        fontFamily = if (item.type == SavedItemType.CODE) androidx.compose.ui.text.font.FontFamily.Monospace else null)
                     Text("Preview · open Cobalt for the complete note", style = MaterialTheme.typography.labelSmall)
 
                 }
@@ -1702,7 +1711,7 @@ private fun MediaHubSubpageContent(
                 modifier = Modifier.size(28.dp)
             ) {
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_custom_close),
+                    painter = painterResource(id = R.drawable.ic_dock_close),
                     contentDescription = "Close",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(16.dp)
@@ -1782,7 +1791,7 @@ private fun MediaHubSubpageContent(
                             .background(MaterialTheme.colorScheme.surfaceContainerHighest, shape = CircleShape)
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_close),
+                            painter = painterResource(id = R.drawable.ic_dock_close),
                             contentDescription = "Clear",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(12.dp)
