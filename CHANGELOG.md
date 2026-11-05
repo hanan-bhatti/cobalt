@@ -2,6 +2,15 @@
 
 ### Fixes
 
+- Simplify Side Dock paste input with a clipboard-preview placeholder, frameless
+  paste control and Send shown only with text; pasting waits for explicit Send.
+- Let compact Dock input grow from one to three lines, use a light close glyph,
+  and show a bounded note-file prefix instead of the two-line list snippet.
+- Queue saved-link metadata independently of Capture/Dock lifetimes, preserving
+  manual descriptions on automatic retries while retaining explicit Refresh replacement.
+- Review Android shares before saving and retain document-import results/errors in
+  a bottom sheet instead of immediately dismissing them.
+
 - Update checklist markers in place without reopening the note, resetting its scroll
   position, or showing a save progress bar; retain recoverable drafts on save failure.
 - Reduce Home card recomposition and scrollbar drag work; keep drag targets stable

@@ -13,6 +13,35 @@ process-death reliability, release/R8 correctness, or the emulator/API matrix.
 Older dated reports describe historical checkpoints; use the November 5 editor
 and checklist/Home reports for the newer disk-backed editor implementation.
 
+### 6 November follow-up: Dock, sharing and link metadata
+
+These are acceptance checks for the current source changes; unchecked means not
+verified on a device. The earlier 148-test baseline above is historical.
+
+- [ ] Dock Note and Link modes show one frameless paste icon, with no separate
+  clipboard strip or labelled Paste pill. The empty input previews clipboard text.
+- [ ] Paste inserts only; it never saves until Send. Large pastes retain their full
+  content while the Dock shows a bounded preview. Clear discards the pending input.
+- [ ] Note and Link inputs start at one line with small padding and grow to three lines. Send uses the existing asset; Send stays hidden until there is text, and saving disables it. A save failure retains input for retry; rapid taps do not duplicate.
+- [ ] Save a bare URL from Dock, OCR, Capture and Android sharing: it appears locally
+  without waiting for metadata. Close the originating UI; background fetching continues.
+- [ ] In Capture, wait for extraction, enter a description, save, then let background
+  retries run: the entered description stays unchanged, including deliberate clearing.
+- [ ] Explicit Refresh replaces the current description, including a manual value.
+  Editing while a refresh is in flight protects the newer text from the late response.
+- [ ] Untouched OCR AI descriptions are replaced by page descriptions when available;
+  missing/blocked metadata retains the AI fallback. A deleted URL never reappears.
+- [ ] Change a URL during fetching: the old page result cannot update the new URL.
+- [ ] Offline saves survive restart and enrich after reconnecting. Safe mode and the
+  migration gate pause the queue. Legacy bookmarks keep their existing single description column.
+- [ ] External text/link/image/audio/video/file shares open Capture for review.
+  Cancel creates no saved item; Save closes back to the source app. Multiple shared
+  files each require explicit Save, and cancel stops the remaining batch.
+- [ ] Import progress and completion/refusal stay readable in the bottom sheet until
+  dismissed. Accepted 55 MB is success; 56 MB offers an explicit split confirmation.
+- [ ] Recheck section 9: task toggles keep the current scroll position, without a
+  progress bar or reopening the note. Verify the exported marker bytes afterward.
+
 ### What the new system contains
 
 - One Cobalt application; discontinued Play flavor and Cobalt-owned cloud account/sync removed.
