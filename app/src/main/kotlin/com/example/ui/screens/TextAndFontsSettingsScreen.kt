@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -89,6 +90,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.example.R
 import com.example.data.model.CodeFontFamily
 import com.example.data.model.TextFontFamily
@@ -148,108 +150,111 @@ fun TextAndFontsSettingsScreen(
     val topBarState = rememberCollapsibleTopBarState(lazyListState, maxHeight = 160.dp)
     val density = LocalDensity.current
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        containerColor = MaterialTheme.colorScheme.background,
-        modifier = modifier.fillMaxSize()
-    ) { scaffoldPadding ->
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(scaffoldPadding)
-        ) {
-            val isWideLayout = maxWidth >= 640.dp
-            val currentTopBarHeightDp = with(density) { topBarState.heightPx.toDp() }
-            val bottomNavPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        val isWideLayout = maxWidth >= 640.dp
+        val currentTopBarHeightDp = with(density) { topBarState.heightPx.toDp() }
+        val bottomNavPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-            if (isWideLayout) {
-                // Two-pane responsive layout for tablets / wide screens
-                Column(modifier = Modifier.fillMaxSize()) {
-                    CollapsibleCommonTopBar(
-                        title = stringResource(R.string.text_fonts_title),
-                        subtitle = stringResource(R.string.text_fonts_subtitle),
-                        collapseFraction = 0f,
-                        headerHeight = 90.dp,
-                        onBackClick = onNavigateBack
-                    )
+        if (isWideLayout) {
+            // Two-pane responsive layout for tablets / wide screens
+            Column(modifier = Modifier.fillMaxSize()) {
+                val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+                CollapsibleCommonTopBar(
+                    title = stringResource(R.string.text_fonts_title),
+                    subtitle = stringResource(R.string.text_fonts_subtitle),
+                    collapseFraction = 0f,
+                    headerHeight = 90.dp + statusBarPadding,
+                    onBackClick = onNavigateBack
+                )
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 20.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(20.dp)
-                    ) {
-                        // Left Pane: Pinned Live Preview
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxSize()
-                        ) {
-                            TextFontsPreviewCard(
-                                typography = liveTypography,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-
-                        // Right Pane: Scrolling Settings Controls
-                        LazyColumn(
-                            modifier = Modifier
-                                .weight(1.2f)
-                                .fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                            contentPadding = PaddingValues(bottom = bottomNavPadding + 32.dp)
-                        ) {
-                            textFontsSettingsItems(
-                                localPrefs = localPrefs,
-                                onUpdatePrefs = { localPrefs = it },
-                                onShowResetDialog = { showResetDialog = true }
-                            )
-                        }
-                    }
-                }
-            } else {
-                // Phone single-pane layout with Pinned Preview Card at top
-                Box(
+                Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .nestedScroll(topBarState.nestedScrollConnection)
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
-                    LazyColumn(
-                        state = lazyListState,
-                        contentPadding = PaddingValues(
-                            top = currentTopBarHeightDp + 12.dp,
-                            start = 16.dp,
-                            end = 16.dp,
-                            bottom = bottomNavPadding + 48.dp
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxSize()
+                    // Left Pane: Pinned Live Preview
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxSize()
                     ) {
-                        // Pinned Live Preview Item
-                        item(key = "live_preview_card") {
-                            TextFontsPreviewCard(
-                                typography = liveTypography,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
+                        TextFontsPreviewCard(
+                            typography = liveTypography,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
 
+                    // Right Pane: Scrolling Settings Controls
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1.2f)
+                            .fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        contentPadding = PaddingValues(bottom = bottomNavPadding + 32.dp)
+                    ) {
                         textFontsSettingsItems(
                             localPrefs = localPrefs,
                             onUpdatePrefs = { localPrefs = it },
                             onShowResetDialog = { showResetDialog = true }
                         )
                     }
-
-                    CollapsibleCommonTopBar(
-                        title = stringResource(R.string.text_fonts_title),
-                        subtitle = stringResource(R.string.text_fonts_subtitle),
-                        collapseFraction = topBarState.collapseFraction,
-                        headerHeight = currentTopBarHeightDp,
-                        onBackClick = onNavigateBack
-                    )
                 }
             }
+        } else {
+            // Phone single-pane layout with Pinned Preview Card at top
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(topBarState.nestedScrollConnection)
+            ) {
+                LazyColumn(
+                    state = lazyListState,
+                    contentPadding = PaddingValues(
+                        top = currentTopBarHeightDp + 12.dp,
+                        start = 16.dp,
+                        end = 16.dp,
+                        bottom = bottomNavPadding + 48.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // Pinned Live Preview Item
+                    item(key = "live_preview_card") {
+                        TextFontsPreviewCard(
+                            typography = liveTypography,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    textFontsSettingsItems(
+                        localPrefs = localPrefs,
+                        onUpdatePrefs = { localPrefs = it },
+                        onShowResetDialog = { showResetDialog = true }
+                    )
+                }
+
+                CollapsibleCommonTopBar(
+                    title = stringResource(R.string.text_fonts_title),
+                    subtitle = stringResource(R.string.text_fonts_subtitle),
+                    collapseFraction = topBarState.collapseFraction,
+                    headerHeight = currentTopBarHeightDp,
+                    onBackClick = onNavigateBack
+                )
+            }
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = bottomNavPadding + 16.dp)
+                .zIndex(10f)
+        )
     }
 
     if (showResetDialog) {

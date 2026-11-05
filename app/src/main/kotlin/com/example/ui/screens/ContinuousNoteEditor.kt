@@ -42,9 +42,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.example.ui.components.ContinuousMarkdownView
 import com.example.ui.components.DiskMarkdownView
 import com.example.ui.components.applyCobaltTypography
+import kotlinx.coroutines.flow.first
 import com.example.ui.components.NoteBodySkeleton
 import com.example.ui.components.NoteOutlineBottomSheet
 import com.example.ui.viewmodel.CobaltViewModel
+import com.example.utils.DevicePerformance
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -75,8 +77,13 @@ internal fun ContinuousNoteEditor(viewModel: CobaltViewModel, modifier: Modifier
     var tool by remember(state.id) { mutableStateOf<String?>(null) }
     var message by remember(state.id) { mutableStateOf<String?>(null) }
     var pasteProgress by remember(state.id) { mutableStateOf<Float?>(null) }
-    var previewReady by remember(state.id) { mutableStateOf(false) }
+    var previewReady by remember(state.id, document, preview) { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
+    val blurRadius by viewModel.blurRadius.collectAsState()
+    val blurOpacity by viewModel.blurOpacity.collectAsState()
+    val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
+    val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
+    val editorHazeState = remember { HazeState() }
     var exportingId by remember(state.id) { mutableStateOf<String?>(null) }
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/markdown")) { uri ->
         val item = activeItem
@@ -121,132 +128,143 @@ internal fun ContinuousNoteEditor(viewModel: CobaltViewModel, modifier: Modifier
         if (state.document == null && !state.busy && state.error == null) viewModel.enableContinuousEditor()
     }
     LaunchedEffect(preview, document, state.busy) {
-        previewReady = false
-        if (state.busy) return@LaunchedEffect
-        if (preview && document != null) {
+        if (preview && document != null && !previewReady && !state.busy) {
             document.freeze(true)
             viewModel.checkpointFileEditor()
             previewReady = !viewModel.fileEditorState.value.dirty
-        } else document?.freeze(false)
+        } else if (!preview) document?.freeze(false)
     }
 
-    Column(modifier.testTag("capture_continuous_editor")) {
-        header()
-        state.error?.let {
-            Text(it, color = colors.error, style = MaterialTheme.typography.bodySmall)
-            if (document != null) TextButton(onClick = {
-                beginExport("${activeItem?.title.orEmpty().take(80).ifBlank { "Note" }}-unsaved.md")
-            }) { Text("Export unsaved edits") }
-        }
-        message?.let { Text(it, color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall) }
-        pasteProgress?.let { progress ->
-            Row(Modifier.fillMaxWidth()) {
-                LinearProgressIndicator(progress = { progress }, modifier = Modifier.weight(1f).padding(top = 14.dp))
-                TextButton(onClick = { if (document?.disk != null) diskNative?.cancelPaste() else native?.cancelPaste() }) { Text("Cancel") }
+    Box(modifier = modifier.testTag("capture_continuous_editor")) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            header()
+            state.error?.let {
+                Text(it, color = colors.error, style = MaterialTheme.typography.bodySmall)
+                if (document != null) TextButton(onClick = {
+                    beginExport("${activeItem?.title.orEmpty().take(80).ifBlank { "Note" }}-unsaved.md")
+                }) { Text("Export unsaved edits") }
             }
-        }
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .then(if (localHazeState != null) Modifier.hazeSource(state = localHazeState) else Modifier)
-        ) {
-            val body = state.generation
-            if (document == null && plain && body != null) {
-                NoteBodyPlainText(recovery, RecoveryNote(state.id!!, activeItem?.title.orEmpty(), body.bytes), Modifier.fillMaxSize(),
-                    body = NoteBodyMetadata(state.id!!, "FILE", body.hash, body.bytes, body.preview, 1, 0))
-            } else if (document == null) {
-                if (state.error == null) NoteBodySkeleton()
-                else if (state.generation != null && !state.busy) {
-                    Column {
-                        Row {
-                            TextButton(onClick = { plain = true }) { Text("Read plain text") }
-                            TextButton(onClick = { beginExport("${activeItem?.title.orEmpty().take(80).ifBlank { "Note" }}.md") }) { Text("Export") }
-                        }
-                        TextButton(onClick = viewModel::enableContinuousEditor) { Text("Retry editing") }
-                    }
-                } else Text("The saved note is retained. Reopen it or use Note Recovery.", style = MaterialTheme.typography.bodyMedium)
-            } else if (preview && previewReady && state.generation != null) {
-                val ref = state.generation!!
-                LazyMarkdownNote(state.id!!, ref.hash, ref.bytes, 0, Modifier.fillMaxSize(),
-                    onBlockChange = if (state.busy) null else { start, end, value ->
-                        viewModel.replaceContinuousNoteRange(start, end, ref.hash, value)
-                    })
-            } else if (document.disk != null) {
-                val typo = com.example.ui.theme.LocalCobaltTypography.current
-                key(document) {
-                    AndroidView(factory = { DiskMarkdownView(it).also { view -> diskNative = view } },
-                        modifier = Modifier.fillMaxSize().testTag("capture_content_input"),
-                        onRelease = { view -> view.dispose(); if (diskNative === view) diskNative = null },
-                        update = { view ->
-                            view.applyCobaltTypography(typo, activeItem?.type == com.example.data.model.SavedItemType.CODE)
-                            view.message = { message = it }
-                            view.progress = { pasteProgress = it; viewModel.continuousEditorBusy(document, it != null) }
-                            view.tool = { tool = it }
-                            view.bind(document)
-                            view.setHostEditable(!state.busy && !preview && pasteProgress == null && !document.frozen)
-                            view.applyColors(colors.background.toArgb(), colors.onBackground.toArgb(), colors.primary.toArgb(),
-                                colors.onSurfaceVariant.toArgb(), colors.primary.copy(alpha = 0.22f).toArgb())
-                        })
-                }
-            } else {
-                val typo = com.example.ui.theme.LocalCobaltTypography.current
-                val isCode = activeItem?.type == com.example.data.model.SavedItemType.CODE
-                key(document) {
-                    AndroidView(
-                        factory = { context -> ContinuousMarkdownView(context).also { native = it } },
-                        modifier = Modifier.fillMaxSize().testTag("capture_content_input"),
-                        onRelease = { view -> view.dispose(); if (native === view) native = null },
-                        update = { view ->
-                            view.applyCobaltTypography(typo, isCode)
-                            view.message = { message = it }
-                            view.pasteProgress = { pasteProgress = it; viewModel.continuousEditorBusy(document, it != null) }
-                            view.onTool = { tool = it }
-                            view.bind(document) { viewModel.continuousEditorChanged(document) }
-                            view.isEditable = !state.busy && !preview && pasteProgress == null && !document.frozen
-                            view.applyColors(colors.background.toArgb(), colors.onBackground.toArgb(),
-                                colors.primary.toArgb(), colors.onSurfaceVariant.toArgb(), colors.primary.copy(alpha = 0.22f).toArgb())
-                        })
+            message?.let { Text(it, color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall) }
+            pasteProgress?.let { progress ->
+                Row(Modifier.fillMaxWidth()) {
+                    LinearProgressIndicator(progress = { progress }, modifier = Modifier.weight(1f).padding(top = 14.dp))
+                    TextButton(onClick = { if (document?.disk != null) diskNative?.cancelPaste() else native?.cancelPaste() }) { Text("Cancel") }
                 }
             }
-
-            // Modern Floating Search & Replace Bar
-            androidx.compose.animation.AnimatedVisibility(
-                visible = tool == "find",
-                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            Box(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .hazeSource(state = editorHazeState)
             ) {
-                EditorFloatingSearchReplaceBar(
-                    localHazeState = localHazeState,
-                    onFind = { query, backwards ->
-                        if (document?.disk != null) diskNative?.find(query, backwards)
-                        else native?.find(query, backwards)
-                    },
-                    onReplace = { query, replacement, all ->
-                        if (document?.disk != null) diskNative?.find(query, replacement = replacement, all = all)
-                        else native?.find(query, replacement = replacement, all = all)
-                    },
-                    onQueryChange = { query ->
-                        if (query.isBlank()) {
-                            diskNative?.clearSearch()
-                            native?.clearSearch()
-                        } else {
-                            diskNative?.highlightMatches(query)
-                            native?.highlightMatches(query)
+                val body = state.generation
+                if (document == null && plain && body != null) {
+                    NoteBodyPlainText(recovery, RecoveryNote(state.id!!, activeItem?.title.orEmpty(), body.bytes), Modifier.fillMaxSize(),
+                        body = NoteBodyMetadata(state.id!!, "FILE", body.hash, body.bytes, body.preview, 1, 0))
+                } else if (document == null) {
+                    if (state.error == null) NoteBodySkeleton()
+                    else if (state.generation != null && !state.busy) {
+                        Column {
+                            Row {
+                                TextButton(onClick = { plain = true }) { Text("Read plain text") }
+                                TextButton(onClick = { beginExport("${activeItem?.title.orEmpty().take(80).ifBlank { "Note" }}.md") }) { Text("Export") }
+                            }
+                            TextButton(onClick = viewModel::enableContinuousEditor) { Text("Retry editing") }
                         }
-                    },
-                    onClose = {
+                    } else Text("The saved note is retained. Reopen it or use Note Recovery.", style = MaterialTheme.typography.bodyMedium)
+                } else if (preview && previewReady && state.generation != null) {
+                    val ref = state.generation!!
+                    LazyMarkdownNote(state.id!!, ref.hash, ref.bytes, 0, Modifier.fillMaxSize(),
+                        onBlockChange = if (state.busy) null else { start, end, value, adopt ->
+                            viewModel.replaceContinuousNoteRange(start, end, ref.hash, value)
+                            val updated = viewModel.fileEditorState.first { !it.busy }
+                            check(updated.error == null) { updated.error.orEmpty() }
+                            val verified = requireNotNull(updated.generation)
+                            check(verified.hash != ref.hash) { "The preview changed. Retry this checkbox." }
+                            adopt(verified.hash)
+                        })
+                } else if (document.disk != null) {
+                    val typo = com.example.ui.theme.LocalCobaltTypography.current
+                    key(document) {
+                        AndroidView(factory = { DiskMarkdownView(it).also { view -> diskNative = view } },
+                            modifier = Modifier.fillMaxSize().testTag("capture_content_input"),
+                            onRelease = { view -> view.dispose(); if (diskNative === view) diskNative = null },
+                            update = { view ->
+                                view.applyCobaltTypography(typo, activeItem?.type == com.example.data.model.SavedItemType.CODE)
+                                view.message = { message = it }
+                                view.progress = { pasteProgress = it; viewModel.continuousEditorBusy(document, it != null) }
+                                view.tool = { tool = it }
+                                view.bind(document)
+                                view.setHostEditable(!state.busy && !preview && pasteProgress == null && !document.frozen)
+                                view.applyColors(colors.background.toArgb(), colors.onBackground.toArgb(), colors.primary.toArgb(),
+                                    colors.onSurfaceVariant.toArgb(), colors.primary.copy(alpha = 0.22f).toArgb())
+                            }
+                        )
+                    }
+                } else {
+                    val typo = com.example.ui.theme.LocalCobaltTypography.current
+                    val isCode = activeItem?.type == com.example.data.model.SavedItemType.CODE
+                    key(document) {
+                        AndroidView(
+                            factory = { context -> ContinuousMarkdownView(context).also { native = it } },
+                            modifier = Modifier.fillMaxSize().testTag("capture_content_input"),
+                            onRelease = { view -> view.dispose(); if (native === view) native = null },
+                            update = { view ->
+                                view.applyCobaltTypography(typo, isCode)
+                                view.message = { message = it }
+                                view.pasteProgress = { pasteProgress = it; viewModel.continuousEditorBusy(document, it != null) }
+                                view.onTool = { tool = it }
+                                view.bind(document) { viewModel.continuousEditorChanged(document) }
+                                view.isEditable = !state.busy && !preview && pasteProgress == null && !document.frozen
+                                view.applyColors(colors.background.toArgb(), colors.onBackground.toArgb(),
+                                    colors.primary.toArgb(), colors.onSurfaceVariant.toArgb(), colors.primary.copy(alpha = 0.22f).toArgb())
+                            }
+                        )
+                    }
+                }
+            }
+            footer()
+        }
+
+        // Modern Floating Search & Replace Bar
+        androidx.compose.animation.AnimatedVisibility(
+            visible = tool == "find",
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .imePadding()
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+        ) {
+            EditorFloatingSearchReplaceBar(
+                hazeState = editorHazeState,
+                useBlur = useBlur,
+                blurRadius = blurRadius,
+                blurOpacity = blurOpacity,
+                onFind = { query, backwards ->
+                    if (document?.disk != null) diskNative?.find(query, backwards)
+                    else native?.find(query, backwards)
+                },
+                onReplace = { query, replacement, all ->
+                    if (document?.disk != null) diskNative?.find(query, replacement = replacement, all = all)
+                    else native?.find(query, replacement = replacement, all = all)
+                },
+                onQueryChange = { query ->
+                    if (query.isBlank()) {
                         diskNative?.clearSearch()
                         native?.clearSearch()
-                        tool = null
+                    } else {
+                        diskNative?.highlightMatches(query)
+                        native?.highlightMatches(query)
                     }
-                )
-            }
+                },
+                onClose = {
+                    diskNative?.clearSearch()
+                    native?.clearSearch()
+                    tool = null
+                }
+            )
         }
-        footer()
     }
     if (tool == "outline" && document != null) {
         val headings by produceState<List<NoteTextNavigator.Heading>?>(null, document, document.revision) {
@@ -281,7 +299,10 @@ internal fun ContinuousNoteEditor(viewModel: CobaltViewModel, modifier: Modifier
 
 @Composable
 private fun EditorFloatingSearchReplaceBar(
-    localHazeState: HazeState?,
+    hazeState: HazeState?,
+    useBlur: Boolean = true,
+    blurRadius: Int = 25,
+    blurOpacity: Float = 0.55f,
     onFind: (String, Boolean) -> Unit,
     onReplace: (String, String, Boolean) -> Unit,
     onQueryChange: (String) -> Unit = {},
@@ -303,43 +324,43 @@ private fun EditorFloatingSearchReplaceBar(
         onQueryChange(query)
     }
 
-    val containerModifier = if (localHazeState != null) {
+    val containerModifier = if (useBlur && hazeState != null) {
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.78f))
+            .clip(RoundedCornerShape(26.dp))
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = blurOpacity.coerceAtLeast(0.4f)))
             .hazeEffect(
-                state = localHazeState,
+                state = hazeState,
                 style = HazeStyle(
                     backgroundColor = MaterialTheme.colorScheme.surface,
-                    tint = HazeTint(MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)),
-                    blurRadius = 24.dp,
+                    tint = HazeTint(MaterialTheme.colorScheme.surface.copy(alpha = blurOpacity)),
+                    blurRadius = blurRadius.dp,
                     noiseFactor = 0.02f
                 )
             )
             .border(
                 1.dp,
                 MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (isDark) 0.35f else 0.5f),
-                RoundedCornerShape(24.dp)
+                RoundedCornerShape(26.dp)
             )
     } else {
         Modifier
             .fillMaxWidth()
             .background(
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(26.dp)
             )
             .border(
                 1.dp,
                 MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (isDark) 0.25f else 0.4f),
-                RoundedCornerShape(24.dp)
+                RoundedCornerShape(26.dp)
             )
     }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(12.dp, RoundedCornerShape(24.dp))
+            .shadow(12.dp, RoundedCornerShape(26.dp))
             .then(containerModifier)
     ) {
         Column(
