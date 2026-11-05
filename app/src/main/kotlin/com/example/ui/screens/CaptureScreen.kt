@@ -731,8 +731,8 @@ fun TextCapturePage(
 
     }
     val noteFooter: @Composable () -> Unit = {
-            // Only show folders and info line when keyboard is not open
-            if (!isKeyboardOpen) {
+            // Only show folders and info line when keyboard is not open (unless creating a new folder)
+            if (!isKeyboardOpen || showNewFolderCreator) {
                 // Push footer down if content is short
                 Spacer(modifier = Modifier.height(8.dp))
                 Spacer(modifier = Modifier.height(16.dp))
@@ -791,7 +791,7 @@ fun TextCapturePage(
             .padding(horizontal = 20.dp, vertical = 10.dp).padding(bottom = bottomPadding + 24.dp)) {
             noteHeader()
             noteEditor()
-            if (!isKeyboardOpen) {
+            if (!isKeyboardOpen || showNewFolderCreator) {
                 Spacer(modifier = Modifier.weight(1f))
             }
             noteFooter()
@@ -964,8 +964,8 @@ fun AudioCapturePage(
                 }
             }
 
-            // 4. Bottom section: Audio recording card + folders (hidden when keyboard is open to maximize typing space)
-            if (!isKeyboardOpen) {
+            // 4. Bottom section: Audio recording card + folders (hidden when keyboard is open to maximize typing space, unless creating a folder)
+            if (!isKeyboardOpen || showNewFolderCreator) {
                 Spacer(modifier = Modifier.weight(1f))
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -1538,8 +1538,8 @@ fun LinkCapturePage(
                 }
             }
 
-            // 6. Bottom section: folders & saves caption (hidden when keyboard is open)
-            if (!isKeyboardOpen) {
+            // 6. Bottom section: folders & saves caption (hidden when keyboard is open, unless creating a folder)
+            if (!isKeyboardOpen || showNewFolderCreator) {
                 Spacer(modifier = Modifier.weight(1f))
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -3267,7 +3267,7 @@ fun CaptureScreen(
                 }
             }
 
-                        if (!isKeyboardOpen) {
+                        if (!isKeyboardOpen || showNewFolderCreator) {
                             // White space eliminator: pushes folders and category assurance note to the bottom of the screen
                             Spacer(modifier = Modifier.weight(1f))
                             Spacer(modifier = Modifier.height(16.dp))

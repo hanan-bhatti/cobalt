@@ -388,6 +388,7 @@ private fun ExpressiveBugReportContent(
                     value = bugTitle,
                     onValueChange = {
                         bugTitle = it
+                        submitSuccess = false
                         if (it.isNotBlank()) errorMessage = null
                     },
                     placeholder = { Text("e.g. OCR preview freezes on rotation", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
@@ -418,6 +419,7 @@ private fun ExpressiveBugReportContent(
                     value = bugDescription,
                     onValueChange = {
                         bugDescription = it
+                        submitSuccess = false
                         if (it.isNotBlank()) errorMessage = null
                     },
                     placeholder = { Text("Describe the unexpected behavior and steps leading up to it...") },
@@ -607,18 +609,53 @@ private fun ExpressiveBugReportContent(
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        modifier = Modifier.padding(18.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
-                        Text(
-                            text = "Bug Report Submitted! Thank you for helping us improve Cobalt.",
-                            color = MaterialTheme.colorScheme.onTertiaryContainer,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
+                            Text(
+                                text = "Bug Report Submitted! Thank you for helping us improve Cobalt.",
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    bugTitle = ""
+                                    bugDescription = ""
+                                    stepsToReproduce.clear()
+                                    stepsToReproduce.add("")
+                                    attachmentUri = null
+                                    errorMessage = null
+                                    submitSuccess = false
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Report Another", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                            }
+
+                            Button(
+                                onClick = onSuccess,
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Done", maxLines = 1)
+                            }
+                        }
                     }
                 }
             } else
@@ -683,7 +720,7 @@ private fun ExpressiveBugReportContent(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Preparing GitHub Issue...")
                         } else {
-                            Icon(painter = painterResource(id = R.drawable.ic_custom_code), contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(painter = painterResource(id = R.drawable.ic_custom_github), contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Open Pre-filled GitHub Issue", fontWeight = FontWeight.Bold)
                         }
@@ -908,6 +945,7 @@ private fun ExpressiveFeatureRequestContent(
                     value = featureTitle,
                     onValueChange = {
                         featureTitle = it
+                        submitSuccess = false
                         if (it.isNotBlank()) errorMessage = null
                     },
                     placeholder = { Text("e.g. Obsidian Vault sync", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
@@ -938,6 +976,7 @@ private fun ExpressiveFeatureRequestContent(
                     value = problemStatement,
                     onValueChange = {
                         problemStatement = it
+                        submitSuccess = false
                         if (it.isNotBlank()) errorMessage = null
                     },
                     placeholder = { Text("Describe the friction or workflow limitation you experience...") },
@@ -967,6 +1006,7 @@ private fun ExpressiveFeatureRequestContent(
                     value = proposedSolution,
                     onValueChange = {
                         proposedSolution = it
+                        submitSuccess = false
                         if (it.isNotBlank()) errorMessage = null
                     },
                     placeholder = { Text("Describe how you envision this feature working in Cobalt...") },
@@ -1077,18 +1117,52 @@ private fun ExpressiveFeatureRequestContent(
                     shape = RoundedCornerShape(20.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(
-                        modifier = Modifier.padding(18.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                        Text(
-                            text = "Feature Request Submitted! We love your ideas.",
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Text(
+                                text = "Feature Request Submitted! We love your ideas.",
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    featureTitle = ""
+                                    problemStatement = ""
+                                    proposedSolution = ""
+                                    alternativesConsidered = ""
+                                    errorMessage = null
+                                    submitSuccess = false
+                                },
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("New Request", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                            }
+
+                            Button(
+                                onClick = onSuccess,
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Done", maxLines = 1)
+                            }
+                        }
                     }
                 }
             } else
