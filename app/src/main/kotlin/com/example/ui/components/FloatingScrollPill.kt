@@ -1,8 +1,6 @@
 package com.example.ui.components
 
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
@@ -19,13 +17,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
 import com.example.R
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
@@ -41,6 +39,8 @@ import kotlin.math.roundToInt
  * Universal adapter enabling any scrollable container to synchronize with [FloatingScrollPill].
  */
 interface ScrollAdapter {
+    fun beginScrub() {}
+    fun endScrub() {}
     val scrollFraction: Float
     val isScrolling: Boolean
     val isScrollable: Boolean
@@ -49,10 +49,36 @@ interface ScrollAdapter {
     suspend fun scrollToBottom()
 }
 
+/** Sample once per drag: newly visible card heights must not move an existing target. */
+internal data class LazyScrubGeometry(val total: Int, val visible: Int, val lanes: Int, val averagePixels: Int) {
+    fun target(fraction: Float): Pair<Int, Int> {
+        if (total <= 0) return 0 to 0
+        val progress = if (fraction.isFinite()) fraction.coerceIn(0f, 1f) else 0f
+        if (progress == 1f) return total - 1 to 0
+        val columns = lanes.coerceAtLeast(1)
+        val rows = (total + columns - 1) / columns
+        val visibleRows = (visible + columns - 1) / columns
+        val position = progress * (rows - visibleRows).coerceAtLeast(0)
+        val row = position.toInt()
+        return (row * columns).coerceIn(0, total - 1) to ((position - row) * averagePixels.coerceAtLeast(1)).roundToInt()
+    }
+}
+
 @Composable
 fun rememberLazyListScrollAdapter(state: LazyListState): ScrollAdapter {
     return remember(state) {
         object : ScrollAdapter {
+            private var scrub: LazyScrubGeometry? = null
+            private fun geometry(): LazyScrubGeometry {
+                val layout = state.layoutInfo
+                val visible = layout.visibleItemsInfo
+                var height = 0L
+                for (item in visible) height += item.size
+                return LazyScrubGeometry(layout.totalItemsCount, visible.size, 1,
+                    if (visible.isEmpty()) 100 else (height / visible.size).toInt())
+            }
+            override fun beginScrub() { scrub = geometry() }
+            override fun endScrub() { scrub = null }
             override val scrollFraction: Float
                 get() {
                     val layout = state.layoutInfo
@@ -62,7 +88,9 @@ fun rememberLazyListScrollAdapter(state: LazyListState): ScrollAdapter {
 
                     val first = state.firstVisibleItemIndex
                     val offset = state.firstVisibleItemScrollOffset
-                    val avgItemSize = visible.map { it.size }.average().toFloat().coerceAtLeast(1f)
+                    var height = 0L
+                    for (item in visible) height += item.size
+                    val avgItemSize = (height.toFloat() / visible.size).coerceAtLeast(1f)
                     val maxScrollable = (total - visible.size).coerceAtLeast(1)
 
                     val exactPosition = first.toFloat() + (offset.toFloat() / avgItemSize)
@@ -76,21 +104,10 @@ fun rememberLazyListScrollAdapter(state: LazyListState): ScrollAdapter {
                 get() = state.layoutInfo.totalItemsCount > state.layoutInfo.visibleItemsInfo.size
 
             override suspend fun scrollToFraction(fraction: Float) {
-                val layout = state.layoutInfo
-                val total = layout.totalItemsCount
-                if (total == 0) return
-                val visible = layout.visibleItemsInfo
-                val avgItemSize = if (visible.isNotEmpty()) {
-                    visible.map { it.size }.average().toInt().coerceAtLeast(1)
-                } else 100
-
-                val maxScrollable = (total - visible.size).coerceAtLeast(1)
-                val targetFloat = fraction.coerceIn(0f, 1f) * maxScrollable
-                val targetIndex = targetFloat.toInt().coerceIn(0, total - 1)
-                val remainder = targetFloat - targetIndex
-                val offsetPx = (remainder * avgItemSize).roundToInt()
-
-                state.scrollToItem(targetIndex, offsetPx)
+                val metrics = scrub ?: geometry()
+                if (metrics.total == 0) return
+                val (index, offset) = metrics.target(fraction)
+                state.scrollToItem(index, offset)
             }
 
             override suspend fun scrollToTop() {
@@ -205,6 +222,18 @@ fun rememberLazyGridScrollAdapter(state: LazyGridState): ScrollAdapter {
 fun rememberLazyStaggeredGridScrollAdapter(state: LazyStaggeredGridState): ScrollAdapter {
     return remember(state) {
         object : ScrollAdapter {
+            private var scrub: LazyScrubGeometry? = null
+            private fun geometry(): LazyScrubGeometry {
+                val layout = state.layoutInfo
+                val visible = layout.visibleItemsInfo
+                var lane = 0
+                var height = 0L
+                for (item in visible) { lane = maxOf(lane, item.lane); height += item.size.height }
+                return LazyScrubGeometry(layout.totalItemsCount, visible.size, maxOf(2, lane + 1),
+                    if (visible.isEmpty()) 180 else (height / visible.size).toInt())
+            }
+            override fun beginScrub() { scrub = geometry() }
+            override fun endScrub() { scrub = null }
             override val scrollFraction: Float
                 get() {
                     val layout = state.layoutInfo
@@ -239,33 +268,10 @@ fun rememberLazyStaggeredGridScrollAdapter(state: LazyStaggeredGridState): Scrol
                 get() = state.layoutInfo.totalItemsCount > state.layoutInfo.visibleItemsInfo.size
 
             override suspend fun scrollToFraction(fraction: Float) {
-                val layout = state.layoutInfo
-                val total = layout.totalItemsCount
-                if (total == 0) return
-                val visible = layout.visibleItemsInfo
-                var maxLane = 1
-                var totalHeight = 0L
-                for (i in visible.indices) {
-                    val item = visible[i]
-                    if (item.lane > maxLane) maxLane = item.lane
-                    totalHeight += item.size.height
-                }
-                val lanes = if (visible.isNotEmpty()) (maxLane + 1).coerceAtLeast(2) else 2
-                val totalRows = (total + lanes - 1) / lanes
-                val visibleRows = if (visible.isNotEmpty()) (visible.size + lanes - 1) / lanes else 1
-                val maxScrollableRows = (totalRows - visibleRows).coerceAtLeast(1)
-
-                val avgHeight = if (visible.isNotEmpty()) {
-                    (totalHeight / visible.size).toInt().coerceAtLeast(1)
-                } else 180
-
-                val targetFloatRow = fraction.coerceIn(0f, 1f) * maxScrollableRows
-                val targetRow = targetFloatRow.toInt().coerceIn(0, totalRows - 1)
-                val remainder = targetFloatRow - targetRow
-                val offsetPx = (remainder * avgHeight).roundToInt()
-
-                val targetItemIndex = (targetRow * lanes).coerceIn(0, total - 1)
-                state.scrollToItem(targetItemIndex, offsetPx)
+                val metrics = scrub ?: geometry()
+                if (metrics.total == 0) return
+                val (index, offset) = metrics.target(fraction)
+                state.scrollToItem(index, offset)
             }
 
             override suspend fun scrollToTop() {
@@ -323,7 +329,8 @@ fun FloatingScrollPill(
     topPadding: Dp = 80.dp,
     bottomPadding: Dp = 100.dp
 ) {
-    if (!enabled || !adapter.isScrollable) return
+    val scrollable by remember(adapter) { derivedStateOf { adapter.isScrollable } }
+    if (!enabled || !scrollable) return
 
     val coroutineScope = rememberCoroutineScope()
     var isDragging by remember { mutableStateOf(false) }
@@ -331,6 +338,8 @@ fun FloatingScrollPill(
     var hideJob by remember { mutableStateOf<Job?>(null) }
     var dragFraction by remember { mutableFloatStateOf(0f) }
     var scrubTargetFraction by remember { mutableFloatStateOf(0f) }
+    var scrubStartFraction by remember { mutableFloatStateOf(0f) }
+    var scrubEpoch by remember { mutableLongStateOf(0) }
 
     LaunchedEffect(adapter.isScrolling, isDragging) {
         if (adapter.isScrolling || isDragging) {
@@ -346,14 +355,21 @@ fun FloatingScrollPill(
     }
 
     // Frame-paced scrubbing loop matching the native editor: continuously syncs with display refresh
-    LaunchedEffect(isDragging) {
+    LaunchedEffect(adapter, isDragging) {
         if (isDragging) {
+            var applied = scrubStartFraction
             while (isActive && isDragging) {
-                adapter.scrollToFraction(scrubTargetFraction)
                 withFrameMillis { }
+                if (!isDragging) break
+                val latest = scrubTargetFraction
+                if (latest != applied) {
+                    adapter.scrollToFraction(latest)
+                    applied = latest
+                }
             }
         }
     }
+    DisposableEffect(adapter) { onDispose { adapter.endScrub() } }
 
     val alpha by animateFloatAsState(
         targetValue = if (isVisible || isDragging) 1f else 0f,
@@ -375,19 +391,6 @@ fun FloatingScrollPill(
         val density = LocalDensity.current
         val availableTrackHeight = maxHeight - topPadding - bottomPadding - pillHeight
         val trackHeightPx = with(density) { availableTrackHeight.coerceAtLeast(0.dp).toPx() }
-
-        val smoothFraction by animateFloatAsState(
-            targetValue = adapter.scrollFraction,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessHigh
-            ),
-            label = "floating_pill_fraction"
-        )
-
-        // When dragging, follow the user's touch instantly; when scrolling naturally, use smooth spring
-        val displayFraction = if (isDragging) dragFraction else smoothFraction
-        val targetOffsetY = topPadding + (availableTrackHeight.coerceAtLeast(0.dp) * displayFraction)
 
         val scale by animateFloatAsState(
             targetValue = if (isDragging) 1.08f else 1.0f,
@@ -432,21 +435,34 @@ fun FloatingScrollPill(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(end = 8.dp)
-                .offset(y = targetOffsetY)
-                .scale(scale)
+                .offset {
+                    val fraction = if (isDragging) dragFraction else adapter.scrollFraction
+                    IntOffset(0, with(density) { topPadding.roundToPx() } + (trackHeightPx * fraction).roundToInt())
+                }
+                .graphicsLayer { scaleX = scale; scaleY = scale }
                 .then(containerModifier)
-                .pointerInput(trackHeightPx) {
+                .pointerInput(adapter, trackHeightPx) {
                     detectDragGestures(
                         onDragStart = {
+                            adapter.beginScrub()
+                            scrubEpoch++
                             isDragging = true
                             dragFraction = adapter.scrollFraction
                             scrubTargetFraction = dragFraction
+                            scrubStartFraction = dragFraction
                         },
                         onDragEnd = {
                             isDragging = false
+                            val finalTarget = scrubTargetFraction
+                            val epoch = scrubEpoch
+                            coroutineScope.launch {
+                                try { if (epoch == scrubEpoch && !isDragging) adapter.scrollToFraction(finalTarget) }
+                                finally { if (epoch == scrubEpoch && !isDragging) adapter.endScrub() }
+                            }
                         },
                         onDragCancel = {
                             isDragging = false
+                            adapter.endScrub()
                         },
                         onDrag = { change, dragAmount ->
                             change.consume()

@@ -121,10 +121,12 @@ fun ArchiveItemCard(
                 scaleY = scale
             }
     ) {
-        val isHomeHub = TransitionCoordinator.isHomeHubTransition()
-        val isDetail = TransitionCoordinator.isDetailTransition()
-        val isVisible = item.id in TransitionCoordinator.homeVisibleItemIds
-        val enableSharedBounds = isDetail || (isHomeHub && isVisible)
+        val enableSharedBounds by remember(item.id) {
+            derivedStateOf {
+                TransitionCoordinator.isDetailTransition() ||
+                    (TransitionCoordinator.isHomeHubTransition() && item.id in TransitionCoordinator.homeVisibleItemIds)
+            }
+        }
 
         Card(
             shape = RoundedCornerShape(20.dp),
@@ -604,10 +606,12 @@ fun ArchiveItemRow(
             .padding(horizontal = 4.dp, vertical = 2.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
     ) {
-        val isHomeHub = TransitionCoordinator.isHomeHubTransition()
-        val isDetail = TransitionCoordinator.isDetailTransition()
-        val isVisible = item.id in TransitionCoordinator.homeVisibleItemIds
-        val enableSharedBounds = isDetail || (isHomeHub && isVisible)
+        val enableSharedBounds by remember(item.id) {
+            derivedStateOf {
+                TransitionCoordinator.isDetailTransition() ||
+                    (TransitionCoordinator.isHomeHubTransition() && item.id in TransitionCoordinator.homeVisibleItemIds)
+            }
+        }
 
         val isDark = isSystemInDarkTheme()
         Card(
