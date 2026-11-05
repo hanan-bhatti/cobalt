@@ -24,6 +24,9 @@ import com.example.notes.NoteSizePolicy
 
 @Dao
 interface SavedItemDao {
+    @Query("UPDATE saved_items SET title = CASE WHEN title = :oldTitle THEN COALESCE(:pageTitle, title) ELSE title END, linkTitle = COALESCE(:pageTitle, linkTitle), linkDescription = :description, linkImage = COALESCE(:image, linkImage) WHERE id = :id AND content = :url AND isDeleted = 0 AND linkDescription IS :oldDescription")
+    suspend fun applyLinkPreview(id: String, url: String, oldTitle: String, oldDescription: String?, pageTitle: String?, description: String?, image: String?): Int
+
     @Query("SELECT isDeleted FROM saved_items WHERE id = :id")
     suspend fun isItemDeleted(id: String): Boolean?
     @Query("SELECT id FROM saved_items WHERE isDeleted = 1")

@@ -693,7 +693,7 @@ class CobaltRepository(
         return updated
     }
 
-    suspend fun saveItem(item: SavedItem, mediaBytes: ByteArray? = null, onProgress: (Float) -> Unit = {}): SavedItem = withContext(Dispatchers.IO) {
+    suspend fun saveItem(item: SavedItem, mediaBytes: ByteArray? = null, descriptionIsAi: Boolean = false, onProgress: (Float) -> Unit = {}): SavedItem = withContext(Dispatchers.IO) {
         val guarded = sanitizeItemTitle(item)
         suspend fun persist(): SavedItem {
             val itemToSave = persistLocalMedia(guarded)
@@ -705,8 +705,22 @@ class CobaltRepository(
                 else -> itemToSave.content.toByteArray().size.toLong()
             }
             val finalItem = itemToSave.copy(sizeBytes = itemSize, timestamp = if (itemToSave.timestamp == 0L) System.currentTimeMillis() else itemToSave.timestamp, updatedAt = System.currentTimeMillis())
-            val saved = if (com.example.notes.NotePersistence.isNote(finalItem)) notePersistence.save(finalItem) else notePersistence.saveNonNoteLocked(finalItem)
-            return saved
+            if (finalItem.type != SavedItemType.LINK) return if (com.example.notes.NotePersistence.isNote(finalItem))
+                notePersistence.save(finalItem) else notePersistence.saveNonNoteLocked(finalItem)
+            return db.withTransaction {
+                val old = if (finalItem.type == SavedItemType.LINK) savedItemDao.getItemById(finalItem.id) else null
+                val saved = if (com.example.notes.NotePersistence.isNote(finalItem)) notePersistence.save(finalItem) else notePersistence.saveNonNoteLocked(finalItem)
+                if (saved.type == SavedItemType.LINK) {
+                    val previous = db.linkPreviewDao().get(saved.id)?.takeIf { it.url == saved.content }
+                    val changed = previous == null || old?.linkDescription != saved.linkDescription
+                    val state = previous ?: com.example.data.local.LinkPreviewEntity(saved.id, saved.content)
+                    db.linkPreviewDao().put(state.copy(
+                        replaceFallback = if (changed) descriptionIsAi else state.replaceFallback,
+                        generation = if (changed) java.util.UUID.randomUUID().toString() else state.generation
+                    ))
+                }
+                saved
+            }
         }
         val saved = if (com.example.notes.NotePersistence.isNote(guarded)) persist() else {
             com.example.notes.NoteWriteLock.mutex.withLock {
@@ -715,8 +729,30 @@ class CobaltRepository(
                 persist()
             }
         }
+        if (saved.type == SavedItemType.LINK) runCatching { com.example.links.LinkPreviewWorker.schedule(context) }
         com.example.widget.WidgetUpdater.update(context)
         saved
+    }
+
+    /** Targeted compare-and-set update: a late fetch cannot restore a deleted item or older fields. */
+    suspend fun processNextLinkPreview(): Boolean = withContext(Dispatchers.IO) {
+        val request = db.linkPreviewDao().next() ?: return@withContext false
+        val before = savedItemDao.getItemById(request.itemId) ?: return@withContext false
+        val metadata = fetchLinkMetadata(request.url)
+        db.withTransaction {
+            val current = db.linkPreviewDao().get(request.itemId)
+            if (current?.generation == request.generation) {
+                val found = metadata.title != null || metadata.description != null || metadata.imageUrl != null
+                val description = com.example.links.LinkDescriptionPolicy.automatic(
+                    before.linkDescription, metadata.description, current.replaceFallback)
+                savedItemDao.applyLinkPreview(request.itemId, request.url, before.title, before.linkDescription,
+                    metadata.title, description, metadata.imageUrl)
+                db.linkPreviewDao().put(current.copy(replaceFallback = current.replaceFallback && metadata.description.isNullOrBlank(),
+                    attempts = current.attempts + 1, pending = !found && current.attempts < 2))
+            }
+        }
+        com.example.widget.WidgetUpdater.update(context)
+        true
     }
 
     suspend fun deleteItem(item: SavedItem): Boolean = com.example.notes.TrashManager(context, db).delete(item.id)
@@ -957,12 +993,18 @@ class CobaltRepository(
 
             val document = org.jsoup.Jsoup.connect(cleanUrl)
                 .timeout(8000)
-                .ignoreHttpErrors(true)
+                .maxBodySize(512 * 1024)
+                .ignoreHttpErrors(false)
                 .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
                 .get()
 
-            val title = document.title().takeIf { !it.isNullOrBlank() }
-                ?: document.select("meta[property=og:title]").attr("content").takeIf { !it.isNullOrBlank() }
+            val pageTitle = document.title().trim()
+            if (pageTitle.equals("Just a moment...", true) || pageTitle.equals("Attention Required! | Cloudflare", true) ||
+                document.select("#challenge-running, #challenge-form, script[src*=/cdn-cgi/challenge-platform/]").isNotEmpty()) {
+                return@withContext LinkMetadata(null, null, null)
+            }
+            val title = document.select("meta[property=og:title]").attr("content").takeIf { it.isNotBlank() }
+                ?: pageTitle.takeIf { it.isNotBlank() }
                 ?: document.select("meta[name=twitter:title]").attr("content").takeIf { !it.isNullOrBlank() }
 
             val description = document.select("meta[property=og:description]").attr("content").takeIf { !it.isNullOrBlank() }
@@ -979,7 +1021,8 @@ class CobaltRepository(
 
             LinkMetadata(title?.trim(), description?.trim(), imageUrl)
         } catch (e: Exception) {
-            Log.e("CobaltRepo", "Failed to fetch link metadata: ${e.message}")
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Log.w("CobaltRepo", "Link metadata unavailable")
             LinkMetadata(null, null, null)
         }
     }

@@ -42,3 +42,8 @@
     static boolean DEBUG return false;
 }
 
+
+# WorkManager persists this class name in its durable link-metadata queue.
+-keep class com.example.links.LinkPreviewWorker {
+    public <init>(android.content.Context, androidx.work.WorkerParameters);
+}

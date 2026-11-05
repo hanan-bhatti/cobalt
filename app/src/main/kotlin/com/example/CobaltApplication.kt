@@ -34,6 +34,8 @@ class CobaltApplication : Application(), ImageLoaderFactory {
 
         // Trigger one-time legacy path title cleanup off the main thread (Issue #21)
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            // Wake durable link jobs after a crash between the item commit and WorkManager enqueue.
+            runCatching { com.example.links.LinkPreviewWorker.schedule(this@CobaltApplication) }
             com.example.data.cleanup.LegacyPathTitleCleanup.runCleanup(this@CobaltApplication)
         }
     }

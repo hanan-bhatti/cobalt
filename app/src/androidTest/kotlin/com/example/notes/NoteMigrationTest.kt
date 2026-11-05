@@ -60,7 +60,7 @@ class NoteMigrationTest {
                     legacy.version = 8
                 }
                 val database = Room.databaseBuilder(context, AppDatabase::class.java, name)
-                    .addMigrations(AppDatabase.MIGRATION_8_9, AppDatabase.MIGRATION_9_10).build().also { room = it }
+                    .addMigrations(AppDatabase.MIGRATION_8_9, AppDatabase.MIGRATION_9_10, AppDatabase.MIGRATION_10_11).build().also { room = it }
                 database.openHelper.writableDatabase // Runs Android Room's generated migration validator.
                 val dao = database.savedItemDao()
                 assertEquals(bodies.size, dao.getAllItems().size)

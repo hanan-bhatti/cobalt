@@ -1081,22 +1081,6 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         return Pair(parsedExtractedText, urlsList)
     }
 
-    private suspend fun buildItemWithFetchedMetadata(item: SavedItem): SavedItem {
-        if (item.type != SavedItemType.LINK) return item
-        val metadata = repository.fetchLinkMetadata(item.content)
-        val finalDescription = metadata.description?.takeIf { it.isNotBlank() }
-            ?: item.linkDescription?.takeIf { it.isNotBlank() }
-        val finalTitle = metadata.title?.takeIf { it.isNotBlank() }
-            ?: item.title.takeIf { it.isNotBlank() }
-            ?: "Shared Link"
-        return item.copy(
-            linkTitle = metadata.title ?: item.linkTitle,
-            linkDescription = finalDescription,
-            linkImage = metadata.imageUrl ?: item.linkImage,
-            title = finalTitle
-        )
-    }
-
     fun performFullImageOcr(uri: android.net.Uri, context: android.content.Context) {
         val currentItem = _activeCaptureItem.value ?: return
         _isOcrLoading.value = true
@@ -1263,36 +1247,12 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     )
 
                     // 1. Save IMMEDIATELY to DB so it appears instantly
-                    val savedItem = repository.saveItem(initialItem, null)
+                    repository.saveItem(initialItem, null, descriptionIsAi = true)
                     _extractedLinksToReview.update { items -> items.filterNot { it.id == reviewItem.id } }
                     withContext(Dispatchers.Main) {
                         com.example.widget.WidgetUpdater.update(context)
                     }
 
-                    // 2. Fetch metadata in background and update DB
-                    try {
-                        val meta = repository.fetchLinkMetadata(reviewItem.url)
-                        val realDesc = meta.description?.takeIf { it.isNotBlank() }
-                        val realTitle = meta.title?.takeIf { it.isNotBlank() }
-                        val realImage = meta.imageUrl?.takeIf { it.isNotBlank() }
-
-                        if (realTitle != null || realDesc != null || realImage != null) {
-                            val updatedItem = savedItem.copy(
-                                title = realTitle ?: savedItem.title,
-                                linkTitle = realTitle ?: savedItem.linkTitle,
-                                linkDescription = realDesc ?: reviewItem.description.takeIf { it.isNotBlank() },
-                                linkImage = realImage ?: savedItem.linkImage
-                            )
-                            repository.saveItem(updatedItem, null)
-                            withContext(Dispatchers.Main) {
-                                com.example.widget.WidgetUpdater.update(context)
-                            }
-                        }
-                    } catch (cancel: kotlinx.coroutines.CancellationException) {
-                        throw cancel
-                    } catch (_: Exception) {
-                        // The durable link remains available without optional metadata.
-                    }
                 } catch (cancel: kotlinx.coroutines.CancellationException) {
                     throw cancel
                 } catch (_: Exception) {
@@ -1307,6 +1267,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     // ----------------------------------------------------
 
     private var metadataFetchJob: kotlinx.coroutines.Job? = null
+    private var metadataFetchToken = 0L
 
     fun fetchLinkPreviewForActiveItem(url: String) {
         val currentItem = _activeCaptureItem.value ?: return
@@ -1314,6 +1275,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         if (url.isBlank()) return
 
         metadataFetchJob?.cancel()
+        val fetchToken = ++metadataFetchToken
         _isMetadataExtracting.value = true
         _metadataError.value = null
 
@@ -1321,9 +1283,9 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val metadata = repository.fetchLinkMetadata(url)
                 val updatedItem = _activeCaptureItem.value ?: return@launch
-                if (updatedItem.content == url) {
-                    val finalDescription = metadata.description?.takeIf { it.isNotBlank() }
-                        ?: updatedItem.linkDescription?.takeIf { it.isNotBlank() }
+                if (updatedItem.id == currentItem.id && updatedItem.content == url) {
+                    val finalDescription = if (updatedItem.linkDescription != currentItem.linkDescription) updatedItem.linkDescription
+                        else metadata.description?.takeIf { it.isNotBlank() } ?: updatedItem.linkDescription
                     _activeCaptureItem.value = updatedItem.copy(
                         linkTitle = metadata.title ?: updatedItem.linkTitle,
                         linkDescription = finalDescription,
@@ -1335,11 +1297,13 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                         _metadataError.value = "No metadata details could be parsed from this page."
                     }
                 }
+            } catch (cancel: kotlinx.coroutines.CancellationException) {
+                throw cancel
             } catch (e: Exception) {
-                Log.e("CobaltVM", "Failed to fetch link preview: ${e.message}")
+                Log.w("CobaltVM", "Link preview unavailable")
                 _metadataError.value = "Extraction failed: ${e.localizedMessage ?: "Network error or invalid link"}"
             } finally {
-                _isMetadataExtracting.value = false
+                if (fetchToken == metadataFetchToken) _isMetadataExtracting.value = false
             }
         }
     }
@@ -1865,26 +1829,10 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     folders = selectedFolders,
                     timestamp = System.currentTimeMillis()
                 )
-                val savedItem = repository.saveItem(newItem, null)
+                repository.saveItem(newItem, null)
                 onSaved()
                 showToast("Item saved successfully.")
 
-                if (type == SavedItemType.LINK && content.isNotBlank()) {
-                    launch(kotlinx.coroutines.Dispatchers.IO) {
-                        try {
-                            val metadata = repository.fetchLinkMetadata(content)
-                            val updatedItem = savedItem.copy(
-                                linkTitle = metadata.title,
-                                linkDescription = metadata.description,
-                                linkImage = metadata.imageUrl,
-                                title = metadata.title ?: savedItem.title
-                            )
-                            repository.saveItem(updatedItem, null)
-                        } catch (e: Exception) {
-                            Log.e("CobaltVM", "Bg link preview error: ${e.message}")
-                        }
-                    }
-                }
             } catch (cancel: kotlinx.coroutines.CancellationException) {
                 throw cancel
             } catch (_: Exception) {
@@ -1906,9 +1854,6 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             _saveProgress.value = 0f
             try {
                 var finalItem = item
-                if (finalItem.type == SavedItemType.LINK && finalItem.linkTitle.isNullOrBlank()) {
-                    finalItem = buildItemWithFetchedMetadata(finalItem)
-                }
                 val fallbacks = context.loadTitleFallbacks()
                 val isAudioMemo = finalItem.type == SavedItemType.AUDIO && (!finalItem.thumbnailPath.isNullOrBlank() || pendingMediaBytes != null)
                 val resolvedTitle = ItemTitleResolver.resolveItemTitle(

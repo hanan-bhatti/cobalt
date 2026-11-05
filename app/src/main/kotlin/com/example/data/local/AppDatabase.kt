@@ -25,8 +25,9 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [SavedItemEntity::class, CustomFolderEntity::class, NoteSearchEntity::class, TrashEntryEntity::class], version = 10, exportSchema = false)
+@Database(entities = [SavedItemEntity::class, CustomFolderEntity::class, NoteSearchEntity::class, TrashEntryEntity::class, LinkPreviewEntity::class], version = 11, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
+    abstract fun linkPreviewDao(): LinkPreviewDao
     abstract fun trashDao(): TrashDao
     abstract fun savedItemDao(): SavedItemDao
     abstract fun customFolderDao(): CustomFolderDao
@@ -79,6 +80,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS link_preview_queue (itemId TEXT NOT NULL PRIMARY KEY, url TEXT NOT NULL, replaceFallback INTEGER NOT NULL, pending INTEGER NOT NULL, attempts INTEGER NOT NULL, generation TEXT NOT NULL)")
+                // No descriptions are copied or split. Existing bookmarks do not trigger network requests.
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -86,7 +94,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "cobalt_db"
                 )
-                .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+                .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
                 .build()
                 INSTANCE = instance
                 instance

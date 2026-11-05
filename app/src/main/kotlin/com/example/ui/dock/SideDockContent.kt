@@ -460,27 +460,6 @@ fun SideDockContent(
                 linkText = ""
                 keyboardController?.hide()
 
-                // Asynchronous background OpenGraph metadata extraction
-                launch(Dispatchers.IO) {
-                    try {
-                        val meta = repository.fetchLinkMetadata(cleanUrl)
-                        val hasTitle = !meta.title.isNullOrBlank()
-                        val hasDesc = !meta.description.isNullOrBlank()
-                        val hasImage = !meta.imageUrl.isNullOrBlank()
-                        if (hasTitle || hasDesc || hasImage) {
-                            val enriched = newItem.copy(
-                                title = meta.title?.takeIf { it.isNotBlank() } ?: hostName,
-                                linkTitle = meta.title ?: newItem.linkTitle,
-                                linkDescription = meta.description?.takeIf { it.isNotBlank() } ?: newItem.linkDescription,
-                                linkImage = meta.imageUrl ?: newItem.linkImage
-                            )
-                            repository.saveItem(enriched)
-                            WidgetUpdater.update(context)
-                        }
-                    } catch (e: Exception) {
-                        com.example.util.SafeLogger.e("CobaltSideDock", "Metadata extraction failed: ${e.message}")
-                    }
-                }
                 } catch (cancel: CancellationException) { throw cancel }
                 catch (_: Exception) { Toast.makeText(context, "Could not save the link. Input retained; retry.", Toast.LENGTH_LONG).show() }
                 finally { dockSaving = false }
