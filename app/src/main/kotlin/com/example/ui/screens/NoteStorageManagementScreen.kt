@@ -60,16 +60,18 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                         SettingsSubsectionHeader("Your data")
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             ExpressiveSettingsNavigationItem("Manage notes", onClick = { open("recovery") },
-                                subtitle = "Read, export or delete your notes", shape = connectedPillShape(0, 4))
+                                subtitle = "Read, export or delete your notes", shape = connectedPillShape(0, 5))
+                            ExpressiveSettingsNavigationItem("Draft recovery", onClick = { open("drafts") },
+                                subtitle = "Recover interrupted and unsaved edits", shape = connectedPillShape(1, 5))
                             ExpressiveSettingsNavigationItem("Trash", onClick = { open("trash") },
                                 subtitle = "Restore items or delete them forever", trailingBadge = report?.let { "${it.trashCount} · ${formatNoteSize(context, it.trash)}" },
-                                shape = connectedPillShape(1, 4))
+                                shape = connectedPillShape(2, 5))
                             ExpressiveSettingsNavigationItem("Version history", onClick = { open("history") },
                                 subtitle = "Restore versions and review history cleanup", trailingBadge = report?.let { formatNoteSize(context, it.older) },
-                                shape = connectedPillShape(2, 4))
+                                shape = connectedPillShape(3, 5))
                             ExpressiveSettingsNavigationItem("Unlinked files", onClick = { open("unlinked") },
                                 subtitle = "Retained files without a matching note", trailingBadge = report?.let { formatNoteSize(context, it.unattached) },
-                                shape = connectedPillShape(3, 4))
+                                shape = connectedPillShape(4, 5))
                         }
                     }
                     item {
@@ -81,6 +83,7 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                 }
             }
         }
+        composable("drafts") { NoteStorageRoute(navigation, this) { CaptureDraftRecoveryScreen { navigation.popBackStack() } } }
         composable("trash") {
             NoteStorageRoute(navigation, this) { NoteTrashScreen(trash, onBack = { navigation.popBackStack() }) }
         }
