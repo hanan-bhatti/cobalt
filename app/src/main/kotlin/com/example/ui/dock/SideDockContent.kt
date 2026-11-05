@@ -659,7 +659,7 @@ fun SideDockContent(
                                     }
                                 )
                                 QuickActionItem(
-                                    iconRes = R.drawable.ic_custom_home,
+                                    iconRes = R.drawable.ic_nav_home_outline,
                                     label = "Home",
                                     isSelected = false,
                                     useBlur = useBlur,
@@ -683,16 +683,10 @@ fun SideDockContent(
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 10.dp, vertical = 7.dp)
+                                        .padding(horizontal = 8.dp)
                                 ) {
-                                    if (dockSaving) {
-                                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                                    }
-                                    if (pendingDockNote != null && !dockSaving) {
-                                        Text("A paste is waiting to save. Tap Save before closing.", style = MaterialTheme.typography.labelSmall)
-                                    }
                                     Row(
-                                        modifier = Modifier.fillMaxWidth(),
+                                        modifier = Modifier.fillMaxWidth().height(48.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         // Leading Mode Icon
@@ -713,11 +707,11 @@ fun SideDockContent(
                                                 .padding(vertical = 2.dp)
                                         ) {
                                             if (currentText.isEmpty()) {
-                                                val placeholderText = if (dockInputMode == DockInputMode.LINK) {
-                                                    if (hasClipboardUrl) "https://$clipboardDomain..." else "https://..."
-                                                } else {
-                                                    "Quick thought..."
-                                                }
+                                                val clipboardValue = if (dockInputMode == DockInputMode.LINK) clipboardUrl.orEmpty() else clipboardText
+                                                val placeholderText = if (clipboardValue.isNotBlank()) {
+                                                    "Paste " + com.example.util.ItemTitleResolver.truncateSafely(
+                                                        clipboardValue.take(160).replace(Regex("\\s+"), " ").trim(), 80)
+                                                } else if (dockInputMode == DockInputMode.LINK) "Paste a link…" else "Write a note…"
                                                 Text(
                                                     text = placeholderText,
                                                     style = MaterialTheme.typography.bodyMedium.copy(
@@ -735,7 +729,8 @@ fun SideDockContent(
                                                 onValueChange = { newText ->
                                                     if (com.example.notes.NoteEditorWindows.requiresWindow(newText)) {
                                                         dockInputMode = DockInputMode.NOTE
-                                                        saveDockNote(newText)
+                                                        pendingDockNote = newText
+                                                        noteText = com.example.util.ItemTitleResolver.truncateSafely(newText, 512)
                                                     } else if (dockInputMode == DockInputMode.LINK) linkText = newText
                                                     else noteText = newText
                                                 },
@@ -748,13 +743,13 @@ fun SideDockContent(
                                                     fontWeight = FontWeight.Normal,
                                                     lineHeight = 16.sp
                                                 ),
-                                                singleLine = dockInputMode == DockInputMode.LINK,
+                                                singleLine = true,
                                                 minLines = 1,
-                                                maxLines = if (dockInputMode == DockInputMode.LINK) 1 else 3,
+                                                maxLines = 1,
                                                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                                 keyboardOptions = KeyboardOptions(
                                                     keyboardType = if (dockInputMode == DockInputMode.LINK) KeyboardType.Uri else KeyboardType.Text,
-                                                    imeAction = if (dockInputMode == DockInputMode.LINK) ImeAction.Done else ImeAction.Default
+                                                    imeAction = ImeAction.Done
                                                 ),
                                                 keyboardActions = KeyboardActions(
                                                     onDone = {
@@ -764,196 +759,51 @@ fun SideDockContent(
                                             )
                                         }
 
-                                        // Action Button: Clear [✕] when text entered, or compact [📋 Paste] pill when empty
-                                        if (currentText.isNotEmpty()) {
-                                            IconButton(
-                                                onClick = {
-                                                    if (dockInputMode == DockInputMode.LINK) linkText = "" else noteText = ""
-                                                },
-                                                modifier = Modifier.size(24.dp)
-                                            ) {
-                                                Icon(
-                                                    painter = painterResource(id = R.drawable.ic_custom_close),
-                                                    contentDescription = "Clear",
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier.size(12.dp)
-                                                )
+                                        if (currentText.isNotEmpty() || pendingDockNote != null) {
+                                            IconButton(onClick = {
+                                                if (dockInputMode == DockInputMode.LINK) linkText = "" else { noteText = ""; pendingDockNote = null }
+                                            }, enabled = !dockSaving, modifier = Modifier.size(40.dp)) {
+                                                Icon(painterResource(R.drawable.ic_custom_close), "Clear input",
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
                                             }
-                                        } else if (dockInputMode == DockInputMode.LINK && hasClipboardUrl) {
-                                            Surface(
-                                                onClick = {
-                                                    linkText = clipboardUrl ?: clipboardText
-                                                    inputFocusRequester.requestFocus()
-                                                },
-                                                shape = RoundedCornerShape(7.dp),
-                                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
-                                                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
-                                                modifier = Modifier.height(24.dp)
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.padding(horizontal = 6.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
-                                                ) {
-                                                    Icon(
-                                                        painter = painterResource(id = R.drawable.ic_custom_paste),
-                                                        contentDescription = "Paste",
-                                                        tint = MaterialTheme.colorScheme.primary,
-                                                        modifier = Modifier.size(11.dp)
-                                                    )
-                                                    Text(
-                                                        text = "Paste",
-                                                        style = MaterialTheme.typography.labelSmall.copy(
-                                                            fontSize = 10.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            color = MaterialTheme.colorScheme.primary
-                                                        )
-                                                    )
-                                                }
-                                            }
-                                        } else if (dockInputMode != DockInputMode.LINK && clipboardText.isNotBlank()) {
-                                            Surface(
-                                                onClick = {
-                                                    noteText = clipboardText
-                                                    inputFocusRequester.requestFocus()
-                                                },
-                                                shape = RoundedCornerShape(7.dp),
-                                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
-                                                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
-                                                modifier = Modifier.height(24.dp)
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.padding(horizontal = 6.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
-                                                ) {
-                                                    Icon(
-                                                        painter = painterResource(id = R.drawable.ic_custom_paste),
-                                                        contentDescription = "Paste",
-                                                        tint = MaterialTheme.colorScheme.primary,
-                                                        modifier = Modifier.size(11.dp)
-                                                    )
-                                                    Text(
-                                                        text = "Paste",
-                                                        style = MaterialTheme.typography.labelSmall.copy(
-                                                            fontSize = 10.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            color = MaterialTheme.colorScheme.primary
-                                                        )
-                                                    )
-                                                }
+                                        } else if (if (dockInputMode == DockInputMode.LINK) hasClipboardUrl else clipboardText.isNotBlank()) {
+                                            IconButton(onClick = {
+                                                if (dockInputMode == DockInputMode.LINK) linkText = clipboardUrl.orEmpty()
+                                                else if (com.example.notes.NoteEditorWindows.requiresWindow(clipboardText)) {
+                                                    pendingDockNote = clipboardText
+                                                    noteText = com.example.util.ItemTitleResolver.truncateSafely(clipboardText, 512)
+                                                } else noteText = clipboardText
+                                                inputFocusRequester.requestFocus()
+                                            }, enabled = !dockSaving, modifier = Modifier.size(40.dp)) {
+                                                Icon(painterResource(R.drawable.ic_custom_paste), "Paste from clipboard",
+                                                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
                                             }
                                         }
-
-                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Spacer(Modifier.width(4.dp))
 
                                         // Send Button
                                         val isSendable = !dockSaving && (if (dockInputMode == DockInputMode.LINK) linkText.isNotBlank() else pendingDockNote != null || noteText.isNotEmpty())
-                                        IconButton(
+                                        FilledIconButton(
                                             onClick = {
                                                 submitInput()
                                             },
                                             enabled = isSendable,
-                                            modifier = Modifier
-                                                .size(28.dp)
-                                                .background(
-                                                    if (isSendable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
-                                                    shape = CircleShape
-                                                )
+                                            modifier = Modifier.size(40.dp),
+                                            shape = RoundedCornerShape(16.dp),
+                                            colors = IconButtonDefaults.filledIconButtonColors(
+                                                containerColor = MaterialTheme.colorScheme.primary,
+                                                contentColor = MaterialTheme.colorScheme.onPrimary)
                                         ) {
                                             Icon(
                                                 painter = painterResource(id = R.drawable.ic_custom_send),
                                                 contentDescription = if (dockInputMode == DockInputMode.LINK) "Save Link" else "Save Note",
                                                 tint = if (isSendable) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                                modifier = Modifier.size(13.dp)
+                                                modifier = Modifier.size(22.dp)
                                             )
                                         }
                                     }
 
-                                    // Supporting text pill below field when clipboard content is available and field is empty
-                                    if (currentText.isEmpty()) {
-                                        if (dockInputMode == DockInputMode.LINK && hasClipboardUrl) {
-                                            Spacer(modifier = Modifier.height(5.dp))
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .clip(RoundedCornerShape(6.dp))
-                                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
-                                                    .clickable {
-                                                        linkText = clipboardUrl ?: clipboardText
-                                                        inputFocusRequester.requestFocus()
-                                                    }
-                                                    .padding(horizontal = 7.dp, vertical = 3.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                Icon(
-                                                    painter = painterResource(id = R.drawable.ic_custom_paste),
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(10.dp)
-                                                )
-                                                Text(
-                                                    text = clipboardDomain,
-                                                    style = MaterialTheme.typography.labelSmall.copy(
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Medium,
-                                                        color = MaterialTheme.colorScheme.primary
-                                                    ),
-                                                    maxLines = 1,
-                                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                                    modifier = Modifier.weight(1f)
-                                                )
-                                                Text(
-                                                    text = "Tap to paste",
-                                                    style = MaterialTheme.typography.labelSmall.copy(
-                                                        fontSize = 9.sp,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                                    )
-                                                )
-                                            }
-                                        } else if (dockInputMode != DockInputMode.LINK && clipboardText.isNotBlank()) {
-                                            Spacer(modifier = Modifier.height(5.dp))
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .clip(RoundedCornerShape(6.dp))
-                                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
-                                                    .clickable {
-                                                        noteText = clipboardText
-                                                        inputFocusRequester.requestFocus()
-                                                    }
-                                                    .padding(horizontal = 7.dp, vertical = 3.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                Icon(
-                                                    painter = painterResource(id = R.drawable.ic_custom_paste),
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(10.dp)
-                                                )
-                                                Text(
-                                                    text = clipboardText.take(24) + if (clipboardText.length > 24) "..." else "",
-                                                    style = MaterialTheme.typography.labelSmall.copy(
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Medium,
-                                                        color = MaterialTheme.colorScheme.primary
-                                                    ),
-                                                    maxLines = 1,
-                                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                                    modifier = Modifier.weight(1f)
-                                                )
-                                                Text(
-                                                    text = "Tap to paste",
-                                                    style = MaterialTheme.typography.labelSmall.copy(
-                                                        fontSize = 9.sp,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                                    )
-                                                )
-                                            }
-                                        }
-                                    }
+
                                 }
                             }
                         }
