@@ -65,8 +65,21 @@ class DiskTextModelTest {
         val model = DiskTextModel.open(original, base.copy(bytes = original.size), File(directory, "append"), File(directory, "state"), HostTestNoteFileOperations)
         try {
             model.replace(0, 0, "kept")
+            val retainedBytes = File(directory, "append").length()
             try { model.replace(0, 3, StringReader("cancelled"), checkCancelled = { throw kotlinx.coroutines.CancellationException() }); fail("Expected cancellation") }
             catch (_: kotlinx.coroutines.CancellationException) {}
+            var reads = 0
+            val interrupted = object : Reader() {
+                override fun read(chars: CharArray, offset: Int, length: Int): Int {
+                    if (reads++ > 0) throw kotlinx.coroutines.CancellationException()
+                    repeat(length) { chars[offset + it] = 'x' }
+                    return length
+                }
+                override fun close() = Unit
+            }
+            try { model.replace(0, 3, interrupted); fail("Expected mid-stream cancellation") }
+            catch (_: kotlinx.coroutines.CancellationException) {}
+            assertEquals("Cancelled insertion left unused bytes", retainedBytes, File(directory, "append").length())
             assertEquals("keptabc", model.text(0, 100))
             assertTrue(model.undo()); assertEquals("abc", model.text(0, 100))
         } finally { model.close(); directory.deleteRecursively() }
@@ -117,6 +130,11 @@ class DiskTextModelTest {
             val pending = listOf(listOf(DiskTextModel.Replacement(0, 0, "queued ")))
             assertEquals("queued unsaved original", model.openRecoveryUtf8(pending).bufferedReader().use { it.readText() })
             assertArrayEquals(durable, state.readBytes())
+            failWrites = false
+            model.recover()
+            assertEquals("unsaved original", model.text(0, 100))
+            assertTrue(model.undo())
+            assertEquals("kept original", model.text(0, 100))
         } finally { model.close(); directory.deleteRecursively() }
     }
     @Test fun streamedToolsFindFarContentAndReplaceAllAsOneUndoOperation() {

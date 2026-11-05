@@ -94,18 +94,18 @@ internal object DiskJournalRecovery {
     /** Read code units exactly, including an unpaired surrogate pending an IME replacement. */
     internal class Utf16UnitReader(input: InputStream) : Reader() {
         private val data = DataInputStream(BufferedInputStream(input, 16 * 1024))
+        private val buffer = ByteArray(8192)
         override fun read(chars: CharArray, offset: Int, length: Int): Int {
             if (offset < 0 || length < 0 || offset > chars.size - length) throw IndexOutOfBoundsException()
             if (length == 0) return 0
-            var count = 0
-            while (count < length) {
-                val high = data.read()
-                if (high < 0) return if (count == 0) -1 else count
-                val low = data.read()
-                if (low < 0) throw EOFException("Incomplete UTF-16 scratch unit")
-                chars[offset + count++] = ((high shl 8) or low).toChar()
+            var count = data.read(buffer, 0, minOf(length, buffer.size / 2) * 2)
+            if (count < 0) return -1
+            if (count % 2 != 0) {
+                val low = data.read(); if (low < 0) throw EOFException("Incomplete UTF-16 scratch unit")
+                buffer[count++] = low.toByte()
             }
-            return count
+            repeat(count / 2) { chars[offset + it] = (((buffer[it * 2].toInt() and 255) shl 8) or (buffer[it * 2 + 1].toInt() and 255)).toChar() }
+            return count / 2
         }
         override fun close() = data.close()
     }

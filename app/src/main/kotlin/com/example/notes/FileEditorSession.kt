@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.Mutex
-import io.github.rosemoe.sora.text.ContentIO
 import org.json.JSONObject
 
 /** File-backed editing state shared by the original capture screen and its toolbar. */
@@ -18,7 +17,7 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
         val window: EditableNoteWindow = EditableNoteWindow(0, 0, ""), val text: String = "", val dirty: Boolean = false,
         val busy: Boolean = false, val error: String? = null, val previous: List<Long> = emptyList(),
         val document: ContinuousNoteDocument? = null, val caretStart: Int = 0, val caretEnd: Int = 0,
-        val editToken: String? = null)
+        val editToken: String? = null, val diskToken: String? = null, val checkpointRevision: Long = 0)
     private val context = context.applicationContext
     private val mutable = MutableStateFlow(State())
     val state = mutable.asStateFlow()
@@ -37,6 +36,20 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
         val id = owner.id ?: error("Missing note identity")
         val ref = owner.generation ?: error("Missing journal base")
         editWriter?.close()
+        document.disk?.let { disk ->
+            val next = owner.copy(diskToken = document.diskToken)
+            document.awaitRecovery = { disk.flush() }
+            disk.onChanged = {
+                document.changed(); document.byteLength = disk.state.value.bytes
+                if (mutable.value.document === document) continuousChanged(document)
+            }
+            disk.onFailure = { message ->
+                document.recoveryReady = false; document.freeze(true)
+                if (mutable.value.document === document) mutable.value = mutable.value.copy(error = message)
+            }
+            withContext(Dispatchers.IO) { snapshot(next) }
+            return next
+        }
         val token = owner.editToken ?: java.util.UUID.randomUUID().toString()
         val log = withContext(Dispatchers.IO) {
             if (owner.editToken == null) store.createEditJournal(id, token, ref) else store.editJournal(id, token)
@@ -98,32 +111,24 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
                 val source = opening
                 val loaded = withContext(Dispatchers.IO) {
                     val ref = source.generation ?: error("Body unavailable")
-                    val table = PieceTable(FileNoteByteSource(store, source.id!!, ref.hash, ref.bytes))
+                    val token = source.diskToken ?: java.util.UUID.randomUUID().toString()
                     val cancellation = currentCoroutineContext()
-                    val runtime = Runtime.getRuntime()
-                    val budget = ContinuousEditorCapacity.budget(runtime.maxMemory(), runtime.totalMemory() - runtime.freeMemory())
-                    table.openStream().use { input -> ContinuousEditorCapacity.check(input, budget) { cancellation.ensureActive() } }
-                    table.openStream().use { input ->
-                        val checked = object : java.io.FilterInputStream(input) {
-                            override fun read(bytes: ByteArray, off: Int, len: Int): Int {
-                                cancellation.ensureActive(); return super.read(bytes, off, len)
-                            }
-                            override fun read(): Int { cancellation.ensureActive(); return super.read() }
-                        }
-                        val model = ContinuousNoteDocument(ContentIO.createFrom(checked, Charsets.UTF_8), table.size)
-                        try {
-                            model.also {
-                                it.selectionStart = source.caretStart.coerceIn(0, it.content.length)
-                                it.selectionEnd = source.caretEnd.coerceIn(it.selectionStart, it.content.length)
-                            }
-                        } catch (error: Throwable) { model.content.release(); throw error }
+                    val model = store.openLiveEditor(source.id!!, token, ref, reopen = source.diskToken != null) { cancellation.ensureActive() }
+                    if (source.diskToken == null || model.status.revision == source.checkpointRevision) {
+                        model.select(source.caretStart.coerceIn(0, model.status.characters), source.caretEnd.coerceIn(0, model.status.characters))
+                    }
+                    val disk = DiskEditorSession(scope, model)
+                    return@withContext ContinuousNoteDocument(io.github.rosemoe.sora.text.Content(""), model.status.bytes, disk, token).also {
+                        it.restoredRevision(model.status.revision); it.savedRevision = source.checkpointRevision
+                        it.selectionStart = model.status.selection.anchor
+                        it.selectionEnd = model.status.selection.caret
                     }
                 }
                 if (mutable.value.id == source.id && mutable.value.generation?.hash == source.generation?.hash) {
-                    val next = opening.copy(document = loaded, busy = false, dirty = loaded.revision > 0)
+                    val next = opening.copy(document = loaded, busy = false, dirty = loaded.revision != loaded.savedRevision)
                     try { mutable.value = attachJournal(next) }
-                    catch (error: Throwable) { withContext(NonCancellable + Dispatchers.IO) { loaded.content.release() }; throw error }
-                } else withContext(Dispatchers.IO) { loaded.content.release() }
+                    catch (error: Throwable) { withContext(NonCancellable + Dispatchers.IO) { loaded.closeSession() }; throw error }
+                } else withContext(Dispatchers.IO) { loaded.closeSession() }
             } catch (cancel: CancellationException) { throw cancel }
             catch (error: EditorCapacityException) { continuousFailure(opening, error.message.orEmpty()) }
             catch (_: OutOfMemoryError) { continuousFailure(opening, "There is not enough memory to edit this note. Read it as plain text or export it. Original and draft files are retained.") }
@@ -142,7 +147,7 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
         val current = mutable.value
         if (current.document !== document) return
         document.changed()
-        val recoveryError = if (editWriter?.healthy == true) null else current.error ?:
+        val recoveryError = if (document.disk?.state?.value?.error == null && document.disk != null || editWriter?.healthy == true) null else current.error ?:
             "Recovery is paused. Use Save before closing; the original is retained."
         mutable.value = current.copy(dirty = true, error = recoveryError)
         journal?.cancel()
@@ -178,15 +183,22 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
                 journal?.join()
                 val range = withContext(Dispatchers.Default) {
                     val cancellation = currentCoroutineContext()
+                    if (document.disk != null) return@withContext store.open(current.id!!, expectedHash).use {
+                        ContinuousTextSearch.utf16Range(it, start, end) { cancellation.ensureActive() }
+                    }
                     val content = document.snapshot()
                     try { ContinuousTextSearch.utf16Range(content, start, end) { cancellation.ensureActive() } }
                     finally { content.release() }
                 }
                 check(document.revision == revision && mutable.value.document === document) { "The preview changed. Retry this edit." }
-                document.content.replace(range.first, range.second, replacement)
-                // Formatted preview has no native View/ContentChangeEvent bridge attached.
-                document.recordEdit(range.first, range.second - range.first, replacement)
-                continuousChanged(document)
+                if (document.disk != null) {
+                    document.disk.replace(range.first, range.second, java.io.StringReader(replacement))
+                } else {
+                    document.content.replace(range.first, range.second, replacement)
+                    // Formatted preview has no native View/ContentChangeEvent bridge attached.
+                    document.recordEdit(range.first, range.second - range.first, replacement)
+                    continuousChanged(document)
+                }
                 val (ref, savedRevision) = checkpointContinuous(mutable.value)
                 if (document.revision == savedRevision) document.byteLength = ref.bytes
                 mutable.value = mutable.value.copy(generation = ref, busy = false,
@@ -194,12 +206,20 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
             } catch (cancel: CancellationException) { throw cancel }
             catch (_: Exception) { mutable.value = mutable.value.copy(busy = false,
                 error = "Preview edit could not be saved. Original and draft retained; retry Save.") }
-            finally { document.freeze(wasFrozen || editWriter?.healthy != true) }
+            finally { document.freeze(wasFrozen || mutable.value.error != null || if (document.disk != null) document.disk.state.value.error != null else editWriter?.healthy != true) }
         }
     }
 
     private suspend fun flushEditOperations() {
-        try { editWriter?.flush() }
+        try {
+            val document = mutable.value.document
+            if (document?.disk != null) {
+                // Retry a failed journal before queueing ordinary selection commands.
+                document.disk.flush()
+                document.disk.select(document.selectionStart, document.selectionEnd)
+                document.disk.flush()
+            } else editWriter?.flush()
+        }
         catch (cancel: CancellationException) { throw cancel }
         catch (_: Exception) {
             mutable.value = mutable.value.copy(error = "Recovery journal failed. Use Save before closing; the original is retained.")
@@ -208,6 +228,28 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
 
     private suspend fun checkpointContinuous(current: State): Pair<NoteBodyRef, Long> = checkpointMutex.withLock {
         val document = current.document ?: error("No continuous document")
+        document.disk?.let { disk ->
+            val frozen = document.frozen
+            withContext(Dispatchers.Main.immediate) { document.freeze(true) }
+            try {
+                disk.flush()
+                disk.select(document.selectionStart, document.selectionEnd)
+                disk.flush(); document.changed(); document.byteLength = disk.state.value.bytes
+                document.recoveryReady = true
+                val revision = disk.state.value.revision
+                if (revision == document.savedRevision && current.generation != null) return@withLock current.generation to revision
+                val ref = withContext(Dispatchers.IO) {
+                    val cancellation = currentCoroutineContext()
+                    disk.openUtf8().use { input -> store.writeAtomic(current.id!!, input,
+                        document.permittedBytes > NoteSizePolicy.IMPORT_MAX_BYTES) { cancellation.ensureActive() } }
+                }
+                val next = current.copy(generation = ref, dirty = false, diskToken = document.diskToken, checkpointRevision = revision)
+                withContext(Dispatchers.IO) { snapshot(next); store.committed(current.id!!, ref.hash) }
+                document.savedRevision = revision; document.byteLength = ref.bytes
+                if (mutable.value.document === document) mutable.value = next
+                return@withLock ref to revision
+            } finally { withContext(NonCancellable + Dispatchers.Main.immediate) { document.freeze(frozen) } }
+        }
         // Reopening preview or saving metadata must not stream an unchanged body again.
         // A failed recovery writer still requires a full checkpoint, even when clean.
         if (!current.dirty && document.revision == document.savedRevision && editWriter?.healthy == true) {
@@ -266,6 +308,8 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
             .put("caretStart", s.document?.selectionStart ?: s.caretStart)
             .put("caretEnd", s.document?.selectionEnd ?: s.caretEnd)
             .put("editToken", s.editToken ?: JSONObject.NULL)
+            .put("diskToken", s.diskToken ?: s.document?.diskToken ?: JSONObject.NULL)
+            .put("checkpointRevision", s.checkpointRevision)
         check(prefs.edit().putString(id, json.toString()).commit()) { "Could not journal edits; retry before closing" }
     }
     private suspend fun readWindow(id: String, ref: NoteBodyRef, start: Long) = persistence.window(id, ref.hash, start)
@@ -306,7 +350,9 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
                 val window = readWindow(item.id, ref, start)
                 State(item.id, hash, ref, if (patchEnd != null) window.copy(end = patchEnd) else window, patchText ?: window.text, patchText != null,
                     caretStart = saved?.optInt("caretStart", 0) ?: 0, caretEnd = saved?.optInt("caretEnd", 0) ?: 0,
-                    editToken = saved?.optString("editToken")?.takeUnless { it == "null" || it.isBlank() })
+                    editToken = saved?.optString("editToken")?.takeUnless { it == "null" || it.isBlank() },
+                    diskToken = saved?.optString("diskToken")?.takeUnless { it == "null" || it.isBlank() },
+                    checkpointRevision = saved?.optLong("checkpointRevision", 0) ?: 0)
             }
             if (mutable.value.id == item.id) mutable.value = loaded
         } catch (cancel: CancellationException) { throw cancel }
@@ -441,6 +487,10 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
                 completedToken?.let { token -> withContext(Dispatchers.IO) {
                     runCatching { store.retireEditJournal(item.id, token, ref) }
                 } }
+                document.disk?.let { disk ->
+                    disk.onChanged = null; disk.onFailure = null
+                    document.diskToken?.let { token -> disk.retireAfterClose { store.retireLiveEditor(item.id, token) } }
+                }
                 mutable.value = State()
                 failedClosings.remove(item.id)
                 document.closeSession()
@@ -482,6 +532,10 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
     private suspend fun flushJournalSnapshot(current: State): Boolean = withContext(Dispatchers.IO) {
         runCatching {
             if (current.document != null) {
+                current.document.disk?.let { disk ->
+                    disk.select(current.document.selectionStart, current.document.selectionEnd)
+                    disk.flush(); current.document.changed()
+                }
                 if (current.dirty || current.document.revision != current.document.savedRevision) {
                     checkpointContinuous(current)
                 }
@@ -495,6 +549,9 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
                             current.document.revision == current.document.savedRevision && json.isNull("patch")) {
                             // Opening and closing an unchanged saved note must not leave a phantom draft.
                             check(prefs.edit().remove(current.id).commit())
+                            current.document.disk?.let { disk -> current.document.diskToken?.let { token ->
+                                disk.retireAfterClose { store.retireLiveEditor(current.id!!, token) }
+                            } }
                             json.optString("editToken").takeUnless { it.isBlank() || it == "null" }?.let { token ->
                                 runCatching { store.retireEditJournal(current.id!!, token,
                                     NoteBodyRef(json.getString("hash"), json.getLong("bytes"), json.getString("preview"))) }

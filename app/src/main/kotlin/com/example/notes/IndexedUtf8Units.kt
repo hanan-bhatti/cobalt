@@ -37,22 +37,31 @@ internal class IndexedUtf8Units private constructor(
         } catch (error: Throwable) { reader.close(); throw error }
         return object : InputStream() {
             var remaining = length
-            var low = -1
-            var initialLow = offset % 2 == 1L
+            private val chars = CharArray(4096)
+            private val buffer = ByteArray(8192)
+            private var position = 0
+            private var available = 0
+            private var initialLow = offset % 2 == 1L
+            private fun fill(): Boolean {
+                if (remaining == 0L) return false
+                if (position < available) return true
+                val count = reader.read(chars, 0, minOf(chars.size.toLong(), (remaining + 2) / 2).toInt())
+                if (count < 0) throw EOFException("UTF-8 source is incomplete")
+                if (count == 0) return fill()
+                repeat(count) { buffer[it * 2] = (chars[it].code ushr 8).toByte(); buffer[it * 2 + 1] = chars[it].code.toByte() }
+                position = if (initialLow) 1 else 0; initialLow = false; available = count * 2
+                return true
+            }
             override fun read(): Int {
-                if (remaining == 0L) return -1
-                if (low >= 0) return low.also { low = -1; remaining-- }
-                val next = reader.read()
-                if (next < 0) throw EOFException("UTF-8 source is incomplete")
-                if (initialLow) { initialLow = false; remaining--; return next and 255 }
-                low = next and 255; remaining--; return next ushr 8
+                if (!fill()) return -1
+                remaining--; return buffer[position++].toInt() and 255
             }
             override fun read(target: ByteArray, off: Int, len: Int): Int {
                 if (off < 0 || len < 0 || off > target.size - len) throw IndexOutOfBoundsException()
                 if (len == 0) return 0
-                if (remaining == 0L) return -1
-                val count = minOf(len.toLong(), remaining, NoteSizePolicy.IO_CHUNK_BYTES.toLong()).toInt()
-                repeat(count) { target[off + it] = read().toByte() }
+                if (!fill()) return -1
+                val count = minOf(len.toLong(), remaining, (available - position).toLong()).toInt()
+                buffer.copyInto(target, off, position, position + count); position += count; remaining -= count
                 return count
             }
             override fun close() = reader.close()
@@ -67,26 +76,27 @@ internal class IndexedUtf8Units private constructor(
                 .onUnmappableCharacter(CodingErrorAction.REPORT)
             source.openRange(0, source.size).use { raw ->
                 BufferedReader(InputStreamReader(raw, decoder), NoteSizePolicy.IO_CHUNK_BYTES).use { reader ->
+                    val buffer = CharArray(4096)
+                    var pendingHigh = false
                     while (true) {
-                        if (chars % 4096 == 0L) checkCancelled()
-                        val value = reader.read()
-                        if (value < 0) break
-                        when {
-                            Character.isHighSurrogate(value.toChar()) -> {
-                                val low = reader.read()
-                                check(low >= 0 && Character.isLowSurrogate(low.toChar())) { "Invalid UTF-8 scalar" }
-                                chars += 2; position += 4
+                        checkCancelled()
+                        val count = reader.read(buffer)
+                        if (count < 0) break
+                        var index = 0
+                        while (index < count) {
+                            val value = buffer[index++].code
+                            when {
+                                pendingHigh -> { check(Character.isLowSurrogate(value.toChar())); chars += 2; position += 4; pendingHigh = false }
+                                Character.isHighSurrogate(value.toChar()) -> { pendingHigh = true; continue }
+                                value < 0x80 -> { chars++; position++ }
+                                value < 0x800 -> { chars++; position += 2 }
+                                else -> { chars++; position += 3 }
                             }
-                            value < 0x80 -> { chars++; position++ }
-                            value < 0x800 -> { chars++; position += 2 }
-                            else -> { chars++; position += 3 }
-                        }
-                        require(chars <= Int.MAX_VALUE) { "This file exceeds Android text-position capacity; export is still available" }
-                        if (chars >= nextMark) {
-                            marks.add(chars); offsets.add(position); nextMark = chars + 4096
-                            checkCancelled()
+                            require(chars <= Int.MAX_VALUE) { "This file exceeds Android text-position capacity; export is still available" }
+                            if (chars >= nextMark) { marks.add(chars); offsets.add(position); nextMark = chars + 4096 }
                         }
                     }
+                    check(!pendingHigh) { "Incomplete UTF-8 scalar" }
                 }
             }
             check(position == source.size) { "Original body length changed" }

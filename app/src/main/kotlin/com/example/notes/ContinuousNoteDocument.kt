@@ -6,10 +6,11 @@ import kotlinx.coroutines.Job
 
 /**
  * One logical UTF-16 document, retained across Activity recreation. No Android View is retained.
- * The native editor owns selection/IME and operation-based undo. Disk snapshots share immutable
- * lines using Sora's copy-on-write API, rather than copying the note into a String.
+ * The native editor owns selection/IME. Disk documents keep Undo in piece descriptors
+ * and materialize only a bounded native viewport. Legacy resident snapshots share
+ * immutable lines using Sora's copy-on-write API.
  */
-class ContinuousNoteDocument(val content: Content, initialBytes: Long? = null) {
+class ContinuousNoteDocument(val content: Content, initialBytes: Long? = null, val disk: DiskEditorSession? = null, val diskToken: String? = null) {
     @Volatile var byteLength: Long? = initialBytes
     val permittedBytes: Long = maxOf(NoteSizePolicy.IMPORT_MAX_BYTES, initialBytes ?: 0)
     @Volatile var revision: Long = 0
@@ -17,6 +18,7 @@ class ContinuousNoteDocument(val content: Content, initialBytes: Long? = null) {
     var savedRevision: Long = 0
     var selectionStart: Int = 0
     var selectionEnd: Int = 0
+    var viewportStart: Int = 0
     var scrollX: Int = 0
     var scrollY: Int = 0
     var onFreeze: ((Boolean) -> Unit)? = null
@@ -33,7 +35,7 @@ class ContinuousNoteDocument(val content: Content, initialBytes: Long? = null) {
     internal fun detachView() { check(viewOwners > 0); viewOwners--; releaseIfUnused() }
     internal fun closeSession() { sessionClosed = true; freeze(true); releaseIfUnused() }
     private fun releaseIfUnused() {
-        if (sessionClosed && viewOwners == 0 && !released) { released = true; content.release() }
+        if (sessionClosed && viewOwners == 0 && !released) { released = true; disk?.close(); content.release() }
     }
     var recoveryReady: Boolean = true
         internal set
@@ -43,12 +45,13 @@ class ContinuousNoteDocument(val content: Content, initialBytes: Long? = null) {
     init { content.setMaxUndoStackSize(PieceTable.MAX_UNDO_OPERATIONS) }
 
     /** Called on Main, after a native content modification, never for selection-only events. */
-    fun changed() { revision++ }
+    fun changed() { revision = disk?.state?.value?.revision ?: (revision + 1) }
+    internal fun restoredRevision(value: Long) { revision = value }
     fun recordEdit(start: Int, removed: Int, inserted: CharSequence) { onEdit?.invoke(start, removed, inserted) }
     fun freeze(value: Boolean) { frozen = value || !recoveryReady; onFreeze?.invoke(frozen) }
 
     /** IO thread only. Caller must close/release the snapshot after streaming it. */
-    fun snapshot(): Content = content.copyTextShallow()
+    fun snapshot(): Content { check(disk == null) { "Disk documents export through a bounded stream" }; return content.copyTextShallow() }
 
     companion object {
         /** A bounded UTF-8 encoder over a stable line snapshot, including original LF/CRLF/CR. */

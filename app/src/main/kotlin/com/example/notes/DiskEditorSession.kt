@@ -57,7 +57,7 @@ class DiskEditorSession internal constructor(private val scope: CoroutineScope, 
                 catch (cancel: CancellationException) { command.completion?.completeExceptionally(cancel); currentCoroutineContext().ensureActive() }
                 catch (error: Exception) {
                     if (command.completion == null) held.addLast(command)
-                    val isFatal = error is java.io.IOException || command.completion == null
+                    val isFatal = error is java.io.IOException || model.needsRecovery || command.completion == null
                     if (isFatal) failed(error)
                     command.completion?.completeExceptionally(error)
                 }
@@ -169,12 +169,17 @@ class DiskEditorSession internal constructor(private val scope: CoroutineScope, 
     fun close() {
         if (closing) return
         closing = true
-        delivery?.cancel()
-        while (outbox.isNotEmpty()) {
-            val cmd = outbox.removeFirst()
-            queue.trySend(cmd)
+        // A full queue is backpressure, not permission to discard accepted edits.
+        // The session lifetime outlives the View and its owning composition.
+        lifetime.launch(Dispatchers.Main.immediate) {
+            try {
+                delivery?.join()
+                while (outbox.isNotEmpty()) {
+                    queue.send(outbox.first())
+                    outbox.removeFirst()
+                }
+            } finally { queue.close() }
         }
-        queue.close()
     }
     private fun releaseIfUnused() { if (workerFinished && readers == 0 && !disposed) { disposed = true; model.close(); retirement?.let { action -> scope.launch(NonCancellable + Dispatchers.IO) { runCatching(action) } } } }
 }

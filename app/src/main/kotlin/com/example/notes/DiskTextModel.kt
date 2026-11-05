@@ -29,6 +29,7 @@ class DiskTextModel private constructor(
     private var selection = Position(0, 0)
     private var closed = false
     private var failed = false
+    internal val needsRecovery: Boolean get() = failed
     val status: Status get() = Status(revision, (table.size / 2).toInt(), byteLength, selection, table.canUndo, table.canRedo)
     private fun ready() { check(!closed && !failed) { "Editor is closed or needs recovery" }; checkAlive() }
     fun select(anchor: Int, caret: Int) {
@@ -94,6 +95,7 @@ class DiskTextModel private constructor(
     private fun editGroup(before: Position, after: Position?, checkCancelled: () -> Unit, action: () -> Unit): Status {
         val previousBytes = byteLength
         val previousSelection = selection
+        val previousAppendLength = appendFile.length()
         try {
             table.editGroup {
                 action(); checkCancelled()
@@ -104,6 +106,10 @@ class DiskTextModel private constructor(
             }
         } catch (error: Throwable) {
             byteLength = previousBytes; selection = previousSelection
+            // Rolled-back insertions are not referenced by the table or its Undo history.
+            // Reclaim cancelled/over-limit paste bytes immediately, without touching old edits.
+            try { RandomAccessFile(appendFile, "rw").use { it.setLength(previousAppendLength) } }
+            catch (cleanup: Exception) { error.addSuppressed(cleanup) }
             throw error
         }
         undo.addLast(Change(before, selection, previousBytes, byteLength))
@@ -129,6 +135,11 @@ class DiskTextModel private constructor(
                 if (count == 0) continue
                 units += count
                 require(status.characters.toLong() - (end - start) + units <= Int.MAX_VALUE) { "Text-position limit exceeded" }
+                // UTF-8 requires at least one byte per UTF-16 unit. This lower-bound
+                // check stops an enormous stream before writing its entire rejected body.
+                if (byteLength - oldContextBytes + units > maxOf(NoteSizePolicy.IMPORT_MAX_BYTES, base.bytes) + 2) {
+                    throw NoteSizeExceededException()
+                }
                 repeat(count) { bytes[it * 2] = (chars[it].code ushr 8).toByte(); bytes[it * 2 + 1] = chars[it].code.toByte() }
                 output.write(bytes, 0, count * 2)
             }
@@ -287,7 +298,11 @@ class DiskTextModel private constructor(
         } finally { temp.delete() }
     }
     fun recover() {
-        check(!closed); checkAlive(); undo.clear(); redo.clear(); restore(); failed = false
+        check(!closed); checkAlive()
+        // The in-memory descriptors own edits whose append bytes were already fsynced.
+        // Loading the old state here would discard a failed paste/Undo publication.
+        publish()
+        failed = false
     }
     private fun restore() {
         val metadata = inspect(stateFile)

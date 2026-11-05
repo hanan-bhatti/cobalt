@@ -202,8 +202,16 @@ class PieceTable(original: NoteByteSource, private val keepUndo: Boolean = true)
         }
     }
 
+    /** Immutable range descriptors are shared; subsequent splices create a new list. */
+    internal fun forkForRead(): PieceTable = PieceTable(object : NoteByteSource {
+        override val size = 0L
+        override fun read(offset: Long, count: Int) = ByteArray(0)
+    }, keepUndo = false).also { it.pieces = pieces; it.size = size }
+
     /** Serialize descriptors only. Sources own the immutable bytes and must outlive this state. */
     internal fun writeState(output: java.io.DataOutputStream, sourceId: (NoteByteSource) -> Int) {
+        val descriptors = pieces.size.toLong() + (undo + redo).sumOf { it.removed.size.toLong() + it.inserted.size }
+        require(descriptors <= MAX_STATE_DESCRIPTORS) { "Editor history metadata is full; export unsaved edits before closing" }
         fun write(parts: List<Piece>) {
             output.writeInt(parts.size)
             parts.forEach { output.writeInt(sourceId(it.source)); output.writeLong(it.offset); output.writeLong(it.length) }
@@ -217,11 +225,12 @@ class PieceTable(original: NoteByteSource, private val keepUndo: Boolean = true)
 
     companion object {
         const val MAX_UNDO_OPERATIONS = 100
+        private const val MAX_STATE_DESCRIPTORS = 1_000_000
         internal fun readState(input: java.io.DataInputStream, source: (Int) -> NoteByteSource): PieceTable {
             var descriptors = 0
             fun read(): List<Piece> {
                 val count = input.readInt()
-                require(count >= 0 && count <= 200_000 - descriptors) { "Invalid piece count" }
+                require(count >= 0 && count <= MAX_STATE_DESCRIPTORS - descriptors) { "Invalid piece count" }
                 descriptors += count
                 return List(count) {
                     val body = source(input.readInt()); val offset = input.readLong(); val length = input.readLong()

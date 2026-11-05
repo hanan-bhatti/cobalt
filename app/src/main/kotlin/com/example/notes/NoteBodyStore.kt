@@ -33,9 +33,10 @@ interface NoteBodyStore {
     fun retireEditJournal(id: String, token: String, verified: NoteBodyRef) {}
     fun recoverEditJournal(id: String, token: String, base: NoteBodyRef, checkCancelled: () -> Unit = {}): NoteBodyRef =
         throw UnsupportedOperationException("Journal recovery unavailable")
-    fun openLiveEditor(id: String, token: String, base: NoteBodyRef, checkCancelled: () -> Unit = {}): DiskTextModel =
+    fun openLiveEditor(id: String, token: String, base: NoteBodyRef, reopen: Boolean = false, checkCancelled: () -> Unit = {}): DiskTextModel =
         throw UnsupportedOperationException("Live disk editing unavailable")
     fun retireLiveEditor(id: String, token: String) {}
+    fun liveEditors(): List<LiveEditorDescriptor> = emptyList()
     fun maintenanceFiles(): List<NoteStorageFile> = emptyList()
     fun removeMaintenanceFile(entry: NoteStorageFile): Boolean = false
     fun prepareArchivePrevious(id: String, previousHash: String, currentHash: String,
@@ -234,27 +235,43 @@ class PrivateMarkdownStore(context: Context,
         syncDirectory(source.parentFile!!)
     }
 
-    override fun openLiveEditor(id: String, token: String, base: NoteBodyRef, checkCancelled: () -> Unit): DiskTextModel {
+    override fun openLiveEditor(id: String, token: String, base: NoteBodyRef, reopen: Boolean, checkCancelled: () -> Unit): DiskTextModel {
         require(token.matches(Regex("[0-9a-f-]{36}")))
         val dir = directory(id)
         val state = File(dir, "$token.live.state")
         val original = NoteBodyLeases.guarded {
             fence.requireAlive(id)
-            check(dir.isDirectory || dir.mkdirs())
-            val ref = if (state.isFile) DiskTextModel.inspect(state) else base
-            check(size(id, ref.hash) == ref.bytes) { "Live editor original is missing; files retained" }
-            NoteBodyLeases.acquire(key(id), ref.hash)
-            ref
+            LiveEditorLeases.acquire(key(id))
+            try {
+                check(dir.isDirectory || dir.mkdirs())
+                check(!reopen || state.isFile) { "Live editor state is missing; the saved checkpoint is retained" }
+                val metadata = if (state.isFile) DiskTextModel.metadata(state) else null
+                check(metadata == null || metadata.ownerId.isEmpty() || metadata.ownerId == id) { "Editor ownership mismatch; retained" }
+                val ref = metadata?.base ?: base
+                check(size(id, ref.hash) == ref.bytes) { "Live editor original is missing; files retained" }
+                NoteBodyLeases.acquire(key(id), ref.hash)
+                ref
+            } catch (error: Throwable) { LiveEditorLeases.release(key(id)); throw error }
         }
         val released = java.util.concurrent.atomic.AtomicBoolean(false)
-        val release = { if (released.compareAndSet(false, true)) NoteBodyLeases.release(key(id), original.hash) }
+        val release = { if (released.compareAndSet(false, true)) {
+            NoteBodyLeases.release(key(id), original.hash); LiveEditorLeases.release(key(id))
+        } }
         try {
             return DiskTextModel.open(FileNoteByteSource(this, id, original.hash, original.bytes), original,
                 File(dir, "$token.live.buffer"), state, fileOperations, { fence.requireAlive(id) },
-                release, checkCancelled)
+                release, checkCancelled, ownerId = id)
         } catch (error: Throwable) { release(); throw error }
     }
-    override fun retireLiveEditor(id: String, token: String) {
+    override fun liveEditors(): List<LiveEditorDescriptor> = maintenanceFiles().filter { it.name.endsWith(".live.state") }.mapNotNull { entry ->
+        runCatching {
+            val metadata = DiskTextModel.metadata(File(File(root, entry.directoryKey), entry.name))
+            if (metadata.ownerId.isBlank() || key(metadata.ownerId) != entry.directoryKey) return@runCatching null
+            LiveEditorDescriptor(metadata.ownerId, entry.name.removeSuffix(".live.state"), metadata.base, metadata.bytes, metadata.revision)
+        }.getOrNull()
+    }
+    override fun retireLiveEditor(id: String, token: String) = NoteBodyLeases.guarded {
+        check(!LiveEditorLeases.active(key(id))) { "Editor history is still in use" }
         require(token.matches(Regex("[0-9a-f-]{36}")))
         val dir = directory(id)
         for (suffix in listOf("live.state", "live.buffer", "live.state.tmp")) {
@@ -470,9 +487,9 @@ class PrivateMarkdownStore(context: Context,
         syncDirectory(directory(id))
     }
 
-    override fun deleteAll(id: String) {
+    override fun deleteAll(id: String) = NoteBodyLeases.guarded {
         val dir = directory(id)
-        if (!dir.exists()) return
+        if (!dir.exists()) return@guarded
         dir.listFiles()?.forEach { if (!it.delete()) throw IOException("Could not remove a private body generation") }
         if (!dir.delete()) throw IOException("Could not remove private note directory")
         syncDirectory(root)
@@ -538,4 +555,15 @@ class NoteTextSlice(private val text: CharSequence, private val start: Int, priv
         return NoteTextSlice(text, start + startIndex, start + endIndex)
     }
     override fun toString() = buildString(length) { for (index in start until end) append(text[index]) }
+}
+
+
+data class LiveEditorDescriptor(val id: String, val token: String, val base: NoteBodyRef, val bytes: Long, val revision: Long)
+
+/** A second Activity must not overwrite the first Activity's live draft reference for the same note. */
+private object LiveEditorLeases {
+    private val active = HashSet<String>()
+    @Synchronized fun acquire(key: String) { check(active.add(key)) { "This note is already being edited. Close its other editor before reopening." } }
+    @Synchronized fun release(key: String) { active.remove(key) }
+    @Synchronized fun active(key: String) = key in active
 }
