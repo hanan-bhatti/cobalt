@@ -8,8 +8,20 @@ object MarkdownBlocks {
     data class Block(val start: Long, val end: Long, val markdown: Boolean,
         val leading: String = "", val trailing: String = "", val lines: Int = 1,
         val tableHeader: String? = null, val visible: Boolean = true,
-        val codeContinuesBefore: Boolean = false, val codeContinuesAfter: Boolean = false) {
-        fun renderSource(text: String): String = tableHeader.orEmpty() + leading + text + trailing
+        val codeContinuesBefore: Boolean = false, val codeContinuesAfter: Boolean = false,
+        val codeContainerPrefix: String = "") {
+        fun renderSource(text: String): String {
+            val body = if (codeContinuesBefore && codeContainerPrefix.isNotEmpty()) {
+                // A continued fence is reopened at the root; remove the original list/
+                // quote container so its indentation does not become literal code.
+                text.splitToSequence('\n').joinToString("\n") { line ->
+                    var matched = 0
+                    while (matched < minOf(line.length, codeContainerPrefix.length) && line[matched] == codeContainerPrefix[matched]) matched++
+                    line.substring(matched)
+                }
+            } else text
+            return tableHeader.orEmpty() + leading + body + trailing
+        }
     }
 
     /** Track common inline delimiters across a bounded range without retaining a paragraph. */
@@ -71,6 +83,7 @@ object MarkdownBlocks {
         private var leadingTable: String? = null
         private var fenceOpening = ""
         private var fenceClosing = ""
+        private var codeContainerPrefix = ""
         private var prefixFull = false
         private var pending = -1
         private var pendingCr = false
@@ -89,14 +102,17 @@ object MarkdownBlocks {
         }
         private fun emit(safeEnd: Boolean): Block {
             val insideLine = prefix.isNotEmpty()
+            val closingFence = if (!continuedCode && codeContainerPrefix.isNotEmpty()) {
+                fenceClosing.replaceFirst("\n", "\n$codeContainerPrefix")
+            } else fenceClosing
             val closing = when {
                 safeStart && safeEnd -> ""
-                fence != null -> if (insideLine) fenceClosing else fenceClosing.removePrefix("\n")
+                fence != null -> if (insideLine) closingFence else closingFence.removePrefix("\n")
                 table != null && insideLine -> inline.trailing() + "|"
                 else -> inline.trailing()
             }
             val block = Block(start, offset, safeStart && safeEnd, leading, closing, renderLines.coerceAtLeast(1),
-                leadingTable, nonBlank || fence != null, continuedCode, fence != null)
+                leadingTable, nonBlank || fence != null, continuedCode, fence != null, codeContainerPrefix)
             continuedCode = fence != null
             leading = when {
                 fence != null -> fencePrefix()
@@ -125,6 +141,7 @@ object MarkdownBlocks {
                 if (run >= 3) {
                     if (fence == null) {
                         fence = first; fenceLength = run; fenceInfo = body.drop(run).take(128)
+                        codeContainerPrefix = quote + " ".repeat(indent + (listMarker?.length ?: 0))
                         val marker = first.toString().repeat(run.coerceAtMost(128))
                         fenceOpening = marker + fenceInfo + "\n"; fenceClosing = "\n" + marker
                     }

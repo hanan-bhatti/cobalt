@@ -58,6 +58,20 @@ class MarkdownFenceRegressionTest {
         assertEquals(expected, actual)
         assertEquals(7, actual.size)
     }
+    @Test fun largeFencesInListsAndQuotesPreserveLiteralIndentationAcrossContinuations() {
+        val literal = "first\n\n    indented\n\tkeep-tab\n".repeat(100)
+        for (prefix in listOf("    ", "> ")) {
+            val intro = if (prefix == "    ") "1. Example:\n\n" else ""
+            val source = intro + prefix + "```text\n" + literal.lineSequence().dropLastEmpty()
+                .joinToString("\n", postfix = "\n") { prefix + it } + prefix + "```\n"
+            val bytes = source.toByteArray()
+            val blocks = MarkdownBlocks.scan(bytes.inputStream(), 256, 8)
+            assertTrue(blocks.size > 2)
+            val actual = blocks.flatMap { codes(it.renderSource(String(bytes, it.start.toInt(), (it.end - it.start).toInt()))) }.joinToString("")
+            assertEquals("container=$prefix", codes(source).joinToString(""), actual)
+        }
+    }
+    private fun Sequence<String>.dropLastEmpty(): List<String> = toList().dropLast(1)
     @Test fun emailAndWebLinksKeepPunctuationOutsideDestinations() {
         val text = "Write hello@example.com. Visit https://example.com/doc_(a)."
         val matches = MarkdownAutoLinks.find(text).toList()
