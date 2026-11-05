@@ -1,5 +1,9 @@
 # Live editor implementation work (in progress)
 
+The current checkpoint is [editor-logic-validation-2026-11-05.md](editor-logic-validation-2026-11-05.md).
+It supersedes the historical pending-work and test-count notes below. The latest
+editor logic passes 144 host tests and packages a debug APK; device acceptance is pending.
+
 Current user instruction: finish remaining editor/Markdown code, then mobile stress
 validation. Preserve the existing frameless editor and normal capture toolbar.
 Do not claim release/performance readiness while integration is unfinished.
@@ -68,3 +72,54 @@ checkout and the main compile jar was only362KiB. Do not kill it. Added opt-in
 `tools/check-editor-isolated.sh` + init script to put this verification's outputs
 and project cache under ignored `build/editor-validation/`; use this runner from
 now on. The failure is not a passing model test and must not be counted as such.
+
+## 2026-11-04 resumed integration
+
+User committed prior work, merged fonts/Trakt, and requested completion urgently.
+Turn began clean at1eebdf7. Read font integration e6bfea2 and TypographyProvider.
+Approval is working again after prior usage-limit block. No new subagents.
+
+Last completed check:125 targeted host tests and Android-test APK build passed
+before active integration. Later integrated Capture/core suite125 passed3m22s;
+it did not yet include new native disk-viewport tests. Current check session29423
+adds DiskMarkdownViewTest and TypographyPrefsTest, still running at this update.
+
+Current active code: ContinuousNoteDocument can own DiskEditorSession. FileEditorSession
+opens disk for >=200KB or restored diskToken, checkpoints through a stream, and has
+preview byte→UTF16 edits. ContinuousNoteEditor now selects DiskMarkdownView for disk
+models, routes find/outline, and exports through session streams. Native typography
+shares LocalCobaltTypography preferences through NativeEditorTypography.
+
+DiskMarkdownView materializes <=32,768 UTF16 chars and caps dense text at about1024
+lines. Global selection survives viewport clipping. Select-all replacement, copy/cut,
+find, outline, format wrappers, paste and model Undo are routed globally. View-scoped
+native edit batches transfer synchronously to a session-owned outbox before disposal.
+The session owns an independent bounded worker lifetime so normal VM teardown can drain
+accepted edits. Stale IME commits are rejected after disposal. THESE native paths
+are under test, not yet validated on device.
+
+Pending draft app/build/editor-review/FileEditorSession.all-disk.draft changes all
+file notes to disk, eliminating small→large paste promotion/RAM-history discontinuity.
+It also syncs revision callbacks after Capture closes and drains native edits before
+checking whether a closing session is dirty. Copy/review after current compile ends.
+Still need clean indentation and unchanged-close retirement handling verification.
+
+Important unfinished edge cases:
+- Emergency unsaved export after disk publication failure: controller currently rejects
+  reads while failed. Need read-only recovery stream overlay of held native batches,
+  never omit pending accepted text or require a successful internal write to export.
+- Native boundaries: hardware arrows/delete and IME global selections/code-point deletion;
+  composition during rewindowing; current shortcut handling is partial. No device claims.
+- Model metadata write/read descriptor budget must match; readState currently caps200000
+  descriptors but writeState does not enforce that cap. Prevent publishing unreopenable
+  state. Prefer bounded metadata and clear refusal over silently trimming user history.
+- LegacyNoteRecovery does not yet understand diskToken; add recovery/export for new live
+  state so conflicting drafts remain accessible through Storage.
+- Very long fenced code inside lists/quotes needs stronger continuation indentation/gutter
+  context tests. Ordinary fence/list cases and bare email tests already passed.
+- Check code typography with device test; do not claim normal-scale screenshots exist.
+
+Build isolation still essential if another agent builds this checkout. Use
+./tools/check-editor-isolated.sh; outputs build/editor-validation/_app. One worker,
+1536MiB heap,384MiB metaspace. Existing font tests use deprecated Compose test API;
+that warning predates this turn. No new APK/stress result claimed yet.

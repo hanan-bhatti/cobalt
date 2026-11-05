@@ -2,6 +2,14 @@
 
 ### Fixes
 
+- Keep accepted editor operations when closing under queue backpressure; retain
+  unpublished paste and Undo changes when retrying a failed journal write.
+- Handle selection, emoji deletion and hardware cursor movement across the internal
+  editing viewport without adding visible editing blocks or controls.
+- Reclaim cancelled paste buffers, stop oversized input streams early, and serialize
+  permanent deletion with editor-history cleanup.
+- Preserve code indentation when long fenced blocks continue inside lists or quotes.
+
 - **Prevent internal cache paths and URIs as user-facing titles and descriptions (Issue #21):**
   - Read original file display names (`OpenableColumns.DISPLAY_NAME`) at pick time across gallery, camera, and share intents before copying into app cache.
   - Added pure `ItemTitleResolver` that sanitizes file names, strips extensions, bounds string lengths without splitting surrogate pairs, and provides localized fallbacks ("Untitled image", "Untitled video", "Untitled audio", etc.) for untitled captures.
@@ -37,7 +45,8 @@
 - Add Settings → Storage: human-readable sizes, explicit copy retention/cleanup, and older-copy export/restore.
 - Protect current notes, drafts, active readers and undo references during cleanup.
 - Offer direct export of unsaved editor text after a storage/save failure; retain closing models until native views release them.
-- No new dependency or network connection. Debug compilation and 114 targeted host regressions pass. The live disk-backed editor requirement and device/release/performance acceptance remain pending.
+- No new dependency or network connection. The disk-backed editor has host regression coverage;
+  device, release and performance acceptance remain pending. See the editor validation report.
 
 
 - Honor Markdown mode for large notes instead of silently forcing files of 5 MB
