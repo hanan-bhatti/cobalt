@@ -121,6 +121,53 @@ class DiskMarkdownViewTest {
             finally { restored.close() }
         } finally { f.scope.cancel(); f.directory.deleteRecursively(); f.activity.pause().stop().destroy() }
     }
+    @Test fun deletionAtViewportStartUsesGlobalCodePointsAndUndoRestoresEmoji() {
+        val body = "😀line\n".repeat(10_000)
+        Fixture(body).use { f ->
+            f.open(50_000)
+            val ime = requireNotNull(f.view.onCreateInputConnection(EditorInfo()))
+            assertTrue(ime.setSelection(0, 0))
+            val position = f.document.selectionStart
+            assertTrue(position > 0)
+            assertFalse(ime.setSelection(-1, 0))
+            assertFalse(ime.deleteSurroundingText(-1, 0))
+            assertTrue(ime.deleteSurroundingTextInCodePoints(1, 0))
+            pump { f.document.pendingEdit?.isCompleted == true && f.view.isEditable }
+            val previous = body.offsetByCodePoints(position, -1)
+            assertEquals(body.removeRange(previous, position), f.text())
+            f.view.undo()
+            pump { f.document.pendingEdit?.isCompleted == true && f.view.isEditable }
+            assertEquals(body, f.text())
+        }
+    }
+    @Test fun closingWithMoreAcceptedEditsThanQueueCapacityDrainsEveryEdit() {
+        Fixture("original").use { f ->
+            repeat(100) {
+                assertTrue(f.session.record(listOf(DiskTextModel.Replacement(0, 0, "x")),
+                    DiskTextModel.Position(0, 0), DiskTextModel.Position(1, 1), final = true))
+            }
+            f.document.closeSession()
+            pump { f.released.get() }
+            val restored = DiskTextModel.open(f.source, f.ref, File(f.directory, "append"), File(f.directory, "state"), HostTestNoteFileOperations)
+            try { assertEquals("x".repeat(100) + "original", restored.text(0, 200)) }
+            finally { restored.close() }
+        }
+    }
+    @Test fun hardwareArrowCrossesTheViewportWithoutChangingText() {
+        val body = "😀line\n".repeat(10_000)
+        Fixture(body).use { f ->
+            f.open(50_000)
+            val ime = requireNotNull(f.view.onCreateInputConnection(EditorInfo()))
+            assertTrue(ime.setSelection(0, 0))
+            val position = f.document.selectionStart
+            assertTrue(position > 0)
+            assertTrue(f.view.onKeyDown(android.view.KeyEvent.KEYCODE_DPAD_LEFT,
+                android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_LEFT)))
+            pump { f.document.pendingEdit?.isCompleted == true && f.view.isEditable }
+            assertEquals(body.offsetByCodePoints(position, -1), f.document.selectionStart)
+            assertEquals(body, f.text())
+        }
+    }
     companion object {
         private fun pump(ready: () -> Boolean) {
             repeat(1_200) {

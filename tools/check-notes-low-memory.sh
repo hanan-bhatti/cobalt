@@ -6,6 +6,7 @@ cd -- "${cobalt_script_dir}/.."
 exec ./gradlew :app:testDebugUnitTest \
   --tests 'com.example.notes.*' \
   --tests com.example.ui.components.ContinuousMarkdownViewTest \
+  --tests com.example.ui.components.DiskMarkdownViewTest \
   --tests com.example.ui.components.ViewportMarkdownSpansTest \
   --tests com.example.ui.screens.MarkdownReadSessionTest \
   --offline --no-daemon --max-workers=1 --no-parallel \

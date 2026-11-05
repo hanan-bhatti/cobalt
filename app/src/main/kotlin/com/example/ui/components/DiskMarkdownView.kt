@@ -38,6 +38,7 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
     private var binding = false
     private var composing = false
     private var loading = false
+    private var loadFailed = false
     private var blocked = false
     private var backpressure = false
     private var hostEditable = true
@@ -61,7 +62,7 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
     var message: (String) -> Unit = {}
     var progress: (Float?) -> Unit = {}
     var tool: (String) -> Unit = {}
-    private val freeze: (Boolean) -> Unit = { isEditable = hostEditable && !it && !loading && !blocked && !backpressure }
+    private val freeze: (Boolean) -> Unit = { isEditable = hostEditable && !it && !loading && !loadFailed && !blocked && !backpressure }
     private val format: (String) -> Unit = { command ->
         when (command) {
             "undo" -> undo()
@@ -206,6 +207,7 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
                 val left = text.indexer.getCharPosition(a); val right = text.indexer.getCharPosition(b)
                 setSelectionRegion(left.line, left.column, right.line, right.column, false)
                 oldLeft = a; oldRight = b
+                loadFailed = false
             } finally { binding = false }
 
             if (keepScroll) {
@@ -221,6 +223,7 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
             (context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).restartInput(this)
         } catch (cancel: CancellationException) { throw cancel }
         catch (_: Exception) {
+            loadFailed = true
             isRestoringScroll = false
             message("The editor could not load this position. Saved text and pending edits are retained.")
         }
@@ -272,6 +275,32 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
     }
     private fun globalSelection() = minOf(anchor, caret) to maxOf(anchor, caret)
     private fun outsideSelection(): Boolean = globalSelection().let { it.first < start || it.second > start + text.length }
+    private fun deleteAcrossWindow(before: Int, after: Int, codePoints: Boolean): Boolean {
+        // Reject invalid/unbounded IME requests rather than deleting a different range.
+        if (before !in 0..8192 || after !in 0..8192) return false
+        val (left, right) = globalSelection()
+        action {
+            val range = session.execute { model ->
+                if (left != right) left to right else {
+                    val multiplier = if (codePoints) 2 else 1
+                    val preceding = model.text((left - before * multiplier).coerceAtLeast(0), minOf(left, before * multiplier))
+                    val following = model.text(right, minOf(model.status.characters - right, after * multiplier))
+                    val from = if (codePoints) preceding.offsetByCodePoints(preceding.length,
+                        -minOf(before, preceding.codePointCount(0, preceding.length))) else (preceding.length - before).coerceAtLeast(0)
+                    val until = if (codePoints) following.offsetByCodePoints(0,
+                        minOf(after, following.codePointCount(0, following.length))) else minOf(after, following.length)
+                    (left - preceding.length + from) to (right + until)
+                }
+            }
+            session.replace(range.first, range.second, java.io.StringReader("")); restoreModelSelection()
+        }
+        return true
+    }
+    private fun crossesWindow(before: Int, after: Int, codePoints: Boolean = false): Boolean {
+        val (left, right) = globalSelection()
+        val scale = if (codePoints) 2L else 1L
+        return outsideSelection() || left.toLong() - before * scale < start || right.toLong() + after * scale > start + text.length
+    }
     override fun copyText() = copyText(false)
     override fun copyText(shouldCopyLine: Boolean) {
         val (from, until) = globalSelection()
@@ -399,16 +428,19 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
             override fun finishComposingText(): Boolean { if (released || epoch != windowEpoch) return false; composing = false; val result = super.finishComposingText(); post { maybeRewindow() }; return result }
             override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean {
                 if (released || epoch != windowEpoch || !isEditable) return false
-                if (outsideSelection()) { pasteText(""); return true }
+                if (beforeLength < 0 || afterLength < 0) return false
+                if (crossesWindow(beforeLength, afterLength)) return deleteAcrossWindow(beforeLength, afterLength, false)
                 return super.deleteSurroundingText(beforeLength, afterLength)
             }
             override fun deleteSurroundingTextInCodePoints(beforeLength: Int, afterLength: Int): Boolean {
                 if (released || epoch != windowEpoch || !isEditable) return false
-                if (outsideSelection()) { pasteText(""); return true }
+                if (beforeLength < 0 || afterLength < 0) return false
+                if (crossesWindow(beforeLength, afterLength, true)) return deleteAcrossWindow(beforeLength, afterLength, true)
                 return super.deleteSurroundingTextInCodePoints(beforeLength, afterLength)
             }
             override fun setSelection(start: Int, end: Int): Boolean {
                 if (released || epoch != windowEpoch || !isEditable) return false
+                if (start !in 0..text.length || end !in 0..text.length) return false
                 val result = super.setSelection(start, end)
                 if (result) { anchor = this@DiskMarkdownView.start + start; caret = this@DiskMarkdownView.start + end; syncDocumentSelection() }
                 return result
@@ -421,8 +453,42 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
         }
     }
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (outsideSelection() && (keyCode == KeyEvent.KEYCODE_DEL || keyCode == KeyEvent.KEYCODE_FORWARD_DEL)) {
-            pasteText(""); return true
+        if (!released && isEditable && !event.isCtrlPressed && !event.isAltPressed && !event.isMetaPressed &&
+            (keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)) {
+            val backwards = keyCode == KeyEvent.KEYCODE_DPAD_LEFT
+            if (outsideSelection() || (backwards && caret <= start && start > 0) ||
+                (!backwards && caret >= start + text.length && caret < total)) {
+                val previousAnchor = anchor
+                val previousCaret = caret
+                val (left, right) = globalSelection()
+                action {
+                    val position = session.execute { model ->
+                        when {
+                            !event.isShiftPressed && left != right -> if (backwards) left else right
+                            backwards -> {
+                                val chars = model.text((previousCaret - 2).coerceAtLeast(0), minOf(previousCaret, 2))
+                                previousCaret - if (chars.isEmpty()) 0 else Character.charCount(chars.codePointBefore(chars.length))
+                            }
+                            else -> {
+                                val chars = model.text(previousCaret, minOf(2, model.status.characters - previousCaret))
+                                previousCaret + if (chars.isEmpty()) 0 else Character.charCount(chars.codePointAt(0))
+                            }
+                        }
+                    }
+                    session.select(if (event.isShiftPressed) previousAnchor else position, position)
+                    restoreModelSelection()
+                }
+                return true
+            }
+        }
+        if (!released && isEditable && (keyCode == KeyEvent.KEYCODE_DEL || keyCode == KeyEvent.KEYCODE_FORWARD_DEL)) {
+            val before = if (keyCode == KeyEvent.KEYCODE_DEL) 1 else 0
+            val after = 1 - before
+            if (crossesWindow(before, after, true)) return deleteAcrossWindow(before, after, true)
+        }
+        if (!released && isEditable && outsideSelection() && !event.isCtrlPressed && !event.isAltPressed && !event.isMetaPressed &&
+            event.unicodeChar != 0 && Character.isValidCodePoint(event.unicodeChar)) {
+            pasteText(String(Character.toChars(event.unicodeChar))); return true
         }
         return super.onKeyDown(keyCode, event)
     }
@@ -614,6 +680,7 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
         invalidate()
     }
     fun dispose() {
+        if (released) return
         released = true
         isDraggingScrollbar = false
         scrollbarFadeJob?.cancel()
