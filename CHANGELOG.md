@@ -2,6 +2,11 @@
 
 ### Fixes
 
+- Update checklist markers in place without reopening the note, resetting its scroll
+  position, or showing a save progress bar; retain recoverable drafts on save failure.
+- Reduce Home card recomposition and scrollbar drag work; keep drag targets stable
+  as differently sized cards enter the viewport and remove delayed thumb tracking.
+
 - Keep accepted editor operations when closing under queue backpressure; retain
   unpublished paste and Undo changes when retrying a failed journal write.
 - Handle selection, emoji deletion and hardware cursor movement across the internal
