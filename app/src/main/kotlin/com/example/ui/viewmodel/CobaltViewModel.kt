@@ -1674,7 +1674,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun saveQuickDraft(folders: List<String>, open: Boolean = false, onSaved: () -> Unit = {}) {
+    fun saveQuickDraft(folders: List<String>, open: Boolean = false, edit: Boolean = false, onSaved: () -> Unit = {}) {
         if (quickDraftSaving || !_quickDraft.value.ready) return
         quickDraftSaving = true
         val pending = quickDraftPendingText
@@ -1697,7 +1697,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 quickDraftPendingText = null
                 _quickDraft.value = QuickDraftState(ready = true)
                 onSaved()
-                if (open) showDetailItem(saved)
+                if (edit) startEditItem(saved) else if (open) showDetailItem(saved)
                 com.example.widget.WidgetUpdater.update(context)
                 showToast("Note saved.")
             } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }

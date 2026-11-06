@@ -17,6 +17,10 @@
  */
 
 package com.example.ui.components
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.FocusDirection
@@ -98,7 +102,6 @@ data class RadialMenuItem(
 fun GlobalExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
     var isFabExpanded by remember { mutableStateOf(false) }
     var showAddFolderDialog by remember { mutableStateOf(false) }
-    var newFolderName by remember { mutableStateOf("") }
     var showQuickNoteOverlay by remember { mutableStateOf(false) }
     var userHasEditedInSession by remember(showQuickNoteOverlay) { mutableStateOf(false) }
     val importText = rememberTextImportAction(viewModel)
@@ -119,28 +122,29 @@ fun GlobalExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
     val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
 
     val isDark = isSystemInDarkTheme()
+    var showMoreActions by remember { mutableStateOf(false) }
+    val imageAction = rememberFabImageAction(viewModel)
+    val compactMenu = LocalConfiguration.current.screenHeightDp < 340 || LocalConfiguration.current.screenWidthDp < 300
+    BackHandler(enabled = isFabExpanded) { isFabExpanded = false }
     val items = listOf(
-        RadialMenuItem(R.drawable.ic_custom_movie, "Movie / Anime", CategoryMedia.toThemeColor(isDark)) {
-            viewModel.openMediaSearchSheet()
-        },
-        RadialMenuItem(R.drawable.ic_custom_edit, "Quick Note", CategoryText.toThemeColor(isDark)) {
-            showQuickNoteOverlay = true
-        },
-        RadialMenuItem(R.drawable.ic_custom_voice, "Voice Memo", CategoryAudio.toThemeColor(isDark)) {
-            viewModel.startManualCapture(SavedItemType.AUDIO)
-        },
-        RadialMenuItem(R.drawable.ic_custom_add_folder, "New Folder", DefaultFolderColor.toThemeColor(isDark)) {
-            showAddFolderDialog = true
-        },
-        RadialMenuItem(R.drawable.ic_custom_import, "Import text", CategoryText.toThemeColor(isDark), importText),
-        RadialMenuItem(R.drawable.ic_custom_plus, "New Item", SuccessGreen.toThemeColor(isDark)) {
-            viewModel.startManualCapture(SavedItemType.TEXT)
-        }
+        RadialMenuItem(R.drawable.ic_custom_edit, "Note", CategoryText.toThemeColor(isDark)) { showQuickNoteOverlay = true },
+        RadialMenuItem(R.drawable.ic_custom_link, "Link", CategoryLink.toThemeColor(isDark)) { viewModel.startManualCapture(SavedItemType.LINK) },
+        RadialMenuItem(R.drawable.ic_custom_image, "Image", CategoryImage.toThemeColor(isDark), imageAction),
+        RadialMenuItem(R.drawable.ic_custom_voice, "Voice", CategoryAudio.toThemeColor(isDark)) { viewModel.startManualCapture(SavedItemType.AUDIO) },
+        RadialMenuItem(R.drawable.ic_custom_import, "Import", CategoryText.toThemeColor(isDark), importText),
+        RadialMenuItem(R.drawable.ic_custom_more_vert, "More", MaterialTheme.colorScheme.onSurface) { showMoreActions = true }
     )
+    if (showMoreActions) FabActionSheet("More actions", listOf(
+        RadialMenuItem(R.drawable.ic_custom_movie, "Movie / Anime", CategoryMedia.toThemeColor(isDark)) { viewModel.openMediaSearchSheet() },
+        RadialMenuItem(R.drawable.ic_custom_add_folder, "New Folder", DefaultFolderColor.toThemeColor(isDark)) { showAddFolderDialog = true },
+        RadialMenuItem(R.drawable.ic_custom_video, "Video", CategoryVideo.toThemeColor(isDark)) { viewModel.startManualCapture(SavedItemType.VIDEO) },
+        RadialMenuItem(R.drawable.ic_custom_code, "Code", CategoryCode.toThemeColor(isDark)) { viewModel.startManualCapture(SavedItemType.CODE) }
+    ), onDismiss = { showMoreActions = false })
+    if (compactMenu && isFabExpanded) FabActionSheet("Add to Cobalt", items, onDismiss = { isFabExpanded = false })
 
     Box(modifier = Modifier.fillMaxSize()) {
         androidx.compose.animation.AnimatedVisibility(
-            visible = isFabExpanded,
+            visible = isFabExpanded && !compactMenu,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.Center)
@@ -176,7 +180,6 @@ fun GlobalExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
         
         val baseFabModifier = if (useBlur) {
             Modifier
-                .testTag("fab_expand")
                 .clip(CircleShape)
                 .hazeEffect(state = hazeState, style = HazeStyle(
                     backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -186,7 +189,6 @@ fun GlobalExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
                 ))
         } else {
             Modifier
-                .testTag("fab_expand")
                 .clip(CircleShape)
         }
 
@@ -196,7 +198,9 @@ fun GlobalExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
                 .padding(bottom = bottomPadding)
                 .padding(bottom = 16.dp, end = 16.dp)
         ) {
-            GestureRadialFab(
+            if (compactMenu) FloatingActionButton(onClick = { isFabExpanded = true }, modifier = baseFabModifier.testTag("fab_expand")) {
+                Icon(painterResource(R.drawable.ic_custom_plus), "Add options")
+            } else GestureRadialFab(
                 items = items,
                 isExpanded = isFabExpanded,
                 onToggleExpand = { isFabExpanded = it },
@@ -240,6 +244,12 @@ fun GlobalExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
         draftError = quickDraft.error,
         onRetryDraft = viewModel::loadQuickDraft,
         hasPendingDraft = quickDraft.pending || quickDraft.snapshot != null,
+        onContinueInEditor = {
+            if (captureContent.isBlank() && !quickDraft.pending && quickDraft.snapshot == null) {
+                showQuickNoteOverlay = false
+                viewModel.startManualCapture(SavedItemType.TEXT)
+            } else viewModel.saveQuickDraft(emptyList(), edit = true, onSaved = { showQuickNoteOverlay = false })
+        },
         onRestoreDraft = {
             viewModel.saveQuickDraft(emptyList(), open = true, onSaved = { showQuickNoteOverlay = false })
         },
@@ -263,157 +273,112 @@ fun GestureRadialFab(
     fabContentColor: Color,
     mainIconResId: Int
 ) {
-    var highlightedIndex by remember { mutableStateOf(-1) }
-    
-    val radiusDp = if (items.size > 5) 192.dp else 160.dp
+    var highlightedIndex by remember { mutableIntStateOf(-1) }
+    val currentItems by rememberUpdatedState(items)
+    val currentExpanded by rememberUpdatedState(isExpanded)
+    val toggle by rememberUpdatedState(onToggleExpand)
+    val haptics = LocalHapticFeedback.current
+    val radius = if (items.size > 5) 192.dp else 160.dp
     val density = LocalDensity.current
-    val radiusPx = with(density) { radiusDp.toPx() }
-    
-    val startAngle = 180.0
-    val endAngle = 270.0
-    val step = if (items.size > 1) (endAngle - startAngle) / (items.size - 1) else 0.0
+    val radiusPx = with(density) { radius.toPx() }
+    val progress by animateFloatAsState(if (isExpanded) 1f else 0f,
+        spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow))
+    LaunchedEffect(isExpanded) { if (!isExpanded) highlightedIndex = -1 }
+    BackHandler(enabled = isExpanded) { onToggleExpand(false) }
 
-    val expandProgress by animateFloatAsState(
-        targetValue = if (isExpanded) 1f else 0f,
-        animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMediumLow)
-    )
+    fun highlight(index: Int) {
+        if (index != highlightedIndex) {
+            highlightedIndex = index
+            if (index >= 0) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
+    }
 
-    Box(modifier = Modifier, contentAlignment = Alignment.BottomEnd) {
-        if (expandProgress > 0.01f) {
+    Box(contentAlignment = Alignment.BottomEnd) {
+        if (progress > 0.01f) {
             items.forEachIndexed { index, item ->
-                val angle = startAngle + step * index
-                val angleRad = Math.toRadians(angle)
-                
-                val targetX = (cos(angleRad) * radiusPx).toFloat()
-                val targetY = (sin(angleRad) * radiusPx).toFloat()
-                
-                val itemProgress by animateFloatAsState(
-                    targetValue = if (isExpanded) 1f else 0f,
-                    animationSpec = spring(
-                        dampingRatio = 0.6f,
-                        stiffness = Spring.StiffnessMediumLow
-                    )
-                )
-                
-                val centerOffsetPx = with(density) { -4.dp.toPx() }
-                val currentX = targetX * itemProgress + centerOffsetPx
-                val currentY = targetY * itemProgress + centerOffsetPx
-                val alpha = (itemProgress * 1.5f).coerceIn(0f, 1f)
-                val isHighlighted = index == highlightedIndex
-                val scale by animateFloatAsState(
-                    targetValue = if (isHighlighted) 1.25f else if (isExpanded) 1f else 0f,
-                    animationSpec = spring(dampingRatio = 0.5f, stiffness = 400f)
-                )
-
-                Box(
-                    modifier = Modifier
-                        .offset { IntOffset(currentX.roundToInt(), currentY.roundToInt()) }
-                        .graphicsLayer {
-                            this.alpha = alpha
-                            this.scaleX = scale
-                            this.scaleY = scale
-                        }
-                        .size(48.dp)
-                        .then(fabBaseModifier)
-                        .clip(CircleShape)
-                        .background(fabContainerColor)
-                        .clickable {
-                            item.action()
-                            onToggleExpand(false)
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = item.iconResId),
-                        contentDescription = item.label,
-                        tint = if (isHighlighted) item.color else item.color.copy(alpha = 0.7f),
-                        modifier = Modifier.size(24.dp)
-                    )
+                val angle = Math.toRadians(180.0 + if (items.size > 1) 90.0 * index / (items.size - 1) else 0.0)
+                val active = index == highlightedIndex
+                val scale by animateFloatAsState(if (active) 1.08f else 1f, spring())
+                Box(Modifier.offset {
+                    IntOffset((cos(angle) * radiusPx * progress - with(density) { 4.dp.toPx() }).roundToInt(),
+                        (sin(angle) * radiusPx * progress - with(density) { 4.dp.toPx() }).roundToInt())
+                }.size(48.dp).graphicsLayer { alpha = progress; scaleX = scale; scaleY = scale }
+                    .then(fabBaseModifier).clip(CircleShape)
+                    .background(if (active) item.color.copy(alpha = 1f) else fabContainerColor)
+                    .semantics { selected = active }
+                    .clickable(enabled = isExpanded, onClickLabel = item.label) {
+                        highlight(index)
+                        onToggleExpand(false)
+                        item.action()
+                    }, contentAlignment = Alignment.Center) {
+                    Icon(painterResource(item.iconResId), item.label, tint = if (active) radialFabIconColor(item.color.copy(alpha = 1f)) else item.color,
+                        modifier = Modifier.size(22.dp))
                 }
             }
+            val label = items.getOrNull(highlightedIndex)?.label ?: "Choose an action"
+            Surface(Modifier.align(Alignment.BottomEnd).offset(y = -(radius + 56.dp)),
+                shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                Text(label, Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                    style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
+            }
         }
-
-        // The custom FAB base without a competing `clickable` modifier
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .then(fabBaseModifier)
-                .pointerInput(Unit) {
-                    awaitEachGesture {
-                        val down = awaitFirstDown()
-                        // CONSUME the down event so parent/child modifiers don't steal it
-                        down.consume()
-                        
-                        val wasExpandedAtDown = isExpanded
-                        var wasDragged = false
-                        var localHighlighted = -1
-                        
+        Box(Modifier.size(56.dp).testTag("fab_expand").then(fabBaseModifier)
+            .semantics {
+                contentDescription = "Add options"
+                stateDescription = if (isExpanded) "Expanded" else "Collapsed"
+                role = androidx.compose.ui.semantics.Role.Button
+                onClick { toggle(!currentExpanded); true }
+            }
+            .pointerInput(items.size, radiusPx) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    down.consume()
+                    val initiallyExpanded = currentExpanded
+                    var dragged = false
+                    var held = false
+                    var cancelled = false
+                    try {
                         while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull() ?: break
-                            
-                            // CONSUME every movement so the UI knows we are actively handling it
-                            if (change.position != change.previousPosition) {
-                                change.consume()
+                            val event = if (!held && !dragged) {
+                                withTimeoutOrNull((viewConfiguration.longPressTimeoutMillis -
+                                    (android.os.SystemClock.uptimeMillis() - down.uptimeMillis)).coerceAtLeast(1)) { awaitPointerEvent() }
+                            } else awaitPointerEvent()
+                            if (event == null) {
+                                held = true
+                                toggle(true)
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                continue
                             }
-                            
-                            if (change.pressed) {
-                                val posChange = change.position - down.position
-                                val dx = posChange.x
-                                val dy = posChange.y 
-                                val distance = kotlin.math.sqrt(dx*dx + dy*dy)
-
-                                if (distance > 24.dp.toPx()) {
-                                    wasDragged = true
-                                    if (!isExpanded) {
-                                        onToggleExpand(true)
-                                    }
-                                    var adjustedAngle = Math.toDegrees(kotlin.math.atan2(dy.toDouble(), dx.toDouble()))
-                                    if (adjustedAngle < 0) adjustedAngle += 360.0
-                                    
-                                    var minDiff = Double.MAX_VALUE
-                                    var closestIndex = -1
-                                    for (i in items.indices) {
-                                        val itemAngle = startAngle + step * i
-                                        val diff = kotlin.math.abs(itemAngle - adjustedAngle)
-                                        if (diff < minDiff) {
-                                            minDiff = diff
-                                            closestIndex = i
-                                        }
-                                    }
-                                    localHighlighted = closestIndex
-                                    highlightedIndex = closestIndex
-                                } else {
-                                    localHighlighted = -1
-                                    highlightedIndex = -1
-                                }
-                            } else {
-                                // Pointer lifted
-                                if (wasDragged) {
-                                    if (localHighlighted in items.indices) {
-                                        items[localHighlighted].action()
-                                    }
-                                    onToggleExpand(false)
-                                } else {
-                                    // Plain tap: toggle expansion and keep open
-                                    onToggleExpand(!wasExpandedAtDown)
-                                }
-                                highlightedIndex = -1
+                            val change = event.changes.firstOrNull { it.id == down.id }
+                            if (change == null || event.changes.size != 1 || change.isConsumed) { cancelled = true; break }
+                            if (!change.pressed) {
+                                change.consume()
+                                if (dragged) {
+                                    val index = highlightedIndex
+                                    toggle(false)
+                                    if (index in currentItems.indices) currentItems[index].action()
+                                } else toggle(if (held) true else !initiallyExpanded)
                                 break
                             }
+                            if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) dragged = true
+                            if (dragged) {
+                                toggle(true)
+                                val delta = change.position - Offset(size.width / 2f, size.height / 2f)
+                                highlight(radialFabIndex(delta.x / density.density, delta.y / density.density, radius.value, currentItems.size))
+                            }
+                            change.consume()
                         }
+                    } finally {
+                        if (cancelled || !currentEvent.changes.all { !it.pressed }) {
+                            if (dragged || held) toggle(false)
+                        }
+                        highlight(-1)
                     }
                 }
-                .background(fabContainerColor, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            val rotation by animateFloatAsState(targetValue = if (isExpanded) 45f else 0f)
-            Icon(
-                painter = painterResource(id = mainIconResId),
-                contentDescription = "Add options",
-                tint = fabContentColor,
-                modifier = Modifier.graphicsLayer(rotationZ = rotation)
-            )
+            }.background(fabContainerColor, CircleShape), contentAlignment = Alignment.Center) {
+            val rotation by animateFloatAsState(if (isExpanded) 45f else 0f)
+            Icon(painterResource(mainIconResId), null, tint = fabContentColor,
+                modifier = Modifier.size(24.dp).graphicsLayer { rotationZ = rotation })
         }
     }
 }
@@ -692,7 +657,8 @@ fun QuickNoteBottomSheet(
     draftError: String? = null,
     hasPendingDraft: Boolean = false,
     onRetryDraft: () -> Unit = {},
-    onRestoreDraft: () -> Unit = {}
+    onRestoreDraft: () -> Unit = {},
+    onContinueInEditor: (() -> Unit)? = null
 ) {
     val focusManager = LocalFocusManager.current
     val titleFocusRequester = remember { FocusRequester() }
@@ -804,12 +770,16 @@ fun QuickNoteBottomSheet(
                                     )
                                 }
 
-                                Text(
-                                    text = "Quick Note",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Quick Note", style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                    onContinueInEditor?.let { continueEditing ->
+                                        IconButton(onClick = continueEditing, enabled = !isSaving, modifier = Modifier.size(36.dp)) {
+                                            Icon(painterResource(R.drawable.ic_custom_link_external),
+                                                "Save draft and continue in full editor", modifier = Modifier.size(18.dp))
+                                        }
+                                    }
+                                }
 
                                 Button(
                                     onClick = {
