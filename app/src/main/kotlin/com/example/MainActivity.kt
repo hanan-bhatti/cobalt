@@ -273,6 +273,7 @@ class MainActivity : ComponentActivity() {
                     androidx.compose.ui.platform.LocalUriHandler provides customTabsUriHandler
                 ) {
                     val navController = rememberNavController()
+                    com.example.ui.components.TextDocumentImportSheetHost(viewModel)
                     val activeCaptureItem by viewModel.activeCaptureItem.collectAsState()
                     val activeDetailItem by viewModel.activeDetailItem.collectAsState()
                     val availableUpdate by viewModel.availableUpdate.collectAsState()
@@ -947,6 +948,14 @@ class MainActivity : ComponentActivity() {
 
         val action = intent.action
         val type = intent.type
+
+        if (intent.getBooleanExtra(QuickShareActivity.REVIEW_AFTER_GATE, false)) {
+            val review = Intent(intent).setClass(this, QuickShareActivity::class.java)
+            review.removeExtra(QuickShareActivity.REVIEW_AFTER_GATE)
+            intent.removeExtra(QuickShareActivity.REVIEW_AFTER_GATE)
+            startActivity(review)
+            return
+        }
 
         if (action in listOf(Intent.ACTION_SEND, Intent.ACTION_SEND_MULTIPLE, Intent.ACTION_VIEW) &&
             com.example.notes.TextFileIntents.isTextFile(intent, type)) {

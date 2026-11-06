@@ -1,349 +1,104 @@
-/*
- * Cobalt - A universal capture and personal knowledge archive
- * Copyright (C) 2026 Hanan Bhatti
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-
 package com.example
 
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
-import com.example.util.SafeLogger as Log
-import android.widget.Toast
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
-import androidx.core.content.IntentCompat
-import com.example.data.local.AppDatabase
-import com.example.data.local.SavedItemEntity
-import com.example.data.model.SavedItemType
-import com.example.util.ItemTitleResolver
-import com.example.util.loadTitleFallbacks
-import kotlinx.coroutines.CoroutineScope
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.example.notes.TextFileIntents
+import com.example.ui.screens.CaptureScreen
+import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.viewmodel.CobaltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
-import java.util.UUID
 
-/**
- * Receives explicitly shared content, preserves complete text notes and finishes
- * only after durable persistence succeeds. Optional metadata enrichment runs on IO.
- */
+/** Review Android shares in the normal Capture UI. Only explicit Save inserts an archive item. */
 class QuickShareActivity : ComponentActivity() {
-
-    private val activityScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val viewModel: CobaltViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (com.example.notes.StartupCrashGuard.isSafeMode || com.example.notes.NoteMigrationManager.shouldPauseBackground(this)) {
-            startActivity(Intent(intent).setClass(this, MainActivity::class.java))
+            startActivity(Intent(intent).setClass(this, MainActivity::class.java).putExtra(REVIEW_AFTER_GATE, true))
             finish()
             return
         }
-
-        val intent = intent
-        val action = intent?.action
-        val type = intent?.type ?: intent?.data?.let { contentResolver.getType(it) } ?: "application/octet-stream"
-
-        if ((Intent.ACTION_SEND == action || Intent.ACTION_SEND_MULTIPLE == action || Intent.ACTION_VIEW == action)) {
-            activityScope.launch { handleQuickShare(intent, type) }
-        } else {
-            finish()
+        if (getSharedPreferences("cobalt_settings", MODE_PRIVATE).getBoolean("hide_recents", false)) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         }
-    }
-
-    private suspend fun handleQuickShare(intent: Intent, mimeType: String) {
-        val appContext = applicationContext
-        val textContent = intent.getStringExtra(Intent.EXTRA_TEXT)
-        val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)
-        val mediaUri = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
-
-        val id = UUID.randomUUID().toString()
-        val now = System.currentTimeMillis()
-
-        val streams = com.example.notes.TextFileIntents.uris(intent)
-        val isTextFileIntent = com.example.notes.TextFileIntents.isTextFile(intent, mimeType)
-        if (streams.isNotEmpty() && isTextFileIntent) {
-            if (streams.size > 100) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(appContext, "Share at most 100 text files at a time. Nothing was imported.", Toast.LENGTH_LONG).show()
-                    finish()
-                }
-                return
-            }
-            var saved = 0
-            var failed = 0
-            for (uri in streams.distinct()) {
-                try { com.example.notes.TextFileImporter(appContext).importFile(uri); saved++ }
-                catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
-                catch (_: Exception) { failed++ }
-            }
-            withContext(Dispatchers.Main) {
-                com.example.widget.WidgetUpdater.update(appContext)
-                Toast.makeText(appContext, "$saved text document(s) imported" +
-                    if (failed > 0) "; $failed unavailable, unsupported or above 55 MB. Originals retained." else ".", Toast.LENGTH_LONG).show()
-                finish()
-            }
-            return
-        }
-
-        when {
-            // 1. Text or URL Shared
-            mimeType.startsWith("text/") && textContent != null -> {
-                val url = com.example.utils.ClipboardUrlHelper.parseUrl(textContent)
-
-                if (url != null) {
-                    val initialTitle = subject?.takeIf { it.isNotBlank() } ?: "Shared Link"
-                    val entity = SavedItemEntity(
-                        id = id,
-                        type = SavedItemType.LINK.name,
-                        title = initialTitle,
-                        content = url,
-                        timestamp = now,
-                        foldersJson = "[]",
-                        extractedText = null,
-                        thumbnailPath = null,
-                        linkTitle = initialTitle
-                    )
-
-                    if (!persistAndNotify("Saved link to Cobalt!", entity)) return
-
-                    // Background enrichment for OpenGraph preview
-                    activityScope.launch {
-                        try {
-                            val metadata = fetchLinkMetadata(url)
-                            if (!metadata.title.isNullOrBlank() || !metadata.description.isNullOrBlank() || !metadata.imageUrl.isNullOrBlank()) {
-                                val db = AppDatabase.getDatabase(appContext)
-                                val current = db.savedItemDao().getItemById(id)
-                                if (current != null) {
-                                    val realDesc = metadata.description?.takeIf { it.isNotBlank() }
-                                    val realTitle = metadata.title?.takeIf { it.isNotBlank() }
-                                    val realImage = metadata.imageUrl?.takeIf { it.isNotBlank() }
-
-                                    db.savedItemDao().insertItem(
-                                        current.copy(
-                                            title = realTitle ?: current.title,
-                                            linkTitle = realTitle ?: current.linkTitle,
-                                            linkDescription = realDesc ?: current.linkDescription,
-                                            linkImage = realImage ?: current.linkImage,
-                                            updatedAt = System.currentTimeMillis()
-                                        )
-                                    )
-                                }
-                            }
-                        } catch (e: Exception) {
-                            Log.e("QuickShare", "Background link metadata enrichment failed: ${e.message}")
-                        }
+        enableEdgeToEdge()
+        val received = intent
+        if (received.action !in listOf(Intent.ACTION_SEND, Intent.ACTION_SEND_MULTIPLE, Intent.ACTION_VIEW)) { finish(); return }
+        val uris = TextFileIntents.uris(received).distinct()
+        val count = uris.size.coerceAtLeast(1)
+        setContent {
+            val mode by viewModel.settingsRepository.themeMode.collectAsState()
+            val dynamic by viewModel.settingsRepository.dynamicColor.collectAsState()
+            val fonts by viewModel.typographyPrefs.collectAsState()
+            val dark = when (mode) { "Dark" -> true; "Light" -> false; else -> isSystemInDarkTheme() }
+            MyApplicationTheme(darkTheme = dark, dynamicColor = dynamic, typographyPrefs = fonts) {
+                val item by viewModel.activeCaptureItem.collectAsState()
+                val preparing by viewModel.sharedCaptureState.collectAsState()
+                val saving by viewModel.isSaving.collectAsState()
+                val savedId by viewModel.lastCaptureSavedId.collectAsState()
+                var index by rememberSaveable { mutableIntStateOf(0) }
+                var reviewedId by rememberSaveable { mutableStateOf<String?>(null) }
+                var retry by remember { mutableIntStateOf(0) }
+                LaunchedEffect(index, retry) {
+                    if (item != null || preparing.preparing || reviewedId != null) return@LaunchedEffect
+                    if (count > 100) return@LaunchedEffect
+                    val uri: Uri? = uris.getOrNull(index)
+                    val type = withContext(Dispatchers.IO) {
+                        uri?.let { contentResolver.getType(it) } ?: received.type ?: "text/plain"
                     }
-                } else {
-                    val isCode = textContent.contains("class ") || textContent.contains("fun ") || textContent.contains("{") || textContent.contains("import ")
-                    val itemType = if (isCode) SavedItemType.CODE else SavedItemType.TEXT
-                    val resolvedTitle = ItemTitleResolver.resolveItemTitle(
-                        userTitle = subject?.takeIf { it.isNotBlank() },
-                        displayName = null,
-                        type = itemType,
-                        fallbacks = appContext.loadTitleFallbacks()
-                    )
-                    val title = if (subject.isNullOrBlank()) {
-                        val firstLine = textContent.lineSequence().firstOrNull { it.isNotBlank() }?.trim()?.removePrefix("#")?.trim()
-                        if (!firstLine.isNullOrBlank() && !ItemTitleResolver.isInternalPathOrGeneratedName(firstLine)) {
-                            ItemTitleResolver.truncateSafely(firstLine, ItemTitleResolver.MAX_TITLE_LENGTH)
-                        } else {
-                            resolvedTitle
+                    val document = uri != null && withContext(Dispatchers.IO) { TextFileIntents.isTextFile(received, type) }
+                    if (document) viewModel.prepareSharedDocument(requireNotNull(uri))
+                    else viewModel.handleSharedIntent(type, received.getStringExtra(Intent.EXTRA_TEXT), uri,
+                        received.getStringExtra(Intent.EXTRA_SUBJECT))
+                }
+                LaunchedEffect(item?.id, preparing.preparing, saving, savedId) {
+                    if (item != null) reviewedId = item?.id
+                    else if (reviewedId != null && !preparing.preparing && !saving) {
+                        if (savedId == reviewedId && index + 1 < count) { reviewedId = null; index++ }
+                        else finish()
+                    }
+                }
+                BackHandler(enabled = !saving) { viewModel.cancelCapture(); finish() }
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    if (item != null) {
+                        Column {
+                            if (count > 1) Text("Shared item ${index + 1} of $count", Modifier.statusBarsPadding().padding(16.dp),
+                                style = MaterialTheme.typography.labelLarge)
+                            CaptureScreen(viewModel = viewModel)
                         }
                     } else {
-                        resolvedTitle
-                    }
-                    val entity = SavedItemEntity(
-                        id = id,
-                        type = itemType.name,
-                        title = title,
-                        content = textContent,
-                        timestamp = now,
-                        foldersJson = "[]",
-                        extractedText = null,
-                        thumbnailPath = null
-                    )
-                    if (!persistAndNotify("Saved to Cobalt!", entity)) return
-                }
-            }
-
-            // 2. Image Shared
-            mimeType.startsWith("image/") && mediaUri != null -> {
-                val displayName = ItemTitleResolver.queryDisplayName(appContext, mediaUri)
-                val resolvedTitle = ItemTitleResolver.resolveItemTitle(
-                    userTitle = subject?.takeIf { it.isNotBlank() },
-                    displayName = displayName,
-                    type = SavedItemType.IMAGE,
-                    fallbacks = appContext.loadTitleFallbacks()
-                )
-                val entity = SavedItemEntity(
-                    id = id,
-                    type = SavedItemType.IMAGE.name,
-                    title = resolvedTitle,
-                    content = mediaUri.toString(),
-                    timestamp = now,
-                    foldersJson = "[]",
-                    extractedText = null,
-                    thumbnailPath = mediaUri.toString()
-                )
-
-                if (!persistAndNotify("Saved image to Cobalt!", entity)) return
-
-                // Background cache persistence
-                activityScope.launch {
-                    try {
-                        val bytes = appContext.contentResolver.openInputStream(mediaUri)?.use { it.readBytes() }
-                        if (bytes != null) {
-                            val localFile = File(appContext.filesDir, "media/images/shared_${id}.jpg")
-                            localFile.parentFile?.mkdirs()
-                            FileOutputStream(localFile).use { fos -> fos.write(bytes) }
-
-                            val db = AppDatabase.getDatabase(appContext)
-                            val current = db.savedItemDao().getItemById(id)
-                            if (current != null) {
-                                db.savedItemDao().insertItem(
-                                    current.copy(
-                                        content = localFile.absolutePath,
-                                        thumbnailPath = localFile.absolutePath,
-                                        sizeBytes = bytes.size.toLong(),
-                                        updatedAt = System.currentTimeMillis()
-                                    )
-                                )
+                        Column(Modifier.fillMaxWidth().statusBarsPadding().padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                            Text("Review shared content", style = MaterialTheme.typography.headlineSmall)
+                            if (count > 100) Text("Share up to 100 items at once. Nothing was saved.")
+                            else if (preparing.error != null) {
+                                Text(preparing.error.orEmpty(), color = MaterialTheme.colorScheme.error)
+                                Button(onClick = { retry++ }) { Text("Try again") }
+                            } else {
+                                LinearProgressIndicator(Modifier.fillMaxWidth())
+                                Text("Preparing a preview. Save it when you're ready.")
                             }
+                            OutlinedButton(onClick = { viewModel.cancelCapture(); finish() }) { Text("Cancel") }
                         }
-                    } catch (e: Exception) {
-                        Log.e("QuickShare", "Background image file caching failed: ${e.message}")
                     }
                 }
             }
-
-            // 3. Video Shared
-            mimeType.startsWith("video/") && mediaUri != null -> {
-                val displayName = ItemTitleResolver.queryDisplayName(appContext, mediaUri)
-                val resolvedTitle = ItemTitleResolver.resolveItemTitle(
-                    userTitle = subject?.takeIf { it.isNotBlank() },
-                    displayName = displayName,
-                    type = SavedItemType.VIDEO,
-                    fallbacks = appContext.loadTitleFallbacks()
-                )
-                val entity = SavedItemEntity(
-                    id = id,
-                    type = SavedItemType.VIDEO.name,
-                    title = resolvedTitle,
-                    content = mediaUri.toString(),
-                    timestamp = now,
-                    foldersJson = "[]",
-                    extractedText = null,
-                    thumbnailPath = null
-                )
-
-                if (!persistAndNotify("Saved video to Cobalt!", entity)) return
-
-                // Background cache persistence
-                activityScope.launch {
-                    try {
-                        val bytes = appContext.contentResolver.openInputStream(mediaUri)?.use { it.readBytes() }
-                        if (bytes != null) {
-                            val localFile = File(appContext.filesDir, "media/videos/shared_${id}.mp4")
-                            localFile.parentFile?.mkdirs()
-                            FileOutputStream(localFile).use { fos -> fos.write(bytes) }
-
-                            val db = AppDatabase.getDatabase(appContext)
-                            val current = db.savedItemDao().getItemById(id)
-                            if (current != null) {
-                                db.savedItemDao().insertItem(
-                                    current.copy(
-                                        content = localFile.absolutePath,
-                                        thumbnailPath = localFile.absolutePath,
-                                        sizeBytes = bytes.size.toLong(),
-                                        updatedAt = System.currentTimeMillis()
-                                    )
-                                )
-                            }
-                        }
-                    } catch (e: Exception) {
-                        Log.e("QuickShare", "Background video caching failed: ${e.message}")
-                    }
-                }
-            }
-
-            else -> {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(appContext, "Unsupported content format", Toast.LENGTH_SHORT).show()
-                    finish()
-                }
-            }
         }
     }
-
-    private suspend fun persistAndNotify(message: String, entity: SavedItemEntity): Boolean {
-        val appContext = applicationContext
-        withContext(Dispatchers.Main) { Toast.makeText(appContext, "Saving…", Toast.LENGTH_SHORT).show() }
-        return try {
-            com.example.notes.NotePersistence(appContext).save(entity.toDomainModel(bodyLoaded = true))
-            withContext(Dispatchers.Main) {
-                Toast.makeText(appContext, message, Toast.LENGTH_SHORT).show()
-                finish()
-            }
-            true
-        } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
-        catch (_: Exception) {
-            withContext(Dispatchers.Main) {
-                Toast.makeText(appContext, "Could not save this capture. Please share it again.", Toast.LENGTH_LONG).show()
-                finish()
-            }
-            false
-        }
-    }
-
-    private data class ParsedMetadata(val title: String?, val description: String?, val imageUrl: String?)
-
-    private fun fetchLinkMetadata(urlString: String): ParsedMetadata {
-        return try {
-            val cleanUrl = if (!urlString.startsWith("http://") && !urlString.startsWith("https://")) {
-                "https://$urlString"
-            } else {
-                urlString
-            }
-
-            val document = org.jsoup.Jsoup.connect(cleanUrl)
-                .timeout(6000)
-                .ignoreHttpErrors(true)
-                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
-                .get()
-
-            val title = document.title().takeIf { it.isNotBlank() }
-                ?: document.select("meta[property=og:title]").attr("content").takeIf { it.isNotBlank() }
-                ?: document.select("meta[name=twitter:title]").attr("content").takeIf { it.isNotBlank() }
-
-            val description = document.select("meta[property=og:description]").attr("content").takeIf { it.isNotBlank() }
-                ?: document.select("meta[name=description]").attr("content").takeIf { it.isNotBlank() }
-                ?: document.select("meta[name=twitter:description]").attr("content").takeIf { it.isNotBlank() }
-
-            val imageUrl = document.select("meta[property=og:image]").firstOrNull()?.absUrl("content")?.takeIf { it.isNotBlank() }
-                ?: document.select("meta[name=twitter:image]").firstOrNull()?.absUrl("content")?.takeIf { it.isNotBlank() }
-                ?: document.select("meta[property=og:image]").attr("content").takeIf { it.isNotBlank() }
-
-            ParsedMetadata(title?.trim(), description?.trim(), imageUrl)
-        } catch (e: Exception) {
-            ParsedMetadata(null, null, null)
-        }
-    }
+    companion object { const val REVIEW_AFTER_GATE = "review_shared_content_after_gate" }
 }

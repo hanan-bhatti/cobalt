@@ -68,12 +68,12 @@
 
         </activity>
 
-        <!-- Zero-lag instant share receiver -->
+        <!-- Shared content is reviewed before explicit Save. -->
         <activity
             android:name=".QuickShareActivity"
             android:label="@string/app_name"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar"
-            android:noHistory="true"
+            android:theme="@style/Theme.MyApplication"
+            android:windowSoftInputMode="adjustResize"
             android:excludeFromRecents="true"
             android:exported="true">
             <!-- Support shared plain text, markdown, and browser URLs -->

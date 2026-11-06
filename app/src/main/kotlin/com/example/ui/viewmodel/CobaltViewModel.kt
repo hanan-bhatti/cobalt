@@ -581,6 +581,13 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     private val _isOcrLoading = MutableStateFlow(false)
     val isOcrLoading: StateFlow<Boolean> = _isOcrLoading.asStateFlow()
 
+    data class SharedCaptureState(val preparing: Boolean = false, val error: String? = null)
+    private val _sharedCaptureState = MutableStateFlow(SharedCaptureState())
+    val sharedCaptureState = _sharedCaptureState.asStateFlow()
+    private val _lastCaptureSavedId = MutableStateFlow<String?>(null)
+    val lastCaptureSavedId = _lastCaptureSavedId.asStateFlow()
+    private var sharedPreparationJob: kotlinx.coroutines.Job? = null
+
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
 
@@ -831,6 +838,10 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun cancelCapture() {
+        metadataFetchToken++
+        metadataFetchJob?.cancel()
+        sharedPreparationJob?.cancel()
+        _sharedCaptureState.value = SharedCaptureState()
         fileEditor.close()
         noteTextRevision++
         noteTextJob?.cancel()
@@ -852,114 +863,101 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     /**
      * Process content shared from other apps via Share Target (Intent.SEND)
      */
-    fun handleSharedIntent(mimeType: String?, textContent: String?, mediaUri: Uri?, subject: String? = null) {
-        viewModelScope.launch {
-            editOriginalId = null
-            _isEditingItem.value = false
-            captureDrafts.clear()
-            _capturedBitmap.value = null
-            pendingMediaBytes = null
-            _isMetadataExtracting.value = false
-            _metadataError.value = null
-
-            if (mimeType == null) return@launch
-            if (mediaUri != null && (com.example.notes.TextFiles.accepts(null, mimeType) || mimeType == "application/octet-stream")) {
-                importMarkdown(mediaUri)
-                return@launch
-            }
-
-            when {
-                // 1. Text Shared
-                mimeType.startsWith("text/") && textContent != null -> {
-                    val url = withContext(Dispatchers.Default) {
-                        com.example.utils.ClipboardUrlHelper.parseUrl(textContent)
-                    }
-
-                    if (url != null) {
-                        // Title might be in subject, or in the remaining text
-                        val title = subject?.takeIf { it.isNotBlank() } ?: "Shared Link"
-                        _activeCaptureItem.value = SavedItem(
-                            type = SavedItemType.LINK,
-                            title = title,
-                            content = url
-                        )
-                        _activeCaptureItem.value?.let { captureDrafts[SavedItemType.LINK] = it }
-                        fetchLinkPreviewForActiveItem(url)
-                    } else {
-                        // Check if looks like code
-                        val isCode = withContext(Dispatchers.Default) {
-                            textContent.contains("class ") || textContent.contains("fun ") || textContent.contains("{") || textContent.contains("import ")
-                        }
-                        _activeCaptureItem.value = SavedItem(
-                            type = if (isCode) SavedItemType.CODE else SavedItemType.TEXT,
-                            title = subject?.takeIf { it.isNotBlank() } ?: if (isCode) "Captured Code Snippet" else "Captured Text Note",
-                            content = textContent
-                        )
-                        _activeCaptureItem.value?.let { captureDrafts[it.type] = it }
-                    }
+    fun prepareSharedDocument(uri: Uri) {
+        sharedPreparationJob?.cancel()
+        _sharedCaptureState.value = SharedCaptureState(preparing = true)
+        sharedPreparationJob = viewModelScope.launch {
+            try {
+                editOriginalId = null; _isEditingItem.value = false
+                captureDrafts.clear(); pendingMediaBytes = null
+                val item = com.example.notes.TextFileImporter(context).prepare(uri) { prepared ->
+                    fileEditor.stage(prepared.note, prepared.body)
+                    val ref = requireNotNull(fileEditor.state.value.generation)
+                    prepared.note.copy(content = "", bodyLoaded = false, bodyLocation = "FILE",
+                        byteLength = ref.bytes, preview = ref.preview)
                 }
-
-                // 2. Image Shared
-                mimeType.startsWith("image/") && mediaUri != null -> {
-                    try {
-                        val bytes = readUriBytes(mediaUri) ?: return@launch
-                        pendingMediaBytes = bytes
-                        val originalName = ItemTitleResolver.queryDisplayName(context, mediaUri)
-                        pendingMediaDisplayName = originalName
-                        val resolvedTitle = ItemTitleResolver.resolveItemTitle(
-                            userTitle = subject?.takeIf { it.isNotBlank() },
-                            displayName = originalName,
-                            type = SavedItemType.IMAGE,
-                            fallbacks = context.loadTitleFallbacks()
-                        )
-                        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                        _capturedBitmap.value = bitmap
-
-                        // Save temporarily to cache file for display
-                        val localPath = repository.saveToLocalCache("shared_img_${UUID.randomUUID()}.jpg", bytes)
-
-                        _activeCaptureItem.value = SavedItem(
-                            type = SavedItemType.IMAGE,
-                            title = resolvedTitle,
-                            content = localPath,
-                            thumbnailPath = localPath
-                        )
-                        _activeCaptureItem.value?.let { captureDrafts[SavedItemType.IMAGE] = it }
-                    } catch (e: Exception) {
-                        Log.e("CobaltVM", "Failed to load shared image: ${e.message}")
-                    }
-                }
-
-                // 3. Video Shared
-                mimeType.startsWith("video/") && mediaUri != null -> {
-                    try {
-                        val bytes = readUriBytes(mediaUri) ?: return@launch
-                        pendingMediaBytes = bytes
-                        val originalName = ItemTitleResolver.queryDisplayName(context, mediaUri)
-                        pendingMediaDisplayName = originalName
-                        val resolvedTitle = ItemTitleResolver.resolveItemTitle(
-                            userTitle = subject?.takeIf { it.isNotBlank() },
-                            displayName = originalName,
-                            type = SavedItemType.VIDEO,
-                            fallbacks = context.loadTitleFallbacks()
-                        )
-
-                        // Save to cache file
-                        val localPath = repository.saveToLocalCache("shared_vid_${UUID.randomUUID()}.mp4", bytes)
-
-                        _activeCaptureItem.value = SavedItem(
-                            type = SavedItemType.VIDEO,
-                            title = resolvedTitle,
-                            content = localPath,
-                            thumbnailPath = localPath // we can use localPath to play/display
-                        )
-                        _activeCaptureItem.value?.let { captureDrafts[SavedItemType.VIDEO] = it }
-                    } catch (e: Exception) {
-                        Log.e("CobaltVM", "Failed to load shared video: ${e.message}")
-                    }
-                }
+                kotlin.coroutines.coroutineContext.ensureActive()
+                _activeCaptureItem.value = item
+                captureDrafts[item.type] = item
+                _sharedCaptureState.value = SharedCaptureState()
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (error: Exception) {
+                _sharedCaptureState.value = SharedCaptureState(error = if (error is com.example.notes.NoteSizeExceededException)
+                    "This document is larger than 55 MB. Use Import document to split it into smaller notes. Your source file is unchanged."
+                    else "This document could not be prepared. Check that it is a readable text file. Nothing was saved.")
             }
         }
+    }
+
+    fun handleSharedIntent(mimeType: String?, textContent: String?, mediaUri: Uri?, subject: String? = null) {
+        if (mediaUri != null && (com.example.notes.TextFiles.accepts(null, mimeType) || mimeType == "application/octet-stream")) {
+            prepareSharedDocument(mediaUri)
+            return
+        }
+        sharedPreparationJob?.cancel()
+        _sharedCaptureState.value = SharedCaptureState(preparing = true)
+        sharedPreparationJob = viewModelScope.launch {
+            try {
+                editOriginalId = null; _isEditingItem.value = false
+                captureDrafts.clear(); _capturedBitmap.value = null; pendingMediaBytes = null
+                _isMetadataExtracting.value = false; _metadataError.value = null
+                val item = when {
+                    mimeType?.startsWith("text/") == true && textContent != null -> {
+                        val url = withContext(Dispatchers.Default) { com.example.utils.ClipboardUrlHelper.parseUrl(textContent) }
+                        if (url != null) SavedItem(type = SavedItemType.LINK, title = subject?.takeIf { it.isNotBlank() } ?: "Shared Link", content = url)
+                        else {
+                            val code = textContent.contains("class ") || textContent.contains("fun ") || textContent.contains("import ")
+                            val note = SavedItem(type = if (code) SavedItemType.CODE else SavedItemType.TEXT,
+                                title = subject?.takeIf { it.isNotBlank() }.orEmpty(), content = textContent)
+                            if (com.example.notes.NoteEditorWindows.requiresWindow(textContent)) {
+                                com.example.notes.TextUtf8InputStream(textContent).use { fileEditor.stage(note, it) }
+                                val ref = requireNotNull(fileEditor.state.value.generation)
+                                note.copy(content = "", bodyLoaded = false, bodyLocation = "FILE", byteLength = ref.bytes, preview = ref.preview)
+                            } else note
+                        }
+                    }
+                    mediaUri != null && (mimeType?.startsWith("image/") == true || mimeType?.startsWith("video/") == true || mimeType?.startsWith("audio/") == true) -> {
+                        val type = when { mimeType.startsWith("image/") -> SavedItemType.IMAGE; mimeType.startsWith("video/") -> SavedItemType.VIDEO; else -> SavedItemType.AUDIO }
+                        prepareSharedMedia(mediaUri, type, subject)
+                    }
+                    else -> error("Unsupported share")
+                }
+                kotlin.coroutines.coroutineContext.ensureActive()
+                _activeCaptureItem.value = item; captureDrafts[item.type] = item
+                _sharedCaptureState.value = SharedCaptureState()
+                if (item.type == SavedItemType.LINK) fetchLinkPreviewForActiveItem(item.content)
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: Exception) { _sharedCaptureState.value = SharedCaptureState(error = "This shared content could not be prepared. Nothing was saved. Try sharing it again.") }
+        }
+    }
+
+    private suspend fun prepareSharedMedia(uri: Uri, type: SavedItemType, subject: String?): SavedItem = withContext(Dispatchers.IO) {
+        val name = ItemTitleResolver.queryDisplayName(context, uri)
+        val extension = name?.substringAfterLast('.', "")?.lowercase()?.takeIf {
+            it in setOf("jpg", "jpeg", "png", "webp", "gif", "heic", "mp4", "webm", "mkv", "mov", "m4a", "mp3", "wav", "ogg", "aac", "flac")
+        } ?: when (type) { SavedItemType.IMAGE -> "jpg"; SavedItemType.VIDEO -> "mp4"; else -> "m4a" }
+        val file = File(context.cacheDir, "shared_media_${UUID.randomUUID()}.$extension")
+        try {
+            val cancellation = kotlin.coroutines.coroutineContext
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(file).use { output ->
+                    val buffer = ByteArray(com.example.notes.NoteSizePolicy.IO_CHUNK_BYTES)
+                    while (true) { cancellation.ensureActive(); val count = input.read(buffer); if (count < 0) break; output.write(buffer, 0, count) }
+                    output.fd.sync()
+                }
+            } ?: error("Shared file is unavailable")
+            val bitmap = if (type == SavedItemType.IMAGE) {
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeFile(file.path, bounds)
+                check(bounds.outWidth > 0 && bounds.outHeight > 0)
+                var sample = 1
+                while (bounds.outWidth / sample > 2048 || bounds.outHeight / sample > 2048) sample *= 2
+                BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample })
+            } else null
+            withContext(Dispatchers.Main.immediate) { pendingMediaDisplayName = name; _capturedBitmap.value = bitmap }
+            SavedItem(type = type, title = ItemTitleResolver.resolveItemTitle(subject, name, type, fallbacks = context.loadTitleFallbacks()),
+                content = if (type == SavedItemType.AUDIO) "" else file.path, thumbnailPath = file.path, sizeBytes = file.length())
+        } catch (error: Throwable) { file.delete(); throw error }
     }
 
     // ----------------------------------------------------
@@ -1548,14 +1546,20 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     private val _quickDraft = MutableStateFlow(QuickDraftState())
     val quickDraft = _quickDraft.asStateFlow()
     data class MarkdownImportState(val running: Boolean = false, val bytes: Long = 0, val message: String? = null,
-        val canSplit: Boolean = false, val partsSaved: Int = 0, val importedItem: SavedItem? = null)
-    private val _markdownImport = MutableStateFlow(MarkdownImportState())
+        val canSplit: Boolean = false, val partsSaved: Int = 0, val importedItem: SavedItem? = null,
+        val visible: Boolean = true, val failed: Boolean = false, val cancelled: Boolean = false,
+        val fileName: String? = null, val documentsTotal: Int = 1, val documentsSaved: Int = 0)
+    private val _markdownImport = MutableStateFlow(MarkdownImportState(visible = false))
     val markdownImport = _markdownImport.asStateFlow()
     private var markdownImportJob: kotlinx.coroutines.Job? = null
     private var markdownImportSource: Uri? = null
     private var markdownImportSession = UUID.randomUUID().toString()
 
     fun cancelMarkdownImport() { markdownImportJob?.cancel() }
+    fun dismissMarkdownImport() {
+        if (!_markdownImport.value.running) _markdownImport.value = _markdownImport.value.copy(visible = false)
+    }
+    fun retryMarkdownImport() { markdownImportSource?.let(::importMarkdown) }
 
     fun importMarkdown(uri: Uri) {
         if (markdownImportJob?.isActive == true) return
@@ -1563,66 +1567,78 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         markdownImportSession = UUID.randomUUID().toString()
         _markdownImport.value = MarkdownImportState(running = true)
         markdownImportJob = viewModelScope.launch {
+            var name: String? = null
             try {
-                val saved = withContext(Dispatchers.IO) {
-                    com.example.notes.TextFileImporter(context).importFile(uri) { bytes ->
-                        _markdownImport.value = MarkdownImportState(running = true, bytes = bytes)
+                name = withContext(Dispatchers.IO) {
+                    com.example.util.ItemTitleResolver.queryDisplayName(context, uri)?.let {
+                        com.example.util.ItemTitleResolver.truncateSafely(com.example.util.ItemTitleResolver.sanitizeDisplayName(it), 160)
                     }
                 }
-                val warning = when {
-                    saved.byteLength > com.example.notes.NoteSizePolicy.SOFT_MAX_BYTES ->
-                        "⚠️ Large Document (${com.example.notes.NoteSizePolicy.formatBytes(saved.byteLength)}): Saved in high-performance streaming mode. Live editing is locked for single notes above 50 MB to prevent app memory crashes. Tap 'Split into notes' to divide into editable parts."
-                    saved.byteLength > com.example.notes.NoteSizePolicy.TIER_B_MAX_BYTES ->
-                        "ℹ️ Large Document (${com.example.notes.NoteSizePolicy.formatBytes(saved.byteLength)}): Saved successfully. High-performance streaming mode is active. Real-time rich formatting is restricted to prevent typing lag."
-                    else -> "Text document imported successfully (${com.example.notes.NoteSizePolicy.formatBytes(saved.byteLength)})."
+                _markdownImport.value = MarkdownImportState(running = true, fileName = name)
+                val saved = withContext(Dispatchers.IO) {
+                    com.example.notes.TextFileImporter(context).importFile(uri) { bytes ->
+                        _markdownImport.value = MarkdownImportState(running = true, bytes = bytes, fileName = name)
+                    }
                 }
-                val isLargeOrWarning = saved.byteLength > com.example.notes.NoteSizePolicy.TIER_B_MAX_BYTES
-                _markdownImport.value = MarkdownImportState(
-                    bytes = saved.byteLength,
-                    canSplit = saved.byteLength > com.example.notes.NoteSizePolicy.TIER_B_MAX_BYTES,
-                    message = warning,
-                    importedItem = saved
-                )
-                if (!isLargeOrWarning) {
-                    showDetailItem(saved)
-                }
+                _markdownImport.value = MarkdownImportState(bytes = saved.byteLength,
+                    canSplit = saved.byteLength > com.example.notes.NoteSizePolicy.SOFT_MAX_BYTES,
+                    message = if (saved.byteLength > com.example.notes.NoteSizePolicy.SOFT_MAX_BYTES)
+                        "Your note is saved. You can keep it as one note or split it into smaller parts."
+                        else "Your document is saved and ready to open.",
+                    importedItem = saved, fileName = name, documentsSaved = 1)
+                // Keep the result visible. Navigation occurs only when Open note is tapped.
                 com.example.widget.WidgetUpdater.update(context)
             } catch (cancel: kotlinx.coroutines.CancellationException) {
-                _markdownImport.value = MarkdownImportState(message = "Import cancelled. The source document was not changed.")
+                _markdownImport.value = MarkdownImportState(bytes = _markdownImport.value.bytes,
+                    fileName = name, cancelled = true, message = "Import cancelled. Your source file is unchanged.")
                 throw cancel
             } catch (error: Exception) {
-                val isOversize = error is com.example.notes.NoteSizeExceededException
-                val currentBytes = _markdownImport.value.bytes
-                val msg = if (isOversize) {
-                    "Document exceeds 55 MB limit (${if (currentBytes > 0) com.example.notes.NoteSizePolicy.formatBytes(currentBytes) else "55+ MB"}). Single notes in Cobalt cannot exceed 55 MB to ensure device stability and prevent out-of-memory errors. Tap 'Split into notes' below to automatically partition this document into manageable notes."
-                } else {
-                    "Import failed. ${error.message ?: "The document could not be read."}. The source document was not changed."
-                }
-                _markdownImport.value = MarkdownImportState(
-                    canSplit = isOversize,
-                    bytes = currentBytes,
-                    message = msg
-                )
+                val tooLarge = error is com.example.notes.NoteSizeExceededException
+                _markdownImport.value = MarkdownImportState(failed = true, canSplit = tooLarge,
+                    bytes = _markdownImport.value.bytes, fileName = name,
+                    message = if (tooLarge) "This document is larger than the 55 MB limit for a new note. Split it into smaller notes to import all its text. Your source file is unchanged."
+                    else "This document could not be imported. Check that it is a readable text file, then try again. Your source file is unchanged.")
             }
         }
     }
 
     fun importSharedTextFiles(uris: List<Uri>) {
         if (markdownImportJob?.isActive == true) { showToast("An import is already running. Please retry afterwards."); return }
-        if (uris.size > 100) { showToast("Share at most 100 text documents. Nothing was imported."); return }
+        val documents = uris.distinct()
+        if (documents.isEmpty()) return
+        if (documents.size == 1) { importMarkdown(documents.single()); return }
+        if (documents.size > 100) {
+            _markdownImport.value = MarkdownImportState(failed = true,
+                message = "Share up to 100 text documents at once. Nothing was imported.")
+            return
+        }
+        markdownImportSource = null
+        _markdownImport.value = MarkdownImportState(running = true, documentsTotal = documents.size)
         markdownImportJob = viewModelScope.launch {
-            var saved = 0
-            var failed = 0
-            for (uri in uris.distinct()) {
-                try {
-                    val item = com.example.notes.TextFileImporter(context).importFile(uri)
-                    saved++
-                    if (uris.size == 1) showDetailItem(item)
-                } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
-                catch (_: Exception) { failed++ }
+            var saved = 0; var failed = 0; var bytesSaved = 0L
+            try {
+                for ((index, uri) in documents.withIndex()) {
+                    try {
+                        val item = com.example.notes.TextFileImporter(context).importFile(uri) { bytes ->
+                            _markdownImport.value = MarkdownImportState(running = true, bytes = bytesSaved + bytes,
+                                documentsTotal = documents.size, documentsSaved = saved,
+                                message = "Importing document ${index + 1} of ${documents.size}")
+                        }
+                        saved++; bytesSaved += item.byteLength
+                    } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+                    catch (_: Exception) { failed++ }
+                }
+                _markdownImport.value = MarkdownImportState(bytes = bytesSaved, documentsTotal = documents.size,
+                    documentsSaved = saved, failed = failed > 0,
+                    message = "$saved of ${documents.size} documents imported." + if (failed > 0)
+                        " $failed could not be imported. Import those files individually to review errors or split a large document. Source files are unchanged." else " Your notes are ready.")
+                com.example.widget.WidgetUpdater.update(context)
+            } catch (cancel: kotlinx.coroutines.CancellationException) {
+                _markdownImport.value = MarkdownImportState(bytes = bytesSaved, cancelled = true,
+                    documentsTotal = documents.size, documentsSaved = saved,
+                    message = "Import cancelled. $saved completed notes are kept. Source files are unchanged.")
+                throw cancel
             }
-            com.example.widget.WidgetUpdater.update(context)
-            showToast("$saved text document(s) imported; $failed unavailable or unsupported. Originals retained.")
         }
     }
 
@@ -1663,11 +1679,11 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 com.example.widget.WidgetUpdater.update(context)
             } catch (cancel: kotlinx.coroutines.CancellationException) {
                 _markdownImport.value = MarkdownImportState(canSplit = true, partsSaved = partsSaved,
-                    message = "Split cancelled. $partsSaved completed parts are kept. Retry checks the same part IDs.")
+                    cancelled = true, message = "Split cancelled. $partsSaved completed parts are kept. Retry checks the same part IDs.")
                 throw cancel
             } catch (_: Exception) {
                 _markdownImport.value = MarkdownImportState(canSplit = true, partsSaved = partsSaved,
-                    message = "Split stopped. $partsSaved completed parts and the original document are retained. Retry checks the same part IDs.")
+                    failed = true, message = "Split stopped. $partsSaved completed parts and the original document are retained. Retry checks the same part IDs.")
             }
         }
     }
@@ -1959,6 +1975,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
                 _saveProgress.value = 1.0f
                 kotlinx.coroutines.delay(200) // slight delay to show 100% progress state
+                _lastCaptureSavedId.value = persisted.id
                 cancelCapture()
                 editOriginalId = null
                 showToast(if (isEdit) "Item updated successfully." else "Item saved successfully.")
