@@ -2,6 +2,21 @@
 
 ### Fixes
 
+- Support selecting and copying parts of rendered notes with a shared rounded
+  selection toolbar, existing icons and long-press action labels. Editor tools
+  use a single row with a More menu; Read aloud is excluded.
+- Add Markdown table creation with row/column counts, row and column editing,
+  alignment and next-cell navigation. Table changes use existing editor history
+  and bounded background parsing; fenced code is protected.
+
+- Keep Edit as plain Markdown source and Preview as rendered content; continue lists
+  and checklists on Enter, exit empty items, and preserve literal escaped markers.
+- Apply table alignment in Preview, round inline-code backgrounds, and keep
+  next-cell navigation out of undo history when it changes only the cursor.
+- Skip the startup migration screen on fresh installations and fully migrated
+  libraries while retaining interrupted migrations and legacy drafts.
+- Keep Capture folder controls above the keyboard and remove duplicated footer space.
+
 - Render bounded Side Dock text-note previews as Markdown, retaining monospace
   code notes, and replace the full-width action bar with a floating three-icon pill.
 
