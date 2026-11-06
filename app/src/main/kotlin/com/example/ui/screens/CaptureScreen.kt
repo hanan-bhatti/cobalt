@@ -36,6 +36,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
@@ -66,6 +67,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -623,6 +627,9 @@ fun TextCapturePage(
     var showNewFolderCreator by remember { mutableStateOf(false) }
     val file by viewModel.fileEditorState.collectAsState()
     val fileEditing = file.id == item.id
+    val bodyFocusRequester = remember { FocusRequester() }
+    val bodyKeyboard = LocalSoftwareKeyboardController.current
+    val bodyInputBusy by viewModel.noteInputBusy.collectAsState()
 
     val noteHeader: @Composable () -> Unit = {
             // 1. Clean borderless Title input
@@ -718,6 +725,7 @@ fun TextCapturePage(
                     modifier = Modifier
                         .fillMaxWidth()
                         .defaultMinSize(minHeight = 180.dp)
+                        .focusRequester(bodyFocusRequester)
                         .testTag("capture_content_input")
                 )
                     }
@@ -797,7 +805,18 @@ fun TextCapturePage(
             .padding(top = 10.dp, bottom = bottomPadding + 8.dp), noteHeader, noteFooter, preview = isPreviewMode,
             localHazeState = localHazeState)
     } else Column(modifier.fillMaxSize().padding(horizontal = 20.dp).padding(top = 10.dp, bottom = 8.dp)) {
-        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
+        // The short source field does not occupy the viewport. Unhandled taps in
+        // the remaining body should focus it too; child title/selection gestures
+        // and scrolling keep their normal handling. Preview must remain readonly.
+        Column(Modifier.weight(1f).fillMaxWidth()
+            .pointerInput(isPreviewMode, bodyInputBusy) {
+                detectTapGestures {
+                    if (!isPreviewMode && !bodyInputBusy) {
+                        bodyFocusRequester.requestFocus()
+                        bodyKeyboard?.show()
+                    }
+                }
+            }.verticalScroll(rememberScrollState())) {
             noteHeader()
             noteEditor()
         }
