@@ -64,6 +64,21 @@ class DiskMarkdownViewTest {
             scope.cancel(); directory.deleteRecursively(); activity.pause().stop().destroy()
         }
     }
+    @Test fun tableEditUsesGlobalDiskCoordinatesAndUndoRestoresTable() {
+        val original = "Intro\n\n| A | B |\n| --- | --- |\n| x | y |\n\nEnd"
+        Fixture(original).use { f ->
+            f.open(original.indexOf('x'))
+            f.document.onFormat!!.invoke("table:column")
+            pump { f.view.isEditable && f.document.pendingEdit?.isActive != true }
+            assertTrue(f.text().contains("| x |  | y |"))
+            f.view.undo()
+            pump { f.view.isEditable && f.document.pendingEdit?.isActive != true }
+            assertEquals(original, f.text())
+            f.view.redo()
+            pump { f.view.isEditable && f.document.pendingEdit?.isActive != true }
+            assertTrue(f.text().contains("| x |  | y |"))
+        }
+    }
     @Test fun imeEditingAtAGlobalPositionUsesTheDiskDocumentAndUndoRestoresIt() {
         val body = (1..10_000).joinToString("\n") { "Line $it text" }
         Fixture(body).use { f ->

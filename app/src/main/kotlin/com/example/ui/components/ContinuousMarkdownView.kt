@@ -218,6 +218,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
     }
 
     private fun formatSelection(command: String) {
+        if (command.startsWith("table:")) { editTable(command); return }
         val type = FormatType.entries.firstOrNull { it.name == command } ?: return
         val from = cursor.left
         val until = cursor.right
@@ -274,6 +275,39 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
             }
         } finally { text.endBatchEdit() }
         requestFocus()
+    }
+
+    private fun editTable(command: String) {
+        val doc = document ?: return
+        if (!isEditable || doc.pendingEdit?.isActive == true) return
+        val position = cursor.left
+        val revision = doc.revision
+        isEditable = false
+        doc.pendingEdit = scope.launch {
+            try {
+                val frozen = doc.snapshot()
+                val edit = try {
+                    withContext(Dispatchers.Default) {
+                        val cancellation = currentCoroutineContext()
+                        val proposed = com.example.notes.MarkdownTableEdits.plan(frozen.length, position, command,
+                            { start, count -> NoteTextSlice(frozen, start, start + count).toString() },
+                            { cancellation.ensureActive() })
+                        val removed = NoteEditorWindows.utf8Bytes(NoteTextSlice(frozen, proposed.start, proposed.end))
+                        val added = NoteEditorWindows.utf8Bytes(proposed.text)
+                        val known = requireNotNull(doc.byteLength) { "Updating note size. Try the table action again." }
+                        check(known - removed + added <= doc.permittedBytes) { "The table would exceed the note size limit." }
+                        proposed
+                    }
+                } finally { frozen.release() }
+                check(document === doc && doc.revision == revision && !doc.frozen) { "The note changed. Try the table action again." }
+                beginStandaloneEdit()
+                try { text.replace(edit.start, edit.end, edit.text); select(edit.caret, edit.caret) }
+                finally { text.endBatchEdit() }
+                requestFocus()
+            } catch (cancel: CancellationException) { throw cancel }
+            catch (failure: Exception) { message(failure.message ?: "The table was not changed.") }
+            finally { if (document === doc) freeze(doc.frozen) }
+        }
     }
 
     fun select(start: Int, end: Int, requestFocus: Boolean = false) {

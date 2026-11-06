@@ -394,6 +394,22 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
         }
     }
     private fun formatGlobal(command: String) {
+        if (command.startsWith("table:")) {
+            action {
+                val position = globalSelection().first
+                val cancellation = kotlinx.coroutines.currentCoroutineContext()
+                try {
+                    session.execute { model ->
+                        val edit = com.example.notes.MarkdownTableEdits.plan(model.status.characters, position, command,
+                            model::text, { cancellation.ensureActive() })
+                        model.replace(edit.start, edit.end, edit.text,
+                            DiskTextModel.Position(edit.caret, edit.caret))
+                    }
+                    restoreModelSelection()
+                } catch (failure: IllegalArgumentException) { message(failure.message ?: "The table was not changed.") }
+            }
+            return
+        }
         val pair = when(command) { "Bold" -> "**" to "**"; "Italic" -> "_" to "_"; "Strikethrough" -> "~~" to "~~"
             "CodeInline" -> "`" to "`"; "CodeBlock" -> "\n```\n" to "\n```\n"; "Link" -> "[" to "](https://)"; else -> null }
         if (pair != null) action {
