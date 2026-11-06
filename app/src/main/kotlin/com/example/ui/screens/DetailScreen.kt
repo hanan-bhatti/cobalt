@@ -156,6 +156,7 @@ fun DetailScreen(
     }
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showLinkShareSheet by remember { mutableStateOf(false) }
 
     val localHazeState = remember { HazeState() }
 
@@ -439,7 +440,11 @@ fun DetailScreen(
                         }
                         IconButton(
                             onClick = {
-                                viewModel.shareItem(item, context)
+                                if (item.type == SavedItemType.LINK) {
+                                    showLinkShareSheet = true
+                                } else {
+                                    viewModel.shareItem(item, context)
+                                }
                             },
                             modifier = Modifier.bounceClick().testTag("detail_share_button")
                         ) {
@@ -516,7 +521,11 @@ fun DetailScreen(
                             ) {
                                 IconButton(
                                     onClick = {
-                                        viewModel.shareItem(item, context)
+                                        if (item.type == SavedItemType.LINK) {
+                                            showLinkShareSheet = true
+                                        } else {
+                                            viewModel.shareItem(item, context)
+                                        }
                                     },
                                     modifier = Modifier.fillMaxSize().bounceClick().testTag("detail_bottom_share_button")
                                 ) {
@@ -1038,6 +1047,13 @@ fun DetailScreen(
             },
             dismissButtonText = "Cancel",
             isDestructive = true
+        )
+    }
+
+    if (showLinkShareSheet && item.type == SavedItemType.LINK) {
+        com.example.ui.components.share.LinkShareBottomSheet(
+            item = item,
+            onDismissRequest = { showLinkShareSheet = false }
         )
     }
 }
