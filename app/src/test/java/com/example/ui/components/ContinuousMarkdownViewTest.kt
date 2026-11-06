@@ -17,6 +17,25 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
 class ContinuousMarkdownViewTest {
+    @Test fun everyFormattingCommandProducesMarkdownAndUndoRestoresIt() {
+        val expected = mapOf("Bold" to "**sample**", "Italic" to "_sample_", "Strikethrough" to "~~sample~~",
+            "Heading1" to "# sample", "Heading2" to "## sample", "Heading3" to "### sample", "Quote" to "> sample",
+            "BulletList" to "- sample", "NumberedList" to "1. sample", "Checklist" to "- [ ] sample",
+            "CodeInline" to "`sample`", "CodeBlock" to "```\nsample\n```", "Link" to "[sample](https://example.com)")
+        for ((command, result) in expected) {
+            val activity = Robolectric.buildActivity(Activity::class.java).setup()
+            val editor = ContinuousMarkdownView(activity.get())
+            editor.setWordwrap(false); activity.get().setContentView(editor)
+            val document = ContinuousNoteDocument(Content("sample"), 6)
+            try {
+                document.selectionStart = 0; document.selectionEnd = 6
+                editor.bind(document) { document.changed() }; awaitReady(editor)
+                document.onFormat!!.invoke(command)
+                assertEquals(command, result, editor.text.toString())
+                editor.undo(); assertEquals(command, "sample", editor.text.toString())
+            } finally { editor.dispose(); document.content.release(); activity.pause().stop().destroy() }
+        }
+    }
     @Test fun selectionAndImeEditingCrossFormerBlockBoundaries() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup()
         val editor = ContinuousMarkdownView(activity.get())
@@ -76,6 +95,25 @@ class ContinuousMarkdownViewTest {
             assertEquals(original, editor.text.toString())
             document.onFormat!!.invoke("redo")
             assertTrue(editor.text.toString().endsWith("\n|  |  |"))
+        } finally { editor.dispose(); document.content.release(); activity.pause().stop().destroy() }
+    }
+    @Test fun smartEnterAndBackspaceUseImeAndRemainUndoable() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup()
+        val editor = ContinuousMarkdownView(activity.get())
+        editor.setWordwrap(false); activity.get().setContentView(editor)
+        val original = "- first"
+        val document = ContinuousNoteDocument(Content(original), original.length.toLong())
+        try {
+            document.selectionStart = original.length; document.selectionEnd = original.length
+            editor.bind(document) { document.changed() }; awaitReady(editor)
+            assertNull("Edit mode remains literal source", editor.styles)
+            val ime = requireNotNull(editor.onCreateInputConnection(EditorInfo()))
+            assertTrue(ime.commitText("\n", 1)); awaitReady(editor)
+            assertEquals("- first\n- ", editor.text.toString())
+            assertTrue(ime.deleteSurroundingText(1, 0)); awaitReady(editor)
+            assertEquals("- first\n", editor.text.toString())
+            editor.undo(); assertEquals("- first\n- ", editor.text.toString())
+            editor.undo(); assertEquals(original, editor.text.toString())
         } finally { editor.dispose(); document.content.release(); activity.pause().stop().destroy() }
     }
     private fun awaitReady(editor: ContinuousMarkdownView) {

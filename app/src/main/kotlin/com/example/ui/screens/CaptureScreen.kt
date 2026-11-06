@@ -696,6 +696,8 @@ fun TextCapturePage(
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         fontSize = 16.sp,
                         lineHeight = 24.sp,
+                        fontFamily = if (item.type == SavedItemType.CODE)
+                            com.example.ui.theme.LocalCobaltTypography.current.codeFontFamily else MaterialTheme.typography.bodyLarge.fontFamily,
                         color = MaterialTheme.colorScheme.onBackground
                     ),
                     cursorBrush = SolidColor(pageCategoryColor),
@@ -1716,7 +1718,9 @@ fun CaptureScreen(
     LaunchedEffect(visibleText, normalWindow.start, fileEditor.window.start) {
         if (textContent.text != visibleText) textContent = TextFieldValue(visibleText, TextRange(visibleText.length))
     }
-    fun applyEditorText(updated: TextFieldValue) {
+    fun applyEditorText(incoming: TextFieldValue) {
+        val updated = if (!fileEditing && item.type == SavedItemType.TEXT)
+            com.example.notes.MarkdownListEditing.adapt(textContent, incoming) else incoming
         if (fileEditing) {
             if (!com.example.notes.NoteEditorWindows.sectionNeedsStreaming(updated.text)) textContent = updated
             viewModel.editFileWindow(updated.text)

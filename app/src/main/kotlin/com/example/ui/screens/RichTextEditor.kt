@@ -193,7 +193,8 @@ fun RichTextEditor(
                 }) {
                 TextField(
                     value = textFieldValue,
-                    onValueChange = {
+                    onValueChange = { incoming ->
+                        val it = com.example.notes.MarkdownListEditing.adapt(textFieldValue, incoming)
                         if (com.example.notes.NoteEditorWindows.requiresWindow(it.text)) {
                             if (onWindowChange != null) onWindowChange(0, value.length, it.text)
                             else onValueChange(it.text)

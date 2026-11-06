@@ -880,7 +880,8 @@ fun QuickNoteBottomSheet(
                                     BasicTextField(
                                         value = contentValue,
                                         enabled = !isSaving,
-                                        onValueChange = { updated ->
+                                        onValueChange = { incoming ->
+                                            val updated = com.example.notes.MarkdownListEditing.adapt(contentValue, incoming)
                                             if (!com.example.notes.NoteEditorWindows.requiresWindow(updated.text)) contentValue = updated
                                             onContentChange(updated.text)
                                         },

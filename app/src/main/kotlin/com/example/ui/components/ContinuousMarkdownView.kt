@@ -2,6 +2,7 @@ package com.example.ui.components
 
 import android.content.Context
 import android.graphics.Typeface
+import android.view.KeyEvent
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
@@ -18,7 +19,6 @@ import com.example.ui.screens.FormatType
 import io.github.rosemoe.sora.event.ContentChangeEvent
 import io.github.rosemoe.sora.event.ScrollEvent
 import io.github.rosemoe.sora.event.SelectionChangeEvent
-import io.github.rosemoe.sora.lang.styling.Styles
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.component.EditorAutoCompletion
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
@@ -27,9 +27,11 @@ import kotlinx.coroutines.*
 /** One fixed-height native editing surface: one IME connection and selection for the whole note. */
 internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    var markdownListsEnabled = true
+    private val listFences = com.example.notes.MarkdownFenceIndex()
+    private var skipListAssistance = false
+    private var composing = false
     private var document: ContinuousNoteDocument? = null
-    private var spans: ViewportMarkdownSpans? = null
-    private var styling: Job? = null
     private var paste: Job? = null
     private var finding: Job? = null
     private var binding = false
@@ -73,6 +75,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
         }
         getComponent(EditorAutoCompletion::class.java).isEnabled = false
         subscribeEvent(ContentChangeEvent::class.java) { event, _ ->
+            listFences.invalidate(event.changeStart.index)
             if (event.action != ContentChangeEvent.ACTION_SET_NEW_TEXT && document != null) {
                 val doc = document!!
                 val previous = doc.byteLength
@@ -100,7 +103,6 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
                     if (event.action == ContentChangeEvent.ACTION_DELETE) part.length else 0,
                     if (event.action == ContentChangeEvent.ACTION_INSERT) part else "")
                 changed()
-                warmStyles()
             }
         }
         subscribeEvent(SelectionChangeEvent::class.java) { event, _ ->
@@ -108,7 +110,6 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
         }
         subscribeEvent(ScrollEvent::class.java) { _, _ ->
             if (!binding) document?.let { it.scrollX = offsetX; it.scrollY = offsetY }
-            warmStyles()
         }
     }
 
@@ -121,12 +122,12 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
         val y = value.scrollY
         val previousDocument = document
         value.attachView()
+        listFences.invalidate(0)
         document = value
         binding = true
         try {
             setText(value.content, true, null)
-            spans = ViewportMarkdownSpans(value.content)
-            setStyles(Styles(spans))
+            setStyles(null)
             if (start != 0 || end != 0) {
                 val left = value.content.indexer.getCharPosition(start.coerceIn(0, value.content.length))
                 val right = value.content.indexer.getCharPosition(end.coerceIn(0, value.content.length))
@@ -142,7 +143,6 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
             if (!isReleased && document === value) {
                 if (x == 0 && y == 0 && end > 0 && value.revision == 0L) revealInitialSelection(value)
                 else restoreViewport(x, y, value)
-                warmStyles()
             }
         }
     }
@@ -201,21 +201,6 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
         }
     }
 
-    private fun warmStyles() {
-        val map = spans ?: return
-        val doc = document ?: return
-        val version = doc.revision
-        val first = (firstVisibleLine - 16).coerceAtLeast(0)
-        val last = (lastVisibleLine + 32).coerceAtLeast(first)
-        styling?.cancel()
-        styling = scope.launch {
-            delay(24)
-            withContext(Dispatchers.Default) { map.prepare(first, last) }
-            if (!isReleased && document === doc && version == doc.revision) {
-                setStyles(Styles(map))
-            } else map.clear()
-        }
-    }
 
     private fun formatSelection(command: String) {
         if (command.startsWith("table:")) { editTable(command); return }
@@ -300,6 +285,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
                     }
                 } finally { frozen.release() }
                 check(document === doc && doc.revision == revision && !doc.frozen) { "The note changed. Try the table action again." }
+                if (edit.selectionOnly) { select(edit.caret, edit.caret); return@launch }
                 beginStandaloneEdit()
                 try { text.replace(edit.start, edit.end, edit.text); select(edit.caret, edit.caret) }
                 finally { text.endBatchEdit() }
@@ -585,8 +571,52 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
         return accepted
     }
 
+    private fun assistList(backspace: Boolean): Boolean {
+        val doc = document ?: return false
+        if (!markdownListsEnabled || skipListAssistance || !isEditable || cursor.isSelected ||
+            doc.pendingEdit?.isActive == true || (backspace && composing)) return false
+        val lineNumber = cursor.leftLine
+        if (text.getColumnCount(lineNumber) > com.example.notes.MarkdownListEditing.MAX_LINE_CHARACTERS) return false
+        val line = text.getLineString(lineNumber)
+        if (!com.example.notes.MarkdownListEditing.canHandle(line, cursor.leftColumn, backspace)) return false
+        val position = cursor.left; val lineStart = position - cursor.leftColumn; val version = doc.revision
+        isEditable = false
+        doc.pendingEdit = scope.launch {
+            try {
+                val frozen = doc.snapshot()
+                val edit = try { withContext(Dispatchers.Default) {
+                    val cancel = currentCoroutineContext()
+                    val fenced = listFences.inside(position,
+                        { start, count -> NoteTextSlice(frozen, start, start + count).toString() }, { cancel.ensureActive() })
+                    val proposed = (if (backspace) com.example.notes.MarkdownListEditing.backspace(line, position - lineStart, lineStart, fenced)
+                        else com.example.notes.MarkdownListEditing.enter(line, position - lineStart, lineStart, fenced))
+                        ?: com.example.notes.MarkdownListEditing.Edit(if (backspace) position - 1 else position, position,
+                            if (backspace) "" else "\n", if (backspace) position - 1 else position + 1)
+                    val known = requireNotNull(doc.byteLength) { "Updating note size. Try Enter again." }
+                    val bytes = known - NoteEditorWindows.utf8Bytes(NoteTextSlice(frozen, proposed.start, proposed.end)) + NoteEditorWindows.utf8Bytes(proposed.text)
+                    check(bytes <= doc.permittedBytes) { "Note is at its size limit." }
+                    proposed
+                } } finally { frozen.release() }
+                check(document === doc && doc.revision == version && !doc.frozen) { "The note changed. Try the edit again." }
+                beginStandaloneEdit()
+                try { text.replace(edit.start, edit.end, edit.text); select(edit.caret, edit.caret) }
+                finally { text.endBatchEdit() }
+            } catch (cancel: CancellationException) { throw cancel }
+            catch (failure: Exception) { message(failure.message ?: "The list was not changed.") }
+            finally { if (document === doc) freeze(doc.frozen) }
+        }
+        return true
+    }
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_DEL && !event.isCtrlPressed && !event.isAltPressed && assistList(true)) return true
+        val previous = skipListAssistance
+        skipListAssistance = event.isShiftPressed || event.isCtrlPressed || event.isAltPressed
+        return try { super.onKeyDown(keyCode, event) } finally { skipListAssistance = previous }
+    }
+
     override fun commitText(text: CharSequence, applyAutoIndent: Boolean, applySymbolCompletion: Boolean) {
         if (document?.frozen == true || document?.pendingEdit?.isActive == true) return
+        if (text.toString() == "\n" && assistList(false)) return
         when (acceptsInput(text)) {
             null -> pasteText(text)
             true -> super.commitText(text, applyAutoIndent, applySymbolCompletion)
@@ -598,6 +628,8 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
         val target = super.onCreateInputConnection(outAttrs) ?: return null
         val guarded = object : InputConnectionWrapper(target, false) {
             override fun commitText(text: CharSequence?, newCursorPosition: Int): Boolean {
+                composing = false
+                if (text?.toString() == "\n" && assistList(false)) return true
                 if (document?.frozen == true || document?.pendingEdit?.isActive == true) return false
                 if (text != null) when (acceptsInput(text)) {
                     null -> { pasteText(text); return true }
@@ -607,6 +639,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
                 return super.commitText(text, newCursorPosition)
             }
             override fun setComposingText(text: CharSequence?, newCursorPosition: Int): Boolean {
+                composing = true
                 if (document?.frozen == true || document?.pendingEdit?.isActive == true) return false
                 if (text != null && text.length > 4096) { message("Composition is too large. Insert it using Paste instead."); return false }
                 // Composition can replace an existing composing span. This conservative bound only
@@ -618,8 +651,18 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
                 return super.setComposingText(text, newCursorPosition)
             }
             override fun setComposingRegion(start: Int, end: Int): Boolean {
+                composing = start != end
                 if (document?.frozen == true || document?.pendingEdit?.isActive == true || kotlin.math.abs(end.toLong() - start) > 4096) return false
                 return super.setComposingRegion(start, end)
+            }
+            override fun finishComposingText(): Boolean { composing = false; return super.finishComposingText() }
+            override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean {
+                if (beforeLength == 1 && afterLength == 0 && assistList(true)) return true
+                return super.deleteSurroundingText(beforeLength, afterLength)
+            }
+            override fun deleteSurroundingTextInCodePoints(beforeLength: Int, afterLength: Int): Boolean {
+                if (beforeLength == 1 && afterLength == 0 && assistList(true)) return true
+                return super.deleteSurroundingTextInCodePoints(beforeLength, afterLength)
             }
             override fun getTextBeforeCursor(length: Int, flags: Int): CharSequence? =
                 super.getTextBeforeCursor(length.coerceIn(0, 16_384), flags)

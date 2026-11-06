@@ -125,44 +125,7 @@ fun parseMarkdown(
     }
 }
 
+/** Edit mode is literal Markdown. Preview owns all presentation styling. */
 class MarkdownVisualTransformation(val primaryColor: Color = LinkBlue) : VisualTransformation {
-    override fun filter(text: AnnotatedString): TransformedText {
-        if (com.example.notes.NoteEditorWindows.requiresWindow(text.text)) return TransformedText(text, OffsetMapping.Identity)
-        // We will just return the original text styled, without replacing characters
-        // to maintain 1:1 offset mapping and not crash the text field cursor.
-        val styled = buildAnnotatedString {
-            var currentIndex = 0
-            val regex = Regex("\\*\\*(.*?)\\*\\*|\\*(.*?)\\*|`(.*?)`|\\[(.*?)\\]\\((.*?)\\)|(?:^|\\n)(\\s*[\\-\\*]\\s+.*)")
-            val matches = regex.findAll(text.text)
-            
-            for (match in matches) {
-                append(text.text.substring(currentIndex, match.range.first))
-                if (match.groups[1] != null) {
-                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(match.value) }
-                } else if (match.groups[2] != null) {
-                    withStyle(SpanStyle(fontStyle = FontStyle.Italic)) { append(match.value) }
-                } else if (match.groups[3] != null) {
-                    withStyle(SpanStyle(background = Color.LightGray.copy(alpha=0.3f), fontFamily = FontFamily.Monospace)) { 
-                        append(match.value) 
-                    }
-                } else if (match.groups[4] != null && match.groups[5] != null) {
-                    withStyle(SpanStyle(color = primaryColor, textDecoration = TextDecoration.Underline)) {
-                        append(match.value)
-                    }
-                } else if (match.groups[6] != null) {
-                    // Just style it a bit, keep exact text
-                    withStyle(SpanStyle(fontWeight = FontWeight.Medium)) { append(match.value) }
-                } else {
-                    append(match.value)
-                }
-                currentIndex = match.range.last + 1
-            }
-            append(text.text.substring(currentIndex))
-        }
-        
-        return TransformedText(
-            text = styled,
-            offsetMapping = OffsetMapping.Identity
-        )
-    }
+    override fun filter(text: AnnotatedString) = TransformedText(text, OffsetMapping.Identity)
 }

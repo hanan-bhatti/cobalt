@@ -194,6 +194,7 @@ internal fun ContinuousNoteEditor(viewModel: CobaltViewModel, modifier: Modifier
                             onRelease = { view -> view.dispose(); if (diskNative === view) diskNative = null },
                             update = { view ->
                                 view.applyCobaltTypography(typo, activeItem?.type == com.example.data.model.SavedItemType.CODE)
+                                view.markdownListsEnabled = activeItem?.type != com.example.data.model.SavedItemType.CODE
                                 view.message = { message = it }
                                 view.progress = { pasteProgress = it; viewModel.continuousEditorBusy(document, it != null) }
                                 view.tool = { tool = it }
@@ -215,6 +216,7 @@ internal fun ContinuousNoteEditor(viewModel: CobaltViewModel, modifier: Modifier
                             onRelease = { view -> view.dispose(); if (native === view) native = null },
                             update = { view ->
                                 view.applyCobaltTypography(typo, isCode)
+                                view.markdownListsEnabled = !isCode
                                 view.message = { message = it }
                                 view.pasteProgress = { pasteProgress = it; viewModel.continuousEditorBusy(document, it != null) }
                                 view.onTool = { tool = it }

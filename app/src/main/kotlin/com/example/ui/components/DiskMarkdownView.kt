@@ -15,7 +15,6 @@ import com.example.notes.*
 import io.github.rosemoe.sora.event.ContentChangeEvent
 import io.github.rosemoe.sora.event.ScrollEvent
 import io.github.rosemoe.sora.event.SelectionChangeEvent
-import io.github.rosemoe.sora.lang.styling.Styles
 import io.github.rosemoe.sora.text.Content
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.component.EditorAutoCompletion
@@ -36,6 +35,9 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
     private var oldRight = 0
     private var windowEpoch = 0L
     private var binding = false
+    var markdownListsEnabled = true
+    private val listFences = com.example.notes.MarkdownFenceIndex()
+    private var skipListAssistance = false
     private var composing = false
     private var loading = false
     private var loadFailed = false
@@ -56,8 +58,6 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
     private val pending = ArrayList<DiskTextModel.Replacement>()
     private var delivery: Job? = null
     private var rewindow: Job? = null
-    private var spans: ViewportMarkdownSpans? = null
-    private var styling: Job? = null
     private var released = false
     var message: (String) -> Unit = {}
     var progress: (Float?) -> Unit = {}
@@ -87,6 +87,7 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
             if (binding || event.action == ContentChangeEvent.ACTION_SET_NEW_TEXT || document == null) return@subscribeEvent
             if (pending.isEmpty()) pendingBefore = DiskTextModel.Position(anchor, caret)
             val position = start + event.changeStart.index
+            listFences.invalidate(position)
             val removed = if (event.action == ContentChangeEvent.ACTION_DELETE) event.changedText.length else 0
             val inserted = if (event.action == ContentChangeEvent.ACTION_INSERT) event.changedText.toString() else ""
             pending.add(DiskTextModel.Replacement(position, position + removed, inserted))
@@ -95,7 +96,6 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
             syncDocumentSelection()
             if (pending.size >= 48 || text.length > DiskTextModel.MAX_VIEW_CHARACTERS + 8192) { backpressure = true; isEditable = false }
             if (delivery?.isActive != true) delivery = scope.launch { yield(); deliver() }
-            warmStyles()
         }
         subscribeEvent(SelectionChangeEvent::class.java) { event, _ ->
             if (binding || document == null) return@subscribeEvent
@@ -109,7 +109,6 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
             if (!binding && !loading && !isRestoringScroll) {
                 saveAnchor()
                 maybeRewindow()
-                warmStyles()
             }
             triggerScrollbar()
         }
@@ -117,6 +116,7 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
     fun bind(value: ContinuousNoteDocument) {
         if (document === value) return
         check(value.disk != null)
+        listFences.invalidate(0)
         document?.detachView(); value.attachView(); document = value
         anchor = value.selectionStart; caret = value.selectionEnd; total = value.disk.state.value.characters
         value.onFreeze = freeze; value.onFormat = format
@@ -201,7 +201,7 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
                 windowEpoch++
                 start = data.first; total = data.third
                 setText(Content(data.second).also { it.setUndoEnabled(false) }, true, null)
-                spans = ViewportMarkdownSpans(text); setStyles(Styles(spans))
+                setStyles(null)
                 val a = (minOf(anchor, caret) - start).coerceIn(0, text.length)
                 val b = (maxOf(anchor, caret) - start).coerceIn(0, text.length)
                 val left = text.indexer.getCharPosition(a); val right = text.indexer.getCharPosition(b)
@@ -230,7 +230,6 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
         finally {
             loading = false
             freeze(document?.frozen != false)
-            warmStyles()
             triggerScrollbar()
         }
     }
@@ -249,12 +248,12 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
         isRestoringScroll = false
         invalidate()
     }
-    private fun action(block: suspend () -> Unit) {
+    private fun action(invalidateSyntax: Boolean = true, block: suspend () -> Unit) {
         if (loading || blocked || document?.frozen != false) return
         val owner = document ?: return
         owner.pendingEdit = scope.launch {
             blocked = true; isEditable = false
-            try { delivery?.join(); session.flush(); session.select(anchor, caret); block() }
+            try { delivery?.join(); session.flush(); session.select(anchor, caret); if (invalidateSyntax) listFences.invalidate(0); block() }
             catch (cancel: CancellationException) { throw cancel }
             catch (_: Exception) { message("This action did not finish. Original text and recoverable edits are retained.") }
             finally { blocked = false; progress(null); freeze(owner.frozen) }
@@ -264,9 +263,17 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
     override fun redo() { action { session.redo(); restoreModelSelection() } }
     override fun canUndo(): Boolean = document?.disk?.state?.value?.canUndo == true
     override fun canRedo(): Boolean = document?.disk?.state?.value?.canRedo == true
-    private suspend fun restoreModelSelection() {
+    private suspend fun restoreModelSelection(reload: Boolean = true) {
         session.state.value.let { anchor = it.anchor; caret = it.caret; total = it.characters }
-        syncDocumentSelection(); load(caret, false, caret)
+        syncDocumentSelection()
+        if (!reload && anchor in start..start + text.length && caret in start..start + text.length) {
+            val position = text.indexer.getCharPosition(caret - start)
+            binding = true
+            try {
+                setSelectionRegion(position.line, position.column, position.line, position.column, true)
+                oldLeft = caret - start; oldRight = oldLeft
+            } finally { binding = false }
+        } else load(caret, false, caret)
     }
     override fun selectAll() {
         anchor = 0; caret = total; syncDocumentSelection()
@@ -399,22 +406,27 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
                 val position = globalSelection().first
                 val cancellation = kotlinx.coroutines.currentCoroutineContext()
                 try {
-                    session.execute { model ->
+                    val selectionOnly = session.execute { model ->
                         val edit = com.example.notes.MarkdownTableEdits.plan(model.status.characters, position, command,
                             model::text, { cancellation.ensureActive() })
-                        model.replace(edit.start, edit.end, edit.text,
-                            DiskTextModel.Position(edit.caret, edit.caret))
+                        if (edit.selectionOnly) model.select(edit.caret, edit.caret)
+                        else model.replace(edit.start, edit.end, edit.text, DiskTextModel.Position(edit.caret, edit.caret))
+                        edit.selectionOnly
                     }
-                    restoreModelSelection()
+                    restoreModelSelection(reload = !selectionOnly)
                 } catch (failure: IllegalArgumentException) { message(failure.message ?: "The table was not changed.") }
             }
             return
         }
         val pair = when(command) { "Bold" -> "**" to "**"; "Italic" -> "_" to "_"; "Strikethrough" -> "~~" to "~~"
-            "CodeInline" -> "`" to "`"; "CodeBlock" -> "\n```\n" to "\n```\n"; "Link" -> "[" to "](https://)"; else -> null }
+            "CodeInline" -> "`" to "`"; "CodeBlock" -> "```\n" to "\n```"; "Link" -> "[" to "](https://example.com)"; else -> null }
         if (pair != null) action {
             val (from, until) = globalSelection()
-            session.execute { it.replaceBatch(listOf(DiskTextModel.Replacement(until, until, pair.second), DiskTextModel.Replacement(from, from, pair.first))) }
+            session.execute { model ->
+                if (command == "Link" && from == until) model.replace(from, until, "[link text](https://example.com)", DiskTextModel.Position(from + 1, from + 10))
+                else model.replaceBatch(listOf(DiskTextModel.Replacement(until, until, pair.second), DiskTextModel.Replacement(from, from, pair.first)),
+                    after = DiskTextModel.Position(from + pair.first.length, until + pair.first.length))
+            }
             restoreModelSelection()
         } else {
             val prefix = when(command) { "Heading1" -> "# "; "Heading2" -> "## "; "Heading3" -> "### "; "Quote" -> "> "; "BulletList" -> "- "; "NumberedList" -> "1. "; "Checklist" -> "- [ ] "; else -> return }
@@ -426,6 +438,34 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
             }
         }
     }
+    private fun assistList(backspace: Boolean): Boolean {
+        if (!markdownListsEnabled || skipListAssistance || !isEditable || anchor != caret ||
+            (backspace && composing) || text.getColumnCount(cursor.leftLine) > MarkdownListEditing.MAX_LINE_CHARACTERS) return false
+        val visible = text.getLineString(cursor.leftLine)
+        if (!MarkdownListEditing.canHandle(visible, cursor.leftColumn, backspace)) return false
+        val position = caret
+        action(invalidateSyntax = false) {
+            val cancellation = currentCoroutineContext()
+            session.execute { model ->
+                val around = MarkdownListEditing.around(model.status.characters, position, model::text)
+                val edit = around?.let { (lineStart, line) ->
+                    val fenced = listFences.inside(position, model::text) { cancellation.ensureActive() }
+                    if (backspace) MarkdownListEditing.backspace(line, position - lineStart, lineStart, fenced)
+                    else MarkdownListEditing.enter(line, position - lineStart, lineStart, fenced)
+                } ?: MarkdownListEditing.Edit(if (backspace) position - 1 else position, position,
+                    if (backspace) "" else "\n", if (backspace) position - 1 else position + 1)
+                model.replace(edit.start, edit.end, edit.text, DiskTextModel.Position(edit.caret, edit.caret))
+                listFences.invalidate(edit.start)
+            }
+            restoreModelSelection()
+        }
+        return true
+    }
+    override fun commitText(value: CharSequence, applyAutoIndent: Boolean, applySymbolCompletion: Boolean) {
+        if (value.toString() == "\n" && assistList(false)) return
+        super.commitText(value, applyAutoIndent, applySymbolCompletion)
+    }
+
     override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection? {
         val delegate = super.onCreateInputConnection(outAttrs) ?: return null
         val epoch = windowEpoch
@@ -433,6 +473,7 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
             override fun commitText(value: CharSequence?, newCursorPosition: Int): Boolean {
                 if (released || epoch != windowEpoch || !isEditable) return false
                 composing = false
+                if (value?.toString() == "\n" && assistList(false)) return true
                 if (value != null && (outsideSelection() || value.length > 8192)) { pasteText(value); return true }
                 return super.commitText(value, newCursorPosition)
             }
@@ -445,12 +486,14 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
             override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean {
                 if (released || epoch != windowEpoch || !isEditable) return false
                 if (beforeLength < 0 || afterLength < 0) return false
+                if (beforeLength == 1 && afterLength == 0 && assistList(true)) return true
                 if (crossesWindow(beforeLength, afterLength)) return deleteAcrossWindow(beforeLength, afterLength, false)
                 return super.deleteSurroundingText(beforeLength, afterLength)
             }
             override fun deleteSurroundingTextInCodePoints(beforeLength: Int, afterLength: Int): Boolean {
                 if (released || epoch != windowEpoch || !isEditable) return false
                 if (beforeLength < 0 || afterLength < 0) return false
+                if (beforeLength == 1 && afterLength == 0 && assistList(true)) return true
                 if (crossesWindow(beforeLength, afterLength, true)) return deleteAcrossWindow(beforeLength, afterLength, true)
                 return super.deleteSurroundingTextInCodePoints(beforeLength, afterLength)
             }
@@ -469,6 +512,9 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
         }
     }
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_DEL && !event.isCtrlPressed && !event.isAltPressed && assistList(true)) return true
+        if (keyCode == KeyEvent.KEYCODE_ENTER && !event.isShiftPressed && !event.isCtrlPressed && !event.isAltPressed && assistList(false)) return true
+
         if (!released && isEditable && !event.isCtrlPressed && !event.isAltPressed && !event.isMetaPressed &&
             (keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)) {
             val backwards = keyCode == KeyEvent.KEYCODE_DPAD_LEFT
@@ -506,14 +552,11 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
             event.unicodeChar != 0 && Character.isValidCodePoint(event.unicodeChar)) {
             pasteText(String(Character.toChars(event.unicodeChar))); return true
         }
-        return super.onKeyDown(keyCode, event)
+        val previous = skipListAssistance
+        skipListAssistance = event.isShiftPressed || event.isCtrlPressed || event.isAltPressed
+        return try { super.onKeyDown(keyCode, event) } finally { skipListAssistance = previous }
     }
-    private fun warmStyles() {
-        val map = spans ?: return
-        styling?.cancel()
-        styling = scope.launch { delay(24); val from = (firstVisibleLine - 16).coerceAtLeast(0); val until = lastVisibleLine + 32
-            withContext(Dispatchers.Default) { map.prepare(from, until) }; if (!released && spans === map) setStyles(Styles(map)) }
-    }
+
     private fun triggerScrollbar() {
         scrollbarFadeJob?.cancel()
         scrollbarAlpha = 1f

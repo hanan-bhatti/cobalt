@@ -64,6 +64,65 @@ class DiskMarkdownViewTest {
             scope.cancel(); directory.deleteRecursively(); activity.pause().stop().destroy()
         }
     }
+    @Test fun everyFormattingCommandProducesMarkdownAndUndoRestoresIt() {
+        val expected = mapOf("Bold" to "**sample**", "Italic" to "_sample_", "Strikethrough" to "~~sample~~",
+            "Heading1" to "# sample", "Heading2" to "## sample", "Heading3" to "### sample", "Quote" to "> sample",
+            "BulletList" to "- sample", "NumberedList" to "1. sample", "Checklist" to "- [ ] sample",
+            "CodeInline" to "`sample`", "CodeBlock" to "```\nsample\n```", "Link" to "[sample](https://example.com)")
+        for ((command, result) in expected) Fixture("sample").use { f ->
+            f.open(); f.view.setSelectionRegion(0,0,0,6)
+            f.document.onFormat!!.invoke(command)
+            pump { f.view.isEditable && f.document.pendingEdit?.isActive != true }
+            assertEquals(command, result, f.text())
+            f.view.undo(); pump { f.view.isEditable && f.document.pendingEdit?.isActive != true }
+            assertEquals(command, "sample", f.text())
+        }
+    }
+    @Test fun linkAtAnEmptyCursorHasAnEditableLabel() {
+        Fixture("sample").use { f ->
+            f.open(6); f.document.onFormat!!.invoke("Link")
+            pump { f.view.isEditable && f.document.pendingEdit?.isActive != true }
+            assertEquals("sample[link text](https://example.com)", f.text())
+        }
+    }
+    @Test fun smartListEnterAndBackspaceWorkBeyondTheMaterializedWindow() {
+        val original = "plain line\n".repeat(6000) + "- [x] done"
+        Fixture(original).use { f ->
+            f.open(original.length)
+            assertNull("Edit mode remains literal source", f.view.styles)
+            val ime = requireNotNull(f.view.onCreateInputConnection(EditorInfo()))
+            assertTrue(ime.commitText("\n", 1)); pump { f.view.isEditable && f.document.pendingEdit?.isActive != true }
+            assertEquals(original + "\n- [ ] ", f.text())
+            val nextIme = requireNotNull(f.view.onCreateInputConnection(EditorInfo()))
+            assertTrue(nextIme.deleteSurroundingText(1,0)); pump { f.view.isEditable && f.document.pendingEdit?.isActive != true }
+            assertEquals(original + "\n", f.text())
+            f.view.undo(); pump { f.view.isEditable && f.document.pendingEdit?.isActive != true }
+            assertEquals(original + "\n- [ ] ", f.text())
+        }
+    }
+    @Test fun smartListsDoNotRewriteCodeFences() {
+        val original = "```markdown\n- code"
+        Fixture(original).use { f ->
+            f.open(original.length)
+            val ime = requireNotNull(f.view.onCreateInputConnection(EditorInfo()))
+            assertTrue(ime.commitText("\n",1)); pump { f.view.isEditable && f.document.pendingEdit?.isActive != true }
+            assertEquals(original + "\n", f.text())
+        }
+    }
+    @Test fun nextCellMovesCaretWithoutReloadingOrAddingHistory() {
+        val original = "| A | B |\n| --- | --- |\n| x | y |"
+        Fixture(original).use { f ->
+            f.open(original.indexOf('A'))
+            val nativeContent = f.view.text
+            val revision = f.session.state.value.revision
+            f.document.onFormat!!.invoke("table:next-cell")
+            pump { f.view.isEditable && f.document.pendingEdit?.isActive != true }
+            assertEquals(original, f.text())
+            assertEquals(revision, f.session.state.value.revision)
+            assertSame(nativeContent, f.view.text)
+            assertEquals(original.indexOf('B'), f.document.selectionStart)
+        }
+    }
     @Test fun tableEditUsesGlobalDiskCoordinatesAndUndoRestoresTable() {
         val original = "Intro\n\n| A | B |\n| --- | --- |\n| x | y |\n\nEnd"
         Fixture(original).use { f ->
