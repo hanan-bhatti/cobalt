@@ -19,7 +19,7 @@ class LinkPreviewMigrationTest {
                     db.execSQL("INSERT INTO saved_items VALUES ('a', 'https://example.com', 'My description', 'LINK')")
                     db.execSQL("INSERT INTO saved_items VALUES ('b', 'private body', NULL, 'TEXT')")
                 }
-                override fun onUpgrade(db: androidx.sqlite.db.SupportSQLiteDatabase, old: Int, new: Int) = Unit
+                override fun onUpgrade(db: androidx.sqlite.db.SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
             }).build()
         FrameworkSQLiteOpenHelperFactory().create(config).use { helper ->
             val db = helper.writableDatabase
