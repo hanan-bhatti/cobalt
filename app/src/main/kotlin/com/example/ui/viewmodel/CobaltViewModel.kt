@@ -228,19 +228,26 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     val customFolderEntities: StateFlow<List<com.example.data.local.CustomFolderEntity>> = repository.getAllFolderEntitiesFlow().map { folders -> folders.filter { it.name != "Archive" } }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    private val _selectedFolder = MutableStateFlow("All")
+    private val _selectedFolder = MutableStateFlow(settingsRepository.homeFilterFolder.value)
     val selectedFolder: StateFlow<String> = _selectedFolder.asStateFlow()
+
+    val homeSortOrder: StateFlow<String> = settingsRepository.homeSortOrder
+    val mediaHubFilterStatus: StateFlow<String> = settingsRepository.mediaHubFilterStatus
+    val mediaHubFilterType: StateFlow<String> = settingsRepository.mediaHubFilterType
+    val mediaHubFilterGenre: StateFlow<String> = settingsRepository.mediaHubFilterGenre
+    val mediaHubSortOrder: StateFlow<String> = settingsRepository.mediaHubSortOrder
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    // Home Items (filtered by folder, independent of search)
+    // Home Items (filtered by folder and sort order, independent of search)
     val homeItems: StateFlow<List<SavedItem>> = combine(
         allItems,
-        _selectedFolder
-    ) { items, folder ->
+        _selectedFolder,
+        settingsRepository.homeSortOrder
+    ) { items, folder, sortOrder ->
         val isItemArchived: (SavedItem) -> Boolean = { it.isArchived }
-        if (folder != "All") {
+        val filtered = if (folder != "All") {
             val systemCategory = SavedItemType.entries.find { it.displayName == folder }
             if (systemCategory != null) {
                 // System folder filter - hide archived
@@ -257,6 +264,13 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         } else {
             // Hide archived items from "All" main feed
             items.filter { !isItemArchived(it) }
+        }
+
+        when (sortOrder) {
+            "Oldest" -> filtered.sortedBy { it.timestamp }
+            "Title A-Z" -> filtered.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title.ifBlank { it.content } })
+            "Size" -> filtered.sortedByDescending { it.sizeBytes }
+            else -> filtered.sortedByDescending { it.timestamp } // "Newest"
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
@@ -436,6 +450,17 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _showMediaSearchBottomSheet = MutableStateFlow(false)
     val showMediaSearchBottomSheet: StateFlow<Boolean> = _showMediaSearchBottomSheet.asStateFlow()
+
+    private val _showQuickNoteRequested = MutableStateFlow(false)
+    val showQuickNoteRequested: StateFlow<Boolean> = _showQuickNoteRequested.asStateFlow()
+
+    fun openQuickNote() {
+        _showQuickNoteRequested.value = true
+    }
+
+    fun consumeQuickNoteRequest() {
+        _showQuickNoteRequested.value = false
+    }
 
     private val _mediaSearchResults = MutableStateFlow<List<MediaSearchResultItem>>(emptyList())
     val mediaSearchResults: StateFlow<List<MediaSearchResultItem>> = _mediaSearchResults.asStateFlow()
@@ -740,6 +765,39 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
     fun setFolderFilter(folder: String) {
         _selectedFolder.value = folder
+        settingsRepository.setHomeFilterFolder(folder)
+    }
+
+    fun setHomeSortOrder(sort: String) {
+        settingsRepository.setHomeSortOrder(sort)
+    }
+
+    fun resetHomeFilters() {
+        setFolderFilter("All")
+        setHomeSortOrder("Newest")
+    }
+
+    fun setMediaHubFilterStatus(status: String) {
+        settingsRepository.setMediaHubFilterStatus(status)
+    }
+
+    fun setMediaHubFilterType(type: String) {
+        settingsRepository.setMediaHubFilterType(type)
+    }
+
+    fun setMediaHubFilterGenre(genre: String) {
+        settingsRepository.setMediaHubFilterGenre(genre)
+    }
+
+    fun setMediaHubSortOrder(sort: String) {
+        settingsRepository.setMediaHubSortOrder(sort)
+    }
+
+    fun resetMediaHubFilters() {
+        settingsRepository.setMediaHubFilterStatus("All")
+        settingsRepository.setMediaHubFilterType("All Types")
+        settingsRepository.setMediaHubFilterGenre("All Genres")
+        settingsRepository.setMediaHubSortOrder("Default")
     }
 
     fun setSearchQuery(query: String) {

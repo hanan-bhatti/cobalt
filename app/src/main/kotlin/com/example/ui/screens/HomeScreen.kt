@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.util.displayTitle
 import com.example.utils.DevicePerformance
 import com.example.ui.components.FloatingScrollPill
+import com.example.ui.components.HomeFilterBottomSheet
 import com.example.ui.components.rememberLazyListScrollAdapter
 import com.example.ui.components.rememberLazyStaggeredGridScrollAdapter
 import dev.chrisbanes.haze.HazeState
@@ -94,6 +95,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.data.model.getBestImagePath
+import com.example.ui.components.CobaltWelcomeIllustration
+import com.example.ui.components.HowToCaptureBottomSheet
 import com.example.ui.viewmodel.CobaltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -105,12 +108,40 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+/**
+ * Deterministic resolution for all Home screen empty and content states.
+ */
+enum class HomeEmptyState {
+    LOADING,
+    CONTENT,
+    SEARCH_EMPTY,
+    FILTER_EMPTY,
+    RETURNING_EMPTY,
+    FIRST_TIME_WELCOME
+}
+
+fun resolveHomeEmptyState(
+    isLoading: Boolean,
+    itemCount: Int,
+    totalArchiveCount: Int,
+    searchQuery: String,
+    hasDismissedOnboarding: Boolean
+): HomeEmptyState {
+    if (isLoading) return HomeEmptyState.LOADING
+    if (itemCount > 0) return HomeEmptyState.CONTENT
+    if (searchQuery.isNotBlank()) return HomeEmptyState.SEARCH_EMPTY
+    if (totalArchiveCount > 0) return HomeEmptyState.FILTER_EMPTY
+    if (hasDismissedOnboarding) return HomeEmptyState.RETURNING_EMPTY
+    return HomeEmptyState.FIRST_TIME_WELCOME
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -133,6 +164,7 @@ fun HomeScreen(
     }
 
     val items by viewModel.homeItems.collectAsState()
+    val allItems by viewModel.allItems.collectAsState()
     val isInitialLoading by viewModel.isInitialLoading.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
     val customFolders by viewModel.customFolders.collectAsState()
@@ -146,6 +178,13 @@ fun HomeScreen(
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
     val selectedItemIds by viewModel.selectedItemIds.collectAsState()
     val hasDismissedOnboarding by viewModel.hasDismissedOnboarding.collectAsState()
+    val emptyState = resolveHomeEmptyState(
+        isLoading = isInitialLoading,
+        itemCount = items.size,
+        totalArchiveCount = allItems.size,
+        searchQuery = searchQuery,
+        hasDismissedOnboarding = hasDismissedOnboarding
+    )
     val themeMode by viewModel.settingsRepository.themeMode.collectAsState()
     val isDark = when (themeMode) {
         "Dark" -> true
@@ -158,10 +197,6 @@ fun HomeScreen(
     var newFolderName by remember { mutableStateOf("") }
     val isListView by viewModel.settingsRepository.isListView.collectAsState()
     var itemToManageFolders by remember { mutableStateOf<SavedItem?>(null) }
-    var showManualCaptureOverlay by remember { mutableStateOf(false) }
-    var captureType by remember { mutableStateOf(SavedItemType.TEXT) }
-    var captureTitle by remember { mutableStateOf("") }
-    var captureContent by remember { mutableStateOf("") }
     var isFabExpanded by remember { mutableStateOf(false) }
     val isRecentCapturesExpanded by viewModel.isRecentCapturesExpanded.collectAsState()
 
@@ -206,6 +241,9 @@ fun HomeScreen(
     var itemToDelete by remember { mutableStateOf<SavedItem?>(null) }
     var showBulkDeleteConfirm by remember { mutableStateOf(false) }
     var showReleaseNotesSheet by remember { mutableStateOf(false) }
+    var showFilterSheet by remember { mutableStateOf(false) }
+    var showHowToCaptureSheet by remember { mutableStateOf(false) }
+    val homeSortOrder by viewModel.homeSortOrder.collectAsState()
 
     LaunchedEffect(lastDeletedItem) {
         undoDismissJob?.cancel()
@@ -215,6 +253,12 @@ fun HomeScreen(
                 kotlinx.coroutines.delay(4000)
                 viewModel.clearUndoToast()
             }
+        }
+    }
+
+    LaunchedEffect(allItems.isNotEmpty()) {
+        if (allItems.isNotEmpty() && !hasDismissedOnboarding) {
+            viewModel.dismissOnboarding()
         }
     }
 
@@ -384,7 +428,7 @@ fun HomeScreen(
                                 )
                             }
                             Text(
-                                text = "${items.size} items captured",
+                                text = if (selectedFolder != "All") "${items.size} in $selectedFolder" else "${items.size} items captured",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Normal,
                                 color = MaterialTheme.colorScheme.secondary,
@@ -392,6 +436,27 @@ fun HomeScreen(
                         }
                     },
                     actions = {
+                        val hasActiveFilters = selectedFolder != "All" || homeSortOrder != "Newest"
+                        IconButton(
+                            onClick = { showFilterSheet = true },
+                            modifier = Modifier.testTag("home_filter_button")
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_filter),
+                                    contentDescription = "Filter and Sort",
+                                    tint = if (hasActiveFilters) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
+                                )
+                                if (hasActiveFilters) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .align(Alignment.TopEnd)
+                                            .background(MaterialTheme.colorScheme.primary, androidx.compose.foundation.shape.CircleShape)
+                                    )
+                                }
+                            }
+                        }
                         IconButton(
                             onClick = { viewModel.settingsRepository.setIsListView(!isListView) },
                             modifier = Modifier.testTag("toggle_view_button")
@@ -439,80 +504,6 @@ fun HomeScreen(
                         text = "Search your archive...",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 16.sp
-                    )
-                }
-            }
-
-            // Horizontal Filter Chips Row
-            val filteredCustomFolders = remember(customFolders) { customFolders.filter { it != "Archive" } }
-            val systemCategories = remember { SavedItemType.entries.map { it.displayName } }
-
-            LazyRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 10.dp)
-                    .testTag("folder_chips_row"),
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // 1. All Folder Chip
-                item {
-                    val isSelected = selectedFolder == "All"
-                    FolderChipItem(
-                        folder = "All",
-                        isSelected = isSelected,
-                        painter = painterResource(id = R.drawable.ic_custom_folder),
-                        onClick = { viewModel.setFolderFilter("All") }
-                    )
-                }
-
-                // 2. Custom Folders
-                items(filteredCustomFolders, key = { it }) { folder ->
-                    val isSelected = selectedFolder == folder
-                    val folderEntity = customFolderEntities.find { it.name.equals(folder, ignoreCase = true) }
-                    val iconRes = getFolderIconRes(folderEntity?.iconName)
-                    val folderAccentColor = folderEntity?.colorHex?.takeIf { it.isNotBlank() }?.let { hex ->
-                        parseHexColor(hex, defaultColor = MaterialTheme.colorScheme.primary, isDark = isDark)
-                    }
-                    FolderChipItem(
-                        folder = folder,
-                        isSelected = isSelected,
-                        painter = painterResource(id = iconRes),
-                        accentColor = folderAccentColor,
-                        onClick = { viewModel.setFolderFilter(folder) }
-                    )
-                }
-
-                // 5. System Category Folders
-                items(systemCategories, key = { it }) { category ->
-                    val isSelected = selectedFolder == category
-                    val painter = when (category) {
-                        "Links" -> painterResource(id = R.drawable.ic_custom_link)
-                        "Images" -> painterResource(id = R.drawable.ic_custom_image)
-                        "Videos" -> painterResource(id = R.drawable.ic_custom_video)
-                        "Code" -> painterResource(id = R.drawable.ic_custom_code)
-                        "Text" -> painterResource(id = R.drawable.ic_custom_text)
-                        "Audio" -> painterResource(id = R.drawable.ic_custom_voice)
-                        "Movies & Anime" -> painterResource(id = R.drawable.ic_custom_movie)
-                        else -> painterResource(id = R.drawable.ic_custom_folder)
-                    }
-                    FolderChipItem(
-                        folder = category,
-                        isSelected = isSelected,
-                        painter = painter,
-                        onClick = { viewModel.setFolderFilter(category) }
-                    )
-                }
-
-                // 6. Archive Folder
-                item {
-                    val isSelected = selectedFolder == "Archive"
-                    FolderChipItem(
-                        folder = "Archive",
-                        isSelected = isSelected,
-                        painter = painterResource(id = R.drawable.ic_custom_archive),
-                        onClick = { viewModel.setFolderFilter("Archive") }
                     )
                 }
             }
@@ -568,9 +559,24 @@ fun HomeScreen(
                 }
             }
 
-            // Items Grid list
-            if (items.isEmpty()) {
-                if (searchQuery.isNotEmpty()) {
+            // Items Grid list or Empty States
+            when (emptyState) {
+                HomeEmptyState.LOADING -> {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(36.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 3.dp
+                        )
+                    }
+                }
+                HomeEmptyState.SEARCH_EMPTY -> {
+                    // State D: User searches and no items match
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -580,7 +586,10 @@ fun HomeScreen(
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(32.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 32.dp, vertical = 24.dp)
+                                .padding(bottom = 48.dp)
                         ) {
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_custom_search),
@@ -590,20 +599,47 @@ fun HomeScreen(
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "No results found",
+                                text = "No matching items",
+                                style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Try searching something else",
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.secondary,
+                                color = MaterialTheme.colorScheme.onBackground,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Try a different search.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+                            TextButton(
+                                onClick = { viewModel.setSearchQuery("") }
+                            ) {
+                                Text(
+                                    text = "Clear search",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
                     }
-                } else {
+                }
+                HomeEmptyState.FILTER_EMPTY -> {
+                    // State C: User has saved items, but current category/filter has no results
+                    val filterCategory = remember(selectedFolder) {
+                        when (selectedFolder) {
+                            "Videos" -> Triple("No videos found", "There are no saved videos matching this view.", R.drawable.ic_custom_video)
+                            "Images" -> Triple("No images found", "There are no saved images matching this view.", R.drawable.ic_custom_image)
+                            "Links" -> Triple("No links found", "There are no saved links matching this view.", R.drawable.ic_custom_link)
+                            "Notes" -> Triple("No notes found", "There are no saved notes matching this view.", R.drawable.ic_custom_text)
+                            "Audio" -> Triple("No audio found", "There are no saved audio clips matching this view.", R.drawable.ic_custom_voice)
+                            "Code" -> Triple("No code found", "There are no saved code snippets matching this view.", R.drawable.ic_custom_code)
+                            "Archive" -> Triple("Archive is empty", "There are no archived items matching this view.", R.drawable.ic_custom_archive)
+                            else -> Triple("No items in $selectedFolder", "There are no saved items matching this view.", R.drawable.ic_custom_folder)
+                        }
+                    }
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -611,50 +647,251 @@ fun HomeScreen(
                             .verticalScroll(rememberScrollState()),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (!hasDismissedOnboarding) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize(),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Top
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 32.dp, vertical = 24.dp)
+                                .padding(bottom = 48.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = filterCategory.third),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = filterCategory.first,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = filterCategory.second,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+                            FilledTonalButton(
+                                onClick = { viewModel.resetHomeFilters() },
+                                shape = RoundedCornerShape(50),
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                )
                             ) {
-                                OnboardingSharingGuide(
-                                    onDismiss = { viewModel.dismissOnboarding() },
-                                    modifier = Modifier.padding(bottom = 96.dp)
-                                )
-                            }
-                        } else {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.padding(32.dp),
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_folder_special),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.secondary,
-                                    modifier = Modifier.size(64.dp)
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = "Your Cobalt is empty",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Share links, photos, code snippets from other apps,\nor tap the '+' button below to add your first item.",
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.secondary,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    text = "Clear filter",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                         }
                     }
                 }
-            } else {
-                AnimatedContent(
+                HomeEmptyState.RETURNING_EMPTY -> {
+                    // State B: Returning user with an entirely empty archive
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp)
+                                .padding(bottom = 48.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(18.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                                modifier = Modifier.size(56.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_cobalt_logo),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = "Nothing saved yet",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Text(
+                                text = "Your saved items will appear here.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            Button(
+                                onClick = { viewModel.openQuickNote() },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp),
+                                shape = RoundedCornerShape(50),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                )
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_plus),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Add something",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                HomeEmptyState.FIRST_TIME_WELCOME -> {
+                    // State A: First-time user with an entirely empty archive
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        contentAlignment = BiasAlignment(0f, -0.20f)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp)
+                                .padding(bottom = 36.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            CobaltWelcomeIllustration()
+
+                            Spacer(modifier = Modifier.height(22.dp))
+
+                            Text(
+                                text = "Welcome to Cobalt",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 22.sp,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = "Save links, notes, images, code, and anything worth keeping.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontSize = 14.sp,
+                                lineHeight = 20.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 12.dp)
+                            )
+
+                            Spacer(modifier = Modifier.height(28.dp))
+
+                            // Primary action button: "+ Add your first item"
+                            Button(
+                                onClick = {
+                                    viewModel.openQuickNote()
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp),
+                                shape = RoundedCornerShape(50),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                )
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_plus),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Add your first item",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Secondary action button: Share icon + "How to capture"
+                            FilledTonalButton(
+                                onClick = { showHowToCaptureSheet = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp),
+                                shape = RoundedCornerShape(50),
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                )
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_share),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "How to capture",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                HomeEmptyState.CONTENT -> {
+                    AnimatedContent(
                     targetState = isListView,
                         transitionSpec = {
                             (fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing)) +
@@ -779,6 +1016,7 @@ fun HomeScreen(
                             }
                         }
                     }
+                }
             }
         }
 
@@ -1007,186 +1245,32 @@ fun HomeScreen(
         )
     }
 
-    if (showManualCaptureOverlay) {
-        AlertDialog(
-            onDismissRequest = {
-                showManualCaptureOverlay = false
-            },
-            title = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_custom_folder_special),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Text(
-                        text = "Manual Capture",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text(
-                        text = "Choose the type of information you want to add to your archive:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf(SavedItemType.TEXT, SavedItemType.LINK).forEach { type ->
-                            val isSelected = captureType == type
-                            val typeLabel = if (type == SavedItemType.TEXT) "Text Note" else "Web Link"
-                            val typeIconRes = if (type == SavedItemType.TEXT) R.drawable.ic_custom_text else R.drawable.ic_custom_link
-
-                            Surface(
-                                shape = RoundedCornerShape(20.dp),
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                border = BorderStroke(
-                                    width = 1.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
-                                ),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .clickable { captureType = type }
-                                    .testTag("capture_type_chip_${type.name}")
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    Icon(
-                                        painter = painterResource(id = typeIconRes),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = typeLabel,
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    OutlinedTextField(
-                        value = captureTitle,
-                        onValueChange = { captureTitle = it },
-                        label = { Text("Title (Optional)") },
-                        placeholder = { Text("e.g. Shopping List, Interesting Article") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("manual_capture_title_input"),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                        )
-                    )
-
-                    if (captureType == SavedItemType.TEXT) {
-                        RichTextEditor(
-                            value = captureContent,
-                            onValueChange = { captureContent = it },
-                            placeholder = { Text("Capture your thoughts or paste note details...") },
-                            minLines = 3,
-                            maxLines = 6,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("manual_capture_content_input")
-                        )
-                    } else {
-                        OutlinedTextField(
-                            value = captureContent,
-                            onValueChange = { captureContent = it },
-                            label = { Text("URL / Link") },
-                            placeholder = { Text("https://example.com/some-resource") },
-                            minLines = 1,
-                            maxLines = 6,
-                            shape = RoundedCornerShape(20.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("manual_capture_content_input"),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                            )
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (captureContent.isNotBlank()) {
-                            viewModel.saveLocalTextItem(
-                                title = captureTitle,
-                                content = captureContent,
-                                type = captureType,
-                                selectedFolders = emptyList(),
-                                onSaved = {
-                                    showManualCaptureOverlay = false
-                                    captureTitle = ""
-                                    captureContent = ""
-                                }
-                            )
-                        }
-                    },
-                    shape = RoundedCornerShape(20.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    enabled = captureContent.isNotBlank() && !isSaving,
-                    modifier = Modifier.testTag("manual_capture_save_button")
-                ) {
-                    if (isSaving) {
-                        @OptIn(ExperimentalMaterial3ExpressiveApi::class)
-                        CircularWavyProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Text("Save to Cobalt", fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showManualCaptureOverlay = false },
-                    modifier = Modifier.testTag("manual_capture_cancel_button")
-                ) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.secondary)
-                }
-            },
-            shape = RoundedCornerShape(28.dp),
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-        )
-    }
-
     if (showReleaseNotesSheet) {
         com.example.ui.components.ReleaseNotesBottomSheet(
             onDismissRequest = { showReleaseNotesSheet = false }
+        )
+    }
+
+    if (showFilterSheet) {
+        HomeFilterBottomSheet(
+            viewModel = viewModel,
+            itemCount = items.size,
+            onDismissRequest = { showFilterSheet = false }
+        )
+    }
+
+    if (showHowToCaptureSheet) {
+        HowToCaptureBottomSheet(
+            onDismissRequest = { showHowToCaptureSheet = false },
+            onGotIt = {
+                viewModel.dismissOnboarding()
+                showHowToCaptureSheet = false
+            },
+            onCreateNote = {
+                viewModel.dismissOnboarding()
+                showHowToCaptureSheet = false
+                viewModel.openQuickNote()
+            }
         )
     }
 }
@@ -1411,7 +1495,7 @@ fun OnboardingSharingGuide(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_folder_special),
+                            painter = painterResource(id = R.drawable.ic_cobalt_logo),
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
@@ -1508,7 +1592,7 @@ fun SharingGuideVisualMockup() {
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_custom_globe),
+                    painter = painterResource(id = R.drawable.ic_custom_grid),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp)
@@ -1544,7 +1628,7 @@ fun SharingGuideVisualMockup() {
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_custom_folder_special),
+                    painter = painterResource(id = R.drawable.ic_cobalt_logo),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.size(18.dp)

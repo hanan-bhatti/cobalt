@@ -110,6 +110,14 @@ fun GlobalExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
     val captureContent = quickDraft.text
     LaunchedEffect(showQuickNoteOverlay) { if (showQuickNoteOverlay) viewModel.loadQuickDraft() }
 
+    val quickNoteRequested by viewModel.showQuickNoteRequested.collectAsState()
+    LaunchedEffect(quickNoteRequested) {
+        if (quickNoteRequested) {
+            showQuickNoteOverlay = true
+            viewModel.consumeQuickNoteRequest()
+        }
+    }
+
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
     val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
@@ -396,6 +404,14 @@ fun ClassicExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
     val captureTitle = quickDraft.title
     val captureContent = quickDraft.text
     LaunchedEffect(showQuickNoteOverlay) { if (showQuickNoteOverlay) viewModel.loadQuickDraft() }
+
+    val quickNoteRequested by viewModel.showQuickNoteRequested.collectAsState()
+    LaunchedEffect(quickNoteRequested) {
+        if (quickNoteRequested) {
+            showQuickNoteOverlay = true
+            viewModel.consumeQuickNoteRequest()
+        }
+    }
 
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()

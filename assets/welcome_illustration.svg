@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" width="320" height="220" fill="none">
+  <!-- Definitions for clean drop shadows -->
+  <defs>
+    <filter id="card-shadow" x="-20%" y="-20%" width="140%" height="150%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.06"/>
+    </filter>
+    <filter id="tile-shadow" x="-20%" y="-20%" width="140%" height="150%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000000" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+
+  <!-- Organic Background Cloud / Blob (Understated, soft) -->
+  <path d="M 60,55 C 110,25 210,22 260,50 C 300,72 312,120 285,155 C 260,185 190,190 135,180 C 70,170 20,150 15,108 C 12,68 32,62 60,55 Z"
+        fill="currentColor" fill-opacity="0.10" />
+
+  <!-- Sparkle Accent: Top-Right (Small & understated) -->
+  <path d="M 270,48 C 270,52 273,55 277,55 C 273,55 270,58 270,62 C 270,58 267,55 263,55 C 267,55 270,52 270,48 Z"
+        stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.55"/>
+
+  <!-- Sparkle Accent: Lower-Left (Small & understated) -->
+  <path d="M 46,150 C 46,153 48,155 51,155 C 48,155 46,157 46,160 C 46,157 44,155 41,155 C 44,155 46,153 46,150 Z"
+        stroke="currentColor" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.30"/>
+
+  <!-- Left Card: Official Link Icon (ic_custom_link) -->
+  <g transform="translate(52, 60) rotate(-13)" filter="url(#card-shadow)">
+    <rect width="64" height="74" rx="16" fill="#FFFFFF" stroke="#E4DAD0" stroke-width="1.0"/>
+    <g transform="translate(18, 23) scale(1.15)" fill="#52443D">
+      <path d="M12.5002 14.75H10.0002C9.59024 14.75 9.25024 14.41 9.25024 14C9.25024 13.59 9.59024 13.25 10.0002 13.25H12.5002C15.1202 13.25 17.2502 11.12 17.2502 8.5C17.2502 5.88 15.1202 3.75 12.5002 3.75H7.50024C4.88024 3.75 2.75024 5.88 2.75024 8.5C2.75024 9.6 3.14023 10.67 3.84023 11.52C4.10023 11.84 4.06023 12.31 3.74023 12.58C3.42023 12.84 2.95024 12.8 2.68024 12.48C1.75024 11.36 1.24023 9.95 1.24023 8.5C1.24023 5.05 4.04023 2.25 7.49023 2.25H12.4902C15.9402 2.25 18.7402 5.05 18.7402 8.5C18.7402 11.95 15.9502 14.75 12.5002 14.75Z"/>
+      <path d="M16.5 21.75H11.5C8.05 21.75 5.25 18.95 5.25 15.5C5.25 12.05 8.05 9.25 11.5 9.25H14C14.41 9.25 14.75 9.59 14.75 10C14.75 10.41 14.41 10.75 14 10.75H11.5C8.88 10.75 6.75 12.88 6.75 15.5C6.75 18.12 8.88 20.25 11.5 20.25H16.5C19.12 20.25 21.25 18.12 21.25 15.5C21.25 14.4 20.86 13.33 20.16 12.48C19.9 12.16 19.94 11.69 20.26 11.42C20.58 11.15 21.05 11.2 21.32 11.52C22.25 12.64 22.76 14.05 22.76 15.5C22.75 18.95 19.95 21.75 16.5 21.75Z"/>
+    </g>
+  </g>
+
+  <!-- Middle/Top Card: Official Image Icon (ic_custom_image) (Top-aligned in upper visible area) -->
+  <g transform="translate(127, 26) rotate(-1)" filter="url(#card-shadow)">
+    <rect width="66" height="76" rx="16" fill="#FFFFFF" stroke="#E4DAD0" stroke-width="1.0"/>
+    <g transform="translate(19, 10) scale(1.15)" fill="#52443D">
+      <path d="M15 22.75H9C3.57 22.75 1.25 20.43 1.25 15V9C1.25 3.57 3.57 1.25 9 1.25H15C20.43 1.25 22.75 3.57 22.75 9V15C22.75 20.43 20.43 22.75 15 22.75ZM9 2.75C4.39 2.75 2.75 4.39 2.75 9V15C2.75 19.61 4.39 21.25 9 21.25H15C19.61 21.25 21.25 19.61 21.25 15V9C21.25 4.39 19.61 2.75 15 2.75H9Z"/>
+      <path d="M9 10.75C7.48 10.75 6.25 9.52 6.25 8C6.25 6.48 7.48 5.25 9 5.25C10.52 5.25 11.75 6.48 11.75 8C11.75 9.52 10.52 10.75 9 10.75ZM9 6.75C8.31 6.75 7.75 7.31 7.75 8C7.75 8.69 8.31 9.25 9 9.25C9.69 9.25 10.25 8.69 10.25 8C10.25 7.31 9.69 6.75 9 6.75Z"/>
+      <path d="M2.67002 19.6996C2.43002 19.6996 2.19002 19.5796 2.05002 19.3696C1.82002 19.0296 1.91002 18.5596 2.26002 18.3296L7.19002 15.0196C8.27002 14.2896 9.76002 14.3796 10.74 15.2096L11.07 15.4996C11.57 15.9296 12.42 15.9296 12.91 15.4996L17.07 11.9296C18.13 11.0196 19.8 11.0196 20.87 11.9296L22.5 13.3296C22.81 13.5996 22.85 14.0696 22.58 14.3896C22.31 14.6996 21.84 14.7396 21.52 14.4696L19.89 13.0696C19.39 12.6396 18.54 12.6396 18.04 13.0696L13.88 16.6396C12.82 17.5496 11.15 17.5496 10.08 16.6396L9.75002 16.3496C9.29002 15.9596 8.53002 15.9196 8.02002 16.2696L3.09002 19.5796C2.96002 19.6596 2.81002 19.6996 2.67002 19.6996Z"/>
+    </g>
+  </g>
+
+  <!-- Right Card: Official Text / Notes Icon (ic_custom_text) -->
+  <g transform="translate(204, 62) rotate(12)" filter="url(#card-shadow)">
+    <rect width="64" height="74" rx="16" fill="#FFFFFF" stroke="#E4DAD0" stroke-width="1.0"/>
+    <g transform="translate(18, 23) scale(1.15)" fill="#52443D">
+      <path d="M17 22.75H7C3.83 22.75 1.25 20.17 1.25 17V7C1.25 3.83 3.83 1.25 7 1.25H17C20.17 1.25 22.75 3.83 22.75 7V17C22.75 20.17 20.17 22.75 17 22.75ZM7 2.75C4.66 2.75 2.75 4.66 2.75 7V17C2.75 19.34 4.66 21.25 7 21.25H17C19.34 21.25 21.25 19.34 21.25 17V7C21.25 4.66 19.34 2.75 17 2.75H7Z"/>
+      <path d="M17 12.75H12C11.59 12.75 11.25 12.41 11.25 12C11.25 11.59 11.59 11.25 12 11.25H17C17.41 11.25 17.75 11.59 17.75 12C17.75 12.41 17.41 12.75 17 12.75Z"/>
+      <path d="M17 7.75H15C14.59 7.75 14.25 7.41 14.25 7C14.25 6.59 14.59 6.25 15 6.25H17C17.41 6.25 17.75 6.59 17.75 7C17.75 7.41 17.41 7.75 17 7.75Z"/>
+      <path d="M12 7.75H7C6.59 7.75 6.25 7.41 6.25 7C6.25 6.59 6.59 6.25 7 6.25H12C12.41 6.25 12.75 6.59 12.75 7C12.75 7.41 12.41 7.75 12 7.75Z"/>
+      <path d="M9 12.75H7C6.59 12.75 6.25 12.41 6.25 12C6.25 11.59 6.59 11.25 7 11.25H9C9.41 11.25 9.75 11.59 9.75 12C9.75 12.41 9.41 12.75 9 12.75Z"/>
+      <path d="M12 17.75H7C6.59 17.75 6.25 17.41 6.25 17C6.25 16.59 6.59 16.25 7 16.25H12C12.41 16.25 12.75 16.59 12.75 17C12.75 17.41 12.41 17.75 12 17.75Z"/>
+      <path d="M17 17.75H15C14.59 17.75 14.25 17.41 14.25 17C14.25 16.59 14.59 16.25 15 16.25H17C17.41 16.25 17.75 16.59 17.75 17C17.75 17.41 17.41 17.75 17 17.75Z"/>
+    </g>
+  </g>
+
+  <!-- Center Foreground Tile: Visually Dominant Cobalt Logo (72% Container Width) -->
+  <g transform="translate(122, 78)" filter="url(#tile-shadow)">
+    <rect width="76" height="76" rx="22" fill="#3E4E68" />
+
+    <!-- Official Cobalt Monogram ("27 Co") - Scaled to ~72% container width -->
+    <g transform="translate(10, 10) scale(1.12)">
+      <!-- "2" - Atomic number top-left -->
+      <path fill="#FFFFFF" d="M1,2 h6 v2 h-6 z M1,6 h6 v2 h-6 z M1,10 h6 v2 h-6 z M5,4 h2 v2 h-2 z M1,8 h2 v2 h-2 z"/>
+      <!-- "7" - Atomic number top-left -->
+      <path fill="#FFFFFF" d="M9,2 h6 v2 h-6 z M13,4 h2 v8 h-2 z"/>
+      <!-- "C" - Left side -->
+      <path fill="#FFFFFF" d="M23,16 H1 V48 H23 V40 H9 V24 H23 Z"/>
+      <!-- "o" - Right side -->
+      <path fill="#FFFFFF" fill-rule="evenodd" d="M29,24 H49 V48 H29 Z M37,32 H41 V40 H37 Z"/>
+    </g>
+  </g>
+</svg>

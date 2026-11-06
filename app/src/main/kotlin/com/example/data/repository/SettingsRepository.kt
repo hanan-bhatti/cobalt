@@ -196,6 +196,24 @@ class SettingsRepository(private val context: Context) {
     private val _isFolderRankingEnabled = MutableStateFlow(prefs.getBoolean(KEY_FOLDER_RANKING_ENABLED, true))
     val isFolderRankingEnabled: StateFlow<Boolean> = _isFolderRankingEnabled.asStateFlow()
 
+    private val _homeFilterFolder = MutableStateFlow(prefs.getString(KEY_HOME_FILTER_FOLDER, "All") ?: "All")
+    val homeFilterFolder: StateFlow<String> = _homeFilterFolder.asStateFlow()
+
+    private val _homeSortOrder = MutableStateFlow(prefs.getString(KEY_HOME_SORT_ORDER, "Newest") ?: "Newest")
+    val homeSortOrder: StateFlow<String> = _homeSortOrder.asStateFlow()
+
+    private val _mediaHubFilterStatus = MutableStateFlow(prefs.getString(KEY_MEDIA_HUB_FILTER_STATUS, "All") ?: "All")
+    val mediaHubFilterStatus: StateFlow<String> = _mediaHubFilterStatus.asStateFlow()
+
+    private val _mediaHubFilterType = MutableStateFlow(prefs.getString(KEY_MEDIA_HUB_FILTER_TYPE, "All Types") ?: "All Types")
+    val mediaHubFilterType: StateFlow<String> = _mediaHubFilterType.asStateFlow()
+
+    private val _mediaHubFilterGenre = MutableStateFlow(prefs.getString(KEY_MEDIA_HUB_FILTER_GENRE, "All Genres") ?: "All Genres")
+    val mediaHubFilterGenre: StateFlow<String> = _mediaHubFilterGenre.asStateFlow()
+
+    private val _mediaHubSortOrder = MutableStateFlow(prefs.getString(KEY_MEDIA_HUB_SORT_ORDER, "Default") ?: "Default")
+    val mediaHubSortOrder: StateFlow<String> = _mediaHubSortOrder.asStateFlow()
+
     fun setProfileArchiveStyle(style: String) {
         prefs.edit().putString(KEY_PROFILE_ARCHIVE_STYLE, style).apply()
         _profileArchiveStyle.value = style
@@ -430,6 +448,36 @@ class SettingsRepository(private val context: Context) {
         _floatingScrollbarMediaHub.value = enabled
     }
 
+    fun setHomeFilterFolder(folder: String) {
+        prefs.edit().putString(KEY_HOME_FILTER_FOLDER, folder).apply()
+        _homeFilterFolder.value = folder
+    }
+
+    fun setHomeSortOrder(sort: String) {
+        prefs.edit().putString(KEY_HOME_SORT_ORDER, sort).apply()
+        _homeSortOrder.value = sort
+    }
+
+    fun setMediaHubFilterStatus(status: String) {
+        prefs.edit().putString(KEY_MEDIA_HUB_FILTER_STATUS, status).apply()
+        _mediaHubFilterStatus.value = status
+    }
+
+    fun setMediaHubFilterType(type: String) {
+        prefs.edit().putString(KEY_MEDIA_HUB_FILTER_TYPE, type).apply()
+        _mediaHubFilterType.value = type
+    }
+
+    fun setMediaHubFilterGenre(genre: String) {
+        prefs.edit().putString(KEY_MEDIA_HUB_FILTER_GENRE, genre).apply()
+        _mediaHubFilterGenre.value = genre
+    }
+
+    fun setMediaHubSortOrder(sort: String) {
+        prefs.edit().putString(KEY_MEDIA_HUB_SORT_ORDER, sort).apply()
+        _mediaHubSortOrder.value = sort
+    }
+
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
             "hide_recents" -> _hideRecents.value = prefs.getBoolean("hide_recents", false)
@@ -476,6 +524,12 @@ class SettingsRepository(private val context: Context) {
             KEY_EDGE_ANIM_DAMPING -> _edgePanelAnimDamping.value = prefs.getFloat(KEY_EDGE_ANIM_DAMPING, 0.72f)
             KEY_PROFILE_ARCHIVE_STYLE -> _profileArchiveStyle.value = prefs.getString(KEY_PROFILE_ARCHIVE_STYLE, "pills") ?: "pills"
             KEY_FOLDER_RANKING_ENABLED -> _isFolderRankingEnabled.value = prefs.getBoolean(KEY_FOLDER_RANKING_ENABLED, true)
+            KEY_HOME_FILTER_FOLDER -> _homeFilterFolder.value = prefs.getString(KEY_HOME_FILTER_FOLDER, "All") ?: "All"
+            KEY_HOME_SORT_ORDER -> _homeSortOrder.value = prefs.getString(KEY_HOME_SORT_ORDER, "Newest") ?: "Newest"
+            KEY_MEDIA_HUB_FILTER_STATUS -> _mediaHubFilterStatus.value = prefs.getString(KEY_MEDIA_HUB_FILTER_STATUS, "All") ?: "All"
+            KEY_MEDIA_HUB_FILTER_TYPE -> _mediaHubFilterType.value = prefs.getString(KEY_MEDIA_HUB_FILTER_TYPE, "All Types") ?: "All Types"
+            KEY_MEDIA_HUB_FILTER_GENRE -> _mediaHubFilterGenre.value = prefs.getString(KEY_MEDIA_HUB_FILTER_GENRE, "All Genres") ?: "All Genres"
+            KEY_MEDIA_HUB_SORT_ORDER -> _mediaHubSortOrder.value = prefs.getString(KEY_MEDIA_HUB_SORT_ORDER, "Default") ?: "Default"
             KEY_USE_CUSTOM_FONT, KEY_APPLY_TO_APP_UI, KEY_TEXT_FONT, KEY_CODE_FONT,
             KEY_FONT_SIZE, KEY_FONT_WEIGHT, KEY_LINE_HEIGHT, KEY_LETTER_SPACING,
             KEY_PARAGRAPH_SPACING, KEY_TYPOGRAPHY_PRESET -> {
@@ -539,6 +593,12 @@ URL EXTRACTION RULES for urls:
         private const val KEY_EDGE_ANIM_PRESET = "edge_panel_anim_preset"
         private const val KEY_EDGE_ANIM_STIFFNESS = "edge_panel_anim_stiffness"
         private const val KEY_EDGE_ANIM_DAMPING = "edge_panel_anim_damping"
+        private const val KEY_HOME_FILTER_FOLDER = "home_filter_folder"
+        private const val KEY_HOME_SORT_ORDER = "home_sort_order"
+        private const val KEY_MEDIA_HUB_FILTER_STATUS = "media_hub_filter_status"
+        private const val KEY_MEDIA_HUB_FILTER_TYPE = "media_hub_filter_type"
+        private const val KEY_MEDIA_HUB_FILTER_GENRE = "media_hub_filter_genre"
+        private const val KEY_MEDIA_HUB_SORT_ORDER = "media_hub_sort_order"
 
         const val KEY_USE_CUSTOM_FONT = "pref_use_custom_font"
         const val KEY_APPLY_TO_APP_UI = "pref_apply_to_app_ui"

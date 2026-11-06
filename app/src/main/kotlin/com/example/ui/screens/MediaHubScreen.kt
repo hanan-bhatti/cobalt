@@ -33,6 +33,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import com.example.ui.components.FloatingScrollPill
+import com.example.ui.components.MediaHubFilterBottomSheet
 import com.example.ui.components.rememberLazyGridScrollAdapter
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -88,6 +89,92 @@ fun MediaHubScreen(
     val blurOpacity by viewModel.blurOpacity.collectAsState()
     val floatingScrollbarEnabled by viewModel.floatingScrollbarEnabled.collectAsState()
     val floatingScrollbarMediaHub by viewModel.floatingScrollbarMediaHub.collectAsState()
+
+    var showFilterSheet by remember { mutableStateOf(false) }
+
+    val allItems by viewModel.allItems.collectAsState()
+    val selectedStatus by viewModel.mediaHubFilterStatus.collectAsState()
+    val selectedType by viewModel.mediaHubFilterType.collectAsState()
+    val selectedGenre by viewModel.mediaHubFilterGenre.collectAsState()
+    val selectedSort by viewModel.mediaHubSortOrder.collectAsState()
+
+    val allMediaItems = remember(allItems) {
+        allItems.filter { item ->
+            item.type == SavedItemType.MEDIA && !item.isArchived
+        }
+    }
+
+    val typeFilters = remember(allMediaItems) {
+        val types = allMediaItems.mapNotNull { it.mediaType?.lowercase() }.toSet()
+        val list = mutableListOf("All Types")
+        if (types.contains("movie")) list.add("Movies")
+        if (types.contains("tv") || types.contains("tv show") || types.contains("tv_show")) list.add("TV")
+        if (types.contains("anime")) list.add("Anime")
+        list
+    }
+
+    val genreFilters = remember(allMediaItems, selectedType) {
+        val filteredForType = allMediaItems.filter { item ->
+            when (selectedType) {
+                "All Types" -> true
+                "Movies" -> item.mediaType?.lowercase() == "movie"
+                "TV" -> item.mediaType?.lowercase() in listOf("tv", "tv show", "tv_show")
+                "Anime" -> item.mediaType?.lowercase() == "anime"
+                else -> true
+            }
+        }
+        val uniqueGenres = filteredForType.flatMap { it.genres }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+        listOf("All Genres") + uniqueGenres
+    }
+
+    LaunchedEffect(genreFilters) {
+        if (!genreFilters.contains(selectedGenre)) {
+            viewModel.setMediaHubFilterGenre("All Genres")
+        }
+    }
+
+    LaunchedEffect(typeFilters) {
+        if (!typeFilters.contains(selectedType)) {
+            viewModel.setMediaHubFilterType("All Types")
+        }
+    }
+
+    val mediaItems = remember(allMediaItems, selectedStatus, selectedType, selectedGenre, selectedSort) {
+        allMediaItems.filter { item ->
+            when (selectedStatus) {
+                "All" -> true
+                "Completed" -> item.watchStatus.equals("Completed", ignoreCase = true) || item.watchStatus.equals("Watched", ignoreCase = true)
+                else -> item.watchStatus.equals(selectedStatus, ignoreCase = true)
+            }
+        }.filter { item ->
+            when (selectedType) {
+                "All Types" -> true
+                "Movies" -> item.mediaType?.lowercase() == "movie"
+                "TV" -> item.mediaType?.lowercase() in listOf("tv", "tv show", "tv_show")
+                "Anime" -> item.mediaType?.lowercase() == "anime"
+                else -> true
+            }
+        }.filter { item ->
+            if (selectedGenre == "All Genres") true
+            else item.genres.contains(selectedGenre)
+        }.let { list ->
+            when (selectedSort) {
+                "Rating" -> list.sortedByDescending { it.rating ?: 0.0 }
+                "Newest" -> list.sortedByDescending { it.timestamp }
+                "Year" -> list.sortedByDescending { it.releaseYear ?: "" }
+                "Title A-Z" -> list.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
+                else -> list
+            }
+        }
+    }
+
+    val hasActiveFilters = selectedStatus != "All" ||
+            selectedType != "All Types" ||
+            selectedGenre != "All Genres" ||
+            selectedSort != "Default"
 
     val fabColor = MaterialTheme.colorScheme.surfaceVariant
     val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
@@ -145,6 +232,23 @@ fun MediaHubScreen(
                     containerColor = MaterialTheme.colorScheme.background
                 ),
                 actions = {
+                    IconButton(onClick = { showFilterSheet = true }) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_filter),
+                                contentDescription = "Media Filter",
+                                tint = if (hasActiveFilters) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
+                            )
+                            if (hasActiveFilters) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .align(Alignment.TopEnd)
+                                        .background(MaterialTheme.colorScheme.primary, CircleShape)
+                                )
+                            }
+                        }
+                    }
                     if (onNavigateToTraktSync != null) {
                         IconButton(onClick = onNavigateToTraktSync) {
                             Icon(
@@ -187,6 +291,8 @@ fun MediaHubScreen(
                 .fillMaxSize()) {
             MediaHubContent(
                 viewModel = viewModel,
+                mediaItems = mediaItems,
+                hasActiveFilters = hasActiveFilters,
                 onMediaClick = onMediaClick,
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
@@ -208,12 +314,24 @@ fun MediaHubScreen(
             )
         }
     }
+
+    if (showFilterSheet) {
+        MediaHubFilterBottomSheet(
+            viewModel = viewModel,
+            mediaCount = mediaItems.size,
+            typeFilters = typeFilters,
+            genreFilters = genreFilters,
+            onDismissRequest = { showFilterSheet = false }
+        )
+    }
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun MediaHubContent(
     viewModel: CobaltViewModel,
+    mediaItems: List<SavedItem>,
+    hasActiveFilters: Boolean,
     onMediaClick: (SavedItem) -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
@@ -222,77 +340,6 @@ fun MediaHubContent(
 ) {
     val traktSyncStatus by com.example.data.remote.trakt.TraktSyncEngine.syncStatus.collectAsState()
     val isTraktSyncing = traktSyncStatus is com.example.data.remote.trakt.TraktSyncStatus.Syncing
-    val allItems by viewModel.allItems.collectAsState()
-    var selectedStatus by rememberSaveable { mutableStateOf("All") }
-    var selectedType by rememberSaveable { mutableStateOf("All Types") }
-    var selectedGenre by rememberSaveable { mutableStateOf("All Genres") }
-
-    val allMediaItems = remember(allItems) {
-        allItems.filter { item ->
-            item.type == SavedItemType.MEDIA && !item.isArchived
-        }
-    }
-
-    val statusFilters = remember { listOf("All", "Plan to Watch", "Watching", "Completed", "Dropped") }
-
-    val typeFilters = remember(allMediaItems) {
-        val types = allMediaItems.mapNotNull { it.mediaType?.lowercase() }.toSet()
-        val list = mutableListOf("All Types")
-        if (types.contains("movie")) list.add("Movies")
-        if (types.contains("tv") || types.contains("tv show") || types.contains("tv_show")) list.add("TV")
-        if (types.contains("anime")) list.add("Anime")
-        list
-    }
-
-    val genreFilters = remember(allMediaItems, selectedType) {
-        val filteredForType = allMediaItems.filter { item ->
-            when (selectedType) {
-                "All Types" -> true
-                "Movies" -> item.mediaType?.lowercase() == "movie"
-                "TV" -> item.mediaType?.lowercase() in listOf("tv", "tv show", "tv_show")
-                "Anime" -> item.mediaType?.lowercase() == "anime"
-                else -> true
-            }
-        }
-        val uniqueGenres = filteredForType.flatMap { it.genres }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .sorted()
-        listOf("All Genres") + uniqueGenres
-    }
-
-    LaunchedEffect(genreFilters) {
-        if (!genreFilters.contains(selectedGenre)) {
-            selectedGenre = "All Genres"
-        }
-    }
-
-    LaunchedEffect(typeFilters) {
-        if (!typeFilters.contains(selectedType)) {
-            selectedType = "All Types"
-        }
-    }
-
-    val mediaItems = remember(allMediaItems, selectedStatus, selectedType, selectedGenre) {
-        allMediaItems.filter { item ->
-            when (selectedStatus) {
-                "All" -> true
-                "Completed" -> item.watchStatus.equals("Completed", ignoreCase = true) || item.watchStatus.equals("Watched", ignoreCase = true)
-                else -> item.watchStatus.equals(selectedStatus, ignoreCase = true)
-            }
-        }.filter { item ->
-            when (selectedType) {
-                "All Types" -> true
-                "Movies" -> item.mediaType?.lowercase() == "movie"
-                "TV" -> item.mediaType?.lowercase() in listOf("tv", "tv show", "tv_show")
-                "Anime" -> item.mediaType?.lowercase() == "anime"
-                else -> true
-            }
-        }.filter { item ->
-            if (selectedGenre == "All Genres") true
-            else item.genres.contains(selectedGenre)
-        }
-    }
 
     Column(
         modifier = modifier.fillMaxSize()
@@ -327,86 +374,6 @@ fun MediaHubContent(
                 }
             }
         }
-        // Status Filter Row (Horizontal scroll)
-        Text(
-            text = "Status Filter",
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 4.dp)
-        )
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            items(statusFilters, key = { "status_$it" }) { status ->
-                val isSelected = selectedStatus == status
-                FilterChipItem(
-                    label = status,
-                    isSelected = isSelected,
-                    onClick = { selectedStatus = status }
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Category/Type Filter Row (Horizontal scroll)
-        Text(
-            text = "Media Category",
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 4.dp)
-        )
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            items(typeFilters, key = { "type_$it" }) { type ->
-                val isSelected = selectedType == type
-                FilterChipItem(
-                    label = type,
-                    isSelected = isSelected,
-                    onClick = { selectedType = type }
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Genre Filter Row (Horizontal scroll)
-        if (genreFilters.size > 1) {
-            Text(
-                text = "Genre Filter",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 4.dp)
-            )
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                items(genreFilters, key = { "genre_$it" }) { genre ->
-                    val isSelected = selectedGenre == genre
-                    FilterChipItem(
-                        label = genre,
-                        isSelected = isSelected,
-                        onClick = { selectedGenre = genre }
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-        } else {
-            Spacer(modifier = Modifier.height(6.dp))
-        }
 
         // Content Grid or Empty State
         if (mediaItems.isEmpty()) {
@@ -436,14 +403,20 @@ fun MediaHubContent(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = if (selectedStatus != "All" || selectedType != "All Types")
-                            "No items match '$selectedStatus' status and '$selectedType' category."
+                        text = if (hasActiveFilters)
+                            "No media items match your active filters."
                         else
                             "Your media collection is empty. Tap 'Search Media' below to discover and save movies, TV shows, and anime!",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
+                    if (hasActiveFilters) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedButton(onClick = { viewModel.resetMediaHubFilters() }) {
+                            Text("Reset Filters")
+                        }
+                    }
                 }
             }
         } else {
