@@ -64,6 +64,9 @@ data class TraktSyncSummary(
 }
 
 object TraktSyncEngine {
+    internal fun storedTmdbKey(context: Context): String = com.example.util.SecretPreferences(
+        context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE), "cobalt_prefs"
+    ).get("tmdb_api_key")?.takeIf { it.isNotBlank() } ?: DEFAULT_TMDB_API_KEY
 
     private const val TAG = "TraktSyncEngine"
     const val DEFAULT_TMDB_API_KEY = ""
@@ -150,7 +153,7 @@ object TraktSyncEngine {
             val db = AppDatabase.getDatabase(context)
             val dao = db.savedItemDao()
             val prefs = context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE)
-            val tmdbKey = prefs.getString("tmdb_api_key", null)?.takeIf { it.isNotBlank() } ?: DEFAULT_TMDB_API_KEY
+            val tmdbKey = storedTmdbKey(context)
 
             var moviesCount = 0
             var showsCount = 0
@@ -828,7 +831,7 @@ object TraktSyncEngine {
         val isTv = item.mediaType?.lowercase() == "tv" || item.mediaType?.lowercase() == "tv show"
 
         val prefs = context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE)
-        val tmdbKey = prefs.getString("tmdb_api_key", null)?.takeIf { it.isNotBlank() } ?: DEFAULT_TMDB_API_KEY
+        val tmdbKey = storedTmdbKey(context)
         val db = AppDatabase.getDatabase(context)
         val dao = db.savedItemDao()
 
