@@ -82,5 +82,18 @@ class MarkdownTableEditsTest {
         val result = apply(table, table.indexOf("Alpha"), "table:new:1:2")
         assertTrue(result.startsWith(table + "\n\n| Column 1 | Column 2 |"))
     }
+    @Test fun everyHeaderActionReadsTheFollowingSeparatorAndRows() {
+        for (command in listOf("table:row", "table:column", "table:left", "table:center", "table:right", "table:remove-column", "table:next-cell")) {
+            val edit = plan(table, table.indexOf("Name"), command)
+            assertTrue(command, edit.caret >= 0)
+        }
+    }
+    @Test fun nextCellDoesNotReformatOrRewriteExistingText() {
+        val source = "|A|B|\n|--|--|\n|x|y|"
+        val edit = plan(source, 1, "table:next-cell")
+        assertTrue(edit.selectionOnly)
+        assertEquals(edit.start, edit.end); assertEquals("", edit.text)
+        assertEquals(source.indexOf('B'), edit.caret)
+    }
 
 }

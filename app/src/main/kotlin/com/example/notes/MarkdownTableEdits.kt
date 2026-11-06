@@ -5,7 +5,7 @@ object MarkdownTableEdits {
     const val MAX_TABLE_CHARACTERS = 131_072
     const val MAX_COLUMNS = 32
     const val MAX_ROWS = 2_000
-    data class Edit(val start: Int, val end: Int, val text: String, val caret: Int)
+    data class Edit(val start: Int, val end: Int, val text: String, val caret: Int, val selectionOnly: Boolean = false)
     private data class Line(val start: Int, val end: Int, val text: String, val oversized: Boolean = false)
     private val delimiter = Regex(":?-{2,}:?")
     private val fence = Regex("^\\s*(?:[-+*] |\\d+[.)] )?(`{3,}|~{3,})(.*)$")
@@ -74,7 +74,7 @@ object MarkdownTableEdits {
             return Edit(insertion, insertion, value, insertion + prefix.length + 2)
         }
         require(!current.oversized && !candidateOversized) { "This table or line is too large for table tools. Edit its Markdown directly." }
-        require(candidate.size >= 2) { "Place the cursor in a Markdown table first." }
+        require(candidate.isNotEmpty()) { "Tap inside the table you want to change, then choose a table action." }
         // Include following rows, but stop before a second table or surrounding prose.
         var following = current.end + 1
         while (following < length) {
@@ -87,6 +87,7 @@ object MarkdownTableEdits {
             }
             following = row.end + 1
         }
+        require(candidate.size >= 2) { "A table needs both a header and a separator row." }
         val rows = candidate.map { requireNotNull(cells(it.text)).toMutableList() }.toMutableList()
         val columns = rows[0].size
         require(columns in 1..MAX_COLUMNS && rows[1].size == columns && rows[1].all { delimiter.matches(it) }) {
@@ -123,7 +124,15 @@ object MarkdownTableEdits {
                 targetColumn++
                 if (targetColumn >= columns) { targetColumn = 0; targetRow++ }
                 if (targetRow == 1) targetRow = 2
-                if (targetRow > rows.lastIndex) rows += MutableList(columns) { "" }
+                if (targetRow <= rows.lastIndex) {
+                    val target = candidate[targetRow]
+                    return Edit(caret, caret, "", target.start + cellStart(target.text, targetColumn), selectionOnly = true)
+                }
+                require(rows.size < MAX_ROWS) { "Table tools support up to $MAX_ROWS rows." }
+                val end = candidate.last().end - if (candidate.last().end > 0 && charAt(candidate.last().end - 1) == '\r') 1 else 0
+                val addition = newline + render(List(columns) { "" })
+                require(candidateChars + addition.length <= MAX_TABLE_CHARACTERS) { "The table is too large for table tools." }
+                return Edit(end, end, addition, end + newline.length + 2)
             }
             else -> error("Unknown table action")
         }
@@ -137,6 +146,18 @@ object MarkdownTableEdits {
             (if (candidate.last().end > 0 && charAt(candidate.last().end - 1) == '\r') 1 else 0), replacement, nextCaret)
     }
     private fun render(cells: List<String>) = "| " + cells.joinToString(" | ") + " |"
+    private fun cellStart(line: String, column: Int): Int {
+        var index = line.indexOfFirst { !it.isWhitespace() }.coerceAtLeast(0)
+        if (line.getOrNull(index) == '|') index++
+        var current = 0; var escaped = false
+        while (index < line.length && current < column) {
+            val char = line[index++]
+            if (char == '|' && !escaped) current++
+            escaped = char == '\\' && !escaped
+        }
+        while (index < line.length && line[index].isWhitespace()) index++
+        return index
+    }
     private fun columnAt(line: String, position: Int): Int {
         var column = if (line.trimStart().startsWith('|')) -1 else 0
         var escaped = false
