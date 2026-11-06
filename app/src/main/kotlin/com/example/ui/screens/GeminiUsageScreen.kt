@@ -84,9 +84,6 @@ fun GeminiUsageScreen(
     val modelDisplay = remember(selectedModel) {
         val clean = selectedModel.substringAfterLast("/")
         when {
-            clean.contains("flash-lite", ignoreCase = true) -> "Gemini Flash Lite"
-            clean.contains("flash", ignoreCase = true) -> "Gemini 2.5 Flash"
-            clean.contains("pro", ignoreCase = true) -> "Gemini 2.5 Pro"
             clean.isNotBlank() -> clean.replace("-", " ").replaceFirstChar { it.uppercase() }
             else -> "Gemini AI"
         }
@@ -184,7 +181,7 @@ fun GeminiUsageScreen(
                         title = "Tokens",
                         value = NumberFormat.getNumberInstance().format(stats.totalTokens),
                         subtitle = "${NumberFormat.getNumberInstance().format(stats.promptTokens)} in · ${NumberFormat.getNumberInstance().format(stats.candidateTokens)} out",
-                        iconRes = R.drawable.ic_custom_api_chip,
+                        iconRes = R.drawable.ic_custom_bar_chart,
                         accentColor = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f)
                     )
@@ -193,7 +190,7 @@ fun GeminiUsageScreen(
                         title = "API Calls",
                         value = "${stats.totalRequests}",
                         subtitle = "${stats.ocrRequests} OCR · ${stats.audioRequests} Voice",
-                        iconRes = R.drawable.ic_custom_ai_brain,
+                        iconRes = R.drawable.ic_custom_api_call,
                         accentColor = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.weight(1f)
                     )
