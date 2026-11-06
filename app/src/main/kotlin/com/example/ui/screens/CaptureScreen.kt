@@ -359,6 +359,8 @@ fun MarkdownAccessoryToolbar(
 
             // Code & Links Group
             codeAndLinkActions.forEach { ToolbarActionItem(it) }
+            if (!isPreviewMode) com.example.ui.components.CobaltTableToolbarActions(
+                textFieldValue, onApplyFormat, onNativeCommand, enabled)
         }
 
         Spacer(modifier = Modifier.width(4.dp))
@@ -673,6 +675,7 @@ fun TextCapturePage(
         // Small notes retain the original frameless field. File notes use the continuous engine below.
             if (!isPreviewMode) {
                     if (viewModel.noteInputBusy.collectAsState().value) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    com.example.ui.components.CobaltSelectionFormattingScope(textContent, onTextContentChange) {
                     BasicTextField(
                     value = textContent,
                     enabled = !viewModel.noteInputBusy.collectAsState().value,
@@ -702,6 +705,7 @@ fun TextCapturePage(
                         .defaultMinSize(minHeight = 180.dp)
                         .testTag("capture_content_input")
                 )
+                    }
             } else {
                 Box(
                     modifier = Modifier

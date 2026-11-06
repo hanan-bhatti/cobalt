@@ -695,6 +695,7 @@ fun QuickNoteBottomSheet(
                 decorFitsSystemWindows = false
             )
         ) {
+            CobaltSelectionMenuHost {
             AnimatedVisibility(
                 visibleState = transitionState,
                 enter = fadeIn(tween(150)),
@@ -872,6 +873,10 @@ fun QuickNoteBottomSheet(
                                     Text(savedDraftPreview, maxLines = 3)
                                     TextButton(onClick = onRestoreDraft, enabled = !isSaving) { Text("Restore draft and open") }
                                 } else if (!isPreviewMode) {
+                                    CobaltSelectionFormattingScope(contentValue, { updated ->
+                                        if (!com.example.notes.NoteEditorWindows.requiresWindow(updated.text)) contentValue = updated
+                                        onContentChange(updated.text)
+                                    }) {
                                     BasicTextField(
                                         value = contentValue,
                                         enabled = !isSaving,
@@ -904,6 +909,7 @@ fun QuickNoteBottomSheet(
                                             .fillMaxWidth()
                                             .defaultMinSize(minHeight = 70.dp)
                                     )
+                                    }
                                 } else {
                                     Box(
                                         modifier = Modifier
@@ -960,6 +966,7 @@ fun QuickNoteBottomSheet(
                         }
                     }
                 }
+            }
             }
         }
     }

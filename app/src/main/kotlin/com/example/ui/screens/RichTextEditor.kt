@@ -187,6 +187,10 @@ fun RichTextEditor(
                 )
 
                 // Input field with natural Bidirectional / Urdu + English support
+                com.example.ui.components.CobaltSelectionFormattingScope(textFieldValue, { updated ->
+                    textFieldValue = updated
+                    onValueChange(updated.text)
+                }) {
                 TextField(
                     value = textFieldValue,
                     onValueChange = {
@@ -220,6 +224,7 @@ fun RichTextEditor(
                         .padding(horizontal = 4.dp, vertical = 4.dp)
                         .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
                 )
+                }
             } else {
                 // Live Preview Mode
                 Box(
@@ -346,6 +351,7 @@ fun MarkdownAccessoryToolbar(
                     }
                 }
             }
+            com.example.ui.components.CobaltTableToolbarActions(textFieldValue, onApplyFormat)
         }
     }
 }
@@ -369,7 +375,7 @@ fun applyMarkdownFormat(
     onValueChange: (TextFieldValue) -> Unit
 ) {
     val text = value.text
-    val selection = value.selection
+    val selection = TextRange(value.selection.min, value.selection.max)
     val selectedText = text.substring(selection.start, selection.end)
 
     val (newText, newSelection) = when (formatType) {

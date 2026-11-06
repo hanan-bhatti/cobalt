@@ -102,6 +102,8 @@
      val cobaltTypography = CobaltTypography.fromPrefs(typographyPrefs)
      val appTypography = cobaltTypography.toMaterialTypography(Typography)
      MaterialTheme(colorScheme = colorScheme, typography = appTypography) {
-         CobaltTypographyProvider(typography = cobaltTypography, content = content)
+         CobaltTypographyProvider(typography = cobaltTypography) {
+             com.example.ui.components.CobaltSelectionMenuHost(content)
+         }
      }
  }

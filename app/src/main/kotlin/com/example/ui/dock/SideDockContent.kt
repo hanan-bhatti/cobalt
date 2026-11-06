@@ -1169,6 +1169,22 @@ private fun DockItemDetailContent(
     onOpenInApp: () -> Unit,
     onOpenLink: (String) -> Unit
 ) {
+    DockSelectionContextMenu {
+        DockItemDetailBody(item, customFolderEntities, isTopDock, useBlur, onBack, onClose, onOpenInApp, onOpenLink)
+    }
+}
+
+@Composable
+private fun DockItemDetailBody(
+    item: SavedItem,
+    customFolderEntities: List<CustomFolderEntity> = emptyList(),
+    isTopDock: Boolean,
+    useBlur: Boolean = false,
+    onBack: () -> Unit,
+    onClose: () -> Unit,
+    onOpenInApp: () -> Unit,
+    onOpenLink: (String) -> Unit
+) {
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val coroutineScope = rememberCoroutineScope()
@@ -1291,272 +1307,276 @@ private fun DockItemDetailContent(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // ════════════ SCROLLABLE CONTENT BODY ════════════
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(scrollState)
-        ) {
-            // Title
-            Text(
-                text = displayTitle,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                    lineHeight = 20.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            )
-
-            // Metadata row
-            Row(
-                modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+        // The scroll viewport extends behind the pill; end padding keeps the final line reachable.
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(bottom = 56.dp)
             ) {
+                // Title
                 Text(
-                    text = formatTimestamp(item.timestamp),
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        fontSize = 10.sp
+                    text = displayTitle,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        lineHeight = 20.sp,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 )
-                if (item.folders.isNotEmpty()) {
-                    val folderName = item.folders.first()
-                    val folderEntity = customFolderEntities.find { it.name.equals(folderName, ignoreCase = true) }
-                    val isDark = isSystemInDarkTheme()
-                    val resolvedColor = parseHexColor(folderEntity?.colorHex, defaultColor = MaterialTheme.colorScheme.primary, isDark = isDark)
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = resolvedColor.copy(alpha = 0.12f),
-                        border = BorderStroke(1.dp, resolvedColor.copy(alpha = 0.35f))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically
+
+                // Metadata row
+                Row(
+                    modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = formatTimestamp(item.timestamp),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            fontSize = 10.sp
+                        )
+                    )
+                    if (item.folders.isNotEmpty()) {
+                        val folderName = item.folders.first()
+                        val folderEntity = customFolderEntities.find { it.name.equals(folderName, ignoreCase = true) }
+                        val isDark = isSystemInDarkTheme()
+                        val resolvedColor = parseHexColor(folderEntity?.colorHex, defaultColor = MaterialTheme.colorScheme.primary, isDark = isDark)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = resolvedColor.copy(alpha = 0.12f),
+                            border = BorderStroke(1.dp, resolvedColor.copy(alpha = 0.35f))
                         ) {
-                            Icon(
-                                painter = painterResource(id = getFolderIconRes(folderEntity?.iconName)),
-                                contentDescription = null,
-                                tint = resolvedColor,
-                                modifier = Modifier.size(10.dp)
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = folderName,
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = resolvedColor,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = getFolderIconRes(folderEntity?.iconName)),
+                                    contentDescription = null,
+                                    tint = resolvedColor,
+                                    modifier = Modifier.size(10.dp)
                                 )
-                            )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = folderName,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = resolvedColor,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            // Visual attachment or link preview if present
-            val thumbUrl = item.getBestImagePath() ?: item.linkImage
-            if (!thumbUrl.isNullOrBlank()) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(thumbUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(140.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-            }
+                // Visual attachment or link preview if present
+                val thumbUrl = item.getBestImagePath() ?: item.linkImage
+                if (!thumbUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(thumbUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
 
-            // Adaptive content representation:
-            when (item.type) {
-                SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.AUDIO -> {
-                    // NEVER show raw file paths or storage URLs!
-                    // Only show clean extracted text / transcription if present:
-                    if (!item.extractedText.isNullOrBlank()) {
-                        Text(
-                            text = if (item.type == SavedItemType.AUDIO) "TRANSCRIPT" else "EXTRACTED TEXT",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 9.sp,
-                                letterSpacing = 1.sp
+                // Adaptive content representation:
+                when (item.type) {
+                    SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.AUDIO -> {
+                        // NEVER show raw file paths or storage URLs!
+                        // Only show clean extracted text / transcription if present:
+                        if (!item.extractedText.isNullOrBlank()) {
+                            Text(
+                                text = if (item.type == SavedItemType.AUDIO) "TRANSCRIPT" else "EXTRACTED TEXT",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 9.sp,
+                                    letterSpacing = 1.sp
+                                )
                             )
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = detailContainerColor,
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                SelectionContainer {
+                                    Text(
+                                        text = parseMarkdown(
+                                            text = item.extractedText.trim(),
+                                            primaryColor = MaterialTheme.colorScheme.primary,
+                                            onLinkClick = onOpenLink
+                                        ),
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            fontSize = 11.5.sp,
+                                            lineHeight = 16.sp
+                                        ),
+                                        modifier = Modifier.padding(10.dp)
+                                    )
+                                }
+                            }
+                        }
+                        // If no extracted text, keep it clean and empty (no raw path dumped!)
+                    }
+
+                    SavedItemType.LINK -> {
+                        val host = try { java.net.URI(item.content).host?.removePrefix("www.") } catch (_: Exception) { null }
                         Surface(
                             shape = RoundedCornerShape(10.dp),
                             color = detailContainerColor,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                            modifier = Modifier.fillMaxWidth()
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onOpenLink(item.content)
+                                }
                         ) {
-                            SelectionContainer {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_globe),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = parseMarkdown(
-                                        text = item.extractedText.trim(),
-                                        primaryColor = MaterialTheme.colorScheme.primary,
-                                        onLinkClick = onOpenLink
-                                    ),
+                                    text = host ?: "Visit Link",
                                     style = MaterialTheme.typography.bodySmall.copy(
-                                        color = MaterialTheme.colorScheme.onSurface,
+                                        color = MaterialTheme.colorScheme.primary,
                                         fontSize = 11.5.sp,
-                                        lineHeight = 16.sp
+                                        fontWeight = FontWeight.Medium
                                     ),
-                                    modifier = Modifier.padding(10.dp)
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_link_external),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(13.dp)
                                 )
                             }
                         }
-                    }
-                    // If no extracted text, keep it clean and empty (no raw path dumped!)
-                }
 
-                SavedItemType.LINK -> {
-                    val host = try { java.net.URI(item.content).host?.removePrefix("www.") } catch (_: Exception) { null }
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = detailContainerColor,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                onOpenLink(item.content)
-                            }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_globe),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
+                        if (!item.linkDescription.isNullOrBlank() && !isRawUrlOrPath(item.linkDescription)) {
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = host ?: "Visit Link",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.Medium
+                                text = parseMarkdown(
+                                    text = item.linkDescription.trim(),
+                                    primaryColor = MaterialTheme.colorScheme.primary,
+                                    onLinkClick = onOpenLink
                                 ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_link_external),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(13.dp)
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 12.sp,
+                                    lineHeight = 17.sp
+                                )
                             )
                         }
                     }
 
-                    if (!item.linkDescription.isNullOrBlank() && !isRawUrlOrPath(item.linkDescription)) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = parseMarkdown(
-                                text = item.linkDescription.trim(),
-                                primaryColor = MaterialTheme.colorScheme.primary,
-                                onLinkClick = onOpenLink
-                            ),
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 12.sp,
-                                lineHeight = 17.sp
+                    SavedItemType.MEDIA -> {
+                        if (item.genres.isNotEmpty() || !item.releaseYear.isNullOrBlank()) {
+                            val genreMeta = buildList {
+                                if (!item.releaseYear.isNullOrBlank()) add(item.releaseYear)
+                                if (item.rating != null && item.rating > 0) add("★ ${String.format(Locale.US, "%.1f", item.rating)}")
+                                addAll(item.genres.take(2))
+                            }.joinToString(" • ")
+
+                            Text(
+                                text = genreMeta,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             )
-                        )
+                            Spacer(modifier = Modifier.height(6.dp))
+                        }
+
+                        if (item.content.isNotBlank() && !isRawUrlOrPath(item.content)) {
+                            Text(
+                                text = parseMarkdown(
+                                    text = item.content.trim(),
+                                    primaryColor = MaterialTheme.colorScheme.primary,
+                                    onLinkClick = onOpenLink
+                                ),
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 12.sp,
+                                    lineHeight = 17.sp
+                                )
+                            )
+                        }
+                    }
+
+                    SavedItemType.TEXT, SavedItemType.CODE -> {
+                        if (item.type == SavedItemType.CODE) {
+                            SelectionContainer {
+                                Text(notePreview, style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                            }
+                        } else {
+                            com.example.ui.components.MarkdownText(
+                                markdown = notePreview,
+                                onLinkClick = onOpenLink,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        Text("Preview · open Cobalt for the complete note", style = MaterialTheme.typography.labelSmall)
+
                     }
                 }
 
-                SavedItemType.MEDIA -> {
-                    if (item.genres.isNotEmpty() || !item.releaseYear.isNullOrBlank()) {
-                        val genreMeta = buildList {
-                            if (!item.releaseYear.isNullOrBlank()) add(item.releaseYear)
-                            if (item.rating != null && item.rating > 0) add("★ ${String.format(Locale.US, "%.1f", item.rating)}")
-                            addAll(item.genres.take(2))
-                        }.joinToString(" • ")
-
-                        Text(
-                            text = genreMeta,
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = MaterialTheme.colorScheme.primary,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                    }
-
-                    if (item.content.isNotBlank() && !isRawUrlOrPath(item.content)) {
-                        Text(
-                            text = parseMarkdown(
-                                text = item.content.trim(),
-                                primaryColor = MaterialTheme.colorScheme.primary,
-                                onLinkClick = onOpenLink
-                            ),
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontSize = 12.sp,
-                                lineHeight = 17.sp
-                            )
-                        )
-                    }
-                }
-
-                SavedItemType.TEXT, SavedItemType.CODE -> {
-                    if (item.type == SavedItemType.CODE) {
-                        Text(notePreview, style = MaterialTheme.typography.bodySmall,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
-                    } else {
-                        com.example.ui.components.MarkdownText(
-                            markdown = notePreview,
-                            onLinkClick = onOpenLink,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    Text("Preview · open Cobalt for the complete note", style = MaterialTheme.typography.labelSmall)
-
-                }
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-
-        // Small floating action pill. Labels remain available through tooltips/accessibility.
-        val hasTextToCopy = when (item.type) {
-            SavedItemType.TEXT, SavedItemType.CODE -> notePreview.isNotBlank()
-            SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.AUDIO -> !item.extractedText.isNullOrBlank()
-            else -> item.content.isNotBlank()
-        }
-        Surface(
-            modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp),
-            shape = CircleShape,
-            color = detailContainerColor,
-            tonalElevation = 2.dp,
-            shadowElevation = 3.dp
-        ) {
-            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-                Row(Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    DockPreviewAction(R.drawable.ic_custom_copy,
-                        if (item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE) "Copy preview" else "Copy",
-                        enabled = hasTextToCopy, onClick = { copyContent() })
-                    if (item.type == SavedItemType.LINK && item.content.startsWith("http")) {
-                        DockPreviewAction(R.drawable.ic_custom_globe, "Open link", onClick = { onOpenLink(item.content) })
-                    } else if (item.type == SavedItemType.MEDIA) {
-                        DockPreviewAction(R.drawable.ic_custom_movie, "Open in Hub", onClick = onOpenInApp)
-                    } else {
-                        DockPreviewAction(R.drawable.ic_custom_share, "Share", onClick = { shareContent() })
+            // Small floating action pill. Labels remain available through tooltips/accessibility.
+            val hasTextToCopy = when (item.type) {
+                SavedItemType.TEXT, SavedItemType.CODE -> notePreview.isNotBlank()
+                SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.AUDIO -> !item.extractedText.isNullOrBlank()
+                else -> item.content.isNotBlank()
+            }
+            Surface(
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp),
+                shape = CircleShape,
+                color = detailContainerColor,
+                tonalElevation = 2.dp,
+                shadowElevation = 3.dp
+            ) {
+                CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+                    Row(Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        DockPreviewAction(R.drawable.ic_custom_copy,
+                            if (item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE) "Copy preview" else "Copy",
+                            enabled = hasTextToCopy, onClick = { copyContent() })
+                        if (item.type == SavedItemType.LINK && item.content.startsWith("http")) {
+                            DockPreviewAction(R.drawable.ic_custom_globe, "Open link", onClick = { onOpenLink(item.content) })
+                        } else if (item.type == SavedItemType.MEDIA) {
+                            DockPreviewAction(R.drawable.ic_custom_movie, "Open in Hub", onClick = onOpenInApp)
+                        } else {
+                            DockPreviewAction(R.drawable.ic_custom_share, "Share", onClick = { shareContent() })
+                        }
+                        DockPreviewAction(R.drawable.ic_custom_link_external, "Open in Cobalt", onClick = onOpenInApp)
                     }
-                    DockPreviewAction(R.drawable.ic_custom_link_external, "Open in Cobalt", onClick = onOpenInApp)
                 }
             }
         }

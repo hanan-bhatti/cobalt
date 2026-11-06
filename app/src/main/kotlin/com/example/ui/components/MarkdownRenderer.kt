@@ -18,6 +18,7 @@
 
 package com.example.ui.components
 
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -166,7 +167,9 @@ fun MarkdownText(
     val document = parsed?.node
     if (parsed == null) { NoteBodySkeleton(modifier, lines = 2); return }
     if (document == null) {
-        Text(markdown, modifier = modifier, color = color, maxLines = minOf(maxLines, NoteSizePolicy.MARKDOWN_BLOCK_LINES))
+        SelectionContainer(modifier) {
+            Text(markdown, color = color, maxLines = minOf(maxLines, NoteSizePolicy.MARKDOWN_BLOCK_LINES))
+        }
         return
     }
     val primaryColor = MaterialTheme.colorScheme.primary
@@ -185,22 +188,23 @@ fun MarkdownText(
         LocalSearchHighlight provides searchHighlight
     ) {
         val typo = com.example.ui.theme.LocalCobaltTypography.current
-        Column(
-            modifier = modifier,
-            verticalArrangement = Arrangement.spacedBy(typo.paragraphSpacingDp)
-        ) {
-            RenderNode(
-                node = document,
-                color = color,
-                primaryColor = primaryColor,
-                maxLines = maxLines,
-                onLinkClick = onLinkClick,
-                context = context,
-                isDark = isDark,
-                markdown = markdown,
-                onMarkdownChange = onMarkdownChange,
-                taskCounter = taskCounter
-            )
+        SelectionContainer(modifier) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(typo.paragraphSpacingDp)
+            ) {
+                RenderNode(
+                    node = document,
+                    color = color,
+                    primaryColor = primaryColor,
+                    maxLines = maxLines,
+                    onLinkClick = onLinkClick,
+                    context = context,
+                    isDark = isDark,
+                    markdown = markdown,
+                    onMarkdownChange = onMarkdownChange,
+                    taskCounter = taskCounter
+                )
+            }
         }
     }
 }

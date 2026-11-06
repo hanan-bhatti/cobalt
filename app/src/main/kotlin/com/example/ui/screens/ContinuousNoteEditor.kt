@@ -39,6 +39,8 @@ import com.example.notes.PrivateMarkdownStore
 import com.example.notes.RecoveryNote
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.example.ui.components.LocalCobaltSelectionController
+import com.example.ui.components.useCobaltSelectionMenu
 import com.example.ui.components.ContinuousMarkdownView
 import com.example.ui.components.DiskMarkdownView
 import com.example.ui.components.applyCobaltTypography
@@ -67,6 +69,7 @@ internal fun ContinuousNoteEditor(viewModel: CobaltViewModel, modifier: Modifier
     localHazeState: HazeState? = null) {
     val state by viewModel.fileEditorState.collectAsState()
     val activeItem by viewModel.activeCaptureItem.collectAsState()
+    val selectionController = LocalCobaltSelectionController.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val recovery = remember(context) { LegacyNoteRecovery(context) }
@@ -195,6 +198,7 @@ internal fun ContinuousNoteEditor(viewModel: CobaltViewModel, modifier: Modifier
                                 view.progress = { pasteProgress = it; viewModel.continuousEditorBusy(document, it != null) }
                                 view.tool = { tool = it }
                                 view.bind(document)
+                                view.useCobaltSelectionMenu(selectionController) { document.onFormat?.invoke(it) }
                                 view.setHostEditable(!state.busy && !preview && pasteProgress == null && !document.frozen)
                                 view.applyColors(colors.background.toArgb(), colors.onBackground.toArgb(), colors.primary.toArgb(),
                                     colors.onSurfaceVariant.toArgb(), colors.primary.copy(alpha = 0.22f).toArgb())
@@ -215,6 +219,7 @@ internal fun ContinuousNoteEditor(viewModel: CobaltViewModel, modifier: Modifier
                                 view.pasteProgress = { pasteProgress = it; viewModel.continuousEditorBusy(document, it != null) }
                                 view.onTool = { tool = it }
                                 view.bind(document) { viewModel.continuousEditorChanged(document) }
+                                view.useCobaltSelectionMenu(selectionController) { document.onFormat?.invoke(it) }
                                 view.isEditable = !state.busy && !preview && pasteProgress == null && !document.frozen
                                 view.applyColors(colors.background.toArgb(), colors.onBackground.toArgb(),
                                     colors.primary.toArgb(), colors.onSurfaceVariant.toArgb(), colors.primary.copy(alpha = 0.22f).toArgb())
