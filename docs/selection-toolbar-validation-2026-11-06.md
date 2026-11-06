@@ -37,9 +37,9 @@ The bounded command runs with one Gradle worker, no parallel builds and a
   :app:assembleDebug :app:assembleDebugAndroidTest
 ```
 
-The last completed host run before the final alignment assertions passed
-**184 tests, zero failures** and built both debug APKs in **6m 1s**.
-Evidence: `/tmp/cobalt-table-header-fix.log` and the isolated build's JUnit XML.
+The final bounded host run passed **185 tests, zero failures, errors or skips**
+and built both debug APKs in **8m 17s**. Evidence:
+`/tmp/cobalt-visual-alignment-retry.log` and the isolated build's JUnit XML.
 This is a targeted suite, not the whole app test suite.
 
 On emulator-5554 (API 37), the installed debug build passed **5 instrumented
@@ -81,8 +81,12 @@ also checks disk-backed Next cell preserves the native content buffer/history.
 
 The initial compile exposed a static Node/TableCell type mismatch, corrected by
 checking the cell type. A subsequent verification was interrupted without a
-final result. The final retry is pending; the new glyph-position assertions and
-additional host regression must not be counted in the completed results above.
+final result. The bounded retry passed all 185 host tests and produced both
+APKs. Both installed successfully without clearing the library. The final
+instrumented rerun was interrupted when emulator-5554 disconnected; ADB listed
+no devices afterward. Its log (`/tmp/cobalt-editor-committed-device.log`) has no
+final summary, so the new glyph-position assertions remain unverified on device.
+This incomplete rerun is not counted as a pass or an assertion failure.
 
 ## Limits and remaining validation
 
