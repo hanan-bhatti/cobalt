@@ -73,5 +73,14 @@ class MarkdownTableEditsTest {
         val result = apply(source, source.lastIndexOf("Alpha"), "table:row")
         assertTrue(result.contains("| Alpha | 42 |\n|  |  |\n| Beta | 7 |"))
     }
+    @Test fun createsTableAtEndOfAClosedFenceWithoutAnExtraEnter() {
+        val source = "```kotlin\nval a = 1\n```"
+        val result = apply(source, source.length, "table:new:2:2")
+        assertTrue(result.startsWith(source + "\n\n| Column 1 | Column 2 |"))
+    }
+    @Test fun insertingFromAnExistingTableKeepsItAndCreatesAnotherBelow() {
+        val result = apply(table, table.indexOf("Alpha"), "table:new:1:2")
+        assertTrue(result.startsWith(table + "\n\n| Column 1 | Column 2 |"))
+    }
 
 }

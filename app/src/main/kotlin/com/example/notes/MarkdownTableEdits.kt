@@ -50,22 +50,30 @@ object MarkdownTableEdits {
             if (current.end >= caret || current.end == length) break
             position = current.end + 1
         }
-        require(!current.oversized && !candidateOversized) { "This table or line is too large for table tools. Edit its Markdown directly." }
         require(marker == null) { "Move the cursor outside the code block to edit a table." }
         val newline = if (current.end > current.start && charAt(current.end - 1) == '\r') "\r\n" else "\n"
         if (command.startsWith("table:new:")) {
-            require(candidate.isEmpty()) { "The cursor is already in a table. Use Add row or Add column, or move to a blank line." }
-            require(fence.matchEntire(current.text) == null) { "Move to a blank line outside the code fence." }
             val dimensions = command.split(':')
             val rows = dimensions.getOrNull(2)?.toIntOrNull() ?: 3
             val columns = dimensions.getOrNull(3)?.toIntOrNull() ?: 3
             require(rows in 1..20 && columns in 1..MAX_COLUMNS) { "Choose 1–20 rows and 1–32 columns." }
             val lines = mutableListOf(render(List(columns) { "Column ${it + 1}" }), render(List(columns) { "---" }))
             repeat(rows) { lines += render(List(columns) { "" }) }
-            val prefix = if (caret > 0 && charAt(caret - 1) != '\n') newline + newline else ""
+            var insertion = caret
+            if (candidate.isNotEmpty() || candidateOversized) {
+                var end = current.end; var next = current.end + 1
+                while (next < length) {
+                    checkCancelled(); val row = lineAt(next)
+                    if (cells(row.text) == null) break
+                    end = row.end; next = row.end + 1
+                }
+                insertion = end - if (end > 0 && charAt(end - 1) == '\r') 1 else 0
+            }
+            val prefix = if (insertion > 0 && charAt(insertion - 1) != '\n') newline + newline else ""
             val value = prefix + lines.joinToString(newline) + newline + newline
-            return Edit(caret, caret, value, caret + prefix.length + 2)
+            return Edit(insertion, insertion, value, insertion + prefix.length + 2)
         }
+        require(!current.oversized && !candidateOversized) { "This table or line is too large for table tools. Edit its Markdown directly." }
         require(candidate.size >= 2) { "Place the cursor in a Markdown table first." }
         // Include following rows, but stop before a second table or surrounding prose.
         var following = current.end + 1
