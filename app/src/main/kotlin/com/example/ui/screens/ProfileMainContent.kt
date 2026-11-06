@@ -305,7 +305,7 @@ fun ProfileMainContent(
                 ClickableRow(
                     title = "Appearance & Preferences",
                     subtitle = "Theme, frosted blur, Gemini AI, and floating capture dock",
-                    leadingIconRes = R.drawable.ic_nav_settings_outline,
+                    leadingIconRes = R.drawable.ic_custom_settings,
                     onClick = onNavigateToSettings
                 )
 
@@ -330,8 +330,6 @@ fun ProfileMainContent(
                     title = "Trakt.tv Sync",
                     subtitle = if (isTraktConnected) "Connected as @${traktUser?.username ?: "user"} • Two-way sync" else "Sync watched history, ratings & TV progress",
                     leadingIconRes = R.drawable.ic_trakt,
-                    iconTint = Color(0xFFED1C24),
-                    iconContainerColor = Color(0xFFED1C24).copy(alpha = 0.15f),
                     onClick = onNavigateToTraktSync
                 )
             }

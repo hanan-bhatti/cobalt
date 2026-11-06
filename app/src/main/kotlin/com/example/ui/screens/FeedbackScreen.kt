@@ -1229,7 +1229,7 @@ private fun ExpressiveFeatureRequestContent(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Preparing GitHub Request...")
                         } else {
-                            Icon(painter = painterResource(id = R.drawable.ic_custom_code), contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(painter = painterResource(id = R.drawable.ic_custom_github), contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Open Pre-filled GitHub Request", fontWeight = FontWeight.Bold)
                         }

@@ -374,7 +374,7 @@ private fun MediaActivityLineChart(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        painter = painterResource(id = R.drawable.ic_custom_api_chip),
+                        painter = painterResource(id = R.drawable.ic_custom_bar_chart),
                         contentDescription = null,
                         tint = primaryColor,
                         modifier = Modifier.size(18.dp)

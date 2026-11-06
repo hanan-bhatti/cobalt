@@ -875,7 +875,7 @@ fun SurveyBottomSheet(
                                 modifier = Modifier.fillMaxWidth().bounceClick().testTag("submit_survey_github_button")
                             ) {
                                 Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_code),
+                                    painter = painterResource(id = R.drawable.ic_custom_github),
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onPrimary,
                                     modifier = Modifier.size(18.dp)

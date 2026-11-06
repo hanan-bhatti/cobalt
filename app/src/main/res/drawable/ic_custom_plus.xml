@@ -1,24 +1,13 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="25dp"
-    android:height="25dp"
-    android:viewportWidth="25"
-    android:viewportHeight="25">
-  <path
-      android:pathData="M12.25 8.96021V16.1082"
-      android:strokeLineJoin="round"
-      android:strokeWidth="1.5"
-      android:strokeColor="#FF000000"
-      android:strokeLineCap="round"/>
-  <path
-      android:pathData="M15.8279 12.5344H8.67188"
-      android:strokeLineJoin="round"
-      android:strokeWidth="1.5"
-      android:strokeColor="#FF000000"
-      android:strokeLineCap="round"/>
-  <path
-      android:pathData="M12.2499 2.79761C19.5519 2.79761 21.9869 5.23261 21.9869 12.5346C21.9869 19.8366 19.5519 22.2716 12.2499 22.2716C4.94794 22.2716 2.51294 19.8366 2.51294 12.5346C2.51294 6.56461 4.14094 3.84761 8.72494 3.05561"
-      android:strokeLineJoin="round"
-      android:strokeWidth="1.5"
-      android:strokeColor="#FF000000"
-      android:strokeLineCap="round"/>
+<vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:width="24dp"
+    android:height="24dp">
+  <group>
+    <clip-path
+        android:pathData="M0 0H24V24H0V0Z" />
+    <path
+        android:pathData="M12 22.75C10.56 22.75 9.38 21.58 9.38 20.13V14.61H3.87C2.43 14.61 1.25 13.44 1.25 11.99C1.25 10.54 2.42 9.37 3.87 9.37H9.39V3.87C9.39 2.43 10.56 1.25 12.01 1.25C13.46 1.25 14.63 2.42 14.63 3.87V9.39H20.14C21.58 9.39 22.76 10.56 22.76 12.01C22.76 13.46 21.59 14.63 20.14 14.63H14.63V20.15C14.63 21.59 13.46 22.77 12.01 22.77L12 22.75ZM3.87 10.88C3.25 10.88 2.75 11.38 2.75 12C2.75 12.62 3.25 13.12 3.87 13.12H10.14C10.55 13.12 10.89 13.46 10.89 13.87V20.14C10.89 20.76 11.39 21.26 12.01 21.26C12.63 21.26 13.13 20.76 13.13 20.14V13.87C13.13 13.46 13.47 13.12 13.88 13.12H20.14C20.76 13.12 21.26 12.62 21.26 12C21.26 11.38 20.76 10.88 20.14 10.88H13.88C13.47 10.88 13.13 10.54 13.13 10.13V3.87C13.13 3.25 12.63 2.75 12.01 2.75C11.39 2.75 10.89 3.25 10.89 3.87V10.14C10.89 10.55 10.55 10.89 10.14 10.89H3.87V10.88Z"
+        android:fillColor="#FFFFFF" />
+  </group>
 </vector>

@@ -1,11 +1,19 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="960"
-    android:viewportHeight="960">
-    <group android:translateY="960">
-        <path
-            android:fillColor="#FFFFFFFF"
-            android:pathData="M180-120q-24.75 0-42.37-17.63Q120-155.25 120-180v-600q0-24.75 17.63-42.38Q155.25-840 180-840h600q24.75 0 42.38 17.62Q840-804.75 840-780v600q0 24.75-17.62 42.37Q804.75-120 780-120H180Zm207-60h393v-600H387v600Z"/>
-    </group>
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Phone frame -->
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M7.5,2.5H16.5A3.5,3.5 0 0 1 20,6V18A3.5,3.5 0 0 1 16.5,21.5H7.5A3.5,3.5 0 0 1 4,18V6A3.5,3.5 0 0 1 7.5,2.5Z" />
+
+    <!-- Dock card -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M14,8H16A1.5,1.5 0 0 1 17.5,9.5V14.5A1.5,1.5 0 0 1 16,16H14A1.5,1.5 0 0 1 12.5,14.5V9.5A1.5,1.5 0 0 1 14,8Z" />
 </vector>

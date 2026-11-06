@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Cobalt - Organic Backdrop Blob for Welcome State (Refined width and soft contours)
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="240dp"
+    android:height="140dp"
+    android:viewportWidth="240"
+    android:viewportHeight="140">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 45,35
+            C 85,12 155,10 195,30
+            C 230,48 245,85 225,115
+            C 205,140 150,142 105,135
+            C 55,128 15,115 12,80
+            C 10,48 25,45 45,35 Z" />
+</vector>

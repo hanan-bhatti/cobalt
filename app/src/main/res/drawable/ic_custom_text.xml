@@ -1,30 +1,31 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:aapt="http://schemas.android.com/aapt"
-    android:viewportWidth="25"
+    android:viewportWidth="24"
     android:viewportHeight="24"
-    android:width="25dp"
+    android:width="24dp"
     android:height="24dp">
-    <path
-        android:pathData="M15.8451 15.6971H8.62512"
-        android:strokeColor="#000000"
-        android:strokeWidth="1.5"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
-    <path
-        android:pathData="M15.8451 11.9371H8.62512"
-        android:strokeColor="#000000"
-        android:strokeWidth="1.5"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
-    <path
-        android:pathData="M11.3799 8.17712H8.62488"
-        android:strokeColor="#000000"
-        android:strokeWidth="1.5"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
-    <path
-        android:pathData="M20.267 7.848C19.425 4.104 17.066 2.75 12.25 2.75C5.95701 2.75 3.85901 5.063 3.85901 12C3.85901 18.937 5.95701 21.25 12.25 21.25C18.544 21.25 20.641 18.937 20.641 12"
-        android:strokeColor="#000000"
-        android:strokeWidth="1.5"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round" />
+    <group>
+        <clip-path
+            android:pathData="M0 0H24V24H0V0Z" />
+        <path
+            android:pathData="M17 22.75H7C3.83 22.75 1.25 20.17 1.25 17V7C1.25 3.83 3.83 1.25 7 1.25H17C20.17 1.25 22.75 3.83 22.75 7V17C22.75 20.17 20.17 22.75 17 22.75ZM7 2.75C4.66 2.75 2.75 4.66 2.75 7V17C2.75 19.34 4.66 21.25 7 21.25H17C19.34 21.25 21.25 19.34 21.25 17V7C21.25 4.66 19.34 2.75 17 2.75H7Z"
+            android:fillColor="#FFFFFF" />
+        <path
+            android:pathData="M17 12.75H12C11.59 12.75 11.25 12.41 11.25 12C11.25 11.59 11.59 11.25 12 11.25H17C17.41 11.25 17.75 11.59 17.75 12C17.75 12.41 17.41 12.75 17 12.75Z"
+            android:fillColor="#FFFFFF" />
+        <path
+            android:pathData="M17 7.75H15C14.59 7.75 14.25 7.41 14.25 7C14.25 6.59 14.59 6.25 15 6.25H17C17.41 6.25 17.75 6.59 17.75 7C17.75 7.41 17.41 7.75 17 7.75Z"
+            android:fillColor="#FFFFFF" />
+        <path
+            android:pathData="M12 7.75H7C6.59 7.75 6.25 7.41 6.25 7C6.25 6.59 6.59 6.25 7 6.25H12C12.41 6.25 12.75 6.59 12.75 7C12.75 7.41 12.41 7.75 12 7.75Z"
+            android:fillColor="#FFFFFF" />
+        <path
+            android:pathData="M9 12.75H7C6.59 12.75 6.25 12.41 6.25 12C6.25 11.59 6.59 11.25 7 11.25H9C9.41 11.25 9.75 11.59 9.75 12C9.75 12.41 9.41 12.75 9 12.75Z"
+            android:fillColor="#FFFFFF" />
+        <path
+            android:pathData="M12 17.75H7C6.59 17.75 6.25 17.41 6.25 17C6.25 16.59 6.59 16.25 7 16.25H12C12.41 16.25 12.75 16.59 12.75 17C12.75 17.41 12.41 17.75 12 17.75Z"
+            android:fillColor="#FFFFFF" />
+        <path
+            android:pathData="M17 17.75H15C14.59 17.75 14.25 17.41 14.25 17C14.25 16.59 14.59 16.25 15 16.25H17C17.41 16.25 17.75 16.59 17.75 17C17.75 17.41 17.41 17.75 17 17.75Z"
+            android:fillColor="#FFFFFF" />
+    </group>
 </vector>

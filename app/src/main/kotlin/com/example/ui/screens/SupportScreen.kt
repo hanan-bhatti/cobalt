@@ -1,19 +1,11 @@
 package com.example.ui.screens
 
 import android.content.Context
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,11 +21,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.Button
@@ -57,20 +46,15 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -81,7 +65,6 @@ import com.example.R
 import com.example.ui.components.AppVersionBadge
 import com.example.ui.components.bounceClick
 import com.example.util.AppVersionManager
-import kotlinx.coroutines.launch
 
 data class FaqCategory(
     val id: String,
@@ -200,7 +183,7 @@ private fun ExpressiveHelpCenterContent(
         listOf(
             FaqCategory("getting_started", "Getting Started", R.drawable.ic_custom_star, Color(0xFF6366F1)),
             FaqCategory("ai_ocr", "AI & Vision OCR", R.drawable.ic_custom_ocr, Color(0xFF8B5CF6)),
-            FaqCategory("sync", "Privacy & Storage", R.drawable.ic_custom_cloud_queue, Color(0xFF0EA5E9)),
+            FaqCategory("sync", "Privacy & Storage", R.drawable.ic_custom_privacy, Color(0xFF0EA5E9)),
             FaqCategory("voice", "Voice & Audio", R.drawable.ic_custom_voice, Color(0xFFEC4899)),
             FaqCategory("widgets", "Widgets & Interface", R.drawable.ic_custom_tools, Color(0xFF10B981))
         )

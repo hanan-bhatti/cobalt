@@ -1309,7 +1309,7 @@ fun FloatingScrollbarSettingsItem(
                                 onCheckedChange = { viewModel.setFloatingScrollbarHome(it) },
                                 leadingIcon = {
                                     Icon(
-                                        painter = painterResource(id = R.drawable.ic_custom_home),
+                                        painter = painterResource(id = R.drawable.ic_nav_home_outline),
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(20.dp)
