@@ -37,7 +37,7 @@ interface SavedItemDao {
     suspend fun deleteById(id: String)
     @Query("SELECT content AS path, thumbnailPath FROM saved_items WHERE id != :excludedId AND upper(type) IN ('LINK', 'IMAGE', 'VIDEO', 'AUDIO', 'MEDIA')")
     suspend fun otherMediaPaths(excludedId: String): List<OwnedMediaPaths>
-    @Query("SELECT id, content AS path, thumbnailPath, isDeleted FROM saved_items WHERE upper(type) IN ('LINK', 'IMAGE', 'VIDEO', 'AUDIO', 'MEDIA')")
+    @Query("SELECT id, content AS path, thumbnailPath, isDeleted, type FROM saved_items WHERE upper(type) IN ('LINK', 'IMAGE', 'VIDEO', 'AUDIO', 'MEDIA')")
     suspend fun mediaStorageItems(): List<MediaStorageItem>
     @Query("SELECT id FROM saved_items WHERE upper(type) = 'MEDIA' AND isDeleted = 0")
     suspend fun activeMediaIds(): List<String>
@@ -112,4 +112,4 @@ interface SavedItemDao {
 }
 
 data class OwnedMediaPaths(val path: String, val thumbnailPath: String?)
-data class MediaStorageItem(val id: String, val path: String, val thumbnailPath: String?, val isDeleted: Boolean)
+data class MediaStorageItem(val id: String, val path: String, val thumbnailPath: String?, val isDeleted: Boolean, val type: String = "OTHER")

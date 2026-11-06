@@ -21,8 +21,12 @@ class NoteStorageManager(context: Context,
     data class Report(val current: Long, val older: Long, val recovery: Long, val database: Long,
         val cache: Long, val media: Long, val removable: Long, val removableFiles: Int, val copiesToKeep: Int,
         val trash: Long = 0, val trashCount: Int = 0, val unattached: Long = 0, val unattachedFiles: Int = 0,
-        val unlinkedRemovable: Long = 0, val clearableCache: Long = 0, val freeDatabase: Long = 0, val other: Long = 0) {
+        val unlinkedRemovable: Long = 0, val clearableCache: Long = 0, val freeDatabase: Long = 0, val other: Long = 0,
+        val images: Long = 0, val video: Long = 0, val audio: Long = 0, val otherMedia: Long = 0,
+        val liveEditBuffers: Long = 0) {
         val total: Long get() = current + older + recovery + database + cache + media + trash + unattached + other
+        val stagedRecovery: Long get() = (recovery - liveEditBuffers).coerceAtLeast(0)
+        val protectedCache: Long get() = (cache - clearableCache).coerceAtLeast(0)
     }
     data class CleanupResult(val bytes: Long, val files: Int)
     data class OlderCopy(val note: com.example.data.model.SavedItem, val hash: String, val bytes: Long, val created: Long)
@@ -276,6 +280,7 @@ class NoteStorageManager(context: Context,
         val candidates = ArrayList<NoteStorageFile>()
         val unlinked = ArrayList<NoteStorageFile>()
         var current = 0L; var older = 0L; var recovery = 0L; var trashed = 0L; var unattached = 0L; var unattachedCount = 0
+        var liveEditBuffers = 0L
         fun eligible(entries: List<NoteStorageFile>): List<NoteStorageFile> {
             val possible = entries.filter { it.hash !in pinned }
             val selected = possible.mapNotNull { entry -> entry.hash?.let { entry.directoryKey to it } }.toSet()
@@ -286,6 +291,7 @@ class NoteStorageManager(context: Context,
         for ((key, entries) in files.groupBy { it.directoryKey }) {
             currentCoroutineContext().ensureActive()
             if (key in trashedDirectories) { trashed += entries.sumOf { it.bytes }; continue }
+            liveEditBuffers += entries.filter { it.name.endsWith(".live.buffer") || it.name.endsWith(".live.state") || it.name.endsWith(".edits") }.sumOf { it.bytes }
             val note = byDirectory[key]
             val bodies = entries.filter { it.hash != null }
             val preferredCurrent = bodies.firstOrNull { it.name == "${note?.contentHash}.md" }
@@ -319,18 +325,33 @@ class NoteStorageManager(context: Context,
         val activePaths = paths(mediaRows.filter { !it.isDeleted })
         val trashedPaths = paths(mediaRows.filter { it.isDeleted }) - activePaths
         var media = 0L
+        var images = 0L; var video = 0L; var audio = 0L; var otherMedia = 0L
+        fun addMedia(file: File, owner: com.example.data.local.MediaStorageItem?) {
+            val bytes = file.length()
+            media += bytes
+            when (file.extension.lowercase(java.util.Locale.ROOT)) {
+                "jpg", "jpeg", "png", "webp", "gif", "heic", "heif", "avif" -> images += bytes
+                "mp4", "mkv", "webm", "mov", "3gp" -> if (owner?.type == "AUDIO" || file.parentFile?.name == "audio") audio += bytes else video += bytes
+                "mp3", "m4a", "wav", "ogg", "aac", "flac", "opus" -> audio += bytes
+                else -> when (owner?.type) { "IMAGE" -> images += bytes; "VIDEO" -> video += bytes; "AUDIO" -> audio += bytes; else -> otherMedia += bytes }
+            }
+        }
+        val ownersById = mediaRows.associateBy { it.id }
+        val ownersByPath = HashMap<String, com.example.data.local.MediaStorageItem>()
+        for (row in mediaRows.sortedByDescending { it.isDeleted }) for (path in listOfNotNull(row.path, row.thumbnailPath)) {
+            if (path.startsWith('/')) ownersByPath[File(path).canonicalPath] = row
+        }
         val unlinkedMedia = ArrayList<RetainedMedia>()
         val time = System.currentTimeMillis()
         if (mediaRoot.exists()) mediaRoot.walkTopDown().filter { it.isFile }.forEach {
             cancellation.ensureActive()
             val path = it.canonicalPath
             if (!path.startsWith(mediaRoot.path + File.separator)) return@forEach
-            val namedOwner = mediaRows.firstOrNull { row ->
-                it.name.startsWith(row.id + ".") || it.name.startsWith(row.id + "_") ||
-                    it.name.startsWith("thumb_" + row.id + ".") || it.name.startsWith("thumb_" + row.id + "_")
-            }
+            val stem = it.name.removePrefix("thumb_")
+            val namedOwner = ownersById[stem.substringBefore('.')]
+                ?: ownersById[stem.substringBefore('_')]
             if (path in trashedPaths || namedOwner?.isDeleted == true && path !in activePaths) trashed += it.length()
-            else if (path in activePaths || namedOwner != null) media += it.length()
+            else if (path in activePaths || namedOwner != null) addMedia(it, ownersByPath[path] ?: namedOwner)
             else {
                 unattached += it.length(); unattachedCount++
                 val grace = if (it.name.endsWith(".tmp")) 24 * 60 * 60 * 1000L else 60_000L
@@ -348,12 +369,22 @@ class NoteStorageManager(context: Context,
         val diskCache = context.imageLoader.diskCache
         val previewRoot = diskCache?.directory?.toString()?.let { File(it).canonicalPath + File.separator }
         val previewCache = if (previewRoot != null && ownedCache.any { it.startsWith(previewRoot) }) 0 else diskCache?.size ?: 0
-        val cache = size(context.cacheDir)
+        // Saved originals can still be in legacy cache paths. They are user media,
+        // not rebuildable cache, and must be counted once and protected from Clear.
+        var ownedCacheBytes = 0L
+        for (path in ownedCache) {
+            val file = File(path)
+            if (!file.isFile) continue
+            ownedCacheBytes += file.length()
+            if (path in trashedPaths) trashed += file.length() else addMedia(file, ownersByPath[path])
+        }
+        val cache = (size(context.cacheDir) - ownedCacheBytes).coerceAtLeast(0)
         val work = File(context.cacheDir, "note-body-work")
         val workBytes = if (ownedCache.any { it.startsWith(work.canonicalPath + File.separator) }) 0 else NoteCacheWork.clearableBytes(work)
         val safeCache = (previewCache + workBytes + oldExports(ownedCache).sumOf { it.length() }).coerceAtMost(cache)
         return Plan(Report(current, older, recovery, dbBytes, cache, media, candidates.sumOf { it.bytes }, candidates.size, keep,
-            trashed, deletedIds.size, unattached, unattachedCount, unlinked.sumOf { it.bytes } + unlinkedMedia.sumOf { it.bytes }, safeCache, freeDatabase, other), candidates, unlinked, unlinkedMedia)
+            trashed, deletedIds.size, unattached, unattachedCount, unlinked.sumOf { it.bytes } + unlinkedMedia.sumOf { it.bytes }, safeCache, freeDatabase, other,
+            images, video, audio, otherMedia, liveEditBuffers), candidates, unlinked, unlinkedMedia)
     }
     companion object { val RETENTIONS = listOf(0, 1, 5, 10, 20, -1) }
 }
