@@ -1512,8 +1512,16 @@ private fun DockItemDetailContent(
                 }
 
                 SavedItemType.TEXT, SavedItemType.CODE -> {
-                    Text(notePreview, style = MaterialTheme.typography.bodySmall,
-                        fontFamily = if (item.type == SavedItemType.CODE) androidx.compose.ui.text.font.FontFamily.Monospace else null)
+                    if (item.type == SavedItemType.CODE) {
+                        Text(notePreview, style = MaterialTheme.typography.bodySmall,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                    } else {
+                        com.example.ui.components.MarkdownText(
+                            markdown = notePreview,
+                            onLinkClick = onOpenLink,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                     Text("Preview · open Cobalt for the complete note", style = MaterialTheme.typography.labelSmall)
 
                 }
@@ -1522,108 +1530,47 @@ private fun DockItemDetailContent(
             Spacer(modifier = Modifier.height(12.dp))
         }
 
-        // ════════════ FOOTER ACTION BAR (CLEAN, ADAPTIVE & IN THUMB REACH) ════════════
+        // Small floating action pill. Labels remain available through tooltips/accessibility.
         val hasTextToCopy = when (item.type) {
-            SavedItemType.TEXT, SavedItemType.CODE -> item.content.isNotBlank()
+            SavedItemType.TEXT, SavedItemType.CODE -> notePreview.isNotBlank()
             SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.AUDIO -> !item.extractedText.isNullOrBlank()
-            SavedItemType.LINK -> item.content.isNotBlank()
-            SavedItemType.MEDIA -> item.content.isNotBlank()
+            else -> item.content.isNotBlank()
         }
-
         Surface(
-            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp),
+            shape = CircleShape,
             color = detailContainerColor,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-            modifier = Modifier.fillMaxWidth()
+            tonalElevation = 2.dp,
+            shadowElevation = 3.dp
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                // Adaptive Action 1: Copy (only when meaningful!)
-                if (hasTextToCopy) {
-                    TextButton(
-                        onClick = { copyContent() },
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_copy),
-                            contentDescription = null,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        val copyLabel = when (item.type) {
-                            SavedItemType.LINK -> "Copy Link"
-                            SavedItemType.IMAGE, SavedItemType.VIDEO -> "Copy OCR"
-                            SavedItemType.AUDIO -> "Copy Transcript"
-                            SavedItemType.TEXT, SavedItemType.CODE -> "Copy Preview"
-                            else -> "Copy"
-                        }
-                        Text(copyLabel, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+                Row(Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    DockPreviewAction(R.drawable.ic_custom_copy,
+                        if (item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE) "Copy preview" else "Copy",
+                        enabled = hasTextToCopy, onClick = { copyContent() })
+                    if (item.type == SavedItemType.LINK && item.content.startsWith("http")) {
+                        DockPreviewAction(R.drawable.ic_custom_globe, "Open link", onClick = { onOpenLink(item.content) })
+                    } else if (item.type == SavedItemType.MEDIA) {
+                        DockPreviewAction(R.drawable.ic_custom_movie, "Open in Hub", onClick = onOpenInApp)
+                    } else {
+                        DockPreviewAction(R.drawable.ic_custom_share, "Share", onClick = { shareContent() })
                     }
-                }
-
-                // Adaptive Action 2: Open Link (if link), Hub (if media), or Share
-                if (item.type == SavedItemType.LINK && item.content.startsWith("http")) {
-                    TextButton(
-                        onClick = {
-                            onOpenLink(item.content)
-                        },
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_globe),
-                            contentDescription = null,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Open Link", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                } else if (item.type == SavedItemType.MEDIA) {
-                    TextButton(
-                        onClick = onOpenInApp,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_movie),
-                            contentDescription = null,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Hub", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                } else {
-                    TextButton(
-                        onClick = { shareContent() },
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_share),
-                            contentDescription = null,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Share", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-
-                // Adaptive Action 3: Open in App
-                TextButton(
-                    onClick = onOpenInApp,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_custom_link_external),
-                        contentDescription = null,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("In App", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    DockPreviewAction(R.drawable.ic_custom_link_external, "Open in Cobalt", onClick = onOpenInApp)
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DockPreviewAction(icon: Int, label: String, enabled: Boolean = true, onClick: () -> Unit) {
+    TooltipBox(positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
+        tooltip = { PlainTooltip { Text(label) } }, state = rememberTooltipState()) {
+        IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(36.dp)) {
+            Icon(painterResource(icon), contentDescription = label, modifier = Modifier.size(18.dp),
+                tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f))
         }
     }
 }

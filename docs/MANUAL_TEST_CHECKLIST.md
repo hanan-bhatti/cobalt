@@ -39,6 +39,9 @@ verified on a device. The earlier 148-test baseline above is historical.
   files each require explicit Save, and cancel stops the remaining batch.
 - [ ] Import progress and completion/refusal stay readable in the bottom sheet until
   dismissed. Accepted 55 MB is success; 56 MB offers an explicit split confirmation.
+- [ ] Dock text-note detail renders headings, emphasis, lists, tables and fenced code
+  as Markdown. CODE notes stay monospace. Confirm the floating pill has three
+  meaningful icons, and long-press/accessibility exposes the action labels.
 - [ ] Recheck section 9: task toggles keep the current scroll position, without a
   progress bar or reopening the note. Verify the exported marker bytes afterward.
 

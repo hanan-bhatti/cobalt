@@ -2,6 +2,9 @@
 
 ### Fixes
 
+- Render bounded Side Dock text-note previews as Markdown, retaining monospace
+  code notes, and replace the full-width action bar with a floating three-icon pill.
+
 - Simplify Side Dock paste input with a clipboard-preview placeholder, frameless
   paste control and Send shown only with text; pasting waits for explicit Send.
 - Let compact Dock input grow from one to three lines, use a light close glyph,

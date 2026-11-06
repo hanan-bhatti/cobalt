@@ -73,3 +73,25 @@ and test deprecation warnings remain; this is not a warning-free release claim.
 
 No dependencies added. No production app data cleared or modified. The rejected
 three-description-column schema was removed before any emulator installation.
+
+
+## Markdown preview and floating actions follow-up
+
+- Replaced the wide labelled footer with a centered rounded pill: existing Copy,
+  Share/Open link/Hub, and Open in Cobalt icons. Disabled Copy stays visible for
+  consistent three-action layout. Tooltips and accessibility descriptions retain
+  action names. No new icons or dependencies.
+- TEXT preview uses the existing background-parsed MarkdownText renderer; CODE
+  items retain monospace code text. The same 4,096-character / 120-line read limit
+  remains. This is a preview, rather than loading an entire large note into Dock.
+- Final bounded debug assembly: **BUILD SUCCESSFUL in 2m 49s**; no Kotlin compiler
+  warnings/errors in that final log. Earlier tooltip overload deprecation warnings
+  were fixed by using explicit Above positioning before the final build.
+- Created one synthetic Markdown fixture through Dock Note and explicit Send.
+  Emulator checks confirmed three icon action descriptions, rendered bold text
+  without raw markers, table cells Alpha/42, and no displayed fence markers.
+  Visual inspection also confirmed heading, italic text, bullet list and monospace
+  code. Evidence: `app/build/device-tests-20261106-single-description/dock-markdown/`.
+- No additional unit suite or performance benchmark was run for this UI-only
+  follow-up; the prior 143-test preview run remains the unit baseline. Data was
+  retained during debug APK updates; no production app was touched.
