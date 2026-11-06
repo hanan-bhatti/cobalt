@@ -96,6 +96,24 @@ class CobaltSelectionMenusTest {
             assertEquals(5, value.text.lines().count { it.startsWith('|') })
         }
     }
+    @Test fun inlineFolderRequestsFocusAndReleasesEditingState() {
+        var visible by mutableStateOf(false)
+        var editing = false
+        var saved: String? = null
+        compose.setContent { MaterialTheme {
+            CompositionLocalProvider(LocalCaptureFolderEditing provides { editing = it }) {
+                if (visible) InlineNewFolderCreator(
+                    onAddFolder = { name, _ -> saved = name; visible = false },
+                    onCancel = { visible = false })
+                else Button(onClick = { visible = true }) { Text("New folder") }
+            }
+        } }
+        compose.onNodeWithText("New folder").performClick()
+        compose.onNodeWithTag("inline_folder_name_input").assertIsFocused().performTextInput("Table notes")
+        compose.runOnIdle { assertTrue(editing) }
+        compose.onNodeWithTag("inline_folder_add_button").performClick()
+        compose.runOnIdle { assertEquals("Table notes", saved); assertFalse(editing) }
+    }
     @Test fun nativeEditorUsesSameMenuAndActualCutOperation() {
         val activity = org.robolectric.Robolectric.buildActivity(android.app.Activity::class.java).setup()
         val editor = io.github.rosemoe.sora.widget.CodeEditor(activity.get())

@@ -422,8 +422,10 @@ fun CleanFolderRow(
     onToggleNewFolder: () -> Unit,
     accentColor: Color,
     modifier: Modifier = Modifier,
-    rankedFolders: List<com.example.util.RankedFolder>? = null
+    rankedFolders: List<com.example.util.RankedFolder>? = null,
+    systemCategory: String? = null
 ) {
+    var showDestinationInfo by remember { mutableStateOf(false) }
     val foldersScrollState = rememberScrollState()
 
     Row(
@@ -545,7 +547,18 @@ fun CleanFolderRow(
                 }
             }
         }
+        if (systemCategory != null) IconButton(onClick = { showDestinationInfo = true }, modifier = Modifier.size(32.dp)) {
+            Icon(painterResource(R.drawable.ic_custom_info), "Save destination information",
+                modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
+    if (showDestinationInfo) AlertDialog(onDismissRequest = { showDestinationInfo = false },
+        title = { Text("Save destination") },
+        text = { Text("Saved in the ${systemCategory.orEmpty()} system category. " +
+            if (assignedFolders.isEmpty()) "Choose a custom folder to organize it as well."
+            else "Also saved in: ${assignedFolders.joinToString()}. You can change folders before saving.") },
+        confirmButton = { TextButton(onClick = { showDestinationInfo = false }) { Text("Got it") } })
+
 }
 
 @Composable
@@ -739,7 +752,6 @@ fun TextCapturePage(
             if (!isKeyboardOpen || showNewFolderCreator) {
                 // Push footer down if content is short
                 Spacer(modifier = Modifier.height(8.dp))
-                Spacer(modifier = Modifier.height(16.dp))
 
                 // Inline Folder Creator if opened
                 AnimatedVisibility(
@@ -772,34 +784,22 @@ fun TextCapturePage(
                     showNewFolderCreator = showNewFolderCreator,
                     onToggleNewFolder = { showNewFolderCreator = !showNewFolderCreator },
                     accentColor = pageCategoryColor,
-                    rankedFolders = rankedFolders
+                    rankedFolders = rankedFolders, systemCategory = item.type.displayName
                 )
 
                 // 6. Minimal Info Caption
-                Text(
-                    text = "Saves to ${item.type.displayName}",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
-                    modifier = Modifier.padding(top = 8.dp, start = 4.dp, bottom = 4.dp)
-                )
             }
     }
     if (fileEditing) {
         ContinuousNoteEditor(viewModel, modifier.fillMaxSize().padding(horizontal = 20.dp)
-            .padding(top = 10.dp, bottom = bottomPadding + 24.dp), noteHeader, noteFooter, preview = isPreviewMode,
+            .padding(top = 10.dp, bottom = bottomPadding + 8.dp), noteHeader, noteFooter, preview = isPreviewMode,
             localHazeState = localHazeState)
-    } else BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        val minContentHeight = maxHeight
-        Column(Modifier.fillMaxWidth().heightIn(min = minContentHeight).verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 10.dp).padding(bottom = bottomPadding + 24.dp)) {
+    } else Column(modifier.fillMaxSize().padding(horizontal = 20.dp).padding(top = 10.dp, bottom = 8.dp)) {
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
             noteHeader()
             noteEditor()
-            if (!isKeyboardOpen || showNewFolderCreator) {
-                Spacer(modifier = Modifier.weight(1f))
-            }
-            noteFooter()
         }
+        noteFooter()
     }
 }
 
@@ -1034,17 +1034,10 @@ fun AudioCapturePage(
                     showNewFolderCreator = showNewFolderCreator,
                     onToggleNewFolder = { showNewFolderCreator = !showNewFolderCreator },
                     accentColor = pageCategoryColor,
-                    rankedFolders = rankedFolders
+                    rankedFolders = rankedFolders, systemCategory = item.type.displayName
                 )
 
                 // Minimal Info Caption
-                Text(
-                    text = "Saves to ${SavedItemType.AUDIO.displayName}",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
-                    modifier = Modifier.padding(top = 8.dp, start = 4.dp, bottom = 4.dp)
-                )
             }
         }
     }
@@ -1576,15 +1569,7 @@ fun LinkCapturePage(
                     showNewFolderCreator = showNewFolderCreator,
                     onToggleNewFolder = { showNewFolderCreator = !showNewFolderCreator },
                     accentColor = pageCategoryColor,
-                    rankedFolders = rankedFolders
-                )
-
-                Text(
-                    text = "Saves to ${SavedItemType.LINK.displayName}",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
-                    modifier = Modifier.padding(top = 8.dp, start = 4.dp, bottom = 4.dp)
+                    rankedFolders = rankedFolders, systemCategory = item.type.displayName
                 )
             }
         }
@@ -1802,6 +1787,8 @@ fun CaptureScreen(
         }
     }
 
+    var folderEditing by remember { mutableStateOf(false) }
+    CompositionLocalProvider(com.example.ui.components.LocalCaptureFolderEditing provides { folderEditing = it }) {
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
@@ -1931,7 +1918,9 @@ fun CaptureScreen(
             }
         },
         bottomBar = {
-            if (isKeyboardOpen) {
+            if (isKeyboardOpen && folderEditing) {
+                Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.ime))
+            } else if (isKeyboardOpen) {
                 if (item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE || item.type == SavedItemType.AUDIO) {
                     val toolbarModifier = if (useBlur) {
                         Modifier
@@ -2157,7 +2146,7 @@ fun CaptureScreen(
                 state = pagerState,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = innerPadding.calculateTopPadding()),
+                    .padding(innerPadding),
                 userScrollEnabled = !fileEditing,
                 verticalAlignment = Alignment.Top
             ) { pageIndex ->
@@ -2180,7 +2169,7 @@ fun CaptureScreen(
                         clipboardUrl = clipboardUrl,
                         clipboardDomain = clipboardDomain,
                         isKeyboardOpen = isKeyboardOpen,
-                        bottomPadding = innerPadding.calculateBottomPadding(),
+                        bottomPadding = 0.dp,
                         rankedFolders = rankedFolders,
                         localHazeState = localHazeState
                     )
@@ -2197,7 +2186,7 @@ fun CaptureScreen(
                         onTogglePreview = { isPreviewMode = !isPreviewMode },
                         isOcrLoading = isOcrLoading,
                         isKeyboardOpen = isKeyboardOpen,
-                        bottomPadding = innerPadding.calculateBottomPadding(),
+                        bottomPadding = 0.dp,
                         rankedFolders = rankedFolders,
                         localHazeState = localHazeState
                     )
@@ -2211,7 +2200,7 @@ fun CaptureScreen(
                         clipboardUrl = clipboardUrl,
                         clipboardDomain = clipboardDomain,
                         isKeyboardOpen = isKeyboardOpen,
-                        bottomPadding = innerPadding.calculateBottomPadding(),
+                        bottomPadding = 0.dp,
                         rankedFolders = rankedFolders,
                         localHazeState = localHazeState
                     )
@@ -3302,27 +3291,21 @@ fun CaptureScreen(
                                 showNewFolderCreator = showNewFolderCreator,
                                 onToggleNewFolder = { showNewFolderCreator = !showNewFolderCreator },
                                 accentColor = pageCategoryColor,
-                                rankedFolders = rankedFolders
+                                rankedFolders = rankedFolders, systemCategory = pageType.displayName
                             )
 
                             // Clean minimal info text
-                            Text(
-                                text = "Saves to ${pageType.displayName}",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
-                                modifier = Modifier.padding(top = 8.dp, start = 4.dp, bottom = 4.dp)
-                            )
                         }
 
                         // Bottom clearance for the frosted bottom bar
-                        Spacer(modifier = Modifier.height(innerPadding.calculateBottomPadding() + 24.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
             }
         }
     }
 
+    } // Folder editor context
     if (showDeleteConfirm) {
         com.example.ui.components.ExpressiveConfirmationDialog(
             onDismissRequest = { showDeleteConfirm = false },

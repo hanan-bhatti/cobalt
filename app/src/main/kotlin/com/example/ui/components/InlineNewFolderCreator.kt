@@ -40,6 +40,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -49,6 +56,8 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.ui.screens.FolderIcon
 import com.example.ui.screens.folderPresetIcons
+
+internal val LocalCaptureFolderEditing = staticCompositionLocalOf<(Boolean) -> Unit> { {} }
 
 /**
  * A sleek, modern inline folder creation row matching Material 3 and Cobalt aesthetic.
@@ -61,6 +70,15 @@ fun InlineNewFolderCreator(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val reportEditing by rememberUpdatedState(LocalCaptureFolderEditing.current)
+    val focus = remember { FocusRequester() }
+    val bringIntoView = remember { BringIntoViewRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    var focused by remember { mutableStateOf(false) }
+    val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+    DisposableEffect(Unit) { reportEditing(true); onDispose { reportEditing(false) } }
+    LaunchedEffect(Unit) { withFrameNanos { }; focus.requestFocus(); keyboard?.show() }
+    LaunchedEffect(focused, imeBottom) { if (focused) { withFrameNanos { }; bringIntoView.bringIntoView() } }
     var folderName by remember { mutableStateOf("") }
     var selectedIconName by remember { mutableStateOf(folderPresetIcons.first()) }
     var isIconDropdownOpen by remember { mutableStateOf(false) }
@@ -74,7 +92,7 @@ fun InlineNewFolderCreator(
     }
 
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().bringIntoViewRequester(bringIntoView),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         Row(
@@ -202,6 +220,8 @@ fun InlineNewFolderCreator(
                         keyboardActions = KeyboardActions(onDone = { submitFolder() }),
                         modifier = Modifier
                             .weight(1f)
+                            .focusRequester(focus)
+                            .onFocusChanged { focused = it.isFocused }
                             .testTag("inline_folder_name_input"),
                         decorationBox = { innerTextField ->
                             if (folderName.isEmpty()) {
