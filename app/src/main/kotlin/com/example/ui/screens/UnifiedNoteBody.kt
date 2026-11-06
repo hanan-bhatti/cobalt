@@ -33,33 +33,6 @@ fun UnifiedNoteBody(item: SavedItem, viewModel: CobaltViewModel, plain: Boolean,
     var failure by remember(item.id) { mutableStateOf<String?>(null) }
     Column(modifier) {
         failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        if (item.byteLength >= NoteSizePolicy.SOFT_MAX_BYTES) {
-            Surface(
-                color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.45f),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_custom_info),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        text = "Large document (${NoteSizePolicy.formatBytes(item.byteLength)}). Rendered in streaming mode. Live editing is locked for single notes above 50 MB to prevent app memory crashes.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer
-                    )
-                }
-            }
-        }
         val hash = item.contentHash
         if (item.bodyMissing || hash == null) LazyColumn(Modifier.fillMaxSize(), state = noteListState, contentPadding = contentPadding) {
             item { header() }
