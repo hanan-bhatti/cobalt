@@ -31,20 +31,28 @@ object NoteMigrationManager {
             (context.getDatabasePath("cobalt_db").exists() && prefs.getInt("completed_format", 0) < BODY_FORMAT_VERSION)
     }
 
-    suspend fun needsStartupMigration(context: Context): Boolean = withContext(Dispatchers.IO) {
-        if (context.getSharedPreferences("draft_prefs", Context.MODE_PRIVATE).contains("quick_note")) {
-            check(preferences(context).edit().putBoolean("migration_required", true).commit())
+    suspend fun needsStartupMigration(context: Context): Boolean = evaluateStartupMigration(context) {
+        context.getDatabasePath("cobalt_db").exists() &&
+            AppDatabase.getDatabase(context).savedItemDao().hasNotesNeedingBodyMigration()
+    }
+
+    /** Room may already have created an empty database before Activity startup. File existence is not migration evidence. */
+    internal suspend fun evaluateStartupMigration(context: Context, pendingBodies: () -> Boolean): Boolean = withContext(Dispatchers.IO) {
+        NoteWriteLock.mutex.withLock {
+            val prefs = preferences(context)
+            val drafts = context.getSharedPreferences("draft_prefs", Context.MODE_PRIVATE)
+            val legacyDraft = drafts.getString("quick_note", "").orEmpty()
+            val phase = runCatching { Phase.valueOf(prefs.getString("phase", Phase.READY.name)!!) }.getOrDefault(Phase.READY)
+            val attention = phase in setOf(Phase.RUNNING, Phase.INTERRUPTED, Phase.ATTENTION) || prefs.getInt("failed", 0) > 0
+            val needed = legacyDraft.isNotEmpty() || pendingBodies() || attention
+            if (drafts.contains("quick_note") && legacyDraft.isEmpty()) {
+                check(drafts.edit().remove("quick_note").commit()) { "Cannot acknowledge empty legacy draft" }
+            }
+            val update = prefs.edit().putBoolean("migration_required", needed)
+            if (!needed) update.putInt("completed_format", BODY_FORMAT_VERSION).putString("phase", Phase.COMPLETE.name)
+            check(update.commit()) { "Cannot persist migration state" }
             refreshStatus(context)
-            return@withContext true
-        }
-        if (!context.getDatabasePath("cobalt_db").exists()) {
-            preferences(context).edit().putInt("completed_format", BODY_FORMAT_VERSION)
-                .putString("phase", Phase.COMPLETE.name).commit()
-            refreshStatus(context)
-            false
-        } else {
-            refreshStatus(context)
-            shouldPauseBackground(context)
+            needed
         }
     }
 

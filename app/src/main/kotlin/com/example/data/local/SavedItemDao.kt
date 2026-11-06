@@ -41,6 +41,10 @@ interface SavedItemDao {
     suspend fun mediaStorageItems(): List<MediaStorageItem>
     @Query("SELECT id FROM saved_items WHERE upper(type) = 'MEDIA' AND isDeleted = 0")
     suspend fun activeMediaIds(): List<String>
+    /** Scalar metadata only: never return a legacy body in a Room row during startup. */
+    @Query("SELECT EXISTS(SELECT 1 FROM saved_items WHERE upper(type) NOT IN ('LINK', 'IMAGE', 'VIDEO', 'AUDIO', 'MEDIA') AND (bodyLocation != 'FILE' OR formatVersion < 1 OR contentHash IS NULL OR contentHash = '' OR bodyMissing = 1))")
+    fun hasNotesNeedingBodyMigration(): Boolean
+
     @Query("UPDATE saved_items SET content = :content, thumbnailPath = :thumbnail WHERE id = :id AND isDeleted = 0")
     suspend fun updateMediaPaths(id: String, content: String, thumbnail: String?): Int
 
