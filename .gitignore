@@ -33,3 +33,7 @@ firebase-debug.*.log
 
 # Local dependencies left from the retired backend (never shipped).
 /functions/node_modules/
+
+# Generated Python bytecode from local fixture/test tools.
+__pycache__/
+*.py[cod]
