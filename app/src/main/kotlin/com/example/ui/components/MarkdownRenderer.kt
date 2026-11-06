@@ -283,7 +283,7 @@ private fun ColumnScope.RenderNode(
                 val blockDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
                 val finalString = annotatedString.withSearchHighlight(LocalSearchHighlight.current, primaryColor)
                 CompositionLocalProvider(LocalLayoutDirection provides blockDirection) {
-                    Text(
+                    MarkdownInlineText(
                         text = finalString,
                         color = if (isTaskChecked) color.copy(alpha = 0.55f) else color,
                         style = typo.body.copy(
@@ -312,7 +312,7 @@ private fun ColumnScope.RenderNode(
                 }
                 val finalString = annotatedString.withSearchHighlight(LocalSearchHighlight.current, primaryColor)
                 CompositionLocalProvider(LocalLayoutDirection provides blockDirection) {
-                    Text(
+                    MarkdownInlineText(
                         text = finalString,
                         color = color,
                         style = headingStyle.copy(
@@ -672,8 +672,15 @@ private fun MarkdownTable(
                                         )
                                     }
                                     val finalCellText = cellText.withSearchHighlight(LocalSearchHighlight.current, primaryColor)
-                                    Text(
+                                    MarkdownInlineText(
                                         text = finalCellText,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        textAlign = when ((cellNode as? TableCell)?.alignment) {
+                                            TableCell.Alignment.LEFT -> TextAlign.Left
+                                            TableCell.Alignment.CENTER -> TextAlign.Center
+                                            TableCell.Alignment.RIGHT -> TextAlign.Right
+                                            else -> TextAlign.Start
+                                        },
                                         color = if (isHeader) MaterialTheme.colorScheme.onSurface else color,
                                         fontSize = if (isHeader) (typo.body.fontSize.value * 0.85f).sp else (typo.body.fontSize.value * 0.8f).sp,
                                         fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
@@ -777,16 +784,17 @@ private fun AnnotatedString.Builder.AppendInlineNodes(
             is Code -> {
                 val codeFamily = typography?.codeFontFamily ?: FontFamily.Monospace
                 val codeSize = typography?.inlineCode?.fontSize ?: 13.sp
+                val codeStart = length
                 withStyle(
                     SpanStyle(
                         fontFamily = codeFamily,
-                        background = color.copy(alpha = 0.08f),
                         color = primaryColor,
                         fontSize = codeSize
                     )
                 ) {
                     append(currentChild.literal)
                 }
+                addStringAnnotation(INLINE_CODE_TAG, "code", codeStart, length)
             }
             is Link -> {
                 if (!decorateLinks) {
