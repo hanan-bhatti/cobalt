@@ -161,14 +161,26 @@ fun MediaSearchBottomSheet(viewModel: CobaltViewModel) {
                     )
                 }
             } else {
+                val allItems by viewModel.allItems.collectAsState()
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(bottom = 32.dp)
                 ) {
                     items(searchResults, key = { it.id }) { item ->
+                        val existingSavedItem = remember(item, allItems) {
+                            allItems.firstOrNull { existing ->
+                                existing.type == com.example.data.model.SavedItemType.MEDIA && (
+                                    (item.tmdbId != null && existing.tmdbId == item.tmdbId) ||
+                                    (item.traktId != null && existing.traktId == item.traktId) ||
+                                    (!item.imdbId.isNullOrBlank() && existing.imdbId == item.imdbId) ||
+                                    existing.id == item.id
+                                )
+                            }
+                        }
                         MediaSearchResultCard(
                             item = item,
+                            existingSavedItem = existingSavedItem,
                             onSave = { status ->
                                 viewModel.saveMediaItem(item, watchStatus = status)
                             }
@@ -184,6 +196,7 @@ fun MediaSearchBottomSheet(viewModel: CobaltViewModel) {
 fun MediaSearchResultCard(
     item: MediaSearchResultItem,
     onSave: (watchStatus: String) -> Unit,
+    existingSavedItem: com.example.data.model.SavedItem? = null,
     modifier: Modifier = Modifier
 ) {
     var isExpanded by remember { mutableStateOf(false) }
@@ -263,6 +276,22 @@ fun MediaSearchResultCard(
                             )
                         }
 
+                        if (existingSavedItem != null) {
+                            val inTrash = existingSavedItem.isDeleted
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (inTrash) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = if (inTrash) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer
+                            ) {
+                                Text(
+                                    text = if (inTrash) "In Trash" else "In Library",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
                         if (!item.releaseYear.isNullOrBlank()) {
                             Text(
                                 text = item.releaseYear,
@@ -312,33 +341,57 @@ fun MediaSearchResultCard(
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Button(
-                            onClick = { onSave("Plan to Watch") },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
-                            ),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                            shape = RoundedCornerShape(topStart = 10.dp, bottomStart = 10.dp, topEnd = 0.dp, bottomEnd = 0.dp),
-                            modifier = Modifier.height(36.dp)
-                        ) {
-                            Text("Save", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                        }
-                        Button(
-                            onClick = { expandedStatusMenu = true },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
-                            ),
-                            contentPadding = PaddingValues(horizontal = 4.dp),
-                            shape = RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 10.dp, bottomEnd = 10.dp),
-                            modifier = Modifier.height(36.dp).width(28.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_chevron_down),
-                                contentDescription = "Select status",
-                                modifier = Modifier.size(16.dp)
-                            )
+                        if (existingSavedItem != null && !existingSavedItem.isDeleted) {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.height(36.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_check),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text("Saved", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        } else {
+                            val inTrash = existingSavedItem?.isDeleted == true
+                            Button(
+                                onClick = { onSave(if (inTrash) (existingSavedItem?.watchStatus ?: "Plan to Watch") else "Plan to Watch") },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (inTrash) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                                    contentColor = if (inTrash) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onPrimary
+                                ),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                shape = RoundedCornerShape(topStart = 10.dp, bottomStart = 10.dp, topEnd = 0.dp, bottomEnd = 0.dp),
+                                modifier = Modifier.height(36.dp)
+                            ) {
+                                Text(if (inTrash) "Restore" else "Save", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                            }
+                            Button(
+                                onClick = { expandedStatusMenu = true },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (inTrash) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                                    contentColor = if (inTrash) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onPrimary
+                                ),
+                                contentPadding = PaddingValues(horizontal = 4.dp),
+                                shape = RoundedCornerShape(topStart = 0.dp, bottomStart = 0.dp, topEnd = 10.dp, bottomEnd = 10.dp),
+                                modifier = Modifier.height(36.dp).width(28.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_chevron_down),
+                                    contentDescription = "Select status",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                     }
 

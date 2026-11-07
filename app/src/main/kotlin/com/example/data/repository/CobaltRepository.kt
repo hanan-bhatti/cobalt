@@ -244,7 +244,7 @@ class CobaltRepository(
 
     private fun SavedItem.toEntity(): SavedItemEntity = SavedItemEntity.fromDomainModel(this)
 
-    private val notePersistence by lazy { com.example.notes.NotePersistence(context) }
+    private val notePersistence by lazy { com.example.notes.NotePersistence(context, db) }
 
     suspend fun searchNoteFiles(query: String): List<SavedItem> = withContext(Dispatchers.IO) {
         val terms = Regex("[\\p{L}\\p{N}_]+").findAll(query).map { it.value.take(64) }.take(12).toList()
@@ -289,6 +289,28 @@ class CobaltRepository(
         val results = java.util.Collections.synchronizedList(mutableListOf<MediaSearchResultItem>())
         val apiKey = getTmdbApiKey()
 
+        val traktJob = async {
+            if (com.example.data.remote.trakt.TraktAuthManager.getInstance(context).hasValidToken()) {
+                try {
+                    val found = com.example.data.remote.trakt.TraktSyncEngine.getApiService().searchMedia(query.trim())
+                    for (result in found) {
+                        val movie = result.movie; val show = result.show
+                        val ids = movie?.ids ?: show?.ids ?: continue
+                        val kind = if (movie != null) "movie" else "tv"
+                        val images = movie?.images ?: show?.images
+                        fun image(type: String): String? = images?.get(type)?.firstOrNull()?.let {
+                            if (it.startsWith("https://")) it else "https://$it"
+                        }
+                        results += MediaSearchResultItem(id = "trakt_${kind}_${ids.trakt}", title = movie?.title ?: show?.title.orEmpty(),
+                            mediaType = kind, posterUrl = image("poster"), backdropUrl = image("fanart"),
+                            releaseYear = (movie?.year ?: show?.year)?.toString(), overview = movie?.overview ?: show?.overview,
+                            genres = show?.genres.orEmpty(), rating = movie?.rating ?: show?.rating,
+                            runtime = movie?.runtime ?: show?.runtime, traktId = ids.trakt, tmdbId = ids.tmdb, imdbId = ids.imdb)
+                    }
+                } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+                catch (_: Exception) { Log.w("CobaltRepo", "Trakt search unavailable") }
+            }
+        }
         val tmdbJob = async {
             if (apiKey.isNotBlank()) {
                 try {
@@ -310,6 +332,7 @@ class CobaltRepository(
                             results.add(
                                 MediaSearchResultItem(
                                     id = "tmdb_${type}_${item.id}",
+                                    tmdbId = item.id,
                                     title = title,
                                     mediaType = type,
                                     posterUrl = posterUrl,
@@ -367,13 +390,18 @@ class CobaltRepository(
             }
         }
 
+        traktJob.await()
         tmdbJob.await()
         jikanJob.await()
-        results.toList()
+        results.toList().sortedBy { if (it.traktId != null) 0 else 1 }
+            .distinctBy { Triple(it.title.lowercase(java.util.Locale.ROOT), it.releaseYear, it.mediaType) }
     }
 
     suspend fun enrichMediaItemDetails(item: SavedItem, saveToDb: Boolean = true): SavedItem = withContext(Dispatchers.IO) {
         if (item.type != SavedItemType.MEDIA) return@withContext item
+        if (item.traktId != null && com.example.data.remote.trakt.TraktAuthManager.getInstance(context).hasValidToken()) {
+            return@withContext com.example.data.remote.trakt.TraktSyncEngine.enrichShowDeepDetails(context, item)
+        }
 
         var mediaType = item.mediaType
         var genres = item.genres
@@ -759,23 +787,65 @@ class CobaltRepository(
 
     suspend fun restoreDeletedItem(id: String) = com.example.notes.TrashManager(context, db).restore(id)
 
-    /** Explicit user add: a deleted provider result gets a fresh capture identity, never an old autosave's identity. */
+    suspend fun findExistingMediaItem(
+        tmdbId: Int?,
+        traktId: Long?,
+        imdbId: String?,
+        id: String
+    ): SavedItem? = withContext(Dispatchers.IO) {
+        savedItemDao.findMediaItemByExternalIds(tmdbId, traktId, imdbId, id)?.toDomainModel()
+    }
+
+    suspend fun findExistingLink(url: String): SavedItem? = withContext(Dispatchers.IO) {
+        val trimmed = url.trim()
+        if (trimmed.isBlank()) return@withContext null
+        val normalized = com.example.util.CobaltCustomTabsLauncher.normalizeUrl(trimmed)
+        val alt = if (normalized.startsWith("https://", ignoreCase = true)) {
+            "http://" + normalized.removePrefix("https://")
+        } else if (normalized.startsWith("http://", ignoreCase = true)) {
+            "https://" + normalized.removePrefix("http://")
+        } else normalized
+        savedItemDao.findLinkByUrl(normalized, alt)?.toDomainModel()
+    }
+
+    /** Explicit user add: checks all three IDs (tmdbId, traktId, imdbId) to prevent duplicates and recover from Trash. */
     suspend fun saveNewMediaItem(item: SavedItem): SavedItem = withContext(Dispatchers.IO) {
         require(item.type == SavedItemType.MEDIA)
         val fence = com.example.notes.NoteDeletionFence(context)
+        val existing = savedItemDao.findMediaItemByExternalIds(item.tmdbId, item.traktId, item.imdbId, item.id)
+        if (existing != null) {
+            if (!existing.isDeleted && !fence.deleted(existing.id)) {
+                return@withContext existing.toDomainModel()
+            }
+            if (existing.isDeleted && !fence.deleted(existing.id)) {
+                try {
+                    restoreDeletedItem(existing.id)
+                    val restored = savedItemDao.getItemById(existing.id)?.toDomainModel()
+                    if (restored != null) {
+                        val updated = restored.copy(
+                            watchStatus = item.watchStatus ?: restored.watchStatus,
+                            folders = if (item.folders.isNotEmpty()) (restored.folders + item.folders).distinct() else restored.folders,
+                            updatedAt = System.currentTimeMillis()
+                        )
+                        saveItem(updated)
+                        return@withContext updated
+                    }
+                } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+                catch (_: IllegalStateException) { /* Purged or expired undo, fall through to fresh capture */ }
+            }
+        }
         val prefix = item.id.substringBeforeLast('_', item.id) + "_"
         val providerId = item.id.substringAfterLast('_')
         val active = savedItemDao.activeMediaIds().firstOrNull { !fence.deleted(it) && (it == item.id || (it.startsWith(prefix) && it.endsWith("_$providerId"))) }
-        val old = savedItemDao.getItemById(item.id)
-        if (active == null && old?.isDeleted == true && !fence.deleted(item.id)) {
-            try {
-                restoreDeletedItem(item.id)
-                return@withContext savedItemDao.getItemById(item.id)!!.toDomainModel()
-            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
-            catch (_: IllegalStateException) { /* An expired Undo or purge gets a fresh capture below. */ }
-        }
-        val identity = active ?: if (fence.deleted(item.id) || old?.isDeleted == true) prefix + java.util.UUID.randomUUID() + "_" + providerId else item.id
-        saveItem(item.copy(id = identity))
+        val identity = active ?: if (fence.deleted(item.id) || existing?.isDeleted == true) prefix + java.util.UUID.randomUUID() + "_" + providerId else item.id
+        val selected = sanitizeItemTitle(item.copy(id = identity))
+        val supported = selected.mediaType in listOf("movie", "tv") &&
+            ((selected.traktId ?: 0) > 0 || (selected.tmdbId ?: 0) > 0 || !selected.imdbId.isNullOrBlank())
+        if (supported && selected.watchStatus == "Plan to Watch") {
+            val saved = com.example.data.remote.trakt.TraktOutbox.savePlannedMedia(context, selected, db)
+            com.example.widget.WidgetUpdater.update(context)
+            saved
+        } else saveItem(selected)
     }
 
     suspend fun addCustomFolder(

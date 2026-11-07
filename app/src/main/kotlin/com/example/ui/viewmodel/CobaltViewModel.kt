@@ -333,12 +333,19 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     fun deleteSelectedItems() {
         val selectedIds = _selectedItemIds.value
         if (selectedIds.isEmpty()) return
+        val items = allItems.value.filter { it.id in selectedIds }
+        val generation = undoNavigationGeneration
         viewModelScope.launch {
-            val itemsToDelete = allItems.value.filter { selectedIds.contains(it.id) }
-            itemsToDelete.forEach { item ->
-                repository.deleteItem(item)
+            val deleted = ArrayList<SavedItem>()
+            var failed = 0
+            for (item in items) {
+                try { if (repository.deleteItem(item)) deleted += item }
+                catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+                catch (_: Exception) { failed++ }
             }
             clearSelection()
+            if (generation == undoNavigationGeneration) triggerUndoToast(deleted)
+            if (failed > 0) showToast("Some items could not be deleted. They remain in your archive; try again.")
         }
     }
 
@@ -527,7 +534,9 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             id = item.id,
             type = SavedItemType.MEDIA,
             title = item.title,
-            content = item.overview ?: "",
+            content = if (item.traktId != null) "https://trakt.tv/${if (item.mediaType == "movie") "movies" else "shows"}/${item.traktId}" else item.overview ?: "",
+            traktId = item.traktId, tmdbId = item.tmdbId, imdbId = item.imdbId,
+            extractedText = item.overview,
             thumbnailPath = item.posterUrl,
             backdropUrl = item.backdropUrl,
             mediaType = item.mediaType,
@@ -540,14 +549,24 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             rating = item.rating
         )
 
-        // 1. Instantly close sheet and notify user
+        // 1. Instantly close sheet
         closeMediaSearchSheet()
 
-        // 2. Save locally and launch background enrichment
+        // 2. Check for duplicate or trash recovery
         viewModelScope.launch {
             try {
+                val existing = repository.findExistingMediaItem(item.tmdbId, item.traktId, item.imdbId, item.id)
+                if (existing != null && !existing.isDeleted) {
+                    showToast("\"${item.title}\" is already in your library.")
+                    return@launch
+                }
+                val isTrashRecovery = existing != null && existing.isDeleted
                 val saved = repository.saveNewMediaItem(newItem)
-                showToast("Saved ${item.title} to Cobalt!")
+                if (isTrashRecovery) {
+                    showToast("\"${item.title}\" restored from Trash to your library!")
+                } else {
+                    showToast("Saved ${item.title} to Cobalt!")
+                }
                 repository.enrichMediaItemDetails(saved)
             } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
             catch (_: Exception) { showToast("Could not save this media item. Please retry.") }
@@ -1371,12 +1390,47 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     private val _lastDeletedItemForUndo = MutableStateFlow<SavedItem?>(null)
     val lastDeletedItemForUndo: StateFlow<SavedItem?> = _lastDeletedItemForUndo.asStateFlow()
 
+    private var undoDeletedItems: List<SavedItem> = emptyList()
+    private var undoDismissJob: kotlinx.coroutines.Job? = null
+    private var undoNavigationGeneration = 0L
+    var undoExpiresAt: Long = 0
+        private set
+    fun trashEnabled(): Boolean = com.example.notes.TrashManager(getApplication()).enabled()
+    fun deletionMessage(plural: Boolean = false): String = com.example.notes.TrashPolicy.deletionMessage(trashEnabled(), plural)
     fun clearUndoToast() {
+        undoDismissJob?.cancel(); undoDismissJob = null
         _lastDeletedItemForUndo.value = null
+        undoDeletedItems = emptyList()
     }
-
-    fun triggerUndoToast(item: SavedItem) {
-        _lastDeletedItemForUndo.value = item
+    fun dismissUndoForNavigation() {
+        undoNavigationGeneration++
+        clearUndoToast()
+    }
+    fun triggerUndoToast(item: SavedItem) = triggerUndoToast(listOf(item))
+    private fun triggerUndoToast(items: List<SavedItem>) {
+        clearUndoToast()
+        if (items.isEmpty()) return
+        undoDeletedItems = items
+        undoExpiresAt = android.os.SystemClock.elapsedRealtime() + 4_000
+        _lastDeletedItemForUndo.value = items.first()
+        undoDismissJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(4_000)
+            _lastDeletedItemForUndo.value = null
+            undoDeletedItems = emptyList()
+        }
+    }
+    fun restoreLastDeletedItems() {
+        val items = undoDeletedItems
+        clearUndoToast()
+        viewModelScope.launch {
+            var failed = 0
+            for (item in items) {
+                try { repository.restoreDeletedItem(item.id) }
+                catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+                catch (_: Exception) { failed++ }
+            }
+            if (failed > 0) showToast("Some items could not be restored. Check Storage → Trash.")
+        }
     }
 
     fun deleteEditingItem() {
@@ -1896,6 +1950,29 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         _isSaving.value = true
         viewModelScope.launch {
             try {
+                if (type == SavedItemType.LINK) {
+                    val existing = repository.findExistingLink(content)
+                    if (existing != null) {
+                        if (!existing.isDeleted) {
+                            showToast("This link is already saved in your library.")
+                            onSaved()
+                            return@launch
+                        } else {
+                            try {
+                                repository.restoreDeletedItem(existing.id)
+                                val updated = existing.copy(
+                                    folders = if (selectedFolders.isNotEmpty()) (existing.folders + selectedFolders).distinct() else existing.folders,
+                                    updatedAt = System.currentTimeMillis()
+                                )
+                                repository.saveItem(updated)
+                                showToast("Link restored from Trash to your library!")
+                                onSaved()
+                                return@launch
+                            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+                            catch (_: IllegalStateException) {}
+                        }
+                    }
+                }
                 val newItem = SavedItem(
                     title = title,
                     content = content,
@@ -1953,6 +2030,35 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 }
                 finalItem = finalItem.copy(title = safeTitle)
                 val isEdit = allItems.value.any { it.id == finalItem.id } || editOriginalId != null
+
+                if (finalItem.type == SavedItemType.LINK && !isEdit) {
+                    val existing = repository.findExistingLink(finalItem.content)
+                    if (existing != null) {
+                        if (!existing.isDeleted && existing.id != finalItem.id) {
+                            showToast("This link is already saved in your library.")
+                            _activeDetailItem.value = existing
+                            cancelCapture()
+                            return@launch
+                        } else if (existing.isDeleted) {
+                            try {
+                                repository.restoreDeletedItem(existing.id)
+                                val updatedFolders = if (finalItem.folders.isNotEmpty()) (existing.folders + finalItem.folders).distinct() else existing.folders
+                                val restored = existing.copy(
+                                    folders = updatedFolders,
+                                    title = if (finalItem.title.isNotBlank() && finalItem.title != "Shared Link" && finalItem.title != "Untitled Link") finalItem.title else existing.title,
+                                    updatedAt = System.currentTimeMillis()
+                                )
+                                val saved = repository.saveItem(restored)
+                                _activeDetailItem.value = saved
+                                cancelCapture()
+                                showToast("Link restored from Trash to your library!")
+                                return@launch
+                            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+                            catch (_: IllegalStateException) { /* Purged or expired undo, proceed with save */ }
+                        }
+                    }
+                }
+
                 val persisted = if (fileEditorState.value.id == finalItem.id) {
                     val original = finalItem
                     val saved = fileEditor.save(finalItem)
@@ -1991,16 +2097,17 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun deleteSavedItem(item: SavedItem) {
+        val generation = undoNavigationGeneration
         viewModelScope.launch {
             try {
-                if (repository.deleteItem(item)) _lastDeletedItemForUndo.value = item
+                if (repository.deleteItem(item) && generation == undoNavigationGeneration) triggerUndoToast(item)
             } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
             catch (_: Exception) { showToast("Could not move this item to Trash. Please retry.") }
         }
     }
 
     fun restoreDeletedItem(item: SavedItem) {
-        _lastDeletedItemForUndo.value = null
+        clearUndoToast()
         viewModelScope.launch {
             try { repository.restoreDeletedItem(item.id) }
             catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
@@ -2295,7 +2402,10 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                         com.example.data.model.SavedItemType.AUDIO -> "mp4"
                         else -> "jpg"
                     }
-                    val fileName = "share_${item.id}.$extension"
+                    val cleanTitle = item.title.trim().takeIf { it.isNotBlank() && !it.startsWith("http") && !it.startsWith("/") }
+                        ?: item.displayTitle(context)
+                    val safeName = cleanTitle.replace(Regex("[^a-zA-Z0-9._ -]"), "_").trim().take(60).ifBlank { "media_${item.id.take(8)}" }
+                    val fileName = "${safeName}.$extension"
                     val destFile = java.io.File(destDir, fileName)
 
                     if (!destFile.exists()) {
@@ -2348,7 +2458,11 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         try {
         val exported = withContext(Dispatchers.IO) {
             val directory = File(context.cacheDir, "shares").also { check(it.isDirectory || it.mkdirs()) }
-            val target = File(directory, "share_${UUID.randomUUID()}.${file.extension.take(8).ifEmpty { "bin" }}")
+            val cleanTitle = item.title.trim().takeIf { it.isNotBlank() && !it.startsWith("http") && !it.startsWith("/") }
+                ?: item.displayTitle(context)
+            val safeName = cleanTitle.replace(Regex("[^a-zA-Z0-9._ -]"), "_").trim().take(60).ifBlank { "share_media" }
+            val ext = file.extension.take(8).ifEmpty { "bin" }
+            val target = File(directory, "${safeName}.${ext}")
             val cancellation = kotlin.coroutines.coroutineContext
             try {
                 file.inputStream().use { input -> target.outputStream().use { output ->
