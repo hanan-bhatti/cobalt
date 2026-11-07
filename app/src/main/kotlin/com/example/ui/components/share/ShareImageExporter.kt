@@ -107,13 +107,105 @@ object ShareImageExporter {
         context.startActivity(chooser)
     }
 
-    fun copyToClipboard(context: Context, text: String, label: String = "Cobalt Link", showToast: Boolean = false) {
-        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val clip = ClipData.newPlainText(label, text)
-        clipboard.setPrimaryClip(clip)
-        if (showToast && Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+    enum class CopyStatus {
+        SUCCESS,
+        TOO_LARGE,
+        ERROR
+    }
+
+    /**
+     * Copies text to clipboard with strict guardrails against Android TransactionTooLargeException
+     * when notes exceed IPC binder memory limits (~500KB).
+     */
+    fun copyToClipboardSafe(
+        context: Context,
+        text: String,
+        label: String = "Cobalt Content",
+        showToast: Boolean = false
+    ): CopyStatus {
+        if (text.length > 150_000 || text.toByteArray(Charsets.UTF_8).size > 450_000) {
+            return CopyStatus.TOO_LARGE
         }
+        return try {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = ClipData.newPlainText(label, text)
+            clipboard.setPrimaryClip(clip)
+            if (showToast && Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+            }
+            CopyStatus.SUCCESS
+        } catch (t: Throwable) {
+            android.util.Log.e("CobaltShare", "Error copying text to clipboard", t)
+            CopyStatus.ERROR
+        }
+    }
+
+    fun copyToClipboard(context: Context, text: String, label: String = "Cobalt Link", showToast: Boolean = false) {
+        copyToClipboardSafe(context, text, label, showToast)
+    }
+
+    suspend fun shareNoteAsMarkdownFile(
+        context: Context,
+        item: SavedItem,
+        noteBody: String,
+        chooserTitle: String = "Share Note as Markdown"
+    ) = withContext(Dispatchers.IO) {
+        val directory = File(context.cacheDir, "shares").also {
+            if (!it.exists()) it.mkdirs()
+        }
+        val rawTitle = item.title.trim().takeIf { it.isNotBlank() && !it.startsWith("http") }
+            ?: noteBody.lines().firstOrNull { it.isNotBlank() }?.replace(Regex("^#+\\s*"), "")?.trim()
+            ?: "Cobalt_Note"
+        val safeName = rawTitle.replace(Regex("[^\\p{L}\\p{N} ._-]"), "_").trim().take(50).ifBlank { "Cobalt_Note_${item.id.take(8)}" }
+        val file = File(directory, "${safeName}.md")
+        try {
+            file.writeText(noteBody, Charsets.UTF_8)
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/markdown"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                clipData = ClipData.newRawUri("Note Markdown", uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            withContext(Dispatchers.Main) {
+                val chooser = Intent.createChooser(shareIntent, chooserTitle).apply {
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(chooser)
+            }
+        } catch (e: Throwable) {
+            android.util.Log.e("CobaltShare", "Error sharing note file", e)
+            file.delete()
+        }
+    }
+
+    fun shareNoteAsText(
+        context: Context,
+        item: SavedItem,
+        noteBody: String,
+        chooserTitle: String = "Share Note"
+    ) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            val textToShare = buildString {
+                val title = item.title.takeIf { it.isNotBlank() && !it.startsWith("http") }
+                if (!title.isNullOrBlank()) {
+                    appendLine(title)
+                    appendLine()
+                }
+                append(noteBody)
+            }
+            putExtra(Intent.EXTRA_TEXT, textToShare)
+        }
+        val chooser = Intent.createChooser(shareIntent, chooserTitle).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(chooser)
     }
 
     fun shareOriginalImage(context: Context, item: SavedItem, chooserTitle: String = "Share Original Photo") {
