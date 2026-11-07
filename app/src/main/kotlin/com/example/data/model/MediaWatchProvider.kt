@@ -29,7 +29,8 @@ data class MediaWatchProvider(
     val type: String = "Stream", // "Stream", "ADS Stream", "Buy", "Rent"
     val price: String? = null,
     val logoUrl: String? = null,
-    val providerId: Int? = null
+    val providerId: Int? = null,
+    val url: String? = null
 ) {
     companion object {
         private val moshi = Moshi.Builder()

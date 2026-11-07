@@ -25,8 +25,11 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [SavedItemEntity::class, CustomFolderEntity::class, NoteSearchEntity::class, TrashEntryEntity::class, LinkPreviewEntity::class], version = 11, exportSchema = false)
+@Database(entities = [SavedItemEntity::class, CustomFolderEntity::class, NoteSearchEntity::class, TrashEntryEntity::class, LinkPreviewEntity::class, TraktOutboxEntity::class, TraktEpisodeEntity::class, MediaTombstoneEntity::class], version = 14, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
+    abstract fun mediaTombstoneDao(): MediaTombstoneDao
+    abstract fun traktEpisodeDao(): TraktEpisodeDao
+    abstract fun traktOutboxDao(): TraktOutboxDao
     abstract fun linkPreviewDao(): LinkPreviewDao
     abstract fun trashDao(): TrashDao
     abstract fun savedItemDao(): SavedItemDao
@@ -87,6 +90,50 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE saved_items ADD COLUMN inWatchlist INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("CREATE TABLE IF NOT EXISTS trakt_episode_cache (itemId TEXT NOT NULL, season INTEGER NOT NULL, number INTEGER NOT NULL, title TEXT, overview TEXT, airDate TEXT, runtime INTEGER, rating REAL, PRIMARY KEY(itemId, season, number))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS trakt_outbox (`key` TEXT NOT NULL PRIMARY KEY, session TEXT NOT NULL, itemId TEXT NOT NULL, action TEXT NOT NULL, payload TEXT NOT NULL, generation TEXT NOT NULL, created INTEGER NOT NULL)")
+            }
+        }
+
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                ensureMediaMetadata(db)
+            }
+        }
+
+        // Early device-validation APKs already used v13 with thumbnails only.
+        // Advance the version and inspect columns so both v13 shapes upgrade safely.
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) = ensureMediaMetadata(db)
+        }
+
+        private fun ensureMediaMetadata(db: SupportSQLiteDatabase) {
+            fun addIfMissing(table: String, column: String) {
+                val exists = db.query("PRAGMA table_info(`$table`)").use { cursor ->
+                    val name = cursor.getColumnIndexOrThrow("name")
+                    var found = false
+                    while (cursor.moveToNext()) if (cursor.getString(name) == column) found = true
+                    found
+                }
+                if (!exists) db.execSQL("ALTER TABLE `$table` ADD COLUMN `$column` ${if (column == "playbackProgress") "REAL" else "TEXT"}")
+            }
+            addIfMissing("trakt_episode_cache", "thumbnailUrl")
+            addIfMissing("trakt_episode_cache", "playbackProgress")
+            addIfMissing("saved_items", "mediaFactsJson")
+            addIfMissing("saved_items", "watchStatusOverride")
+            db.execSQL("CREATE TABLE IF NOT EXISTS media_tombstones (`key` TEXT NOT NULL PRIMARY KEY, groupId TEXT NOT NULL, kind TEXT NOT NULL, provider TEXT NOT NULL, providerId TEXT NOT NULL, deletedAt INTEGER NOT NULL)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_media_tombstones_groupId ON media_tombstones(groupId)")
+            // Existing Trash records must also stay removed after this upgrade.
+            val kind = "CASE WHEN lower(mediaType) IN ('tv','tv show','tv_show','show','series') THEN 'tv' ELSE 'movie' END"
+            for ((provider, column) in listOf("trakt" to "traktId", "tmdb" to "tmdbId", "imdb" to "imdbId")) {
+                val valid = if (provider == "imdb") "$column IS NOT NULL AND $column != ''" else "$column > 0"
+                db.execSQL("INSERT OR IGNORE INTO media_tombstones SELECT ($kind) || ':$provider:' || $column, id, ($kind), '$provider', CAST($column AS TEXT), updatedAt FROM saved_items WHERE isDeleted = 1 AND upper(type) = 'MEDIA' AND lower(mediaType) IN ('movie','tv','tv show','tv_show','show','series') AND $valid")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -94,7 +141,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "cobalt_db"
                 )
-                .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+                .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
                 .build()
                 INSTANCE = instance
                 instance

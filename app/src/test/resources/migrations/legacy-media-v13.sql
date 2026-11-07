@@ -1,0 +1,15 @@
+CREATE TABLE `saved_items` (`id` TEXT NOT NULL, `type` TEXT NOT NULL, `title` TEXT NOT NULL, `content` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `foldersJson` TEXT NOT NULL, `extractedText` TEXT, `thumbnailPath` TEXT, `orderIndex` REAL NOT NULL, `isSynced` INTEGER NOT NULL, `linkTitle` TEXT, `linkDescription` TEXT, `linkImage` TEXT, `isBackedUp` INTEGER NOT NULL, `sizeBytes` INTEGER NOT NULL, `isPendingBackup` INTEGER NOT NULL, `isUnavailable` INTEGER NOT NULL, `mediaType` TEXT, `watchStatus` TEXT, `genresJson` TEXT NOT NULL, `watchProvidersJson` TEXT NOT NULL, `trailerUrl` TEXT, `backdropUrl` TEXT, `releaseYear` TEXT, `rating` REAL, `runtime` INTEGER, `tagline` TEXT, `budget` INTEGER, `revenue` INTEGER, `status` TEXT, `productionCompaniesJson` TEXT NOT NULL, `isArchived` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `isDeleted` INTEGER NOT NULL, `traktId` INTEGER, `tmdbId` INTEGER, `imdbId` TEXT, `userRating` INTEGER, `lastWatchedAt` INTEGER, `showProgressJson` TEXT, `bodyLocation` TEXT NOT NULL DEFAULT 'INLINE', `contentHash` TEXT DEFAULT NULL, `byteLength` INTEGER NOT NULL DEFAULT 0, `formatVersion` INTEGER NOT NULL DEFAULT 0, `preview` TEXT NOT NULL DEFAULT '', `bodyMissing` INTEGER NOT NULL DEFAULT 0, inWatchlist INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`));
+CREATE INDEX `index_saved_items_timestamp` ON `saved_items` (`timestamp`);
+CREATE INDEX `index_saved_items_type` ON `saved_items` (`type`);
+CREATE INDEX `index_saved_items_isArchived` ON `saved_items` (`isArchived`);
+CREATE INDEX `index_saved_items_updatedAt` ON `saved_items` (`updatedAt`);
+CREATE INDEX `index_saved_items_traktId` ON `saved_items` (`traktId`);
+CREATE INDEX `index_saved_items_tmdbId` ON `saved_items` (`tmdbId`);
+CREATE TABLE `custom_folders` (`name` TEXT NOT NULL, `colorHex` TEXT, `iconName` TEXT, `isPinned` INTEGER NOT NULL, `isSynced` INTEGER NOT NULL, PRIMARY KEY(`name`));
+CREATE VIRTUAL TABLE `note_search` USING FTS4(`noteId` TEXT NOT NULL, `title` TEXT NOT NULL, `bodyPrefix` TEXT NOT NULL, tokenize=unicode61);
+CREATE TABLE `trash_entries` (`itemId` TEXT NOT NULL, `deletedAt` INTEGER NOT NULL, `expiresAt` INTEGER NOT NULL, `undoOnly` INTEGER NOT NULL, `purgeStarted` INTEGER NOT NULL, PRIMARY KEY(`itemId`));
+CREATE INDEX `index_trash_entries_expiresAt` ON `trash_entries` (`expiresAt`);
+CREATE TABLE `link_preview_queue` (`itemId` TEXT NOT NULL, `url` TEXT NOT NULL, `replaceFallback` INTEGER NOT NULL, `pending` INTEGER NOT NULL, `attempts` INTEGER NOT NULL, `generation` TEXT NOT NULL, PRIMARY KEY(`itemId`));
+CREATE TABLE room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT);
+CREATE TABLE trakt_episode_cache (itemId TEXT NOT NULL, season INTEGER NOT NULL, number INTEGER NOT NULL, title TEXT, overview TEXT, airDate TEXT, runtime INTEGER, rating REAL, thumbnailUrl TEXT, PRIMARY KEY(itemId, season, number));
+CREATE TABLE trakt_outbox (`key` TEXT NOT NULL PRIMARY KEY, session TEXT NOT NULL, itemId TEXT NOT NULL, action TEXT NOT NULL, payload TEXT NOT NULL, generation TEXT NOT NULL, created INTEGER NOT NULL);
