@@ -86,9 +86,8 @@ object SharePreferencesManager {
 
     fun getNoteShareStyle(context: Context): NoteShareStyle {
         val name = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getString(KEY_NOTE_SHARE_STYLE, NoteShareStyle.EDITORIAL.name)
-        return runCatching { NoteShareStyle.valueOf(name ?: NoteShareStyle.EDITORIAL.name) }
-            .getOrDefault(NoteShareStyle.EDITORIAL)
+            .getString(KEY_NOTE_SHARE_STYLE, NoteShareStyle.DOCUMENT.name)
+        return NoteShareStyle.fromString(name)
     }
 
     fun setNoteShareStyle(context: Context, style: NoteShareStyle) {

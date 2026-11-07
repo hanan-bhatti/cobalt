@@ -231,7 +231,13 @@ fun NoteShareBottomSheet(
                                 SharePreferencesManager.setNoteShareStyle(context, it)
                             },
                             styleLabel = { it.displayName },
-                            styleIcon = { if (it == NoteShareStyle.EDITORIAL) R.drawable.ic_custom_markdown else R.drawable.ic_custom_quote },
+                            styleIcon = {
+                                when (it) {
+                                    NoteShareStyle.DOCUMENT -> R.drawable.ic_custom_markdown
+                                    NoteShareStyle.MINIMAL -> R.drawable.ic_custom_text
+                                    NoteShareStyle.COMPACT -> R.drawable.ic_custom_grid
+                                }
+                            },
                             showAttribution = showAttribution,
                             onToggleAttribution = {
                                 val updated = !showAttribution
@@ -284,7 +290,7 @@ fun NoteShareBottomSheet(
                                 ShareActionRowItem(
                                     icon = painterResource(id = R.drawable.ic_custom_image),
                                     title = "Share card image (4K)",
-                                    subtitle = "High-resolution ${if (selectedStyle == NoteShareStyle.EDITORIAL) "Document" else "Quote"} visual card",
+                                    subtitle = "High-resolution ${selectedStyle.displayName} visual card",
                                     trailing = {
                                         if (isExporting) {
                                             CircularProgressIndicator(

@@ -69,7 +69,7 @@ class NoteShareCardScreenshotTest {
         timestamp = 1731000000000L
     )
 
-    private val sampleQuoteNote = SavedItem(
+    private val sampleShortNote = SavedItem(
         id = "note-test-2",
         type = SavedItemType.TEXT,
         title = "Night Thoughts",
@@ -78,14 +78,14 @@ class NoteShareCardScreenshotTest {
     )
 
     @Test
-    fun note_share_editorial_light_screenshot() {
+    fun note_share_document_light_screenshot() {
         composeTestRule.setContent {
             MyApplicationTheme(darkTheme = false, dynamicColor = false) {
                 Box(modifier = Modifier.width(380.dp).padding(16.dp)) {
                     NoteShareCard(
                         item = sampleMarkdownNote,
                         noteBody = sampleMarkdownNote.content,
-                        style = NoteShareStyle.EDITORIAL,
+                        style = NoteShareStyle.DOCUMENT,
                         showAttribution = true,
                         tagline = "Archived in Cobalt"
                     )
@@ -96,14 +96,14 @@ class NoteShareCardScreenshotTest {
     }
 
     @Test
-    fun note_share_editorial_dark_screenshot() {
+    fun note_share_document_dark_screenshot() {
         composeTestRule.setContent {
             MyApplicationTheme(darkTheme = true, dynamicColor = false) {
                 Box(modifier = Modifier.width(380.dp).padding(16.dp)) {
                     NoteShareCard(
                         item = sampleMarkdownNote,
                         noteBody = sampleMarkdownNote.content,
-                        style = NoteShareStyle.EDITORIAL,
+                        style = NoteShareStyle.DOCUMENT,
                         showAttribution = true,
                         tagline = "Saved with Cobalt (future me says thanks)"
                     )
@@ -114,13 +114,13 @@ class NoteShareCardScreenshotTest {
     }
 
     @Test
-    fun note_share_minimal_quote_light_screenshot() {
+    fun note_share_minimal_light_screenshot() {
         composeTestRule.setContent {
             MyApplicationTheme(darkTheme = false, dynamicColor = false) {
                 Box(modifier = Modifier.width(360.dp).padding(16.dp)) {
                     NoteShareCard(
-                        item = sampleQuoteNote,
-                        noteBody = sampleQuoteNote.content,
+                        item = sampleShortNote,
+                        noteBody = sampleShortNote.content,
                         style = NoteShareStyle.MINIMAL,
                         showAttribution = true,
                         tagline = "Cobalt: A quiet corner for curious minds"
@@ -132,13 +132,13 @@ class NoteShareCardScreenshotTest {
     }
 
     @Test
-    fun note_share_minimal_quote_dark_screenshot() {
+    fun note_share_minimal_dark_screenshot() {
         composeTestRule.setContent {
             MyApplicationTheme(darkTheme = true, dynamicColor = false) {
                 Box(modifier = Modifier.width(360.dp).padding(16.dp)) {
                     NoteShareCard(
-                        item = sampleQuoteNote,
-                        noteBody = sampleQuoteNote.content,
+                        item = sampleShortNote,
+                        noteBody = sampleShortNote.content,
                         style = NoteShareStyle.MINIMAL,
                         showAttribution = true,
                         tagline = "Saved with Cobalt • Second brain satisfied"
@@ -147,5 +147,23 @@ class NoteShareCardScreenshotTest {
             }
         }
         composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/note_share_minimal_quote_dark.png")
+    }
+
+    @Test
+    fun note_share_compact_light_screenshot() {
+        composeTestRule.setContent {
+            MyApplicationTheme(darkTheme = false, dynamicColor = false) {
+                Box(modifier = Modifier.width(340.dp).padding(16.dp)) {
+                    NoteShareCard(
+                        item = sampleMarkdownNote,
+                        noteBody = sampleMarkdownNote.content,
+                        style = NoteShareStyle.COMPACT,
+                        showAttribution = true,
+                        tagline = "Archived in Cobalt"
+                    )
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/note_share_compact_light.png")
     }
 }

@@ -26,17 +26,25 @@ enum class NoteShareStyle(val displayName: String, val analyticsName: String) {
      * Classic Editorial Document style:
      * Category, date, word count, formatted Markdown body with headings, code blocks, compact tables.
      */
-    EDITORIAL("Document", "editorial_document"),
+    DOCUMENT("Document", "editorial_document"),
 
     /**
-     * Minimalist Thought / Quote style:
-     * Expressive large-text presentation for brief thoughts, key quotes, or code highlights.
+     * Clean, distraction-free presentation:
+     * Removes the top metadata pill and divider, presenting title and markdown content with generous breathing room.
      */
-    MINIMAL("Quote", "minimal_quote");
+    MINIMAL("Minimal", "minimal_note"),
+
+    /**
+     * Tighter, punchy card format optimized for sharing to Twitter/X, Instagram, or WhatsApp.
+     */
+    COMPACT("Compact", "compact_card");
 
     companion object {
-        fun fromString(value: String?): NoteShareStyle =
-            entries.find { it.name.equals(value, ignoreCase = true) || it.analyticsName.equals(value, ignoreCase = true) }
-                ?: EDITORIAL
+        fun fromString(value: String?): NoteShareStyle = when (value?.uppercase()) {
+            "EDITORIAL", "DOCUMENT", "EDITORIAL_DOCUMENT" -> DOCUMENT
+            "MINIMAL", "MINIMAL_NOTE", "QUOTE", "MINIMAL_QUOTE" -> MINIMAL
+            "COMPACT", "COMPACT_CARD" -> COMPACT
+            else -> DOCUMENT
+        }
     }
 }
