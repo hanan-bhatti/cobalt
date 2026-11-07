@@ -27,6 +27,7 @@ import android.os.Build
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.example.data.model.SavedItem
+import com.example.data.model.getBestImagePath
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -41,8 +42,16 @@ object ShareImageExporter {
     suspend fun exportAndShareBitmap(
         context: Context,
         bitmap: Bitmap,
-        chooserTitle: String = "Share Link Card"
+        linkUrl: String? = null,
+        chooserTitle: String = "Share Link"
     ) = withContext(Dispatchers.IO) {
+        // Automatically copy link to clipboard silently so the user has the tappable link ready
+        if (!linkUrl.isNullOrBlank()) {
+            withContext(Dispatchers.Main) {
+                copyToClipboard(context, linkUrl, showToast = false)
+            }
+        }
+
         val directory = File(context.cacheDir, "shares").also {
             if (!it.exists()) it.mkdirs()
         }
@@ -60,16 +69,23 @@ object ShareImageExporter {
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "image/png"
                 putExtra(Intent.EXTRA_STREAM, uri)
+                clipData = ClipData.newRawUri("Shared Image", uri)
+                if (!linkUrl.isNullOrBlank()) {
+                    // Share image with link only so recipients get visual + clickable URL
+                    putExtra(Intent.EXTRA_TEXT, linkUrl)
+                }
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             withContext(Dispatchers.Main) {
-                context.startActivity(Intent.createChooser(shareIntent, chooserTitle))
+                val chooser = Intent.createChooser(shareIntent, chooserTitle).apply {
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(chooser)
             }
         } catch (e: Throwable) {
+            android.util.Log.e("CobaltShare", "Error sharing bitmap", e)
             file.delete()
-            withContext(Dispatchers.Main) {
-                Toast.makeText(context, "Could not prepare image for sharing", Toast.LENGTH_SHORT).show()
-            }
         }
     }
 
@@ -85,15 +101,80 @@ object ShareImageExporter {
             }
             putExtra(Intent.EXTRA_TEXT, shareText)
         }
-        context.startActivity(Intent.createChooser(shareIntent, "Share Link"))
+        val chooser = Intent.createChooser(shareIntent, "Share Link").apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(chooser)
     }
 
-    fun copyToClipboard(context: Context, text: String, label: String = "Cobalt Link") {
+    fun copyToClipboard(context: Context, text: String, label: String = "Cobalt Link", showToast: Boolean = false) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText(label, text)
         clipboard.setPrimaryClip(clip)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+        if (showToast && Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun shareOriginalImage(context: Context, item: SavedItem, chooserTitle: String = "Share Original Photo") {
+        val path = item.getBestImagePath() ?: return
+        try {
+            val uri: android.net.Uri = when {
+                path.startsWith("content://") -> android.net.Uri.parse(path)
+                path.startsWith("http://") || path.startsWith("https://") -> android.net.Uri.parse(path)
+                else -> {
+                    val file = File(path)
+                    if (file.exists()) {
+                        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                    } else {
+                        android.net.Uri.parse(path)
+                    }
+                }
+            }
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "image/*"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                clipData = ClipData.newRawUri("Shared Image", uri)
+                val caption = item.title.takeIf { it.isNotBlank() && !it.startsWith("http") } ?: item.extractedText
+                if (!caption.isNullOrBlank()) {
+                    putExtra(Intent.EXTRA_TEXT, caption)
+                }
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            val chooser = Intent.createChooser(shareIntent, chooserTitle).apply {
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(chooser)
+        } catch (e: Throwable) {
+            android.util.Log.e("CobaltShare", "Error sharing original image", e)
+        }
+    }
+
+    suspend fun copyImageToClipboard(context: Context, bitmap: Bitmap, label: String = "Cobalt Image"): Boolean = withContext(Dispatchers.IO) {
+        val directory = File(context.cacheDir, "shares").also {
+            if (!it.exists()) it.mkdirs()
+        }
+        val file = File(directory, "clip_${UUID.randomUUID()}.png")
+        try {
+            FileOutputStream(file).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                out.flush()
+            }
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+            withContext(Dispatchers.Main) {
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newUri(context.contentResolver, label, uri)
+                clipboard.setPrimaryClip(clip)
+            }
+            true
+        } catch (e: Throwable) {
+            android.util.Log.e("CobaltShare", "Error copying image to clipboard", e)
+            false
         }
     }
 }

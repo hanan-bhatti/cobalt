@@ -19,7 +19,6 @@
 package com.example.ui.components.share
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Modifier
@@ -63,6 +62,26 @@ class LinkShareCardScreenshotTest {
         content = "https://kotlinlang.org/",
         linkTitle = "Kotlin Programming Language",
         linkDescription = "A modern programming language that makes developers happier. Concise, safe, and multiplatform."
+    )
+
+    private val sampleItemWithFavicon = SavedItem(
+        id = "test-link-3",
+        type = SavedItemType.LINK,
+        title = "GitHub: Where the world builds software",
+        content = "https://github.com/",
+        linkTitle = "GitHub: Where the world builds software",
+        linkDescription = "GitHub is where over 100 million developers shape the future of software, together.",
+        linkImage = "https://github.githubassets.com/favicons/favicon.png"
+    )
+
+    private val sampleItemWithLongDomain = SavedItem(
+        id = "test-link-4",
+        type = SavedItemType.LINK,
+        title = "Cloud Infrastructure Architecture Design Guidelines",
+        content = "https://subdomain.analytics.internal-production-monitoring.service.corp.example.com/deep/path",
+        linkTitle = "Cloud Infrastructure Architecture Design Guidelines",
+        linkDescription = "An exhaustive whitepaper on microservices telemetry, autoscaling policies, and network isolation.",
+        linkImage = "https://subdomain.analytics.internal-production-monitoring.service.corp.example.com/favicons/favicon.ico"
     )
 
     @Test
@@ -141,11 +160,80 @@ class LinkShareCardScreenshotTest {
                     LinkShareCard(
                         item = sampleItemWithoutImage,
                         style = LinkShareStyle.CARD,
-                        showAttribution = true
+                        showAttribution = true,
+                        tagline = "Cobalt: Digital hoarding, but make it aesthetic"
                     )
                 }
             }
         }
         composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/link_share_card_style_no_image.png")
+    }
+
+    @Test
+    fun link_share_card_style_favicon_screenshot() {
+        composeTestRule.setContent {
+            MyApplicationTheme(darkTheme = false, dynamicColor = false) {
+                Box(modifier = Modifier.width(380.dp).padding(16.dp)) {
+                    LinkShareCard(
+                        item = sampleItemWithFavicon,
+                        style = LinkShareStyle.CARD,
+                        showAttribution = true,
+                        tagline = "Cobalt caught this one"
+                    )
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/link_share_card_style_favicon.png")
+    }
+
+    @Test
+    fun link_share_list_style_favicon_screenshot() {
+        composeTestRule.setContent {
+            MyApplicationTheme(darkTheme = false, dynamicColor = false) {
+                Box(modifier = Modifier.width(380.dp).padding(16.dp)) {
+                    LinkShareCard(
+                        item = sampleItemWithFavicon,
+                        style = LinkShareStyle.LIST,
+                        showAttribution = true,
+                        tagline = "Saved with Cobalt (future me says thanks)"
+                    )
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/link_share_list_style_favicon.png")
+    }
+
+    @Test
+    fun link_share_card_style_long_domain_screenshot() {
+        composeTestRule.setContent {
+            MyApplicationTheme(darkTheme = false, dynamicColor = false) {
+                Box(modifier = Modifier.width(380.dp).padding(16.dp)) {
+                    LinkShareCard(
+                        item = sampleItemWithLongDomain,
+                        style = LinkShareStyle.CARD,
+                        showAttribution = true,
+                        tagline = "Saved with Cobalt before the tab was closed forever"
+                    )
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/link_share_card_style_long_domain.png")
+    }
+
+    @Test
+    fun link_share_list_style_long_domain_screenshot() {
+        composeTestRule.setContent {
+            MyApplicationTheme(darkTheme = true, dynamicColor = false) {
+                Box(modifier = Modifier.width(380.dp).padding(16.dp)) {
+                    LinkShareCard(
+                        item = sampleItemWithLongDomain,
+                        style = LinkShareStyle.LIST,
+                        showAttribution = true,
+                        tagline = "Another one for the collection"
+                    )
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/link_share_list_style_long_domain.png")
     }
 }

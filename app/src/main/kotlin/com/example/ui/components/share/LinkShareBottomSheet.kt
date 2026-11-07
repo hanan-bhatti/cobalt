@@ -18,15 +18,16 @@
 
 package com.example.ui.components.share
 
+import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -35,25 +36,31 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import com.example.R
 import com.example.data.model.SavedItem
+import com.example.ui.theme.LocalCobaltTypography
 import com.example.ui.theme.MyApplicationTheme
 import com.example.util.displayTitle
 import kotlinx.coroutines.launch
 
 /**
  * Material 3 Expressive bottom sheet for sharing and exporting saved link items.
- * Provides a live adaptive preview, style switcher, attribution toggle, and contextual export actions.
+ * Supports swipeable carousel switching between Card and List styles, dynamic theming,
+ * persisted user preferences, and high-resolution export.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -65,13 +72,41 @@ fun LinkShareBottomSheet(
     val coroutineScope = rememberCoroutineScope()
     val systemInDark = isSystemInDarkTheme()
 
-    var selectedStyle by remember { mutableStateOf(LinkShareStyle.CARD) }
-    var showAttribution by remember { mutableStateOf(true) }
+    // Persistent preferences
+    val initialStyle = remember { SharePreferencesManager.getLinkShareStyle(context) }
+    var selectedStyle by remember { mutableStateOf(initialStyle) }
+    var showAttribution by remember { mutableStateOf(SharePreferencesManager.isAttributionEnabled(context)) }
+
+    // Dynamic color preference directly from cobalt_settings
+    val userDynamicColor = remember {
+        context.getSharedPreferences("cobalt_settings", Context.MODE_PRIVATE)
+            .getBoolean("dynamic_color", true)
+    }
+    val typographyPrefs = LocalCobaltTypography.current.prefs
+
     var currentTagline by remember(item.id) { mutableStateOf(CobaltTaglines.getForSeed(item.id)) }
     var isPreviewDark by remember { mutableStateOf(systemInDark) }
     var isExporting by remember { mutableStateOf(false) }
+    var isCopied by remember { mutableStateOf(false) }
 
-    var previewView by remember { mutableStateOf<ComposeView?>(null) }
+    // Swipeable pager state
+    val pagerState = rememberPagerState(
+        initialPage = if (initialStyle == LinkShareStyle.CARD) 0 else 1
+    ) { 2 }
+
+    // Keep selectedStyle in sync with settled page (prevents gesture jank and mid-swipe churn)
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.settledPage }.collect { settledPage ->
+            val newStyle = if (settledPage == 0) LinkShareStyle.CARD else LinkShareStyle.LIST
+            if (selectedStyle != newStyle) {
+                selectedStyle = newStyle
+                SharePreferencesManager.setLinkShareStyle(context, newStyle)
+            }
+        }
+    }
+
+    var triggerCapture by remember { mutableStateOf(false) }
+    var capturedCallback by remember { mutableStateOf<((Bitmap) -> Unit)?>(null) }
 
     val sheetState = rememberBottomSheetState(
         initialValue = SheetValue.Hidden,
@@ -134,7 +169,7 @@ fun LinkShareBottomSheet(
                 }
             }
 
-            // Style Switcher (Card vs List)
+            // Style Switcher (Synchronized with Swipeable Pager)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -151,7 +186,13 @@ fun LinkShareBottomSheet(
                         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                         modifier = Modifier
                             .weight(1f)
-                            .clickable { selectedStyle = style }
+                            .clickable {
+                                selectedStyle = style
+                                SharePreferencesManager.setLinkShareStyle(context, style)
+                                coroutineScope.launch {
+                                    pagerState.animateScrollToPage(if (style == LinkShareStyle.CARD) 0 else 1)
+                                }
+                            }
                     ) {
                         Row(
                             modifier = Modifier.padding(vertical = 8.dp),
@@ -168,7 +209,7 @@ fun LinkShareBottomSheet(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = if (style == LinkShareStyle.CARD) "Card Style" else "List Style",
+                                text = if (style == LinkShareStyle.CARD) "Card" else "List",
                                 fontSize = 13.sp,
                                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                 color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
@@ -178,7 +219,7 @@ fun LinkShareBottomSheet(
                 }
             }
 
-            // Quick Preferences Bar: Attribution & Theme Toggles
+            // Quick Preferences Bar: Attribution, Shuffle, and Clean Text-Only Theme Toggle
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -195,10 +236,14 @@ fun LinkShareBottomSheet(
                         shape = RoundedCornerShape(10.dp),
                         color = if (showAttribution) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.surface,
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
-                        modifier = Modifier.clickable { showAttribution = !showAttribution }
+                        modifier = Modifier.clickable {
+                            val updated = !showAttribution
+                            showAttribution = updated
+                            SharePreferencesManager.setAttributionEnabled(context, updated)
+                        }
                     ) {
                         Text(
-                            text = if (showAttribution) "Attribution: On" else "Attribution: Off",
+                            text = if (showAttribution) "Tagline: On" else "Tagline: Off",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             color = if (showAttribution) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -235,37 +280,41 @@ fun LinkShareBottomSheet(
                     }
                 }
 
-                // Theme Toggle
+                // Clean Text-Only Theme Toggle (No Icon)
                 Surface(
                     shape = RoundedCornerShape(10.dp),
                     color = MaterialTheme.colorScheme.surface,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
                     modifier = Modifier.clickable { isPreviewDark = !isPreviewDark }
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(
-                                id = if (isPreviewDark) R.drawable.ic_custom_eye else R.drawable.ic_custom_eye_off
-                            ),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            text = if (isPreviewDark) "Theme: Dark" else "Theme: Light",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Text(
+                        text = if (isPreviewDark) "Dark" else "Light",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
+            }
+
+            // Intercept horizontal deltas so the bottom sheet and parent vertical scroll
+            // do not lock or steal the touch stream on horizontal page swipes
+            val pagerScrollInterop = remember {
+                object : NestedScrollConnection {
+                    override fun onPreScroll(
+                        available: Offset,
+                        source: NestedScrollSource
+                    ): Offset {
+                        return if (kotlin.math.abs(available.x) > kotlin.math.abs(available.y)) {
+                            Offset(available.x, 0f)
+                        } else {
+                            Offset.Zero
+                        }
                     }
                 }
             }
 
-            // Live Adaptive Preview Container
+            // Live Swipeable Preview Container (Swipe between Card and List)
             Surface(
                 shape = RoundedCornerShape(26.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -275,30 +324,53 @@ fun LinkShareBottomSheet(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .nestedScroll(pagerScrollInterop)
                         .padding(12.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    AndroidView(
-                        factory = { ctx ->
-                            ComposeView(ctx).apply {
-                                previewView = this
-                            }
-                        },
-                        update = { view ->
-                            previewView = view
-                            view.setContent {
-                                MyApplicationTheme(darkTheme = isPreviewDark, dynamicColor = false) {
-                                    LinkShareCard(
-                                        item = item,
-                                        style = selectedStyle,
-                                        showAttribution = showAttribution,
-                                        tagline = currentTagline
-                                    )
-                                }
-                            }
-                        },
+                    HorizontalPager(
+                        state = pagerState,
                         modifier = Modifier.fillMaxWidth()
-                    )
+                    ) { page ->
+                        val pageStyle = if (page == 0) LinkShareStyle.CARD else LinkShareStyle.LIST
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .drawWithContent {
+                                    drawContent()
+                                    if (triggerCapture && pagerState.currentPage == page) {
+                                        val w = size.width.toInt()
+                                        val h = size.height.toInt()
+                                        if (w > 0 && h > 0) {
+                                            val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                                            val composeCanvas = Canvas(android.graphics.Canvas(bitmap))
+                                            val originalCanvas = drawContext.canvas
+                                            drawContext.canvas = composeCanvas
+                                            drawContent()
+                                            drawContext.canvas = originalCanvas
+                                            val cb = capturedCallback
+                                            capturedCallback = null
+                                            triggerCapture = false
+                                            cb?.invoke(bitmap)
+                                        }
+                                    }
+                                }
+                        ) {
+                            // Respects user dynamic color and typography settings
+                            MyApplicationTheme(
+                                darkTheme = isPreviewDark,
+                                dynamicColor = userDynamicColor,
+                                typographyPrefs = typographyPrefs
+                            ) {
+                                LinkShareCard(
+                                    item = item,
+                                    style = pageStyle,
+                                    showAttribution = showAttribution,
+                                    tagline = currentTagline
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -310,11 +382,11 @@ fun LinkShareBottomSheet(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    // Option 1: Share as Image
+                    // Option 1: Share as Image (Includes link and copies link to clipboard silently)
                     ShareActionRowItem(
                         icon = painterResource(id = R.drawable.ic_custom_image),
-                        title = "Share as image",
-                        subtitle = "Rendered high-resolution card (PNG)",
+                        title = "Share card image",
+                        subtitle = "Visual card with link & copies URL",
                         enabled = !isExporting,
                         trailing = {
                             if (isExporting) {
@@ -335,24 +407,24 @@ fun LinkShareBottomSheet(
                         onClick = {
                             if (isExporting) return@ShareActionRowItem
                             isExporting = true
-                            coroutineScope.launch {
-                                try {
-                                    val view = previewView
-                                    if (view != null && view.width > 0 && view.height > 0) {
-                                        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
-                                        val canvas = Canvas(bitmap)
-                                        view.draw(canvas)
-                                        ShareImageExporter.exportAndShareBitmap(context, bitmap, "Share Link Card")
+                            capturedCallback = { bitmap ->
+                                coroutineScope.launch {
+                                    try {
+                                        ShareImageExporter.exportAndShareBitmap(
+                                            context = context,
+                                            bitmap = bitmap,
+                                            linkUrl = item.content,
+                                            chooserTitle = "Share Link"
+                                        )
                                         onDismissRequest()
-                                    } else {
-                                        Toast.makeText(context, "Preparing preview, please try again", Toast.LENGTH_SHORT).show()
+                                    } catch (e: Throwable) {
+                                        android.util.Log.e("CobaltShare", "Error exporting share card image", e)
+                                    } finally {
+                                        isExporting = false
                                     }
-                                } catch (t: Throwable) {
-                                    Toast.makeText(context, "Could not prepare image: ${t.message}", Toast.LENGTH_SHORT).show()
-                                } finally {
-                                    isExporting = false
                                 }
                             }
+                            triggerCapture = true
                         }
                     )
 
@@ -364,7 +436,7 @@ fun LinkShareBottomSheet(
                     // Option 2: Share as Text
                     ShareActionRowItem(
                         icon = painterResource(id = R.drawable.ic_custom_text),
-                        title = "Share as text",
+                        title = "Share text link",
                         subtitle = "Direct link URL and title",
                         trailing = {
                             Icon(
@@ -385,14 +457,32 @@ fun LinkShareBottomSheet(
                         thickness = 0.5.dp
                     )
 
-                    // Option 3: Copy URL
+                    // Option 3: Copy URL (Shows in-button success state with ic_custom_copy_success)
                     ShareActionRowItem(
-                        icon = painterResource(id = R.drawable.ic_custom_copy),
-                        title = "Copy link URL",
-                        subtitle = item.content,
+                        icon = painterResource(id = if (isCopied) R.drawable.ic_custom_copy_success else R.drawable.ic_custom_copy),
+                        title = if (isCopied) "Link copied!" else "Copy link",
+                        subtitle = if (isCopied) "Copied to clipboard" else item.content,
+                        iconTint = MaterialTheme.colorScheme.primary,
+                        iconBgColor = if (isCopied) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                        titleColor = if (isCopied) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        trailing = if (isCopied) {
+                            {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_check),
+                                    contentDescription = "Copied",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        } else null,
                         onClick = {
-                            ShareImageExporter.copyToClipboard(context, item.content, "Link URL")
-                            onDismissRequest()
+                            if (isCopied) return@ShareActionRowItem
+                            isCopied = true
+                            ShareImageExporter.copyToClipboard(context, item.content, showToast = false)
+                            coroutineScope.launch {
+                                kotlinx.coroutines.delay(650)
+                                onDismissRequest()
+                            }
                         }
                     )
                 }

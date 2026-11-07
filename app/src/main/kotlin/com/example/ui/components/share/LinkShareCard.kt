@@ -28,8 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.R
 import com.example.data.model.SavedItem
 import com.example.data.model.getBestImagePath
@@ -48,8 +48,22 @@ import com.example.ui.theme.LocalCobaltTypography
 import com.example.util.displayTitle
 
 /**
+ * Checks if a given image URL points to a favicon, site icon, or small logo.
+ */
+fun isFaviconOrSmallIcon(url: String?): Boolean {
+    if (url.isNullOrBlank()) return false
+    val lower = url.lowercase()
+    return lower.contains("favicon") ||
+           lower.contains("apple-touch-icon") ||
+           lower.endsWith(".ico") ||
+           lower.contains("/icon") ||
+           lower.contains("logo_small") ||
+           lower.contains("avatar")
+}
+
+/**
  * Reusable, adaptive-height link card component for sharing and image export.
- * Rendered on a framed background with the Cobalt app icon badge and high-contrast typography.
+ * Features an adaptive aspect ratio for hero images, smart favicon handling, and a Cobalt icon badge.
  */
 @Composable
 fun LinkShareCard(
@@ -85,6 +99,10 @@ fun LinkShareCard(
         item.linkImage?.takeIf { it.isNotBlank() } ?: item.getBestImagePath()
     }
 
+    var isSmallIcon by remember(imageUrl) {
+        mutableStateOf(isFaviconOrSmallIcon(imageUrl))
+    }
+
     // Outer export frame guaranteeing solid background and high contrast
     Surface(
         color = MaterialTheme.colorScheme.background,
@@ -106,6 +124,12 @@ fun LinkShareCard(
                         description = displayDescription,
                         url = item.content,
                         imageUrl = imageUrl,
+                        isSmallIcon = isSmallIcon,
+                        onImageDimensionsResolved = { width, height ->
+                            if (width in 1..128 && height in 1..128) {
+                                isSmallIcon = true
+                            }
+                        },
                         cobaltTypography = cobaltTypography
                     )
                 }
@@ -116,6 +140,12 @@ fun LinkShareCard(
                         description = displayDescription,
                         url = item.content,
                         imageUrl = imageUrl,
+                        isSmallIcon = isSmallIcon,
+                        onImageDimensionsResolved = { width, height ->
+                            if (width in 1..128 && height in 1..128) {
+                                isSmallIcon = true
+                            }
+                        },
                         cobaltTypography = cobaltTypography
                     )
                 }
@@ -153,7 +183,8 @@ fun LinkShareCard(
                         letterSpacing = 0.2.sp,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                 }
             }
@@ -162,7 +193,7 @@ fun LinkShareCard(
 }
 
 /**
- * Card-like layout: Hero media on top, expansive typography, creative frameless domain, adaptive height.
+ * Card-like layout: Hero media on top with adaptive aspect ratio, or clean favicon header if image is small.
  */
 @Composable
 private fun CardStyleLayout(
@@ -171,9 +202,24 @@ private fun CardStyleLayout(
     description: String?,
     url: String,
     imageUrl: String?,
+    isSmallIcon: Boolean,
+    onImageDimensionsResolved: (Int, Int) -> Unit,
     cobaltTypography: com.example.ui.theme.CobaltTypography,
     modifier: Modifier = Modifier
 ) {
+    var adaptiveAspectRatio by remember(imageUrl) { mutableFloatStateOf(16f / 9f) }
+    val context = LocalContext.current
+    val imageModel = remember(imageUrl, context) {
+        if (imageUrl.isNullOrBlank()) null
+        else {
+            ImageRequest.Builder(context)
+                .data(imageUrl)
+                .allowHardware(false)
+                .crossfade(false)
+                .build()
+        }
+    }
+
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -183,18 +229,28 @@ private fun CardStyleLayout(
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
-            if (!imageUrl.isNullOrBlank()) {
+            // Adaptive Hero Banner (only when it is a full image, NOT a small favicon)
+            if (!imageUrl.isNullOrBlank() && !isSmallIcon) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(16f / 9f)
+                        .aspectRatio(adaptiveAspectRatio)
                         .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 ) {
                     AsyncImage(
-                        model = imageUrl,
+                        model = imageModel,
                         contentDescription = title,
                         contentScale = ContentScale.Crop,
+                        onSuccess = { state ->
+                            val drawable = state.result.drawable
+                            val width = drawable.intrinsicWidth
+                            val height = drawable.intrinsicHeight
+                            onImageDimensionsResolved(width, height)
+                            if (width > 0 && height > 0) {
+                                adaptiveAspectRatio = (width.toFloat() / height.toFloat()).coerceIn(1.2f, 2.4f)
+                            }
+                        },
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -206,22 +262,47 @@ private fun CardStyleLayout(
                     .padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Creative Frameless Domain with Accent Dot (No Icon)
+                // Creative Frameless Domain with either Favicon icon or Accent Dot
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(5.dp)
-                            .background(MaterialTheme.colorScheme.primary, CircleShape)
-                    )
+                    if (!imageUrl.isNullOrBlank() && isSmallIcon) {
+                        // Favicon integration next to domain
+                        AsyncImage(
+                            model = imageModel,
+                            contentDescription = domain,
+                            contentScale = ContentScale.Fit,
+                            onSuccess = { state ->
+                                onImageDimensionsResolved(
+                                    state.result.drawable.intrinsicWidth,
+                                    state.result.drawable.intrinsicHeight
+                                )
+                            },
+                            modifier = Modifier
+                                .size(22.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        )
+                    } else {
+                        // Minimal Accent Dot
+                        Box(
+                            modifier = Modifier
+                                .size(5.dp)
+                                .background(MaterialTheme.colorScheme.primary, CircleShape)
+                        )
+                    }
+
                     Text(
                         text = domain.lowercase(),
-                        fontSize = 11.5.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.6.sp,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                 }
 
@@ -280,9 +361,23 @@ private fun ListStyleLayout(
     description: String?,
     url: String,
     imageUrl: String?,
+    isSmallIcon: Boolean,
+    onImageDimensionsResolved: (Int, Int) -> Unit,
     cobaltTypography: com.example.ui.theme.CobaltTypography,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val imageModel = remember(imageUrl, context) {
+        if (imageUrl.isNullOrBlank()) null
+        else {
+            ImageRequest.Builder(context)
+                .data(imageUrl)
+                .allowHardware(false)
+                .crossfade(false)
+                .build()
+        }
+    }
+
     Surface(
         shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -301,14 +396,38 @@ private fun ListStyleLayout(
                     modifier = Modifier
                         .size(76.dp)
                         .clip(RoundedCornerShape(13.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                    contentAlignment = Alignment.Center
                 ) {
-                    AsyncImage(
-                        model = imageUrl,
-                        contentDescription = title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    if (isSmallIcon) {
+                        // Centered Favicon at natural neat size
+                        AsyncImage(
+                            model = imageModel,
+                            contentDescription = title,
+                            contentScale = ContentScale.Fit,
+                            onSuccess = { state ->
+                                onImageDimensionsResolved(
+                                    state.result.drawable.intrinsicWidth,
+                                    state.result.drawable.intrinsicHeight
+                                )
+                            },
+                            modifier = Modifier.size(36.dp)
+                        )
+                    } else {
+                        // Full Thumbnail cropped cleanly
+                        AsyncImage(
+                            model = imageModel,
+                            contentDescription = title,
+                            contentScale = ContentScale.Crop,
+                            onSuccess = { state ->
+                                onImageDimensionsResolved(
+                                    state.result.drawable.intrinsicWidth,
+                                    state.result.drawable.intrinsicHeight
+                                )
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
 
@@ -319,7 +438,8 @@ private fun ListStyleLayout(
                 // Creative Frameless Domain with Accent Dot (No Icon)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Box(
                         modifier = Modifier
@@ -331,7 +451,10 @@ private fun ListStyleLayout(
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.6.sp,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                 }
 
