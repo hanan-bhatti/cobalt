@@ -91,6 +91,7 @@ import com.example.ui.components.horizontalFadingEdges
 import com.example.ui.viewmodel.CobaltViewModel
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -776,6 +777,7 @@ fun TextCapturePage(
                             showNewFolderCreator = false
                         },
                         onCancel = { showNewFolderCreator = false },
+                        existingFolders = customFolders,
                         modifier = Modifier.padding(bottom = 10.dp)
                     )
                 }
@@ -1037,6 +1039,7 @@ fun AudioCapturePage(
                             showNewFolderCreator = false
                         },
                         onCancel = { showNewFolderCreator = false },
+                        existingFolders = customFolders,
                         modifier = Modifier.padding(bottom = 10.dp)
                     )
                 }
@@ -1573,6 +1576,7 @@ fun LinkCapturePage(
                             showNewFolderCreator = false
                         },
                         onCancel = { showNewFolderCreator = false },
+                        existingFolders = customFolders,
                         modifier = Modifier.padding(bottom = 10.dp)
                     )
                 }
@@ -1774,11 +1778,25 @@ fun CaptureScreen(
         pageCount = { SavedItemType.entries.size }
     )
 
-    // Keep category tab bar scrolled to active item
+    // Keep category tab bar smoothly aligned to active item without jarring jumps
     LaunchedEffect(item.type) {
         val index = SavedItemType.entries.indexOf(item.type)
         if (index >= 0) {
-            listState.animateScrollToItem(index)
+            val layoutInfo = listState.layoutInfo
+            val visibleItem = layoutInfo.visibleItemsInfo.find { it.index == index }
+            if (visibleItem != null) {
+                val viewportWidth = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
+                val itemCenter = visibleItem.offset + visibleItem.size / 2
+                val viewportCenter = viewportWidth / 2
+                val scrollDelta = itemCenter - viewportCenter
+                if (kotlin.math.abs(scrollDelta) > visibleItem.size / 2) {
+                    listState.animateScrollBy(scrollDelta.toFloat())
+                }
+            } else {
+                val viewportWidth = layoutInfo.viewportEndOffset - layoutInfo.viewportStartOffset
+                val centerOffset = -(viewportWidth / 3)
+                listState.animateScrollToItem(index, scrollOffset = centerOffset)
+            }
         }
     }
 
@@ -3086,6 +3104,45 @@ fun CaptureScreen(
                     )
                 }
                 if (pageType == SavedItemType.LINK && item.content.isNotBlank()) {
+                    val trimmedUrl = item.content.trim()
+                    val linkAlreadySaved = remember(trimmedUrl, allArchiveItems) {
+                        allArchiveItems.any {
+                            it.type == SavedItemType.LINK && !it.isDeleted &&
+                                (it.content.trim().equals(trimmedUrl, ignoreCase = true) ||
+                                 it.content.trim().trimEnd('/') == trimmedUrl.trimEnd('/'))
+                        }
+                    }
+
+                    if (linkAlreadySaved) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_custom_link),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "This link is already saved in your library",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+
                     val isExtracting by viewModel.isMetadataExtracting.collectAsState()
                     val metadataError by viewModel.metadataError.collectAsState()
 
@@ -3300,6 +3357,7 @@ fun CaptureScreen(
                                         showNewFolderCreator = false
                                     },
                                     onCancel = { showNewFolderCreator = false },
+                                    existingFolders = customFolders,
                                     modifier = Modifier.padding(bottom = 10.dp)
                                 )
                             }
@@ -3337,7 +3395,7 @@ fun CaptureScreen(
         com.example.ui.components.ExpressiveConfirmationDialog(
             onDismissRequest = { showDeleteConfirm = false },
             title = "Delete Archive",
-            message = "Are you sure you want to delete this item? This action cannot be undone.",
+            message = viewModel.deletionMessage(),
             confirmButtonText = "Delete",
             onConfirm = {
                 showDeleteConfirm = false
