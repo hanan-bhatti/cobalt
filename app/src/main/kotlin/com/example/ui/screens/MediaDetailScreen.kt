@@ -402,6 +402,8 @@ fun MediaDetailSection(
             }
         }
 
+        com.example.ui.components.MediaRatingsRow(item.showProgress)
+
         // ONE-TAP WATCH STATUS SELECTOR CHIPS
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
