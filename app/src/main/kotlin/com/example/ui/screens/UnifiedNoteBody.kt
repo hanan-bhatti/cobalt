@@ -78,7 +78,8 @@ fun NoteDetailActions(
     onPlainChange: (Boolean) -> Unit,
     onJump: (Long) -> Unit,
     onStartSearch: () -> Unit = {},
-    onDeleteClick: (() -> Unit)? = null
+    onDeleteClick: (() -> Unit)? = null,
+    onShareClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -161,7 +162,7 @@ fun NoteDetailActions(
                 export.launch(item.title.replace(Regex("[^\\p{L}\\p{N} ._-]"), "_").take(80).ifBlank { "note" } + ".md")
             },
             onShare = {
-                viewModel.shareItem(item, context)
+                onShareClick?.invoke() ?: viewModel.shareItem(item, context)
             },
             onDelete = {
                 onDeleteClick?.invoke()

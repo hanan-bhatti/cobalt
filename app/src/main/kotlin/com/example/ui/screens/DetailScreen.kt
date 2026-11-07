@@ -161,6 +161,7 @@ fun DetailScreen(
     var showLinkShareSheet by remember { mutableStateOf(false) }
     var showImageShareSheet by remember { mutableStateOf(false) }
     var showMovieShareSheet by remember { mutableStateOf(false) }
+    var showNoteShareSheet by remember { mutableStateOf(false) }
     var isLinkCopied by remember { mutableStateOf(false) }
     var isDescCopied by remember { mutableStateOf(false) }
 
@@ -452,6 +453,8 @@ fun DetailScreen(
                                     showImageShareSheet = true
                                 } else if (item.type == SavedItemType.MEDIA) {
                                     showMovieShareSheet = true
+                                } else if (com.example.notes.NotePersistence.isNote(item)) {
+                                    showNoteShareSheet = true
                                 } else {
                                     viewModel.shareItem(item, context)
                                 }
@@ -473,7 +476,8 @@ fun DetailScreen(
                                 onPlainChange = { plainNote = it },
                                 onJump = { noteJump = it },
                                 onStartSearch = { isSearchingNote = true },
-                                onDeleteClick = { showDeleteConfirm = true }
+                                onDeleteClick = { showDeleteConfirm = true },
+                                onShareClick = { showNoteShareSheet = true }
                             )
                         }
                     },
@@ -537,6 +541,8 @@ fun DetailScreen(
                                             showImageShareSheet = true
                                         } else if (item.type == SavedItemType.MEDIA) {
                                             showMovieShareSheet = true
+                                        } else if (com.example.notes.NotePersistence.isNote(item)) {
+                                            showNoteShareSheet = true
                                         } else {
                                             viewModel.shareItem(item, context)
                                         }
@@ -1086,6 +1092,13 @@ fun DetailScreen(
         com.example.ui.components.share.MovieShareBottomSheet(
             item = item,
             onDismissRequest = { showMovieShareSheet = false }
+        )
+    }
+
+    if (showNoteShareSheet && com.example.notes.NotePersistence.isNote(item)) {
+        com.example.ui.components.share.NoteShareBottomSheet(
+            item = item,
+            onDismissRequest = { showNoteShareSheet = false }
         )
     }
 }
