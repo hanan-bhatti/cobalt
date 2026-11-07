@@ -20,14 +20,12 @@ package com.example.ui.components.share
 
 import android.content.Context
 import android.graphics.Bitmap
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -35,15 +33,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -122,22 +115,6 @@ fun NoteShareBottomSheet(
         }
     }
 
-    // Swipeable pager state
-    val pagerState = rememberPagerState(
-        initialPage = if (initialStyle == NoteShareStyle.EDITORIAL) 0 else 1
-    ) { 2 }
-
-    // Sync selectedStyle only when pager completely settles
-    LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.settledPage }.collect { settledPage ->
-            val newStyle = if (settledPage == 0) NoteShareStyle.EDITORIAL else NoteShareStyle.MINIMAL
-            if (selectedStyle != newStyle) {
-                selectedStyle = newStyle
-                SharePreferencesManager.setNoteShareStyle(context, newStyle)
-            }
-        }
-    }
-
     var triggerCapture by remember { mutableStateOf(false) }
     var capturedCallback by remember { mutableStateOf<((Bitmap) -> Unit)?>(null) }
 
@@ -202,211 +179,87 @@ fun NoteShareBottomSheet(
                 }
             }
 
-            // Style Switcher (Synchronized with Swipeable Pager)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                NoteShareStyle.entries.forEach { style ->
-                    val isSelected = selectedStyle == style
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable {
-                                selectedStyle = style
-                                SharePreferencesManager.setNoteShareStyle(context, style)
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(if (style == NoteShareStyle.EDITORIAL) 0 else 1)
-                                }
-                            }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(vertical = 8.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                painter = painterResource(
-                                    id = if (style == NoteShareStyle.EDITORIAL) R.drawable.ic_custom_markdown else R.drawable.ic_custom_quote
-                                ),
-                                contentDescription = null,
-                                tint = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = style.displayName,
-                                fontSize = 13.sp,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Quick Preferences Bar: Attribution, Shuffle, and Theme Toggle
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 2.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (showAttribution) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
-                        modifier = Modifier.clickable {
-                            val updated = !showAttribution
-                            showAttribution = updated
-                            SharePreferencesManager.setAttributionEnabled(context, updated)
-                        }
-                    ) {
-                        Text(
-                            text = if (showAttribution) "Tagline: On" else "Tagline: Off",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = if (showAttribution) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        )
-                    }
-
-                    if (showAttribution) {
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
-                            modifier = Modifier.clickable { currentTagline = CobaltTaglines.getRandom() }
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(5.dp)
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_sync),
-                                    contentDescription = "Shuffle tagline",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(13.dp)
-                                )
-                                Text(
-                                    text = "Shuffle",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
-                    modifier = Modifier.clickable { isPreviewDark = !isPreviewDark }
-                ) {
-                    Text(
-                        text = if (isPreviewDark) "Dark" else "Light",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
-                }
-            }
-
-            // Pass horizontal touch deltas cleanly to HorizontalPager while absorbing
-            // boundary overscroll so parent bottom sheet does not bounce or stutter
-            val pagerScrollInterop = remember {
-                object : NestedScrollConnection {
-                    override fun onPreScroll(
-                        available: Offset,
-                        source: NestedScrollSource
-                    ): Offset = Offset.Zero
-
-                    override fun onPostScroll(
-                        consumed: Offset,
-                        available: Offset,
-                        source: NestedScrollSource
-                    ): Offset = Offset(available.x, 0f)
-                }
-            }
-
-            // Live Swipeable Preview Container
+            // Floating Preview Window (Elevated card with smooth AnimatedContent transition; no swipe gesture)
             Surface(
                 shape = RoundedCornerShape(26.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerLow,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
+                shadowElevation = 6.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .nestedScroll(pagerScrollInterop)
-                        .padding(12.dp),
+                        .padding(12.dp)
+                        .drawWithContent {
+                            drawContent()
+                            if (triggerCapture) {
+                                // 4K Ultra-Crisp Rendering Scale Factor (~2.5x scaling)
+                                val scale = 2.5f
+                                val w = (size.width * scale).toInt()
+                                val h = (size.height * scale).toInt()
+                                if (w > 0 && h > 0) {
+                                    val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                                    val composeCanvas = Canvas(android.graphics.Canvas(bitmap))
+                                    composeCanvas.scale(scale, scale)
+                                    val originalCanvas = drawContext.canvas
+                                    drawContext.canvas = composeCanvas
+                                    drawContent()
+                                    drawContext.canvas = originalCanvas
+                                    val cb = capturedCallback
+                                    capturedCallback = null
+                                    triggerCapture = false
+                                    cb?.invoke(bitmap)
+                                }
+                            }
+                        },
                     contentAlignment = Alignment.Center
                 ) {
-                    HorizontalPager(
-                        state = pagerState,
-                        modifier = Modifier.fillMaxWidth()
-                    ) { page ->
-                        val pageStyle = if (page == 0) NoteShareStyle.EDITORIAL else NoteShareStyle.MINIMAL
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .drawWithContent {
-                                    drawContent()
-                                    if (triggerCapture && pagerState.currentPage == page) {
-                                        // 4K Ultra-Crisp Rendering Scale Factor (~2.5x - 3.0x scaling)
-                                        val scale = 2.5f
-                                        val w = (size.width * scale).toInt()
-                                        val h = (size.height * scale).toInt()
-                                        if (w > 0 && h > 0) {
-                                            val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-                                            val composeCanvas = Canvas(android.graphics.Canvas(bitmap))
-                                            composeCanvas.scale(scale, scale)
-                                            val originalCanvas = drawContext.canvas
-                                            drawContext.canvas = composeCanvas
-                                            drawContent()
-                                            drawContext.canvas = originalCanvas
-                                            val cb = capturedCallback
-                                            capturedCallback = null
-                                            triggerCapture = false
-                                            cb?.invoke(bitmap)
-                                        }
-                                    }
-                                }
+                    AnimatedContent(
+                        targetState = selectedStyle,
+                        transitionSpec = {
+                            (fadeIn(animationSpec = tween(200)) + scaleIn(initialScale = 0.97f, animationSpec = tween(200)))
+                                .togetherWith(fadeOut(animationSpec = tween(150)))
+                        },
+                        label = "NoteCardStyleTransition"
+                    ) { targetStyle ->
+                        MyApplicationTheme(
+                            darkTheme = isPreviewDark,
+                            dynamicColor = userDynamicColor,
+                            typographyPrefs = typographyPrefs
                         ) {
-                            MyApplicationTheme(
-                                darkTheme = isPreviewDark,
-                                dynamicColor = userDynamicColor,
-                                typographyPrefs = typographyPrefs
-                            ) {
-                                NoteShareCard(
-                                    item = item,
-                                    noteBody = noteBody,
-                                    style = pageStyle,
-                                    showAttribution = showAttribution,
-                                    tagline = currentTagline
-                                )
-                            }
+                            NoteShareCard(
+                                item = item,
+                                noteBody = noteBody,
+                                style = targetStyle,
+                                showAttribution = showAttribution,
+                                tagline = currentTagline
+                            )
                         }
                     }
                 }
             }
+
+            // Control Toolbar Row (Connected Style Switcher, Connected Tagline + Shuffle, Theme Capsule)
+            ShareControlToolbar(
+                styles = NoteShareStyle.entries,
+                selectedStyle = selectedStyle,
+                onStyleSelected = {
+                    selectedStyle = it
+                    SharePreferencesManager.setNoteShareStyle(context, it)
+                },
+                styleLabel = { it.displayName },
+                styleIcon = { if (it == NoteShareStyle.EDITORIAL) R.drawable.ic_custom_markdown else R.drawable.ic_custom_quote },
+                showAttribution = showAttribution,
+                onToggleAttribution = {
+                    val updated = !showAttribution
+                    showAttribution = updated
+                    SharePreferencesManager.setAttributionEnabled(context, updated)
+                },
+                onShuffleTagline = { currentTagline = CobaltTaglines.getRandom() },
+                isDark = isPreviewDark,
+                onToggleTheme = { isPreviewDark = !isPreviewDark }
+            )
 
             // Inline Clipboard Warning Message (Shown if note exceeds safe clipboard memory limits)
             if (clipboardError != null) {
