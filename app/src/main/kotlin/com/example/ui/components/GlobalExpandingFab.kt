@@ -119,6 +119,7 @@ fun GlobalExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
     }
 
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
+    val customFolders by viewModel.customFolders.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
     val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
     val blurRadius by viewModel.blurRadius.collectAsState()
@@ -229,7 +230,8 @@ fun GlobalExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
             showAddFolderDialog = false
         },
         useBlur = useBlur,
-        hazeState = hazeState
+        hazeState = hazeState,
+        existingFolderNames = customFolders
     )
 
     QuickNoteBottomSheet(
@@ -414,6 +416,7 @@ fun ClassicExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
     }
 
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
+    val customFolders by viewModel.customFolders.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
     val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
     val blurRadius by viewModel.blurRadius.collectAsState()
@@ -620,7 +623,8 @@ fun ClassicExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
             showAddFolderDialog = false
         },
         useBlur = useBlur,
-        hazeState = hazeState
+        hazeState = hazeState,
+        existingFolderNames = customFolders
     )
 
     QuickNoteBottomSheet(

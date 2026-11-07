@@ -235,26 +235,12 @@ fun HomeScreen(
     }
 
     val coroutineScope = rememberCoroutineScope()
-    val lastDeletedItem by viewModel.lastDeletedItemForUndo.collectAsState()
-    var undoDismissJob by remember { mutableStateOf<Job?>(null) }
-    var toastOffsetX by remember { mutableFloatStateOf(0f) }
     var itemToDelete by remember { mutableStateOf<SavedItem?>(null) }
     var showBulkDeleteConfirm by remember { mutableStateOf(false) }
     var showReleaseNotesSheet by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
     var showHowToCaptureSheet by remember { mutableStateOf(false) }
     val homeSortOrder by viewModel.homeSortOrder.collectAsState()
-
-    LaunchedEffect(lastDeletedItem) {
-        undoDismissJob?.cancel()
-        toastOffsetX = 0f
-        if (lastDeletedItem != null) {
-            undoDismissJob = launch {
-                kotlinx.coroutines.delay(4000)
-                viewModel.clearUndoToast()
-            }
-        }
-    }
 
     LaunchedEffect(allItems.isNotEmpty()) {
         if (allItems.isNotEmpty() && !hasDismissedOnboarding) {
@@ -324,10 +310,6 @@ fun HomeScreen(
                 }
             }
         }
-    }
-
-    val showUndoToastWithItem = { item: SavedItem ->
-        viewModel.triggerUndoToast(item)
     }
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
@@ -907,7 +889,7 @@ fun HomeScreen(
                                 state = listState,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .hazeSource(state = hazeState),
+                                    .then(if (useBlur && floatingScrollbarEnabled && floatingScrollbarHome) Modifier.hazeSource(state = hazeState) else Modifier),
                                 contentPadding = PaddingValues(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 100.dp),
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
@@ -972,7 +954,7 @@ fun HomeScreen(
                                 state = gridState,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .hazeSource(state = hazeState),
+                                    .then(if (useBlur && floatingScrollbarEnabled && floatingScrollbarHome) Modifier.hazeSource(state = hazeState) else Modifier),
                                 contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 100.dp),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                                 verticalItemSpacing = 12.dp
@@ -1037,95 +1019,7 @@ fun HomeScreen(
             bottomPadding = 96.dp
         )
 
-        // Sleek interactive Undo Toast UI overlay (half height, auto-dismiss, swipe-to-dismiss)
-        AnimatedVisibility(
-            visible = lastDeletedItem != null,
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 96.dp, start = 20.dp, end = 20.dp)
-                .offset { androidx.compose.ui.unit.IntOffset(toastOffsetX.toInt(), 0) }
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures(
-                        onDragEnd = {
-                            if (kotlin.math.abs(toastOffsetX) > 120f) {
-                                undoDismissJob?.cancel()
-                                viewModel.clearUndoToast()
-                            }
-                            toastOffsetX = 0f
-                        },
-                        onDragCancel = {
-                            toastOffsetX = 0f
-                        },
-                        onHorizontalDrag = { _, dragAmount ->
-                            toastOffsetX += dragAmount
-                        }
-                    )
-                }
-        ) {
-            Surface(
-                shape = RoundedCornerShape(22.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                tonalElevation = 6.dp,
-                shadowElevation = 8.dp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(42.dp)
-                    .testTag("undo_toast")
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_delete),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = "Item deleted",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
 
-                    Surface(
-                        onClick = {
-                            undoDismissJob?.cancel()
-                            lastDeletedItem?.let { item ->
-                                viewModel.restoreDeletedItem(item)
-                                android.widget.Toast.makeText(context, "Item restored!", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        modifier = Modifier
-                            .bounceClick()
-                            .testTag("undo_button")
-                    ) {
-                        Text(
-                            text = "UNDO",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-            }
-        }
     }
 }
 }
@@ -1152,7 +1046,8 @@ fun HomeScreen(
             }
         },
         useBlur = false,
-        hazeState = null
+        hazeState = null,
+        existingFolderNames = customFolders
     )
 
     // Delete Confirmation Dialog
@@ -1160,12 +1055,11 @@ fun HomeScreen(
         com.example.ui.components.ExpressiveConfirmationDialog(
             onDismissRequest = { itemToDelete = null },
             title = "Delete Item",
-            message = "Are you sure you want to delete this item? This action cannot be undone.",
+            message = viewModel.deletionMessage(),
             confirmButtonText = "Delete",
             onConfirm = {
                 itemToDelete?.let {
                     viewModel.deleteSavedItem(it)
-                    showUndoToastWithItem(it)
                 }
                 itemToDelete = null
             },
@@ -1178,7 +1072,7 @@ fun HomeScreen(
         com.example.ui.components.ExpressiveConfirmationDialog(
             onDismissRequest = { showBulkDeleteConfirm = false },
             title = "Delete Selected Items",
-            message = "Are you sure you want to delete these selected items? This action cannot be undone.",
+            message = viewModel.deletionMessage(plural = true),
             confirmButtonText = "Delete",
             onConfirm = {
                 viewModel.deleteSelectedItems()

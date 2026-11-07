@@ -408,6 +408,7 @@ fun MoveToFolderDialog(
                                     showNewFolderCreator = false
                                 },
                                 onCancel = { showNewFolderCreator = false },
+                                existingFolders = customFolders,
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {

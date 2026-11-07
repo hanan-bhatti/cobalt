@@ -50,7 +50,8 @@ fun FolderBottomSheet(
     onSave: (CustomFolderEntity, String?) -> Unit,
     onDelete: ((CustomFolderEntity) -> Unit)? = null,
     useBlur: Boolean = false,
-    hazeState: HazeState? = null
+    hazeState: HazeState? = null,
+    existingFolderNames: List<String> = emptyList()
 ) {
     val focusManager = LocalFocusManager.current
     val titleFocusRequester = remember { FocusRequester() }
@@ -62,6 +63,13 @@ fun FolderBottomSheet(
     var selectedIconName by remember(initialFolder) { mutableStateOf(initialFolder?.iconName ?: folderPresetIcons.first()) }
     var isPinned by remember(initialFolder) { mutableStateOf(initialFolder?.isPinned ?: false) }
     val originalName = initialFolder?.name
+
+    val trimmedInput = folderNameInput.trim()
+    val isDuplicate = remember(trimmedInput, existingFolderNames, initialFolder) {
+        trimmedInput.isNotBlank() &&
+        (initialFolder == null || !trimmedInput.equals(initialFolder.name.trim(), ignoreCase = true)) &&
+        existingFolderNames.any { it.trim().equals(trimmedInput, ignoreCase = true) }
+    }
 
     LaunchedEffect(isVisible) {
         if (isVisible && initialFolder == null) {
@@ -179,7 +187,7 @@ fun FolderBottomSheet(
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                                 keyboardActions = KeyboardActions(
                                     onDone = {
-                                        if (folderNameInput.isNotBlank()) {
+                                        if (folderNameInput.isNotBlank() && !isDuplicate) {
                                             onSave(previewFolder, originalName)
                                             onDismiss()
                                             focusManager.clearFocus()
@@ -203,6 +211,32 @@ fun FolderBottomSheet(
                                     .fillMaxWidth()
                                     .focusRequester(titleFocusRequester)
                             )
+
+                            // Inline duplicate notice
+                            AnimatedVisibility(
+                                visible = isDuplicate,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically()
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier.padding(top = 8.dp)
+                                ) {
+                                    Icon(
+                                        painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.ic_custom_close),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = "A folder with this name already exists",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
 
                             Spacer(modifier = Modifier.height(24.dp))
 
@@ -315,13 +349,13 @@ fun FolderBottomSheet(
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Button(
                                         onClick = {
-                                            if (folderNameInput.isNotBlank()) {
+                                            if (folderNameInput.isNotBlank() && !isDuplicate) {
                                                 onSave(previewFolder, originalName)
                                                 onDismiss()
                                                 focusManager.clearFocus()
                                             }
                                         },
-                                        enabled = folderNameInput.isNotBlank(),
+                                        enabled = folderNameInput.isNotBlank() && !isDuplicate,
                                         shape = CircleShape
                                     ) {
                                         Text(if (initialFolder == null) "Create" else "Save")

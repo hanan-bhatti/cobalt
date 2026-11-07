@@ -207,11 +207,13 @@ fun FoldersScreen(
 ) {
     val allItems by viewModel.allItems.collectAsState()
     val customFolderEntities by viewModel.customFolderEntities.collectAsState()
+    val customFolders by viewModel.customFolders.collectAsState()
 
     val isDark = isSystemInDarkTheme()
     val gridHazeState = remember { HazeState() }
 
     var activeBrowseFolder by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(activeBrowseFolder) { viewModel.dismissUndoForNavigation() }
 
     val activeDetailItem by viewModel.activeDetailItem.collectAsState()
 
@@ -600,7 +602,8 @@ fun FoldersScreen(
             }
         },
         useBlur = false,
-        hazeState = null
+        hazeState = null,
+        existingFolderNames = customFolders
     )
 
     // Customize Folder Dialog/Sheet (Aesthetics Customizer)
@@ -949,10 +952,8 @@ fun FolderContentsBrowser(
             val detailInteractionSource = remember { MutableInteractionSource() }
             FloatingActionButton(
                 onClick = {
-                    if (systemCategory == SavedItemType.MEDIA) {
-                        viewModel.openMediaSearchSheet()
-                    } else if (systemCategory != null) {
-                        viewModel.startManualCapture(systemCategory)
+                    if (systemCategory != null) {
+                        viewModel.startManualCapture(systemCategory, listOf(folderName))
                     } else {
                         viewModel.startManualCapture(SavedItemType.TEXT, listOf(folderName))
                     }
@@ -1057,6 +1058,7 @@ fun FolderBrowseItemRow(
     val isDark = isSystemInDarkTheme()
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     var showContextMenu by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableStateOf(false) }
     var showMoveDialog by remember { mutableStateOf(false) }
     var isExpanded by remember { mutableStateOf(false) }
 
@@ -1613,7 +1615,7 @@ fun FolderBrowseItemRow(
                     text = { Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
                     onClick = {
                         showContextMenu = false
-                        viewModel.deleteSavedItem(item)
+                        confirmDelete = true
                     },
                     colors = MenuDefaults.itemColors(
                         textColor = MaterialTheme.colorScheme.error,
@@ -1623,6 +1625,12 @@ fun FolderBrowseItemRow(
             }
         }
     }
+    if (confirmDelete) com.example.ui.components.ExpressiveConfirmationDialog(
+        onDismissRequest = { confirmDelete = false }, title = "Delete item",
+        message = viewModel.deletionMessage(), confirmButtonText = "Delete",
+        onConfirm = { confirmDelete = false; viewModel.deleteSavedItem(item) },
+        dismissButtonText = "Cancel", isDestructive = true)
+
 }
 
 @Composable
@@ -1666,6 +1674,7 @@ fun FolderCustomizerDialog(
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
     val allItems by viewModel.allItems.collectAsState()
+    val customFolders by viewModel.customFolders.collectAsState()
     val itemCount = remember(allItems, folder.name) {
         allItems.count { it.folders.contains(folder.name) }
     }
@@ -1719,6 +1728,7 @@ fun FolderCustomizerDialog(
         },
         onDelete = { showDeleteConfirm = true },
         useBlur = false,
-        hazeState = null
+        hazeState = null,
+        existingFolderNames = customFolders
     )
 }

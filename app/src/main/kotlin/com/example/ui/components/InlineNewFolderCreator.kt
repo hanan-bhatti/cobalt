@@ -18,6 +18,7 @@
 
 package com.example.ui.components
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -68,6 +69,7 @@ internal val LocalCaptureFolderEditing = staticCompositionLocalOf<(Boolean) -> U
 fun InlineNewFolderCreator(
     onAddFolder: (name: String, iconName: String) -> Unit,
     onCancel: () -> Unit,
+    existingFolders: List<String> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     val reportEditing by rememberUpdatedState(LocalCaptureFolderEditing.current)
@@ -83,9 +85,13 @@ fun InlineNewFolderCreator(
     var selectedIconName by remember { mutableStateOf(folderPresetIcons.first()) }
     var isIconDropdownOpen by remember { mutableStateOf(false) }
 
+    val trimmed = folderName.trim()
+    val isDuplicate = remember(trimmed, existingFolders) {
+        trimmed.isNotBlank() && existingFolders.any { it.trim().equals(trimmed, ignoreCase = true) }
+    }
+
     fun submitFolder() {
-        val trimmed = folderName.trim()
-        if (trimmed.isNotEmpty()) {
+        if (trimmed.isNotEmpty() && !isDuplicate) {
             onAddFolder(trimmed, selectedIconName)
             folderName = ""
         }
@@ -247,14 +253,14 @@ fun InlineNewFolderCreator(
                 // Button 1: + Add (outer left rounded pill, inner right 6dp)
                 Surface(
                     onClick = { submitFolder() },
-                    enabled = folderName.isNotBlank(),
+                    enabled = folderName.isNotBlank() && !isDuplicate,
                     shape = RoundedCornerShape(
                         topStart = 22.dp,
                         bottomStart = 22.dp,
                         topEnd = 6.dp,
                         bottomEnd = 6.dp
                     ),
-                    color = if (folderName.isNotBlank()) MaterialTheme.colorScheme.primary
+                    color = if (folderName.isNotBlank() && !isDuplicate) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier
@@ -304,6 +310,32 @@ fun InlineNewFolderCreator(
                         )
                     }
                 }
+            }
+        }
+
+        // Inline duplicate info warning
+        AnimatedVisibility(
+            visible = isDuplicate,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.padding(start = 8.dp, top = 2.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_custom_close),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(12.dp)
+                )
+                Text(
+                    text = "A folder with this name already exists",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }
