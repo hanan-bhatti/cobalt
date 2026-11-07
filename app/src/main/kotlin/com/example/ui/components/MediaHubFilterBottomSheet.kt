@@ -64,7 +64,6 @@ fun MediaHubFilterBottomSheet(
     val sortOptions = remember { listOf("Default", "Rating", "Newest", "Year", "Title A-Z") }
 
     val sortListState = rememberLazyListState()
-    val statusListState = rememberLazyListState()
     val typeListState = rememberLazyListState()
     val genreListState = rememberLazyListState()
 
@@ -75,12 +74,6 @@ fun MediaHubFilterBottomSheet(
         }
     }
 
-    LaunchedEffect(selectedStatus) {
-        val index = statusFilters.indexOf(selectedStatus)
-        if (index >= 0) {
-            statusListState.animateScrollToItem(index)
-        }
-    }
 
     LaunchedEffect(selectedType) {
         val index = typeFilters.indexOf(selectedType)
@@ -222,41 +215,14 @@ fun MediaHubFilterBottomSheet(
                     title = "WATCH STATUS",
                     description = if (selectedStatus != "All") "Filtered: $selectedStatus" else "All statuses"
                 )
-                LazyRow(
-                    state = statusListState,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalFadingEdges(lazyListState = statusListState, fadeWidth = 24.dp),
-                    contentPadding = PaddingValues(horizontal = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    items(statusFilters, key = { "status_$it" }) { status ->
-                        val isSelected = selectedStatus == status
-                        Surface(
-                            shape = RoundedCornerShape(20.dp),
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            border = BorderStroke(
-                                width = 1.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
-                            ),
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .clickable { viewModel.setMediaHubFilterStatus(status) }
-                        ) {
-                            Text(
-                                text = status,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                maxLines = 1,
-                                softWrap = false,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
-                        }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    statusFilters.forEach { status ->
+                        FilterChip(selected = selectedStatus == status, onClick = { viewModel.setMediaHubFilterStatus(status) },
+                            label = { Text(when(status) { "Completed" -> "Watched"; "Watching" -> "In progress"; else -> status }) })
                     }
                 }
             }
+
 
             // Section 3: Media Format / Category (Single Row Scrollable with Edge Fades)
             if (typeFilters.size > 1) {

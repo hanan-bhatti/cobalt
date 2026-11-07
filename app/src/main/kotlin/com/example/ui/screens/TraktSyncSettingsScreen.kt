@@ -431,7 +431,7 @@ fun TraktSyncSettingsScreen(
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "Sign in securely using PKCE OAuth. No passwords stored on device.",
+                                        text = "Authorize Cobalt with a device code. Your password stays with Trakt.",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -439,7 +439,7 @@ fun TraktSyncSettingsScreen(
                             }
 
                             Button(
-                                onClick = { authManager.startPkceAuth(context) },
+                                onClick = { authManager.startDeviceAuth() },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Color(0xFFED1C24)
                                 ),
@@ -458,11 +458,11 @@ fun TraktSyncSettingsScreen(
                             }
 
                             TextButton(
-                                onClick = { authManager.startDeviceAuth() },
+                                onClick = { authManager.startPkceAuth(context) },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = "Or use Device Code activation (TV / secondary)",
+                                    text = "Browser sign-in (requires an approved callback)",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -485,7 +485,7 @@ fun TraktSyncSettingsScreen(
                 ExpressiveSettingsGroup {
                     ExpressiveSettingsSwitchItem(
                         title = "Sync Watched Movies",
-                        subtitle = "Imports watched movies and play history",
+                        subtitle = "Pause or resume movie history uploads and imports",
                         checked = isSyncWatched,
                         onCheckedChange = {
                             isSyncWatched = it
@@ -496,7 +496,7 @@ fun TraktSyncSettingsScreen(
 
                     ExpressiveSettingsSwitchItem(
                         title = "Sync TV Shows & Seasons",
-                        subtitle = "Imports watched series progress and episode breakdowns",
+                        subtitle = "Pause or resume TV progress uploads and imports",
                         checked = isSyncTv,
                         onCheckedChange = {
                             isSyncTv = it
@@ -507,7 +507,7 @@ fun TraktSyncSettingsScreen(
 
                     ExpressiveSettingsSwitchItem(
                         title = "Sync Watchlist",
-                        subtitle = "Imports planned watchlists into your archive",
+                        subtitle = "Pause or resume watchlist uploads and imports",
                         checked = isSyncWatchlist,
                         onCheckedChange = {
                             isSyncWatchlist = it
@@ -518,7 +518,7 @@ fun TraktSyncSettingsScreen(
 
                     ExpressiveSettingsSwitchItem(
                         title = "Sync Personal Ratings",
-                        subtitle = "Imports your 1–10 scores from Trakt",
+                        subtitle = "Pause or resume rating uploads and imports; local changes are kept",
                         checked = isSyncRatings,
                         onCheckedChange = {
                             isSyncRatings = it

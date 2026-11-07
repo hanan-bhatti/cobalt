@@ -23,15 +23,6 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import android.content.Intent
 import android.net.Uri
-import android.view.View
-import android.webkit.CookieManager
-import android.webkit.JavascriptInterface
-import android.webkit.WebChromeClient
-import android.webkit.WebResourceError
-import android.webkit.WebResourceRequest
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.compose.foundation.shape.CircleShape
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -73,7 +64,6 @@ import androidx.compose.ui.text.style.TextAlign
 import com.example.utils.isRtlText
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
@@ -82,8 +72,8 @@ import java.util.Date
 import com.example.R
 import com.example.data.model.SavedItem
 import com.example.data.model.getBestImagePath
+import com.example.ui.components.hasTraktIdentity
 import com.example.ui.components.MarkdownText
-import com.example.ui.components.VideoPlayer
 import com.example.ui.theme.*
 import com.example.ui.viewmodel.CobaltViewModel
 import java.util.Locale
@@ -404,8 +394,10 @@ fun MediaDetailSection(
 
         com.example.ui.components.MediaRatingsRow(item.showProgress)
 
-        // ONE-TAP WATCH STATUS SELECTOR CHIPS
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        com.example.ui.components.TraktMediaControls(item, viewModel::showToast)
+
+        // Trakt progress is read only; local-only entries retain their existing status controls.
+        if (!item.hasTraktIdentity()) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
                 text = "CHANGE STATUS",
                 fontSize = 11.sp,
@@ -480,132 +472,11 @@ fun MediaDetailSection(
             }
         }
 
-        // TV SERIES PROGRESS (Seasons & Episodes)
-        val progress = item.showProgress
-        if (progress != null && (progress.totalWatched > 0 || progress.seasons.isNotEmpty())) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_trakt),
-                            contentDescription = null,
-                            tint = Color(0xFFED1C24),
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            text = "WATCH PROGRESS",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                    }
-                    if (progress.lastWatchedSeason != null && progress.lastWatchedEpisode != null) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFFED1C24).copy(alpha = 0.12f)
-                        ) {
-                            Text(
-                                text = "Last: S%02dE%02d".format(progress.lastWatchedSeason, progress.lastWatchedEpisode),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFED1C24),
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = if (progress.totalAired > 0) "${progress.totalWatched} of ${progress.totalAired} episodes"
-                                       else "${progress.totalWatched} episodes watched",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "${progress.progressPercent}%",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Black,
-                                color = if (progress.completed) Color(0xFF10B981) else Color(0xFFED1C24)
-                            )
-                        }
-
-                        LinearProgressIndicator(
-                            progress = { progress.progressFraction },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(CircleShape),
-                            color = if (progress.completed) Color(0xFF10B981) else Color(0xFFED1C24),
-                            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                        )
-
-                        if (progress.seasons.isNotEmpty()) {
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                items(progress.seasons.sortedBy { it.seasonNumber }, key = { it.seasonNumber }) { season ->
-                                    val isSeasonDone = season.isCompleted
-                                    Surface(
-                                        shape = RoundedCornerShape(10.dp),
-                                        color = if (isSeasonDone) Color(0xFF10B981).copy(alpha = 0.12f)
-                                                else MaterialTheme.colorScheme.surface,
-                                        border = BorderStroke(
-                                            1.dp,
-                                            if (isSeasonDone) Color(0xFF10B981).copy(alpha = 0.35f)
-                                            else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                                        )
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                        ) {
-                                            Text(
-                                                text = "Season ${season.seasonNumber}",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (isSeasonDone) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Text(
-                                                text = "• ${season.watchedEpisodes} eps",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+        item.mediaFacts?.let { facts ->
+            val details = listOfNotNull(facts.episodeCount?.let { "$it episodes" }, facts.chapterCount?.let { "$it chapters" },
+                facts.volumeCount?.let { "$it volumes" }, facts.publicationStatus)
+            if (details.isNotEmpty()) Text(details.joinToString(" · "), style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
         // GENRES SECTION
@@ -641,74 +512,17 @@ fun MediaDetailSection(
             }
         }
 
-        // WATCH PROVIDERS ("Where to Watch")
-        val allWatchProviders = if (item.watchProviders.isNotEmpty()) item.watchProviders else item.richWatchProviders.map { it.name }
-        if (allWatchProviders.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_custom_movie),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Text(
-                        text = "WHERE TO WATCH",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                }
-                val uniqueProviders = allWatchProviders.map { getStreamingProviderConfig(it) }.distinctBy { it.label }
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    items(uniqueProviders, key = { it.label }) { config ->
-                        val watchUrl = getStreamingWatchUrl(config.label, item.title)
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = config.backgroundColor,
-                            contentColor = config.contentColor,
-                            shadowElevation = 1.dp,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable {
-                                    com.example.util.CobaltCustomTabsLauncher.launch(context, watchUrl)
-                                }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                            ) {
-                                if (config.iconResId != null) {
-                                    Icon(
-                                        painter = painterResource(id = config.iconResId),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(14.dp),
-                                        tint = config.contentColor
-                                    )
-                                }
-                                Text(
-                                    text = config.label,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = config.contentColor
-                                )
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_link_external),
-                                    contentDescription = "Watch on ${config.label}",
-                                    modifier = Modifier.size(11.dp),
-                                    tint = config.contentColor.copy(alpha = 0.8f)
-                                )
-                            }
-                        }
-                    }
+        // Provider logos remain untinted; show prices only when supplied, never infer them.
+        val providers = item.richWatchProviders.ifEmpty { item.watchProviders.map { com.example.data.model.MediaWatchProvider(it) } }
+            .distinctBy { Triple(it.name, it.type, it.url) }
+        if (providers.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Where to watch", style = MaterialTheme.typography.titleSmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                providers.forEach { provider ->
+                    val url = provider.url?.takeIf { Uri.parse(it).scheme == "https" } ?: getStreamingWatchUrl(provider.name, item.title)
+                    AssistChip(onClick = { com.example.util.CobaltCustomTabsLauncher.launch(context, url) },
+                        leadingIcon = provider.logoUrl?.let { logo -> { AsyncImage(logo, null, Modifier.size(18.dp).clip(RoundedCornerShape(4.dp))) } },
+                        label = { Text(listOfNotNull(provider.name, provider.price?.takeIf { it.isNotBlank() } ?: provider.type.takeIf { it != "Stream" }).joinToString(" · ")) })
                 }
             }
         }
@@ -973,342 +787,46 @@ fun MediaDetailSection(
     }
 }
 
-class YouTubePlayerBridge(
-    private val onReady: () -> Unit,
-    private val onError: (String) -> Unit
-) {
-    @JavascriptInterface
-    fun onReady() {
-        onReady()
-    }
-
-    @JavascriptInterface
-    fun onError(errorCode: String) {
-        onError(errorCode)
-    }
-}
-
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun YouTubeTrailerPlayer(
-    trailerUrl: String,
-    modifier: Modifier = Modifier
-) {
+fun YouTubeTrailerPlayer(trailerUrl: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val videoId = remember(trailerUrl) { extractYouTubeVideoId(trailerUrl) }
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (videoId != null) {
-            var isLoading by remember { mutableStateOf(true) }
-            var hasPlaybackError by remember { mutableStateOf(false) }
-            var webViewRef by remember { mutableStateOf<WebView?>(null) }
-
-            val appOrigin = remember(context) { "https://${context.packageName}" }
-
-            val embedHtml = remember(videoId, appOrigin) {
-                """
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-                    <meta name="referrer" content="strict-origin-when-cross-origin">
-                    <style>
-                        * { margin: 0; padding: 0; box-sizing: border-box; background-color: #000000; }
-                        html, body { width: 100%; height: 100%; overflow: hidden; background-color: #000000; }
-                        .container { position: relative; width: 100%; height: 100%; }
-                        iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <iframe 
-                            id="player"
-                            src="https://www.youtube.com/embed/$videoId?enablejsapi=1&playsinline=1&rel=0&modestbranding=1&iv_load_policy=3&origin=$appOrigin" 
-                            frameborder="0" 
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                            allowfullscreen 
-                            referrerpolicy="strict-origin-when-cross-origin">
-                        </iframe>
-                    </div>
-                    <script>
-                        window.addEventListener('message', function(event) {
-                            try {
-                                var data = (typeof event.data === 'string') ? JSON.parse(event.data) : event.data;
-                                if (data && data.event === 'onError') {
-                                    if (window.AndroidBridge) {
-                                        window.AndroidBridge.onError('' + data.info);
-                                    }
-                                } else if (data && data.event === 'onReady') {
-                                    if (window.AndroidBridge) {
-                                        window.AndroidBridge.onReady();
-                                    }
-                                }
-                            } catch (e) {}
-                        });
-                    </script>
-                </body>
-                </html>
-                """.trimIndent()
+    val video = remember(trailerUrl) { extractYouTubeVideoId(trailerUrl) }
+    val url = video?.let { "https://www.youtube.com/watch?v=$it" } ?: trailerUrl.takeIf {
+        val parsed = Uri.parse(it); parsed.scheme == "https" && !parsed.host.isNullOrBlank()
+    }
+    if (url == null) { Text("Trailer unavailable", style = MaterialTheme.typography.bodySmall); return }
+    // YouTube embed restrictions (including error 153) must not strand playback in an app WebView.
+    // The installed player/browser handles playback, captions and provider restrictions.
+    Surface(onClick = {
+        try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+        catch (_: android.content.ActivityNotFoundException) { android.widget.Toast.makeText(context, "No app can open this trailer", android.widget.Toast.LENGTH_SHORT).show() }
+    }, shape = RoundedCornerShape(16.dp), modifier = modifier.fillMaxWidth()) {
+        Box(Modifier.aspectRatio(16f / 9f).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
+            if (video != null) AsyncImage("https://img.youtube.com/vi/$video/hqdefault.jpg", null,
+                Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary) {
+                Icon(Icons.Default.PlayArrow, "Watch trailer", Modifier.padding(16.dp).size(28.dp), tint = MaterialTheme.colorScheme.onPrimary)
             }
-
-            DisposableEffect(lifecycleOwner) {
-                val observer = LifecycleEventObserver { _, event ->
-                    when (event) {
-                        Lifecycle.Event.ON_PAUSE -> {
-                            webViewRef?.onPause()
-                            webViewRef?.pauseTimers()
-                        }
-                        Lifecycle.Event.ON_RESUME -> {
-                            webViewRef?.onResume()
-                            webViewRef?.resumeTimers()
-                        }
-                        else -> {}
-                    }
-                }
-                lifecycleOwner.lifecycle.addObserver(observer)
-                onDispose {
-                    lifecycleOwner.lifecycle.removeObserver(observer)
-                    try {
-                        webViewRef?.stopLoading()
-                        webViewRef?.loadUrl("about:blank")
-                        webViewRef?.destroy()
-                    } catch (_: Exception) {}
-                    webViewRef = null
-                }
-            }
-
-            if (hasPlaybackError) {
-                Box(
-                    modifier = modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 9f)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.Black)
-                        .clickable {
-                            com.example.util.CobaltCustomTabsLauncher.launch(
-                                context = context,
-                                url = trailerUrl,
-                                isDarkTheme = true
-                            )
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    AsyncImage(
-                        model = "https://img.youtube.com/vi/$videoId/hqdefault.jpg",
-                        contentDescription = "Trailer Preview",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.55f))
-                    )
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(52.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = "Play Trailer",
-                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(32.dp)
-                                )
-                            }
-                        }
-                        Text(
-                            text = "Watch Trailer on YouTube",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        Text(
-                            text = "Tap to open external player",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.7f)
-                        )
-                    }
-                }
-            } else {
-                Box(
-                    modifier = modifier
-                        .fillMaxWidth()
-                        .aspectRatio(16f / 9f)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.Black),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AndroidView(
-                        factory = { ctx ->
-                            WebView(ctx).apply {
-                                webViewRef = this
-                                setLayerType(View.LAYER_TYPE_HARDWARE, null)
-
-                                val cookieManager = CookieManager.getInstance()
-                                cookieManager.setAcceptCookie(true)
-                                cookieManager.setAcceptThirdPartyCookies(this, true)
-
-                                settings.apply {
-                                    javaScriptEnabled = true
-                                    domStorageEnabled = true
-                                    mediaPlaybackRequiresUserGesture = false
-                                    allowFileAccess = false
-                                    allowContentAccess = false
-                                    loadsImagesAutomatically = true
-                                    useWideViewPort = true
-                                    loadWithOverviewMode = true
-                                    mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-
-                                    val defaultUa = userAgentString ?: ""
-                                    if (defaultUa.contains("; wv")) {
-                                        userAgentString = defaultUa.replace("; wv", "")
-                                    }
-                                }
-
-                                addJavascriptInterface(
-                                    YouTubePlayerBridge(
-                                        onReady = { isLoading = false },
-                                        onError = { errorCode ->
-                                            com.example.util.SafeLogger.w("YouTubeTrailerPlayer", "YouTube embed error: $errorCode")
-                                            hasPlaybackError = true
-                                            isLoading = false
-                                        }
-                                    ),
-                                    "AndroidBridge"
-                                )
-
-                                webChromeClient = WebChromeClient()
-                                webViewClient = object : WebViewClient() {
-                                    override fun onPageFinished(view: WebView?, url: String?) {
-                                        super.onPageFinished(view, url)
-                                        isLoading = false
-                                    }
-
-                                    override fun onReceivedError(
-                                        view: WebView?,
-                                        request: WebResourceRequest?,
-                                        error: WebResourceError?
-                                    ) {
-                                        super.onReceivedError(view, request, error)
-                                        if (request?.isForMainFrame == true) {
-                                            isLoading = false
-                                            hasPlaybackError = true
-                                        }
-                                    }
-                                }
-                                loadDataWithBaseURL(appOrigin, embedHtml, "text/html", "UTF-8", null)
-                            }
-                        },
-                        update = { webView ->
-                            webViewRef = webView
-                            if (webView.tag != videoId) {
-                                webView.tag = videoId
-                                hasPlaybackError = false
-                                isLoading = true
-                                webView.loadDataWithBaseURL(appOrigin, embedHtml, "text/html", "UTF-8", null)
-                            }
-                        },
-                        onRelease = { webView ->
-                            try {
-                                webView.stopLoading()
-                                webView.loadUrl("about:blank")
-                                webView.destroy()
-                            } catch (_: Exception) {}
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
-
-                    if (isLoading) {
-                        CircularWavyProgressIndicator(
-                            modifier = Modifier.size(48.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    }
-                }
-            }
-        } else {
-            VideoPlayer(
-                videoUri = trailerUrl,
-                modifier = modifier.clip(RoundedCornerShape(16.dp))
-            )
         }
-
-        // Quick Action: Watch directly on YouTube App
-        Text(
-            text = "Watch on YouTube App ↗",
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .clickable {
-                    com.example.util.CobaltCustomTabsLauncher.launch(
-                        context = context,
-                        url = trailerUrl,
-                        isDarkTheme = true
-                    )
-                }
-                .padding(vertical = 4.dp)
-        )
     }
 }
 
 fun extractYouTubeVideoId(url: String): String? {
-    val trimmed = url.trim()
-    if (trimmed.isBlank()) return null
-    if (trimmed.length == 11 && trimmed.matches(Regex("^[a-zA-Z0-9_-]{11}$"))) {
-        return trimmed
+    val value = url.trim()
+    val valid = Regex("[a-zA-Z0-9_-]{11}")
+    if (valid.matches(value)) return value
+    val uri = Uri.parse(value)
+    if (uri.scheme !in listOf("https", "http")) return null
+    val host = uri.host?.lowercase(Locale.ROOT)?.removePrefix("www.") ?: return null
+    val parts = uri.pathSegments
+    val candidate = when {
+        host == "youtu.be" -> parts.firstOrNull()
+        host in listOf("youtube.com", "m.youtube.com", "youtube-nocookie.com") ->
+            if (parts.firstOrNull() in listOf("embed", "shorts", "live", "v")) parts.getOrNull(1) else uri.getQueryParameter("v")
+        else -> null
     }
-    val pattern = "(?:youtube\\.com\\/(?:[^\\/]+\\/.+\\/|(?:v|e(?:mbed)?)\\/" +
-            "|.*[?&]v=)|youtu\\.be\\/)([^\"&?\\/\\s]{11})"
-    val regex = Regex(pattern, RegexOption.IGNORE_CASE)
-    val matchResult = regex.find(trimmed)
-    return matchResult?.groupValues?.getOrNull(1)
-}
-
-data class StreamingProviderConfig(
-    val backgroundColor: Color,
-    val contentColor: Color,
-    val iconResId: Int? = null,
-    val label: String
-)
-
-@Composable
-fun getStreamingProviderConfig(name: String): StreamingProviderConfig {
-    val clean = name.lowercase().trim()
-    return when {
-        clean.contains("netflix") -> StreamingProviderConfig(StreamingNetflix, Color.White, R.drawable.ic_provider_netflix, "Netflix")
-        clean.contains("prime") || clean.contains("amazon") -> StreamingProviderConfig(StreamingPrime, Color.White, R.drawable.ic_provider_prime, "Prime Video")
-        clean.contains("disney") -> StreamingProviderConfig(StreamingDisney, Color.White, R.drawable.ic_provider_disney, "Disney+")
-        clean.contains("crunchyroll") -> StreamingProviderConfig(StreamingCrunchyroll, Color.White, R.drawable.ic_provider_crunchyroll, "Crunchyroll")
-        clean.contains("hulu") -> StreamingProviderConfig(StreamingHulu, StreamingHuluDark, R.drawable.ic_provider_hulu, "Hulu")
-        clean.contains("apple") || clean.contains("itunes") -> StreamingProviderConfig(StreamingApple, Color.White, R.drawable.ic_provider_apple, "Apple TV+")
-        clean.contains("hbo") || clean.contains("max") -> StreamingProviderConfig(StreamingMax, Color.White, R.drawable.ic_provider_hbo, "Max")
-        clean.contains("paramount") -> StreamingProviderConfig(StreamingParamount, Color.White, null, "Paramount+")
-        clean.contains("peacock") -> StreamingProviderConfig(StreamingPeacock, Color.White, null, "Peacock")
-        clean.contains("youtube") -> StreamingProviderConfig(StreamingYouTube, Color.White, R.drawable.ic_provider_youtube, "YouTube")
-        clean.contains("sony") || clean.contains("liv") -> StreamingProviderConfig(StreamingSony, Color.White, null, "Sony LIV")
-        clean.contains("zee5") -> StreamingProviderConfig(StreamingZee5, Color.White, null, "ZEE5")
-        clean.contains("hotstar") -> StreamingProviderConfig(StreamingHotstar, Color.White, null, "Hotstar")
-        clean.contains("jio") -> StreamingProviderConfig(StreamingJio, Color.White, null, "JioCinema")
-        clean.contains("funimation") -> StreamingProviderConfig(StreamingFunimation, Color.White, null, "Funimation")
-        clean.contains("vudu") || clean.contains("fandango") -> StreamingProviderConfig(StreamingVudu, Color.White, null, "Vudu")
-        clean.contains("google play") -> StreamingProviderConfig(StreamingGooglePlay, Color.White, null, "Google Play")
-        clean.contains("tubi") -> StreamingProviderConfig(StreamingTubi, Color.White, null, "Tubi")
-        clean.contains("pluto") -> StreamingProviderConfig(StreamingPluto, Color.Black, null, "Pluto TV")
-        clean.contains("starz") -> StreamingProviderConfig(StreamingStarz, Color.White, null, "STARZ")
-        clean.contains("showtime") -> StreamingProviderConfig(StreamingShowtime, Color.White, null, "Showtime")
-        clean.contains("iplayer") || clean.contains("bbc") -> StreamingProviderConfig(StreamingBbc, Color.White, null, "BBC iPlayer")
-        clean.contains("hidive") -> StreamingProviderConfig(StreamingHidive, Color.White, null, "HIDIVE")
-        else -> StreamingProviderConfig(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant, null, name)
-    }
+    return candidate?.takeIf { valid.matches(it) }
 }
 
 fun getStreamingWatchUrl(providerName: String, title: String): String {

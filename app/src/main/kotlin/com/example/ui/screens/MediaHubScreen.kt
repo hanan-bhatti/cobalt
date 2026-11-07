@@ -110,6 +110,7 @@ fun MediaHubScreen(
         if (types.contains("movie")) list.add("Movies")
         if (types.contains("tv") || types.contains("tv show") || types.contains("tv_show")) list.add("TV")
         if (types.contains("anime")) list.add("Anime")
+        if (types.contains("manga")) list.add("Manga")
         list
     }
 
@@ -120,6 +121,7 @@ fun MediaHubScreen(
                 "Movies" -> item.mediaType?.lowercase() == "movie"
                 "TV" -> item.mediaType?.lowercase() in listOf("tv", "tv show", "tv_show")
                 "Anime" -> item.mediaType?.lowercase() == "anime"
+                "Manga" -> item.mediaType?.lowercase() == "manga"
                 else -> true
             }
         }
@@ -155,6 +157,7 @@ fun MediaHubScreen(
                 "Movies" -> item.mediaType?.lowercase() == "movie"
                 "TV" -> item.mediaType?.lowercase() in listOf("tv", "tv show", "tv_show")
                 "Anime" -> item.mediaType?.lowercase() == "anime"
+                "Manga" -> item.mediaType?.lowercase() == "manga"
                 else -> true
             }
         }.filter { item ->
@@ -252,8 +255,8 @@ fun MediaHubScreen(
                     if (onNavigateToTraktSync != null) {
                         IconButton(onClick = onNavigateToTraktSync) {
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_trakt),
-                                contentDescription = "Trakt Sync",
+                                painter = painterResource(id = R.drawable.ic_custom_settings),
+                                contentDescription = "Media settings",
                                 tint = Color(0xFFED1C24),
                                 modifier = Modifier.size(24.dp)
                             )

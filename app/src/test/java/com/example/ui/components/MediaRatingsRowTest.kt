@@ -46,7 +46,7 @@ class MediaRatingsRowTest {
             assertTrue("Logo must remain visible: $id", pixels.count { it ushr 24 > 0 } > width * 5)
             assertTrue("Logo must preserve supplied color: $id", pixels.any { it == expectedColor })
             val output = java.io.File("build/reports/rating-logos", context.resources.getResourceEntryName(id) + ".png")
-            output.parentFile.mkdirs()
+            output.parentFile?.mkdirs()
             output.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
             bitmap.recycle()
         }
