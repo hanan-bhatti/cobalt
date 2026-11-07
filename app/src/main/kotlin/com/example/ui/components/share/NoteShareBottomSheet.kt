@@ -23,6 +23,7 @@ import android.graphics.Bitmap
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -33,14 +34,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
@@ -49,16 +55,16 @@ import com.example.data.model.SavedItemType
 import com.example.notes.NotePersistence
 import com.example.ui.theme.LocalCobaltTypography
 import com.example.ui.theme.MyApplicationTheme
-import com.example.util.displayTitle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 /**
  * Material 3 Expressive bottom sheet for sharing and exporting notes and code snippets.
- * Features live adaptive 4K image preview, synchronized swipeable pager between Editorial and
- * Minimal styles, clean .md file export, and large-note clipboard error handling.
+ * Redesigned with a floating hero card that overlaps the top edge of the sheet into the
+ * backdrop scrim, connected style switchers, persisted user preferences, and high-resolution export.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -126,325 +132,377 @@ fun NoteShareBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 3.dp,
-        dragHandle = { BottomSheetDefaults.DragHandle() }
+        shape = RectangleShape,
+        containerColor = Color.Transparent,
+        tonalElevation = 0.dp,
+        scrimColor = BottomSheetDefaults.ScrimColor,
+        dragHandle = null,
+        contentWindowInsets = { WindowInsets(0, 0, 0, 0) }
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 36.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header Section
-            Row(
+            FloatingHeroSheetLayout(
+                modifier = Modifier.fillMaxWidth(),
+                heroCard = {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 440.dp)
+                            .padding(horizontal = 20.dp)
+                            .shadow(
+                                elevation = 14.dp,
+                                shape = RoundedCornerShape(26.dp),
+                                spotColor = Color.Black.copy(alpha = 0.28f),
+                                ambientColor = Color.Black.copy(alpha = 0.16f)
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                                shape = RoundedCornerShape(26.dp)
+                            )
+                            .clip(RoundedCornerShape(26.dp))
+                            .drawWithContent {
+                                drawContent()
+                                if (triggerCapture) {
+                                    val scale = 2.5f
+                                    val w = (size.width * scale).toInt()
+                                    val h = (size.height * scale).toInt()
+                                    if (w > 0 && h > 0) {
+                                        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                                        val composeCanvas = Canvas(android.graphics.Canvas(bitmap))
+                                        composeCanvas.scale(scale, scale)
+                                        val originalCanvas = drawContext.canvas
+                                        drawContext.canvas = composeCanvas
+                                        drawContent()
+                                        drawContext.canvas = originalCanvas
+                                        val cb = capturedCallback
+                                        capturedCallback = null
+                                        triggerCapture = false
+                                        cb?.invoke(bitmap)
+                                    }
+                                }
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AnimatedContent(
+                            targetState = selectedStyle,
+                            transitionSpec = {
+                                (fadeIn(animationSpec = tween(200)) + scaleIn(initialScale = 0.97f, animationSpec = tween(200)))
+                                    .togetherWith(fadeOut(animationSpec = tween(150)))
+                            },
+                            label = "NoteCardStyleTransition"
+                        ) { targetStyle ->
+                            MyApplicationTheme(
+                                darkTheme = isPreviewDark,
+                                dynamicColor = userDynamicColor,
+                                typographyPrefs = typographyPrefs
+                            ) {
+                                NoteShareCard(
+                                    item = item,
+                                    noteBody = noteBody,
+                                    style = targetStyle,
+                                    showAttribution = showAttribution,
+                                    tagline = currentTagline
+                                )
+                            }
+                        }
+                    }
+                },
+                sheetContent = {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 480.dp)
+                            .padding(horizontal = 20.dp)
+                            .navigationBarsPadding()
+                            .padding(bottom = 28.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Control Toolbar Row (Connected Style Switcher, Connected Tagline + Shuffle, Theme Capsule)
+                        ShareControlToolbar(
+                            styles = NoteShareStyle.entries,
+                            selectedStyle = selectedStyle,
+                            onStyleSelected = {
+                                selectedStyle = it
+                                SharePreferencesManager.setNoteShareStyle(context, it)
+                            },
+                            styleLabel = { it.displayName },
+                            styleIcon = { if (it == NoteShareStyle.EDITORIAL) R.drawable.ic_custom_markdown else R.drawable.ic_custom_quote },
+                            showAttribution = showAttribution,
+                            onToggleAttribution = {
+                                val updated = !showAttribution
+                                showAttribution = updated
+                                SharePreferencesManager.setAttributionEnabled(context, updated)
+                            },
+                            onShuffleTagline = { currentTagline = CobaltTaglines.getRandom() },
+                            isDark = isPreviewDark,
+                            onToggleTheme = { isPreviewDark = !isPreviewDark }
+                        )
+
+                        // Inline Clipboard Warning Message (Shown if note exceeds safe clipboard memory limits)
+                        if (clipboardError != null) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.75f),
+                                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_close),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = clipboardError.orEmpty(),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                            }
+                        }
+
+                        // Contextual Export Actions
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.surface,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                // Option 1: Share as Card (High-Resolution 4K Image)
+                                ShareActionRowItem(
+                                    icon = painterResource(id = R.drawable.ic_custom_image),
+                                    title = "Share card image (4K)",
+                                    subtitle = "High-resolution ${if (selectedStyle == NoteShareStyle.EDITORIAL) "Document" else "Quote"} visual card",
+                                    trailing = {
+                                        if (isExporting) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(20.dp),
+                                                strokeWidth = 2.dp,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        } else {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_custom_chevron_right),
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        if (isExporting) return@ShareActionRowItem
+                                        isExporting = true
+                                        capturedCallback = { bitmap ->
+                                            coroutineScope.launch {
+                                                try {
+                                                    ShareImageExporter.exportAndShareBitmap(
+                                                        context = context,
+                                                        bitmap = bitmap,
+                                                        chooserTitle = "Share Note Card"
+                                                    )
+                                                    onDismissRequest()
+                                                } catch (e: Throwable) {
+                                                    android.util.Log.e("CobaltShare", "Error exporting note card image", e)
+                                                } finally {
+                                                    isExporting = false
+                                                }
+                                            }
+                                        }
+                                        triggerCapture = true
+                                    }
+                                )
+
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f),
+                                    thickness = 0.5.dp
+                                )
+
+                                // Option 2: Share as Markdown File (.md) with clean sanitized filename
+                                ShareActionRowItem(
+                                    icon = painterResource(id = R.drawable.ic_custom_markdown),
+                                    title = "Share as Markdown (.md)",
+                                    subtitle = "Clean file with sanitized title",
+                                    trailing = {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_custom_chevron_right),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    },
+                                    onClick = {
+                                        coroutineScope.launch {
+                                            ShareImageExporter.shareNoteAsMarkdownFile(
+                                                context = context,
+                                                item = item,
+                                                noteBody = noteBody
+                                            )
+                                            onDismissRequest()
+                                        }
+                                    }
+                                )
+
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f),
+                                    thickness = 0.5.dp
+                                )
+
+                                // Option 3: Share as Text
+                                ShareActionRowItem(
+                                    icon = painterResource(id = R.drawable.ic_custom_text),
+                                    title = "Share as text",
+                                    subtitle = "Direct text to messaging or notes",
+                                    trailing = {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.ic_custom_chevron_right),
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    },
+                                    onClick = {
+                                        ShareImageExporter.shareNoteAsText(context, item, noteBody)
+                                        onDismissRequest()
+                                    }
+                                )
+
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f),
+                                    thickness = 0.5.dp
+                                )
+
+                                // Option 4: Copy Note Text (with large-note memory protection)
+                                ShareActionRowItem(
+                                    icon = painterResource(id = if (isCopied) R.drawable.ic_custom_copy_success else R.drawable.ic_custom_copy),
+                                    title = if (isCopied) "Text copied!" else "Copy note text",
+                                    subtitle = if (isCopied) "Copied to clipboard" else "${noteBody.length} characters",
+                                    iconTint = MaterialTheme.colorScheme.primary,
+                                    iconBgColor = if (isCopied) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                                    titleColor = if (isCopied) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    trailing = if (isCopied) {
+                                        {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_custom_check),
+                                                contentDescription = "Copied",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    } else null,
+                                    onClick = {
+                                        if (isCopied) return@ShareActionRowItem
+                                        clipboardError = null
+                                        val status = ShareImageExporter.copyToClipboardSafe(context, noteBody, label = "Cobalt Note")
+                                        when (status) {
+                                            ShareImageExporter.CopyStatus.SUCCESS -> {
+                                                isCopied = true
+                                                coroutineScope.launch {
+                                                    delay(650)
+                                                    onDismissRequest()
+                                                }
+                                            }
+                                            ShareImageExporter.CopyStatus.TOO_LARGE -> {
+                                                clipboardError = "Note is too large for clipboard (~${noteBody.length / 1000}KB). Please share as a .md file."
+                                            }
+                                            ShareImageExporter.CopyStatus.ERROR -> {
+                                                clipboardError = "Could not copy note text to clipboard."
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            )
+        }
+    }
+}
+
+/**
+ * Custom layout that places the hero preview card so it protrudes above the rounded
+ * top edge of the bottom sheet container into the scrim backdrop.
+ */
+@Composable
+private fun FloatingHeroSheetLayout(
+    modifier: Modifier = Modifier,
+    heroCard: @Composable () -> Unit,
+    sheetContent: @Composable () -> Unit
+) {
+    Layout(
+        modifier = modifier,
+        content = {
+            // 0: Sheet Background Surface
+            Surface(
+                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                tonalElevation = 3.dp,
+                shadowElevation = 8.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {}
+
+            // 1: Hero Preview Card
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .wrapContentSize(Alignment.Center),
+                contentAlignment = Alignment.Center
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = if (item.type == SavedItemType.CODE) "SHARE CODE" else "SHARE NOTE",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = item.title.takeIf { it.isNotBlank() && !it.startsWith("http") } ?: item.displayTitle(context),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                IconButton(
-                    onClick = onDismissRequest,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_custom_close),
-                        contentDescription = "Close share sheet",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
+                heroCard()
             }
 
-            // Floating Preview Window (Elevated card with smooth AnimatedContent transition; no swipe gesture)
-            Surface(
-                shape = RoundedCornerShape(26.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-                shadowElevation = 6.dp,
-                modifier = Modifier.fillMaxWidth()
+            // 2: Sheet Content (Controls + Actions)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentSize(Alignment.Center),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp)
-                        .drawWithContent {
-                            drawContent()
-                            if (triggerCapture) {
-                                // 4K Ultra-Crisp Rendering Scale Factor (~2.5x scaling)
-                                val scale = 2.5f
-                                val w = (size.width * scale).toInt()
-                                val h = (size.height * scale).toInt()
-                                if (w > 0 && h > 0) {
-                                    val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-                                    val composeCanvas = Canvas(android.graphics.Canvas(bitmap))
-                                    composeCanvas.scale(scale, scale)
-                                    val originalCanvas = drawContext.canvas
-                                    drawContext.canvas = composeCanvas
-                                    drawContent()
-                                    drawContext.canvas = originalCanvas
-                                    val cb = capturedCallback
-                                    capturedCallback = null
-                                    triggerCapture = false
-                                    cb?.invoke(bitmap)
-                                }
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    AnimatedContent(
-                        targetState = selectedStyle,
-                        transitionSpec = {
-                            (fadeIn(animationSpec = tween(200)) + scaleIn(initialScale = 0.97f, animationSpec = tween(200)))
-                                .togetherWith(fadeOut(animationSpec = tween(150)))
-                        },
-                        label = "NoteCardStyleTransition"
-                    ) { targetStyle ->
-                        MyApplicationTheme(
-                            darkTheme = isPreviewDark,
-                            dynamicColor = userDynamicColor,
-                            typographyPrefs = typographyPrefs
-                        ) {
-                            NoteShareCard(
-                                item = item,
-                                noteBody = noteBody,
-                                style = targetStyle,
-                                showAttribution = showAttribution,
-                                tagline = currentTagline
-                            )
-                        }
-                    }
-                }
+                sheetContent()
             }
+        }
+    ) { measurables, constraints ->
+        val cardPlaceable = measurables[1].measure(constraints.copy(minHeight = 0))
+        val cardHeight = cardPlaceable.height
 
-            // Control Toolbar Row (Connected Style Switcher, Connected Tagline + Shuffle, Theme Capsule)
-            ShareControlToolbar(
-                styles = NoteShareStyle.entries,
-                selectedStyle = selectedStyle,
-                onStyleSelected = {
-                    selectedStyle = it
-                    SharePreferencesManager.setNoteShareStyle(context, it)
-                },
-                styleLabel = { it.displayName },
-                styleIcon = { if (it == NoteShareStyle.EDITORIAL) R.drawable.ic_custom_markdown else R.drawable.ic_custom_quote },
-                showAttribution = showAttribution,
-                onToggleAttribution = {
-                    val updated = !showAttribution
-                    showAttribution = updated
-                    SharePreferencesManager.setAttributionEnabled(context, updated)
-                },
-                onShuffleTagline = { currentTagline = CobaltTaglines.getRandom() },
-                isDark = isPreviewDark,
-                onToggleTheme = { isPreviewDark = !isPreviewDark }
-            )
+        // Top ~52% of card protrudes above the sheet container
+        val protrudeAmount = (cardHeight * 0.52f).roundToInt()
+        val overlapInSheet = cardHeight - protrudeAmount
+        val spacingBelowCard = 16.dp.roundToPx()
 
-            // Inline Clipboard Warning Message (Shown if note exceeds safe clipboard memory limits)
-            if (clipboardError != null) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.75f),
-                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_custom_close),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = clipboardError.orEmpty(),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                }
-            }
+        val contentPlaceable = measurables[2].measure(constraints.copy(minHeight = 0))
 
-            // Contextual Export Actions
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                    // Option 1: Share as Card (High-Resolution 4K Image)
-                    ShareActionRowItem(
-                        icon = painterResource(id = R.drawable.ic_custom_image),
-                        title = "Share card image (4K)",
-                        subtitle = "High-resolution ${if (selectedStyle == NoteShareStyle.EDITORIAL) "Document" else "Quote"} visual card",
-                        trailing = {
-                            if (isExporting) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            } else {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_chevron_right),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        },
-                        onClick = {
-                            if (isExporting) return@ShareActionRowItem
-                            isExporting = true
-                            capturedCallback = { bitmap ->
-                                coroutineScope.launch {
-                                    try {
-                                        ShareImageExporter.exportAndShareBitmap(
-                                            context = context,
-                                            bitmap = bitmap,
-                                            chooserTitle = "Share Note Card"
-                                        )
-                                        onDismissRequest()
-                                    } catch (e: Throwable) {
-                                        android.util.Log.e("CobaltShare", "Error exporting note card image", e)
-                                    } finally {
-                                        isExporting = false
-                                    }
-                                }
-                            }
-                            triggerCapture = true
-                        }
-                    )
+        val sheetSurfaceHeight = overlapInSheet + spacingBelowCard + contentPlaceable.height
+        val sheetSurfacePlaceable = measurables[0].measure(
+            Constraints.fixed(constraints.maxWidth, sheetSurfaceHeight)
+        )
 
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
-                        thickness = 0.5.dp
-                    )
+        val totalHeight = protrudeAmount + sheetSurfaceHeight
 
-                    // Option 2: Share as Markdown File (.md) with clean sanitized filename
-                    ShareActionRowItem(
-                        icon = painterResource(id = R.drawable.ic_custom_markdown),
-                        title = "Share as Markdown (.md)",
-                        subtitle = "Clean file with sanitized title",
-                        trailing = {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_chevron_right),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                modifier = Modifier.size(18.dp)
-                            )
-                        },
-                        onClick = {
-                            coroutineScope.launch {
-                                ShareImageExporter.shareNoteAsMarkdownFile(
-                                    context = context,
-                                    item = item,
-                                    noteBody = noteBody
-                                )
-                                onDismissRequest()
-                            }
-                        }
-                    )
+        layout(constraints.maxWidth, totalHeight) {
+            // 1. Draw sheet background starting at protrudeAmount
+            sheetSurfacePlaceable.placeRelative(0, protrudeAmount)
 
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
-                        thickness = 0.5.dp
-                    )
+            // 2. Draw hero card floating at top (y = 0)
+            val cardX = (constraints.maxWidth - cardPlaceable.width) / 2
+            cardPlaceable.placeRelative(cardX, 0)
 
-                    // Option 3: Share as Text
-                    ShareActionRowItem(
-                        icon = painterResource(id = R.drawable.ic_custom_text),
-                        title = "Share as text",
-                        subtitle = "Direct text to messaging or notes",
-                        trailing = {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_chevron_right),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                modifier = Modifier.size(18.dp)
-                            )
-                        },
-                        onClick = {
-                            ShareImageExporter.shareNoteAsText(context, item, noteBody)
-                            onDismissRequest()
-                        }
-                    )
-
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f),
-                        thickness = 0.5.dp
-                    )
-
-                    // Option 4: Copy Note Text (with large-note memory protection)
-                    ShareActionRowItem(
-                        icon = painterResource(id = if (isCopied) R.drawable.ic_custom_copy_success else R.drawable.ic_custom_copy),
-                        title = if (isCopied) "Text copied!" else "Copy note text",
-                        subtitle = if (isCopied) "Copied to clipboard" else "${noteBody.length} characters",
-                        iconTint = MaterialTheme.colorScheme.primary,
-                        iconBgColor = if (isCopied) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
-                        titleColor = if (isCopied) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                        trailing = if (isCopied) {
-                            {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_check),
-                                    contentDescription = "Copied",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        } else null,
-                        onClick = {
-                            if (isCopied) return@ShareActionRowItem
-                            clipboardError = null
-                            val status = ShareImageExporter.copyToClipboardSafe(context, noteBody, label = "Cobalt Note")
-                            when (status) {
-                                ShareImageExporter.CopyStatus.SUCCESS -> {
-                                    isCopied = true
-                                    coroutineScope.launch {
-                                        delay(650)
-                                        onDismissRequest()
-                                    }
-                                }
-                                ShareImageExporter.CopyStatus.TOO_LARGE -> {
-                                    clipboardError = "Note is too large for clipboard (~${noteBody.length / 1000}KB). Please share as a .md file."
-                                }
-                                ShareImageExporter.CopyStatus.ERROR -> {
-                                    clipboardError = "Could not copy note text to clipboard."
-                                }
-                            }
-                        }
-                    )
-                }
-            }
+            // 3. Draw controls and actions below the card
+            val contentX = (constraints.maxWidth - contentPlaceable.width) / 2
+            val contentY = cardHeight + spacingBelowCard
+            contentPlaceable.placeRelative(contentX, contentY)
         }
     }
 }
@@ -512,4 +570,3 @@ private fun ShareActionRowItem(
         trailing?.invoke()
     }
 }
-

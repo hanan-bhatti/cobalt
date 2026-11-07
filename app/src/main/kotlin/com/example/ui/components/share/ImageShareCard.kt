@@ -34,6 +34,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -163,49 +164,44 @@ fun ImageShareCard(
         }
     }
 
+    val cardShape = if (style == ImageShareStyle.POLAROID) RectangleShape else RoundedCornerShape(20.dp)
+
     // Outer export frame guaranteeing solid background and high contrast
     Surface(
         color = MaterialTheme.colorScheme.background,
-        shape = RoundedCornerShape(24.dp),
+        shape = cardShape,
         modifier = modifier.fillMaxWidth()
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            when (style) {
-                ImageShareStyle.POLAROID -> {
-                    PolaroidStyleCard(
-                        imageModel = imageModel,
-                        aspectRatio = adaptiveAspectRatio,
-                        caption = captionText,
-                        showAttribution = showAttribution,
-                        tagline = tagline,
-                        cobaltTypography = cobaltTypography,
-                        onImageDimensionsResolved = { w, h ->
-                            if (w > 0 && h > 0) {
-                                adaptiveAspectRatio = (w.toFloat() / h.toFloat()).coerceIn(0.2f, 5.0f)
-                            }
+        when (style) {
+            ImageShareStyle.POLAROID -> {
+                PolaroidStyleCard(
+                    imageModel = imageModel,
+                    aspectRatio = adaptiveAspectRatio,
+                    caption = captionText,
+                    showAttribution = showAttribution,
+                    tagline = tagline,
+                    cobaltTypography = cobaltTypography,
+                    onImageDimensionsResolved = { w, h ->
+                        if (w > 0 && h > 0) {
+                            adaptiveAspectRatio = (w.toFloat() / h.toFloat()).coerceIn(0.2f, 5.0f)
                         }
-                    )
-                }
-                ImageShareStyle.MINIMAL -> {
-                    MinimalStyleCard(
-                        imageModel = imageModel,
-                        aspectRatio = adaptiveAspectRatio,
-                        caption = captionText,
-                        showAttribution = showAttribution,
-                        tagline = tagline,
-                        cobaltTypography = cobaltTypography,
-                        onImageDimensionsResolved = { w, h ->
-                            if (w > 0 && h > 0) {
-                                adaptiveAspectRatio = (w.toFloat() / h.toFloat()).coerceIn(0.2f, 5.0f)
-                            }
+                    }
+                )
+            }
+            ImageShareStyle.MINIMAL -> {
+                MinimalStyleCard(
+                    imageModel = imageModel,
+                    aspectRatio = adaptiveAspectRatio,
+                    caption = captionText,
+                    showAttribution = showAttribution,
+                    tagline = tagline,
+                    cobaltTypography = cobaltTypography,
+                    onImageDimensionsResolved = { w, h ->
+                        if (w > 0 && h > 0) {
+                            adaptiveAspectRatio = (w.toFloat() / h.toFloat()).coerceIn(0.2f, 5.0f)
                         }
-                    )
-                }
+                    }
+                )
             }
         }
     }
@@ -213,7 +209,8 @@ fun ImageShareCard(
 
 /**
  * Classic Polaroid Instant Print Layout:
- * Features equal top/side photo margins, adaptive photo aspect ratio, and generous bottom chin.
+ * Features authentic sharp corners (no rounding), equal top/side margins, and a generous bottom chin
+ * with caption and attribution pinned to the bottom right.
  */
 @Composable
 private fun PolaroidStyleCard(
@@ -227,26 +224,25 @@ private fun PolaroidStyleCard(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        shape = RoundedCornerShape(18.dp),
+        shape = RectangleShape,
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-        tonalElevation = 2.dp,
         modifier = modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 18.dp),
+                .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             var isLoadError by remember { mutableStateOf(false) }
 
-            // Adaptive Photo Print Container (Adapts fully to photo aspect ratio)
+            // Adaptive Photo Print Container (Authentic sharp 90-degree corners)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(aspectRatio)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(RectangleShape)
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 contentAlignment = Alignment.Center
             ) {
@@ -289,15 +285,12 @@ private fun PolaroidStyleCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Polaroid Chin: Caption & Attribution
+            // Polaroid Chin: Caption & Attribution pinned to bottom right
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (caption.isNotBlank()) {
                     Text(
@@ -306,8 +299,8 @@ private fun PolaroidStyleCard(
                             fontFamily = cobaltTypography.textFontFamily,
                             fontWeight = FontWeight.Medium,
                             fontStyle = FontStyle.Italic,
-                            fontSize = 16.sp,
-                            lineHeight = 22.sp
+                            fontSize = 15.5.sp,
+                            lineHeight = 21.sp
                         ),
                         color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Center,
@@ -319,9 +312,9 @@ private fun PolaroidStyleCard(
 
                 if (showAttribution && tagline.isNotBlank()) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
                             shape = RoundedCornerShape(5.dp),
@@ -359,7 +352,7 @@ private fun PolaroidStyleCard(
 
 /**
  * Minimal Modern Frame Layout:
- * Sleek card presentation with edge-to-edge photo and bottom metadata bar.
+ * Refined presentation with edge-to-edge photo, sleek rounded corners, and attribution pinned to the bottom right.
  */
 @Composable
 private fun MinimalStyleCard(
@@ -373,19 +366,20 @@ private fun MinimalStyleCard(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
-        tonalElevation = 2.dp,
         modifier = modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             var isLoadError by remember { mutableStateOf(false) }
+
+            // Edge-to-edge photo with top rounded corners
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(aspectRatio)
-                    .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
+                    .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 contentAlignment = Alignment.Center
             ) {
@@ -428,10 +422,11 @@ private fun MinimalStyleCard(
                 }
             }
 
+            // Minimal metadata footer
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 if (caption.isNotBlank()) {
@@ -439,20 +434,22 @@ private fun MinimalStyleCard(
                         text = caption,
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontFamily = cobaltTypography.textFontFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.5.sp,
                             lineHeight = 20.sp
                         ),
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
 
                 if (showAttribution && tagline.isNotBlank()) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
                             shape = RoundedCornerShape(5.dp),
@@ -470,10 +467,13 @@ private fun MinimalStyleCard(
                             }
                         }
 
+                        Spacer(modifier = Modifier.width(6.dp))
+
                         Text(
                             text = tagline,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 0.2.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
