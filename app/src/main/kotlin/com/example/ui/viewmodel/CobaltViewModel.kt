@@ -26,6 +26,7 @@ import android.net.Uri
 import com.example.util.SafeLogger as Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.media.toSavedMedia
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.data.repository.CobaltRepository
@@ -483,23 +484,28 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         _showMediaSearchBottomSheet.value = false
     }
 
+    private var mediaSearchJob: kotlinx.coroutines.Job? = null
+    @Volatile private var mediaSearchGeneration = 0L
     fun searchMedia(query: String) {
+        mediaSearchJob?.cancel()
+        val generation = ++mediaSearchGeneration
         if (query.isBlank()) {
             _mediaSearchResults.value = emptyList()
             _isSearchingMedia.value = false
             return
         }
-        viewModelScope.launch {
+        mediaSearchJob = viewModelScope.launch {
             _isSearchingMedia.value = true
             try {
                 if (!isNetworkAvailable()) {
                     postFeedback("Offline mode • Searching cached & anime items", com.example.util.FeedbackSeverity.WARNING)
-                } else if (repository.getTmdbApiKey().isBlank()) {
-                    postFeedback("TMDb API key missing • Searching anime via Jikan. Add TMDb key in Profile for Movies & TV", com.example.util.FeedbackSeverity.WARNING)
                 }
 
                 val results = kotlinx.coroutines.withTimeoutOrNull(12_000L) {
-                    repository.searchMedia(query.trim())
+                    repository.searchMedia(query.trim()) { message ->
+                        if (generation == mediaSearchGeneration) postFeedback(message, com.example.util.FeedbackSeverity.WARNING,
+                            actionLabel = "Retry", onAction = { searchMedia(query) })
+                    }
                 }
 
                 if (results != null) {
@@ -513,7 +519,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                         onAction = { searchMedia(query) }
                     )
                 }
-            } catch (e: Exception) {
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (e: Exception) {
                 Log.e("CobaltVM", "searchMedia failed: ${e.message}")
                 _mediaSearchResults.value = emptyList()
                 postFeedback(
@@ -523,31 +530,14 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     onAction = { searchMedia(query) }
                 )
             } finally {
-                _isSearchingMedia.value = false
+                if (generation == mediaSearchGeneration) _isSearchingMedia.value = false
             }
         }
     }
 
     fun saveMediaItem(item: MediaSearchResultItem, watchStatus: String = "Plan to Watch", selectedFolders: List<String> = emptyList()) {
         val foldersToUse = if (selectedFolders.isNotEmpty()) selectedFolders else listOf("Media")
-        val newItem = SavedItem(
-            id = item.id,
-            type = SavedItemType.MEDIA,
-            title = item.title,
-            content = if (item.traktId != null) "https://trakt.tv/${if (item.mediaType == "movie") "movies" else "shows"}/${item.traktId}" else item.overview ?: "",
-            traktId = item.traktId, tmdbId = item.tmdbId, imdbId = item.imdbId,
-            extractedText = item.overview,
-            thumbnailPath = item.posterUrl,
-            backdropUrl = item.backdropUrl,
-            mediaType = item.mediaType,
-            watchStatus = watchStatus,
-            genres = item.genres,
-            watchProviders = item.watchProviders,
-            trailerUrl = item.trailerUrl,
-            folders = foldersToUse,
-            releaseYear = item.releaseYear,
-            rating = item.rating
-        )
+        val newItem = item.toSavedMedia(watchStatus, foldersToUse)
 
         // 1. Instantly close sheet
         closeMediaSearchSheet()
@@ -576,12 +566,15 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     fun enrichMediaItem(item: SavedItem, saveToDb: Boolean = true) {
         if (item.type != SavedItemType.MEDIA) return
         viewModelScope.launch {
+            try {
             val enriched = repository.enrichMediaItemDetails(item, saveToDb)
             if (!saveToDb) {
                 _activeCaptureItem.value = enriched
             } else if (_activeDetailItem.value?.id == item.id) {
                 _activeDetailItem.value = enriched
             }
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: Exception) { showToast("Couldn’t refresh media details. Saved information is kept.") }
         }
     }
 

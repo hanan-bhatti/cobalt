@@ -74,6 +74,9 @@ interface JikanApiService {
         @Query("limit") limit: Int = 10
     ): JikanAnimeSearchResponse
 
+    @GET("manga")
+    suspend fun searchManga(@Query("q") query: String, @Query("limit") limit: Int = 10): JikanAnimeSearchResponse
+
     @GET("anime/{id}/streaming")
     suspend fun getAnimeStreaming(
         @Path("id") id: Int
@@ -118,6 +121,18 @@ object MediaApiClient {
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(TmdbApiService::class.java)
+    }
+
+    @Volatile private var configuredJikan: Pair<String, JikanApiService>? = null
+    fun jikanService(baseUrl: String): JikanApiService {
+        val validated = com.example.media.MediaProviderSettings.validateJikanUrl(baseUrl)
+        configuredJikan?.takeIf { it.first == validated }?.let { return it.second }
+        return synchronized(this) {
+            configuredJikan?.takeIf { it.first == validated }?.second ?: Retrofit.Builder()
+                .baseUrl(validated).client(okHttpClient.newBuilder().followRedirects(false).followSslRedirects(false).build())
+                .addConverterFactory(MoshiConverterFactory.create(moshi)).build().create(JikanApiService::class.java)
+                .also { configuredJikan = validated to it }
+        }
     }
 
     val jikanApiService: JikanApiService by lazy {

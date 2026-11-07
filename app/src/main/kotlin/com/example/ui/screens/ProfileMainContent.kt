@@ -314,22 +314,9 @@ fun ProfileMainContent(
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 ClickableRow(
-                    title = "Movie & TV Metadata",
-                    subtitle = "TMDB API credentials and discovery settings",
+                    title = "Media & Providers",
+                    subtitle = "Trakt, TMDB, Jikan and search preferences",
                     leadingIconRes = R.drawable.ic_custom_movie,
-                    onClick = onNavigateToMovieApiKey
-                )
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                val traktAuth = remember { com.example.data.remote.trakt.TraktAuthManager.getInstance(context) }
-                val isTraktConnected by traktAuth.isConnected.collectAsState()
-                val traktUser by traktAuth.currentUser.collectAsState()
-                ClickableRow(
-                    title = "Trakt.tv Sync",
-                    subtitle = if (isTraktConnected) "Connected as @${traktUser?.username ?: "user"} • Two-way sync" else "Sync watched history, ratings & TV progress",
-                    leadingIconRes = R.drawable.ic_trakt,
                     onClick = onNavigateToTraktSync
                 )
             }

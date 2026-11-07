@@ -39,7 +39,11 @@ data class MediaSearchResultItem(
     val budget: Long? = null,
     val revenue: Long? = null,
     val status: String? = null,
-    val productionCompanies: List<String> = emptyList()
+    val productionCompanies: List<String> = emptyList(),
+    val traktId: Long? = null,
+    val tmdbId: Int? = null,
+    val imdbId: String? = null,
+    val mediaFacts: com.example.data.model.MediaFacts? = null
 )
 
 // TMDb DTOs
@@ -143,6 +147,7 @@ data class TmdbWatchProvidersResponse(
 
 @JsonClass(generateAdapter = true)
 data class TmdbWatchProviderCountry(
+    val link: String? = null,
     @param:Json(name = "flatrate") val flatrate: List<TmdbWatchProviderItem>? = null,
     @param:Json(name = "ads") val ads: List<TmdbWatchProviderItem>? = null,
     @param:Json(name = "rent") val rent: List<TmdbWatchProviderItem>? = null,
@@ -231,7 +236,12 @@ data class JikanAnimeResult(
     @param:Json(name = "aired") val aired: JikanAired? = null,
     @param:Json(name = "genres") val genres: List<JikanGenre>? = null,
     @param:Json(name = "trailer") val trailer: JikanTrailer? = null,
-    @param:Json(name = "score") val score: Double? = null
+    @param:Json(name = "score") val score: Double? = null,
+    @param:Json(name = "episodes") val episodes: Int? = null,
+    @param:Json(name = "chapters") val chapters: Int? = null,
+    @param:Json(name = "volumes") val volumes: Int? = null,
+    @param:Json(name = "status") val status: String? = null,
+    @param:Json(name = "url") val url: String? = null
 )
 
 @JsonClass(generateAdapter = true)

@@ -89,6 +89,7 @@ import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import com.example.data.model.getBestImagePath
 import com.example.data.remote.MediaSearchResultItem
+import com.example.media.toSavedMedia
 import com.example.data.repository.CobaltRepository
 import com.example.ui.screens.parseMarkdown
 import com.example.util.CobaltCustomTabsLauncher
@@ -1611,8 +1612,11 @@ private fun MediaHubSubpageContent(
     var query by remember { mutableStateOf("") }
     var searchResults by remember { mutableStateOf<List<MediaSearchResultItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
+    var searchError by remember { mutableStateOf<String?>(null) }
+    var retrySearch by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(query) {
+    LaunchedEffect(query, retrySearch) {
+        searchError = null
         val trimmed = query.trim()
         if (trimmed.isBlank()) {
             searchResults = emptyList()
@@ -1622,14 +1626,24 @@ private fun MediaHubSubpageContent(
         isLoading = true
         delay(350) // Debounce
         try {
-            searchResults = repository.searchMedia(trimmed)
-        } catch (_: Exception) {
+            searchResults = repository.searchMedia(trimmed) { if (query.trim() == trimmed) searchError = it }
+        } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+        catch (_: Exception) {
             searchResults = emptyList()
         } finally {
             isLoading = false
         }
     }
 
+    val searchErrorRow = @Composable {
+        searchError?.let { message ->
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(message, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                TextButton(onClick = { retrySearch++ }) { Text("Retry") }
+            }
+        }
+    }
     val searchHeader = @Composable {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1827,27 +1841,10 @@ private fun MediaHubSubpageContent(
                             .clickable {
                                 coroutineScope.launch {
                                     try {
-                                        val savedItem = SavedItem(
-                                            id = item.id,
-                                            type = SavedItemType.MEDIA,
-                                            title = item.title,
-                                            content = item.overview ?: "",
-                                            thumbnailPath = item.posterUrl,
-                                            backdropUrl = item.backdropUrl,
-                                            mediaType = item.mediaType,
-                                            watchStatus = "Plan to Watch",
-                                            releaseYear = item.releaseYear,
-                                            genres = item.genres,
-                                            watchProviders = item.watchProviders,
-                                            trailerUrl = item.trailerUrl,
-                                            rating = item.rating,
-                                            folders = listOf("Media")
-                                        )
-                                        val enriched = repository.enrichMediaItemDetails(savedItem, saveToDb = false)
-                                        repository.saveItem(enriched)
-                                        WidgetUpdater.update(context)
-                                    } catch (_: Exception) {}
-                                    onOpenItemInApp(item.id)
+                                        val saved = repository.saveNewMediaItem(item.toSavedMedia())
+                                        onOpenItemInApp(saved.id)
+                                    } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+                                    catch (_: Exception) { Toast.makeText(context, "Couldn’t save. Please retry.", Toast.LENGTH_SHORT).show() }
                                 }
                             },
                         shape = RoundedCornerShape(10.dp),
@@ -1926,25 +1923,7 @@ private fun MediaHubSubpageContent(
                                     if (isSaved) return@Button
                                     coroutineScope.launch {
                                         try {
-                                            val savedItem = SavedItem(
-                                                id = item.id,
-                                                type = SavedItemType.MEDIA,
-                                                title = item.title,
-                                                content = item.overview ?: "",
-                                                thumbnailPath = item.posterUrl,
-                                                backdropUrl = item.backdropUrl,
-                                                mediaType = item.mediaType,
-                                                watchStatus = "Plan to Watch",
-                                                releaseYear = item.releaseYear,
-                                                genres = item.genres,
-                                                watchProviders = item.watchProviders,
-                                                trailerUrl = item.trailerUrl,
-                                                rating = item.rating,
-                                                folders = listOf("Media")
-                                            )
-                                            val enriched = repository.enrichMediaItemDetails(savedItem, saveToDb = false)
-                                            repository.saveItem(enriched)
-                                            WidgetUpdater.update(context)
+                                            repository.saveNewMediaItem(item.toSavedMedia())
                                             isSaved = true
                                             Toast.makeText(context, "✓ Saved ${item.title}", Toast.LENGTH_SHORT).show()
                                         } catch (_: Exception) {
@@ -1982,11 +1961,13 @@ private fun MediaHubSubpageContent(
             searchResultsContent()
             Spacer(modifier = Modifier.height(8.dp))
             searchInputBar()
+            searchErrorRow()
         } else {
             // ═════════ BOTTOM DOCK REACHABILITY: Search Bar at Top ═════════
             searchHeader()
             Spacer(modifier = Modifier.height(8.dp))
             searchInputBar()
+            searchErrorRow()
             Spacer(modifier = Modifier.height(8.dp))
             searchResultsContent()
         }

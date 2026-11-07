@@ -38,7 +38,7 @@ object LegalDocs {
 
         **3. Media and Remote Content**
 
-        When you search for movies and TV shows, Cobalt contacts The Movie Database (TMDb) using your configured API key. When you search for anime, Cobalt contacts Jikan; new anime searches require an active internet connection, though previously saved anime details can be viewed offline. Uncached remote images will not load while offline.
+        When you search for movies and TV shows, Cobalt contacts The Movie Database (TMDb) using your configured API key. Anime and manga searches use your selected Jikan v4 server. A local server needs a connection to that server; saved catalogue details remain available offline. Search providers and source priority are controlled in Media & Providers. Uncached remote images will not load while offline.
 
         Posters, backdrops, cast photos, user avatars, and other remote images load automatically when media cards or details are displayed. When you save or share a URL, Cobalt automatically contacts the host website to fetch page titles and preview metadata. Opening saved items that reference remote media may download and cache those media files locally. Cobalt does not contact OMDb; that integration is unused.
 
@@ -128,7 +128,7 @@ object LegalDocs {
         A: Yes. When you save or share a URL, Cobalt automatically contacts the host website to fetch page titles and preview metadata.
 
         Q: How does movie and TV search work?
-        A: Searching movies and TV shows requires your own free TMDb API key configured in Profile settings. Anime search is powered by Jikan and requires an active internet connection, but does not need an API key.
+        A: Searching movies and TV shows requires your own free TMDb API key configured in Profile settings. Anime and manga search use Jikan without an API key. You can configure a private Jikan v4 server and read saved details offline.
 
         Q: Can I view anime and media offline?
         A: You can view previously saved media and anime details offline. However, new searches require an internet connection, and remote images that are not yet cached will not load while offline.

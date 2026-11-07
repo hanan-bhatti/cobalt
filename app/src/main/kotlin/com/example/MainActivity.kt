@@ -627,18 +627,18 @@ class MainActivity : ComponentActivity() {
 
                                     composable("movie_api_key") {
                                         ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
-                                            com.example.ui.screens.MovieApiKeyScreen(
-                                                viewModel = viewModel,
-                                                onNavigateBack = { navController.popBackStack() }
-                                            )
+                                            com.example.ui.screens.MovieApiKeyScreen(viewModel, onNavigateBack = { navController.popBackStack() })
                                         }
                                     }
                                     composable("trakt_sync_settings") {
                                         ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
-                                            com.example.ui.screens.TraktSyncSettingsScreen(
-                                                viewModel = viewModel,
-                                                onNavigateBack = { navController.popBackStack() }
-                                            )
+                                            com.example.ui.screens.MediaSettingsScreen(onBack = { navController.popBackStack() },
+                                                onTrakt = { navController.navigate("trakt_account_settings") }, onTmdb = { navController.navigate("movie_api_key") })
+                                        }
+                                    }
+                                    composable("trakt_account_settings") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.TraktSyncSettingsScreen(viewModel, onNavigateBack = { navController.popBackStack() })
                                         }
                                     }
                                     composable("edge_panel_settings") {

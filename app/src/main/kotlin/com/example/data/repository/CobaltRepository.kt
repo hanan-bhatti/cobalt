@@ -283,16 +283,26 @@ class CobaltRepository(
         com.example.util.SecretPreferences(prefs, "cobalt_prefs").putAll(mapOf("tmdb_api_key" to key))
     }
 
-    suspend fun searchMedia(query: String): List<MediaSearchResultItem> = withContext(Dispatchers.IO) {
+    suspend fun searchMedia(query: String, onSourceFailure: (String) -> Unit = {}): List<MediaSearchResultItem> = withContext(Dispatchers.IO) {
         if (query.isBlank()) return@withContext emptyList()
 
         val results = java.util.Collections.synchronizedList(mutableListOf<MediaSearchResultItem>())
         val apiKey = getTmdbApiKey()
 
+        savedItemDao.searchCachedMedia(query).forEach { entity ->
+            val cached = entity.toDomainModel()
+            results.add(MediaSearchResultItem(id = cached.id, title = cached.title, mediaType = cached.mediaType ?: "movie",
+                posterUrl = cached.thumbnailPath, backdropUrl = cached.backdropUrl, releaseYear = cached.releaseYear,
+                overview = cached.extractedText, genres = cached.genres, rating = cached.rating,
+                trailerUrl = cached.trailerUrl, traktId = cached.traktId, tmdbId = cached.tmdbId, imdbId = cached.imdbId, mediaFacts = cached.mediaFacts))
+        }
+        val unavailable = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+        val providers = com.example.media.MediaProviderSettings(context)
         val traktJob = async {
-            if (com.example.data.remote.trakt.TraktAuthManager.getInstance(context).hasValidToken()) {
+            if (providers.enabled("trakt") && com.example.data.remote.trakt.TraktAuthManager.getInstance(context).hasValidToken()) {
                 try {
-                    val found = com.example.data.remote.trakt.TraktSyncEngine.getApiService().searchMedia(query.trim())
+                    val found = withTimeoutOrNull(6_000L) { com.example.data.remote.trakt.TraktSyncEngine.getApiService().searchMedia(query.trim()) }
+                        ?: run { unavailable.add("Trakt"); emptyList() }
                     for (result in found) {
                         val movie = result.movie; val show = result.show
                         val ids = movie?.ids ?: show?.ids ?: continue
@@ -305,18 +315,19 @@ class CobaltRepository(
                             mediaType = kind, posterUrl = image("poster"), backdropUrl = image("fanart"),
                             releaseYear = (movie?.year ?: show?.year)?.toString(), overview = movie?.overview ?: show?.overview,
                             genres = show?.genres.orEmpty(), rating = movie?.rating ?: show?.rating,
-                            runtime = movie?.runtime ?: show?.runtime, traktId = ids.trakt, tmdbId = ids.tmdb, imdbId = ids.imdb)
+                            runtime = movie?.runtime ?: show?.runtime, trailerUrl = movie?.trailer ?: show?.trailer, traktId = ids.trakt, tmdbId = ids.tmdb, imdbId = ids.imdb)
                     }
                 } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
-                catch (_: Exception) { Log.w("CobaltRepo", "Trakt search unavailable") }
+                catch (_: Exception) { unavailable.add("Trakt"); Log.w("CobaltRepo", "Trakt search unavailable") }
             }
         }
         val tmdbJob = async {
-            if (apiKey.isNotBlank()) {
+            if (providers.enabled("tmdb") && apiKey.isNotBlank()) {
                 try {
                     val tmdbResponse = withTimeoutOrNull(6000L) {
                         MediaApiClient.tmdbApiService.searchMulti(query = query, apiKey = apiKey)
                     }
+                    if (tmdbResponse == null) unavailable.add("TMDB")
                     tmdbResponse?.results?.forEach { item ->
                         val type = item.mediaType
                         if (type == "movie" || type == "tv") {
@@ -347,17 +358,20 @@ class CobaltRepository(
                             )
                         }
                     }
-                } catch (e: Exception) {
-                    Log.e("CobaltRepo", "TMDb searchMulti failed: ${e.message}", e)
+                } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+                catch (e: Exception) {
+                    unavailable.add("TMDB")
+                    Log.w("CobaltRepo", "TMDB search unavailable")
                 }
             }
         }
 
         val jikanJob = async {
-            try {
+            if (providers.enabled("jikan")) try {
                 val jikanResponse = withTimeoutOrNull(3500L) {
-                    MediaApiClient.jikanApiService.searchAnime(query = query, limit = 10)
+                    MediaApiClient.jikanService(providers.jikanUrl).searchAnime(query = query, limit = 10)
                 }
+                if (jikanResponse == null) unavailable.add("Jikan")
                 jikanResponse?.data?.forEach { item ->
                     val title = item.titleEnglish?.takeIf { it.isNotBlank() } ?: item.title ?: ""
                     val posterUrl = item.images?.jpg?.largeImageUrl ?: item.images?.jpg?.imageUrl
@@ -372,6 +386,7 @@ class CobaltRepository(
                     results.add(
                         MediaSearchResultItem(
                             id = "jikan_anime_${item.malId}",
+                            mediaFacts = com.example.data.model.MediaFacts("Jikan", item.url, episodeCount = item.episodes, publicationStatus = item.status),
                             title = title,
                             mediaType = "anime",
                             posterUrl = posterUrl,
@@ -385,16 +400,36 @@ class CobaltRepository(
                         )
                     )
                 }
-            } catch (e: Exception) {
-                Log.w("CobaltRepo", "Jikan searchAnime fallback: ${e.message}")
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (e: Exception) {
+                unavailable.add("Jikan")
+                Log.w("CobaltRepo", "Jikan search unavailable")
             }
         }
 
+        val mangaJob = async {
+            if (providers.enabled("jikan") && providers.mangaEnabled) try {
+                val data = withTimeoutOrNull(5000L) { MediaApiClient.jikanService(providers.jikanUrl).searchManga(query, 10) }
+                if (data == null) unavailable.add("Jikan")
+                data?.data.orEmpty().forEach { manga -> results.add(MediaSearchResultItem(
+                    id = "jikan_manga_${manga.malId}", title = manga.titleEnglish ?: manga.title ?: "Manga",
+                    mediaType = "manga", posterUrl = manga.images?.jpg?.largeImageUrl ?: manga.images?.jpg?.imageUrl,
+                    overview = manga.synopsis, rating = manga.score, genres = manga.genres.orEmpty().mapNotNull { it.name },
+                    mediaFacts = com.example.data.model.MediaFacts("Jikan", manga.url, chapterCount = manga.chapters,
+                        volumeCount = manga.volumes, publicationStatus = manga.status))) }
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: Exception) { unavailable.add("Jikan"); Log.w("CobaltRepo", "Manga search unavailable") }
+        }
         traktJob.await()
         tmdbJob.await()
         jikanJob.await()
-        results.toList().sortedBy { if (it.traktId != null) 0 else 1 }
-            .distinctBy { Triple(it.title.lowercase(java.util.Locale.ROOT), it.releaseYear, it.mediaType) }
+        mangaJob.await()
+        if (unavailable.isNotEmpty()) onSourceFailure("${unavailable.sorted().joinToString(", ")} unavailable. Showing saved titles and other sources. Check settings or retry.")
+        com.example.media.MediaIdentity.merge(results.toList(), providers.priority).map { row ->
+            val existing = row.traktId?.let { savedItemDao.getItemByTraktId(it, row.mediaType) }
+                ?: row.tmdbId?.let { savedItemDao.getItemByTmdbId(it, row.mediaType) }
+            if (existing == null) row else row.copy(id = existing.id)
+        }
     }
 
     suspend fun enrichMediaItemDetails(item: SavedItem, saveToDb: Boolean = true): SavedItem = withContext(Dispatchers.IO) {
@@ -552,11 +587,11 @@ class CobaltRepository(
                 }
             }
         }
-    } else if (item.id.startsWith("jikan_") || item.mediaType?.lowercase() == "anime") {
+    } else if (item.mediaType != "manga" && (item.id.startsWith("jikan_") || item.mediaType?.lowercase() == "anime")) {
             val malId = item.id.substringAfterLast("_").toIntOrNull()
             if (malId != null && watchProviders.isEmpty()) {
                 try {
-                    val streamingResp = MediaApiClient.jikanApiService.getAnimeStreaming(malId)
+                    val streamingResp = MediaApiClient.jikanService(com.example.media.MediaProviderSettings(context).jikanUrl).getAnimeStreaming(malId)
                     val providers = streamingResp.data?.mapNotNull { it.name }?.filter { it.isNotBlank() }?.distinct() ?: emptyList()
                     if (providers.isNotEmpty()) {
                         watchProviders = providers
@@ -588,9 +623,17 @@ class CobaltRepository(
                 tmdbId = tmdbId ?: item.tmdbId
             )
             if (saveToDb) {
-                try { notePersistence.save(newItem) }
-                catch (error: IllegalStateException) {
-                    if (savedItemDao.isItemDeleted(item.id) != true && !com.example.notes.NoteDeletionFence(context).deleted(item.id)) throw error
+                // Enrichment owns catalogue fields only; never overwrite a newer rating, status or Trash operation.
+                db.withTransaction {
+                    val current = savedItemDao.getItemById(item.id)
+                    if (current != null && !current.isDeleted && !com.example.notes.NoteDeletionFence(context).deleted(item.id)) {
+                        val metadata = SavedItemEntity.fromDomainModel(newItem)
+                        savedItemDao.insertItem(current.copy(thumbnailPath = metadata.thumbnailPath, backdropUrl = metadata.backdropUrl,
+                            genresJson = metadata.genresJson, watchProvidersJson = metadata.watchProvidersJson, trailerUrl = metadata.trailerUrl,
+                            rating = metadata.rating, runtime = metadata.runtime, tagline = metadata.tagline, budget = metadata.budget,
+                            revenue = metadata.revenue, status = metadata.status, productionCompaniesJson = metadata.productionCompaniesJson,
+                            tmdbId = metadata.tmdbId ?: current.tmdbId))
+                    }
                 }
             }
             return@withContext newItem
@@ -836,6 +879,9 @@ class CobaltRepository(
         }
         val prefix = item.id.substringBeforeLast('_', item.id) + "_"
         val providerId = item.id.substringAfterLast('_')
+        val matched = item.traktId?.let { savedItemDao.getItemByTraktId(it, item.mediaType) }
+            ?: item.tmdbId?.let { savedItemDao.getItemByTmdbId(it, item.mediaType) }
+        if (matched != null && !fence.deleted(matched.id)) return@withContext matched.toDomainModel()
         val active = savedItemDao.activeMediaIds().firstOrNull { !fence.deleted(it) && (it == item.id || (it.startsWith(prefix) && it.endsWith("_$providerId"))) }
         val identity = active ?: if (fence.deleted(item.id) || existing?.isDeleted == true) prefix + java.util.UUID.randomUUID() + "_" + providerId else item.id
         val selected = sanitizeItemTitle(item.copy(id = identity))
@@ -845,7 +891,10 @@ class CobaltRepository(
             val saved = com.example.data.remote.trakt.TraktOutbox.savePlannedMedia(context, selected, db)
             com.example.widget.WidgetUpdater.update(context)
             saved
-        } else saveItem(selected)
+        } else saveItem(selected).also {
+            db.mediaTombstoneDao().clearMatching(selected.mediaType.orEmpty(), selected.traktId?.toString().orEmpty(),
+                selected.tmdbId?.toString().orEmpty(), selected.imdbId.orEmpty())
+        }
     }
 
     suspend fun addCustomFolder(
