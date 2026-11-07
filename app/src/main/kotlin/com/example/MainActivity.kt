@@ -341,6 +341,7 @@ class MainActivity : ComponentActivity() {
                 androidx.compose.runtime.DisposableEffect(navController) {
                     val listener = androidx.navigation.NavController.OnDestinationChangedListener { _, destination, _ ->
                         val route = destination.route ?: return@OnDestinationChangedListener
+                        viewModel.dismissUndoForNavigation()
                         if (!route.startsWith("detail") && viewModel.activeDetailItem.value != null) {
                             viewModel.closeDetailItem()
                         }
@@ -371,6 +372,8 @@ class MainActivity : ComponentActivity() {
                 val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
                 val useBlur = DevicePerformance.isDeviceCapableOfBlur(context) && !forceDisableBlur
                 val density = LocalDensity.current.density
+
+                LaunchedEffect(activeCaptureItem?.id) { viewModel.dismissUndoForNavigation() }
 
                 val captureBlurFraction by animateFloatAsState(
                     targetValue = if (activeCaptureItem != null) 1f else 0f,
@@ -893,6 +896,10 @@ class MainActivity : ComponentActivity() {
                             }
                             com.example.ui.components.MediaSearchBottomSheet(viewModel = viewModel)
                         }
+
+                        com.example.ui.components.DeleteUndoHost(
+                            viewModel, Modifier.align(Alignment.BottomCenter)
+                                .padding(horizontal = 20.dp, vertical = 96.dp))
 
                         val showProactiveSurvey by viewModel.showProactiveSurvey.collectAsState()
                         if (showProactiveSurvey) {
