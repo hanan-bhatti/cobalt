@@ -47,3 +47,11 @@
 -keep class com.example.links.LinkPreviewWorker {
     public <init>(android.content.Context, androidx.work.WorkerParameters);
 }
+
+# WorkManager also persists InputMerger names and reflects a no-argument constructor.
+# Full R8 removed that constructor in release, causing NoSuchMethodException and
+# failing one-time work before the Worker could run. Cover both built-in mergers
+# and any future custom merger, preserving only the reflective entry point.
+-keep class * extends androidx.work.InputMerger {
+    public <init>();
+}
