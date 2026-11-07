@@ -121,7 +121,7 @@ fun ImageShareCard(
     item: SavedItem,
     style: ImageShareStyle = ImageShareStyle.POLAROID,
     showAttribution: Boolean = true,
-    tagline: String = remember(item.id) { CobaltTaglines.getForSeed(item.id) },
+    tagline: String = remember { CobaltTaglines.getRandom() },
     customCaption: String? = null,
     modifier: Modifier = Modifier
 ) {

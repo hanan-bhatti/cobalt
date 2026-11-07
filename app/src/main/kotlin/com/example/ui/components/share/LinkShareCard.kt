@@ -70,7 +70,7 @@ fun LinkShareCard(
     item: SavedItem,
     style: LinkShareStyle = LinkShareStyle.CARD,
     showAttribution: Boolean = true,
-    tagline: String = remember(item.id) { CobaltTaglines.getForSeed(item.id) },
+    tagline: String = remember { CobaltTaglines.getRandom() },
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current

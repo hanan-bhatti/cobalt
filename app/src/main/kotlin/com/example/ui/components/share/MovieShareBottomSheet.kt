@@ -86,7 +86,7 @@ fun MovieShareBottomSheet(
     }
     val typographyPrefs = LocalCobaltTypography.current.prefs
 
-    var currentTagline by remember(item.id) { mutableStateOf(CobaltTaglines.getForSeed(item.id)) }
+    var currentTagline by remember { mutableStateOf(CobaltTaglines.getRandom()) }
     var isPreviewDark by remember { mutableStateOf(systemInDark) }
     var isExporting by remember { mutableStateOf(false) }
     var isCardCopied by remember { mutableStateOf(false) }
