@@ -34,9 +34,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -205,12 +208,12 @@ private fun TheatricalStyleCard(
                 .fillMaxWidth()
                 .padding(14.dp),
             horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalAlignment = Alignment.Top
+            verticalAlignment = Alignment.CenterVertically
         ) {
             // 2:3 Theatrical Poster
             Box(
                 modifier = Modifier
-                    .width(112.dp)
+                    .width(106.dp)
                     .aspectRatio(2f / 3f)
                     .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh),
@@ -236,7 +239,7 @@ private fun TheatricalStyleCard(
             // Movie Information Column
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(5.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // Media Type Tag
                 Text(
@@ -303,25 +306,23 @@ private fun TheatricalStyleCard(
                     }
                 }
 
-                // Genre Pills with Overflow Counter (+N)
+                // Frameless Genres with Bullet Dots (•)
                 if (item.genres.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    GenrePillsRow(genres = item.genres)
+                    FramelessGenresText(genres = item.genres, maxVisible = 3)
                 }
 
                 // Tagline in Italics
                 val taglineText = item.tagline?.takeIf { it.isNotBlank() } ?: item.extractedText?.takeIf { it.isNotBlank() }
                 if (!taglineText.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "\"$taglineText\"",
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontFamily = cobaltTypography.textFontFamily,
                             fontStyle = FontStyle.Italic,
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp
+                            fontSize = 11.5.sp,
+                            lineHeight = 15.5.sp
                         ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.88f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -422,10 +423,10 @@ private fun BackdropStyleCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(7.dp)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // Media Type & Year
+                // Media Type & Year & Runtime in one clean top meta row
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -471,7 +472,7 @@ private fun BackdropStyleCard(
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontFamily = cobaltTypography.textFontFamily,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 17.sp,
+                        fontSize = 17.5.sp,
                         lineHeight = 22.sp
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
@@ -479,9 +480,9 @@ private fun BackdropStyleCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                // Genre Pills with Overflow Counter (+N)
+                // Frameless Genres with Bullet Dots (•)
                 if (item.genres.isNotEmpty()) {
-                    GenrePillsRow(genres = item.genres)
+                    FramelessGenresText(genres = item.genres, maxVisible = 3)
                 }
 
                 // Tagline in Italics
@@ -506,52 +507,52 @@ private fun BackdropStyleCard(
 }
 
 /**
- * Genre pills row showing at most 3 genres and an overflow pill (+N) if more exist.
+ * Clean, editorial frameless genres line separated by subtle bullet dots (•),
+ * with an accent overflow count (+N) when more than [maxVisible] genres exist.
  */
 @Composable
-private fun GenrePillsRow(
+private fun FramelessGenresText(
     genres: List<String>,
     maxVisible: Int = 3,
     modifier: Modifier = Modifier
 ) {
-    val visibleGenres = remember(genres) { genres.take(maxVisible) }
-    val extraCount = remember(genres) { (genres.size - maxVisible).coerceAtLeast(0) }
+    if (genres.isEmpty()) return
 
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(5.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        visibleGenres.forEach { genre ->
-            Surface(
-                shape = RoundedCornerShape(7.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
-            ) {
-                Text(
-                    text = genre,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                )
+    val visibleGenres = remember(genres, maxVisible) { genres.take(maxVisible) }
+    val extraCount = remember(genres, maxVisible) { (genres.size - maxVisible).coerceAtLeast(0) }
+    val textColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val dotColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+    val extraColor = MaterialTheme.colorScheme.primary
+
+    val annotatedString = remember(visibleGenres, extraCount, textColor, dotColor, extraColor) {
+        buildAnnotatedString {
+            visibleGenres.forEachIndexed { index, genre ->
+                if (index > 0) {
+                    withStyle(SpanStyle(color = dotColor)) {
+                        append("  •  ")
+                    }
+                }
+                withStyle(SpanStyle(color = textColor, fontWeight = FontWeight.Medium)) {
+                    append(genre)
+                }
             }
-        }
-
-        if (extraCount > 0) {
-            Surface(
-                shape = RoundedCornerShape(7.dp),
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
-                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
-            ) {
-                Text(
-                    text = "+$extraCount",
-                    fontSize = 10.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
-                )
+            if (extraCount > 0) {
+                withStyle(SpanStyle(color = dotColor)) {
+                    append("  •  ")
+                }
+                withStyle(SpanStyle(color = extraColor, fontWeight = FontWeight.Bold)) {
+                    append("+$extraCount")
+                }
             }
         }
     }
+
+    Text(
+        text = annotatedString,
+        fontSize = 11.5.sp,
+        lineHeight = 16.sp,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
+    )
 }
