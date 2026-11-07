@@ -81,14 +81,24 @@ fun NoteShareCard(
 
     val displayTitle = remember(item.title, noteBody) {
         val t = item.title.trim()
+        val cleanedFirstLine = noteBody.lines().firstOrNull { it.isNotBlank() }
+            ?.replace(Regex("^#+\\s*"), "")
+            ?.replace(Regex("^>+\\s*"), "")
+            ?.trim()
+            ?.take(80)
+
         if (t.isNotBlank() && !t.startsWith("http") && !t.startsWith("/")) {
-            t
+            // Avoid duplicate header if the title is identical to the single quote or body line
+            val fullBodyCleaned = noteBody.trim().removePrefix(">").trim()
+            if (t.equals(fullBodyCleaned, ignoreCase = true) || (t.equals(cleanedFirstLine, ignoreCase = true) && noteBody.lines().count { it.isNotBlank() } <= 1)) {
+                null
+            } else {
+                t
+            }
         } else {
-            // Derive title from first line of note
-            noteBody.lines().firstOrNull { it.isNotBlank() }
-                ?.replace(Regex("^#+\\s*"), "")
-                ?.trim()
-                ?.take(80)
+            // Derived from note body - only show if there is more content following it
+            val restOfBody = noteBody.lines().filter { it.isNotBlank() }.drop(1).joinToString(" ").trim()
+            if (restOfBody.isBlank()) null else cleanedFirstLine
         }
     }
 
@@ -217,24 +227,12 @@ private fun EditorialNoteCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Header: Category • Date • Word Count
+            // Header: Date • Word Count
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
-                    text = if (item.type == SavedItemType.CODE) "CODE" else "NOTE",
-                    fontSize = 10.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.1.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "•",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                )
                 Text(
                     text = formattedDate,
                     fontSize = 11.5.sp,
@@ -384,22 +382,15 @@ private fun CompactNoteCard(
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Compact Header: Type badge & Date in one sleek row
+            // Compact Header: Date
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = if (item.type == SavedItemType.CODE) "CODE" else "NOTE",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
                     text = formattedDate,
-                    fontSize = 10.5.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
                 )
