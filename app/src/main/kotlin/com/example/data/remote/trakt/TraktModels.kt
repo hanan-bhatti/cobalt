@@ -122,6 +122,8 @@ data class TraktIds(
 
 @JsonClass(generateAdapter = true)
 data class TraktMovie(
+    val trailer: String? = null,
+    val images: Map<String, List<String>>? = null,
     val title: String = "",
     val year: Int? = null,
     val ids: TraktIds = TraktIds(),
@@ -140,6 +142,8 @@ data class TraktAirs(
 
 @JsonClass(generateAdapter = true)
 data class TraktShow(
+    val trailer: String? = null,
+    val images: Map<String, List<String>>? = null,
     val title: String = "",
     val year: Int? = null,
     val ids: TraktIds = TraktIds(),
@@ -263,16 +267,20 @@ data class TraktSyncPayload(
     val episodes: List<TraktSyncEpisodePayload>? = null
 )
 
+/** Outbound IDs omit unknown providers rather than sending an invalid Trakt ID of zero. */
+@JsonClass(generateAdapter = true)
+data class TraktSyncIds(val trakt: Long? = null, val tmdb: Int? = null, val imdb: String? = null)
+
 @JsonClass(generateAdapter = true)
 data class TraktSyncItemPayload(
-    val ids: TraktIds,
+    val ids: TraktSyncIds,
     val watched_at: String? = null,
     val rating: Int? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class TraktSyncShowPayload(
-    val ids: TraktIds,
+    val ids: TraktSyncIds,
     val watched_at: String? = null,
     val rating: Int? = null,
     val seasons: List<TraktSyncSeasonPayload>? = null
@@ -395,7 +403,8 @@ data class TraktSeasonEpisodeItem(
     val rating: Double? = null,
     val votes: Int? = null,
     val runtime: Int? = null,
-    val first_aired: String? = null
+    val first_aired: String? = null,
+    val images: Map<String, List<String>>? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -415,3 +424,10 @@ data class TraktPerson(
     val name: String = "",
     val ids: TraktIds = TraktIds()
 )
+
+@JsonClass(generateAdapter = true)
+data class TraktSearchResult(val type: String = "", val movie: TraktMovie? = null, val show: TraktShow? = null)
+
+@JsonClass(generateAdapter = true)
+data class TraktPlaybackEpisode(val progress: Double = 0.0, val paused_at: String? = null,
+    val episode: TraktSeasonEpisodeItem? = null, val show: TraktShow? = null)

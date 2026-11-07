@@ -36,6 +36,14 @@ class CobaltApplication : Application(), ImageLoaderFactory {
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
             // Wake durable link jobs after a crash between the item commit and WorkManager enqueue.
             runCatching { com.example.links.LinkPreviewWorker.schedule(this@CobaltApplication) }
+            if (!com.example.notes.StartupCrashGuard.shouldPause(this@CobaltApplication) &&
+                !com.example.notes.NoteMigrationManager.shouldPauseBackground(this@CobaltApplication)) runCatching {
+                val auth = com.example.data.remote.trakt.TraktAuthManager.getInstance(this@CobaltApplication)
+                if (auth.hasValidToken() && com.example.data.local.AppDatabase.getDatabase(this@CobaltApplication)
+                    .traktOutboxDao().pending(auth.syncSessionId(), 1).isNotEmpty())
+                    com.example.util.TraktSyncWorker.enqueueOneTimeSync(this@CobaltApplication, uploadOnly = true)
+                if (auth.hasValidToken()) com.example.util.TraktSyncWorker.scheduleDeferredRetry(this@CobaltApplication)
+            }
             com.example.data.cleanup.LegacyPathTitleCleanup.runCleanup(this@CobaltApplication)
         }
     }

@@ -99,6 +99,7 @@ class TraktAuthManager(
     private val sessionEpoch = AtomicLong(System.currentTimeMillis())
     @Volatile private var isDisconnecting = false
     private val disconnectMutex = Mutex()
+    private val refreshMutex = Mutex()
     private val sessionMutex = Mutex()
 
     fun currentSessionEpoch(): Long = sessionEpoch.get()
@@ -125,6 +126,8 @@ class TraktAuthManager(
         TraktClient.tokenProvider = { getAccessToken() }
         TraktClient.clientIdProvider = { getClientId() }
         TraktClient.baseUrlProvider = { getBaseUrl() }
+        TraktClient.retryNotBeforeProvider = { prefs.getLong("retry_not_before", 0L) }
+        TraktClient.saveRetryNotBefore = { until -> prefs.edit().putLong("retry_not_before", until).commit(); Unit }
     }
 
     private val _isConnected = MutableStateFlow(hasValidToken())
@@ -154,6 +157,13 @@ class TraktAuthManager(
     // ==========================================
     // ADVANCED / SELF-HOSTED CONFIGURATION
     // ==========================================
+
+    @Synchronized fun syncSessionId(): String {
+        prefs.getString("sync_session_id", null)?.let { return it }
+        val id = java.util.UUID.randomUUID().toString()
+        check(prefs.edit().putString("sync_session_id", id).commit()) { "Could not retain sync ownership" }
+        return id
+    }
 
     fun getClientId(): String {
         return prefs.getString(KEY_CUSTOM_CLIENT_ID, null)?.takeIf { it.isNotBlank() } ?: DEFAULT_CLIENT_ID
@@ -233,17 +243,29 @@ class TraktAuthManager(
     // SYNC PREFERENCES & METRICS
     // ==========================================
 
+    @Synchronized
+    private fun setSyncPreference(key: String, category: String, enabled: Boolean) {
+        val previous = prefs.getBoolean(key, true)
+        val edit = prefs.edit().putBoolean(key, enabled)
+        if (enabled && !previous) edit.putString("dirty_$category", java.util.UUID.randomUUID().toString())
+        edit.apply()
+        if (enabled && hasValidToken()) authScope.launch {
+            runCatching { com.example.util.TraktSyncWorker.enqueueOneTimeSync(context, uploadOnly = previous) }
+        }
+    }
+    internal fun dirtyCategory(category: String): String? = prefs.getString("dirty_$category", null)
+    @Synchronized
+    internal fun acknowledgeCategory(category: String, generation: String?) {
+        if (generation != null && dirtyCategory(category) == generation) prefs.edit().remove("dirty_$category").apply()
+    }
     fun isSyncWatchedEnabled(): Boolean = prefs.getBoolean(KEY_SYNC_WATCHED, true)
-    fun setSyncWatchedEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_SYNC_WATCHED, enabled).apply()
-
+    fun setSyncWatchedEnabled(enabled: Boolean) = setSyncPreference(KEY_SYNC_WATCHED, "movies", enabled)
     fun isSyncWatchlistEnabled(): Boolean = prefs.getBoolean(KEY_SYNC_WATCHLIST, true)
-    fun setSyncWatchlistEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_SYNC_WATCHLIST, enabled).apply()
-
+    fun setSyncWatchlistEnabled(enabled: Boolean) = setSyncPreference(KEY_SYNC_WATCHLIST, "watchlist", enabled)
     fun isSyncRatingsEnabled(): Boolean = prefs.getBoolean(KEY_SYNC_RATINGS, true)
-    fun setSyncRatingsEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_SYNC_RATINGS, enabled).apply()
-
+    fun setSyncRatingsEnabled(enabled: Boolean) = setSyncPreference(KEY_SYNC_RATINGS, "ratings", enabled)
     fun isSyncTvProgressEnabled(): Boolean = prefs.getBoolean(KEY_SYNC_TV_PROGRESS, true)
-    fun setSyncTvProgressEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_SYNC_TV_PROGRESS, enabled).apply()
+    fun setSyncTvProgressEnabled(enabled: Boolean) = setSyncPreference(KEY_SYNC_TV_PROGRESS, "shows", enabled)
 
     fun getLastSyncTimestamp(): Long = prefs.getLong(KEY_LAST_SYNC_TIMESTAMP, 0L)
     fun setLastSyncTimestamp(timestamp: Long) = prefs.edit().putLong(KEY_LAST_SYNC_TIMESTAMP, timestamp).apply()
@@ -251,6 +273,9 @@ class TraktAuthManager(
     fun getLastSyncSummary(): String? = prefs.getString(KEY_LAST_SYNC_SUMMARY, null)
     fun setLastSyncSummary(summary: String) = prefs.edit().putString(KEY_LAST_SYNC_SUMMARY, summary).apply()
 
+    fun setSyncCheckpoint(step: String, page: Int) {
+        check(prefs.edit().putString(KEY_CHECKPOINT_STEP, step).putInt(KEY_CHECKPOINT_PAGE, page.coerceAtLeast(1)).commit()) { "Could not save sync progress" }
+    }
     fun getSyncCheckpointStep(): String? = prefs.getString(KEY_CHECKPOINT_STEP, null)
     fun setSyncCheckpointStep(step: String?) {
         if (step == null) prefs.edit().remove(KEY_CHECKPOINT_STEP).apply()
@@ -536,6 +561,8 @@ class TraktAuthManager(
     fun handleAuthCallback(uri: Uri): Boolean {
         val currentEpoch = sessionEpoch.get()
         if (isSessionInvalid(currentEpoch)) return false
+        val expected = Uri.parse(prefs.getString(KEY_PKCE_REDIRECT_URI, null) ?: getRedirectUri())
+        if (uri.scheme != expected.scheme || uri.authority != expected.authority || uri.path != expected.path) return false
 
         val error = uri.getQueryParameter("error")
         val errorDescription = uri.getQueryParameter("error_description")
@@ -678,9 +705,9 @@ class TraktAuthManager(
      */
     fun cancelDeviceAuth() = cancelAuth()
 
-    fun saveTokens(token: TraktTokenResponse) {
+    fun saveTokens(token: TraktTokenResponse, newSession: Boolean = true) {
         if (isDisconnecting) return
-        sessionEpoch.incrementAndGet()
+        if (newSession) sessionEpoch.incrementAndGet()
         val expiresAt = System.currentTimeMillis() + (token.expires_in * 1000L)
         secrets.putAll(mapOf(KEY_ACCESS_TOKEN to token.access_token, KEY_REFRESH_TOKEN to token.refresh_token))
         prefs.edit().putLong(KEY_EXPIRES_AT, expiresAt).apply()
@@ -718,7 +745,7 @@ class TraktAuthManager(
     /**
      * Refreshes the access token using the stored refresh token if expired.
      */
-    suspend fun refreshAccessTokenIfNeeded(): String? = withContext(Dispatchers.IO) {
+    suspend fun refreshAccessTokenIfNeeded(): String? = refreshMutex.withLock { withContext(Dispatchers.IO) {
         val startEpoch = sessionEpoch.get()
         if (isSessionInvalid(startEpoch)) return@withContext null
 
@@ -746,13 +773,18 @@ class TraktAuthManager(
                 Log.w(TAG, "Token refreshed but session was invalidated during call; discarding.")
                 return@withContext null
             }
-            saveTokens(response)
+            // Token rotation belongs to the same account/session. Do not invalidate its sync.
+            sessionMutex.withLock {
+                if (isSessionInvalid(startEpoch)) return@withContext null
+                saveTokens(response, newSession = false)
+            }
             return@withContext response.access_token
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e(TAG, "Failed to refresh Trakt access token: ${e.message}", e)
             return@withContext if (!isSessionInvalid(startEpoch)) currentAccessToken else null
         }
+    }
     }
 
     /**
@@ -797,6 +829,8 @@ class TraktAuthManager(
 
                     // 3. Invalidate sync engine
                     TraktSyncEngine.onSessionInvalidated()
+
+                    com.example.data.local.AppDatabase.getDatabase(context).traktOutboxDao().clearSession(syncSessionId())
 
                     // 4. Wipe local credentials, session data, user profiles, and sync checkpoints
                     prefs.edit().clear().apply()
@@ -855,7 +889,7 @@ class TraktAuthManager(
     companion object {
         const val DEFAULT_CLIENT_ID = "dj1F8ZeR5jYd9_Bs8ZeKRJOP-B3kydXanE43vwHW9tQ"
         const val DEFAULT_BASE_URL = "https://api.trakt.tv/"
-        const val DEFAULT_AUTHORIZE_URL = "https://trakt.tv/oauth/authorize"
+        const val DEFAULT_AUTHORIZE_URL = "https://auth.trakt.tv/oauth/authorize"
         const val DEFAULT_REDIRECT_URI = "https://cobalt.hanan-bhatti.site/callback"
         const val PKCE_EXPIRATION_MS = 10 * 60 * 1000L // 10 minutes
 

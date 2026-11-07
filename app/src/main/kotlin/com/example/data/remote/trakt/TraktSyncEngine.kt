@@ -19,6 +19,7 @@
 package com.example.data.remote.trakt
 
 import android.content.Context
+import androidx.room.withTransaction
 import com.example.util.SafeLogger as Log
 import com.example.data.local.AppDatabase
 import com.example.data.local.SavedItemEntity
@@ -91,9 +92,23 @@ object TraktSyncEngine {
         _syncStatus.value = TraktSyncStatus.Idle
     }
 
+    private val syncMutex = Mutex()
     private val writeMutex = Mutex()
     @Volatile
     private var lastWriteTimestamp = 0L
+
+    private fun imageUrl(images: Map<String, List<String>>?, type: String): String? {
+        val raw = images?.get(type)?.firstOrNull()?.takeIf { it.isNotBlank() } ?: return null
+        val uri = android.net.Uri.parse(if (raw.startsWith("https://")) raw else "https://$raw")
+        return uri.toString().takeIf { uri.scheme == "https" && uri.host?.endsWith(".trakt.tv") == true }
+    }
+
+    private suspend fun locallyRemoved(db: AppDatabase, kind: String, ids: TraktIds) =
+        db.mediaTombstoneDao().blocked(kind, ids.trakt.toString(), ids.tmdb?.toString().orEmpty(), ids.imdb.orEmpty())
+
+    internal fun activityTimestamp(iso: String?): Long = try {
+        if (iso.isNullOrBlank()) 0L else java.time.Instant.parse(iso).toEpochMilli()
+    } catch (_: Exception) { 0L }
 
     private fun parseIsoDate(iso: String?): Long {
         if (iso.isNullOrBlank()) return System.currentTimeMillis()
@@ -122,15 +137,28 @@ object TraktSyncEngine {
         context: Context,
         isBackground: Boolean = false,
         onProgressUpdate: ((String, Float) -> Unit)? = null
+    ): Result<TraktSyncSummary> = syncMutex.withLock {
+        performSyncLocked(context, isBackground, onProgressUpdate)
+    }
+
+    private suspend fun performSyncLocked(
+        context: Context,
+        isBackground: Boolean = false,
+        onProgressUpdate: ((String, Float) -> Unit)? = null
     ): Result<TraktSyncSummary> = withContext(Dispatchers.IO) {
         val authManager = TraktAuthManager.getInstance(context)
         val sessionEpoch = authManager.currentSessionEpoch()
+        val dirtyCategories = listOf("movies", "shows", "ratings", "watchlist").associateWith { authManager.dirtyCategory(it) }
         if (authManager.isSessionInvalid(sessionEpoch) || !authManager.hasValidToken()) {
             val err = "Trakt is not connected. Connect account to sync."
             _syncStatus.value = TraktSyncStatus.Error(err)
             return@withContext Result.failure(IllegalStateException(err))
         }
 
+        suspend fun checkpoint(step: String, page: Int) {
+            check(authManager.runIfSessionValid(sessionEpoch) { authManager.setSyncCheckpoint(step, page) }) { "Trakt account changed" }
+            TraktOutbox.drain(context, getApiService())
+        }
         fun updateProgress(msg: String, fraction: Float) {
             _syncStatus.value = TraktSyncStatus.Syncing(msg, fraction)
             onProgressUpdate?.invoke(msg, fraction)
@@ -148,7 +176,8 @@ object TraktSyncEngine {
         try {
             updateProgress("Verifying connection & credentials...", 0.05f)
             authManager.refreshAccessTokenIfNeeded()
-            authManager.fetchAndSaveUserProfile()
+            authManager.fetchAndSaveUserProfile().getOrThrow()
+            TraktOutbox.drain(context, getApiService())
 
             val db = AppDatabase.getDatabase(context)
             val dao = db.savedItemDao()
@@ -163,6 +192,23 @@ object TraktSyncEngine {
             // Check Delta Activities if not resuming from an incomplete sync
             var currentStep = authManager.getSyncCheckpointStep() ?: STEP_SHOWS
             var currentPage = authManager.getSyncCheckpointPage()
+            fun phaseRank(step: String) = when {
+                step.startsWith(STEP_SHOWS) -> 0
+                step.startsWith(STEP_MOVIES) -> 1
+                step.startsWith(STEP_RATINGS) -> 2
+                step.startsWith(STEP_WATCHLIST) -> 3
+                else -> 4
+            }
+            val enabledDirty = listOf(
+                Triple("shows", 0, authManager.isSyncTvProgressEnabled()),
+                Triple("movies", 1, authManager.isSyncWatchedEnabled()),
+                Triple("ratings", 2, authManager.isSyncRatingsEnabled()),
+                Triple("watchlist", 3, authManager.isSyncWatchlistEnabled()))
+            if (enabledDirty.any { (category, rank, enabled) -> enabled && dirtyCategories[category] != null && rank < phaseRank(currentStep) }) {
+                currentStep = STEP_SHOWS; currentPage = 1
+                checkpoint(STEP_SHOWS, 1)
+            }
+
 
             val lastSyncTime = authManager.getLastSyncTimestamp()
             var shouldSyncShows = authManager.isSyncTvProgressEnabled()
@@ -173,18 +219,18 @@ object TraktSyncEngine {
             if (authManager.getSyncCheckpointStep() == null && lastSyncTime > 0) {
                 try {
                     val lastActivities = getApiService().getLastActivities()
-                    val remoteShowsWatched = parseIsoDate(lastActivities.shows?.watched_at)
-                    val remoteMoviesWatched = parseIsoDate(lastActivities.movies?.watched_at)
+                    val remoteShowsWatched = activityTimestamp(lastActivities.shows?.watched_at)
+                    val remoteMoviesWatched = activityTimestamp(lastActivities.movies?.watched_at)
                     val remoteRatings = maxOf(
-                        parseIsoDate(lastActivities.shows?.rated_at),
-                        parseIsoDate(lastActivities.movies?.rated_at)
+                        activityTimestamp(lastActivities.shows?.rated_at),
+                        activityTimestamp(lastActivities.movies?.rated_at)
                     )
-                    val remoteWatchlist = parseIsoDate(lastActivities.watchlist?.updated_at)
+                    val remoteWatchlist = activityTimestamp(lastActivities.watchlist?.updated_at)
 
-                    if (remoteShowsWatched <= lastSyncTime) shouldSyncShows = false
-                    if (remoteMoviesWatched <= lastSyncTime) shouldSyncMovies = false
-                    if (remoteRatings <= lastSyncTime) shouldSyncRatings = false
-                    if (remoteWatchlist <= lastSyncTime) shouldSyncWatchlist = false
+                    if (dirtyCategories["shows"] == null && remoteShowsWatched <= lastSyncTime) shouldSyncShows = false
+                    if (dirtyCategories["movies"] == null && remoteMoviesWatched <= lastSyncTime) shouldSyncMovies = false
+                    if (dirtyCategories["ratings"] == null && remoteRatings <= lastSyncTime) shouldSyncRatings = false
+                    if (dirtyCategories["watchlist"] == null && remoteWatchlist <= lastSyncTime) shouldSyncWatchlist = false
 
                     if (!shouldSyncShows && !shouldSyncMovies && !shouldSyncRatings && !shouldSyncWatchlist) {
                         Log.i(TAG, "All Trakt categories are up-to-date with local library. Skipping download.")
@@ -222,6 +268,7 @@ object TraktSyncEngine {
                         val pageEntities = mutableListOf<SavedItemEntity>()
                         for (item in watchedShows) {
                             val show = item.show ?: continue
+                            if (locallyRemoved(db, "tv", show.ids)) continue
                             val ids = show.ids
                             val traktId = ids.trakt
                             val tmdbId = ids.tmdb
@@ -234,7 +281,7 @@ object TraktSyncEngine {
 
                             item.seasons?.forEach { s ->
                                 val eps = s.episodes?.map { ep ->
-                                    totalWatchedEps += ep.plays.coerceAtLeast(1)
+                                    if (s.number > 0) totalWatchedEps++
                                     TvEpisodeProgress(
                                         episodeNumber = ep.number,
                                         seasonNumber = s.number,
@@ -273,8 +320,8 @@ object TraktSyncEngine {
                                 contentRating = show.certification
                             )
 
-                            val existing = (if (traktId > 0) dao.getItemByTraktId(traktId) else null)
-                                ?: (if (tmdbId != null && tmdbId > 0) dao.getItemByTmdbId(tmdbId) else null)
+                            val existing = (if (traktId > 0) dao.getItemByTraktId(traktId, "tv") else null)
+                                ?: (if (tmdbId != null && tmdbId > 0) dao.getItemByTmdbId(tmdbId, "tv") else null)
 
                             val existingProgress = TvShowProgress.fromJson(existing?.showProgressJson)
                             val mergedProgress = if (existingProgress != null && existingProgress.cast.isNotEmpty()) {
@@ -289,8 +336,8 @@ object TraktSyncEngine {
                                 )
                             } else progress
 
-                            var thumbnailPath: String? = existing?.thumbnailPath
-                            var backdropUrl: String? = existing?.backdropUrl
+                            var thumbnailPath: String? = existing?.thumbnailPath ?: imageUrl(show.images, "poster")
+                            var backdropUrl: String? = existing?.backdropUrl ?: imageUrl(show.images, "fanart")
                             var genresJson: String = existing?.genresJson ?: "[]"
                             var watchProvidersJson: String = existing?.watchProvidersJson ?: "[]"
                             var trailerUrl: String? = existing?.trailerUrl
@@ -313,17 +360,17 @@ object TraktSyncEngine {
                                     val richList = mutableListOf<com.example.data.model.MediaWatchProvider>()
                                     countryData?.flatrate?.forEach { p ->
                                         p.providerName?.let {
-                                            richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Stream", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
+                                            richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Stream", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId, url = countryData?.link))
                                         }
                                     }
                                     countryData?.rent?.forEach { p ->
                                         p.providerName?.let {
-                                            richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Rent", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
+                                            richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Rent", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId, url = countryData?.link))
                                         }
                                     }
                                     countryData?.buy?.forEach { p ->
                                         p.providerName?.let {
-                                            richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Buy", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
+                                            richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Buy", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId, url = countryData?.link))
                                         }
                                     }
                                     if (richList.isNotEmpty()) {
@@ -386,7 +433,7 @@ object TraktSyncEngine {
                         // Atomic page persistence directly to SQLite guarded by session lock
                         if (pageEntities.isNotEmpty()) {
                             val persisted = authManager.runIfSessionValid(sessionEpoch) {
-                                dao.insertItems(pageEntities)
+                                TraktOutbox.persistInbound(db, pageEntities, authManager.syncSessionId())
                             }
                             if (!persisted) {
                                 Log.i(TAG, "Session invalidated during shows sync; aborting.")
@@ -399,17 +446,23 @@ object TraktSyncEngine {
                             hasMore = false
                         } else {
                             page++
-                            authManager.setSyncCheckpointPage(page)
+                            checkpoint(currentStep, page)
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed syncing watched shows on page $page: ${e.message}", e)
                         throw e
                     }
                 }
+                if (authManager.isSyncTvProgressEnabled()) authManager.acknowledgeCategory("shows", dirtyCategories["shows"])
                 currentStep = STEP_MOVIES
                 currentPage = 1
-                authManager.setSyncCheckpointStep(STEP_MOVIES)
-                authManager.setSyncCheckpointPage(1)
+                checkpoint(STEP_MOVIES, 1)
+            }
+
+            // Disabled or unchanged categories must not strand later enabled phases.
+            if (currentStep == STEP_SHOWS) {
+                currentStep = STEP_MOVIES; currentPage = 1
+                checkpoint(STEP_MOVIES, 1)
             }
 
             // ──────────────────────────────────────────────
@@ -437,6 +490,7 @@ object TraktSyncEngine {
                         val pageEntities = mutableListOf<SavedItemEntity>()
                         for (item in watchedMovies) {
                             val movie = item.movie ?: continue
+                            if (locallyRemoved(db, "movie", movie.ids)) continue
                             val ids = movie.ids
                             val traktId = ids.trakt
                             val tmdbId = ids.tmdb
@@ -444,11 +498,11 @@ object TraktSyncEngine {
                             val title = movie.title.takeIf { it.isNotBlank() } ?: "Untitled Movie"
                             val watchedTimestamp = parseIsoDate(item.last_watched_at)
 
-                            val existing = (if (traktId > 0) dao.getItemByTraktId(traktId) else null)
-                                ?: (if (tmdbId != null && tmdbId > 0) dao.getItemByTmdbId(tmdbId) else null)
+                            val existing = (if (traktId > 0) dao.getItemByTraktId(traktId, "movie") else null)
+                                ?: (if (tmdbId != null && tmdbId > 0) dao.getItemByTmdbId(tmdbId, "movie") else null)
 
-                            var thumbnailPath: String? = existing?.thumbnailPath
-                            var backdropUrl: String? = existing?.backdropUrl
+                            var thumbnailPath: String? = existing?.thumbnailPath ?: imageUrl(movie.images, "poster")
+                            var backdropUrl: String? = existing?.backdropUrl ?: imageUrl(movie.images, "fanart")
                             var genresJson: String = existing?.genresJson ?: "[]"
                             var watchProvidersJson: String = existing?.watchProvidersJson ?: "[]"
                             var trailerUrl: String? = existing?.trailerUrl
@@ -471,17 +525,17 @@ object TraktSyncEngine {
                                     val richList = mutableListOf<com.example.data.model.MediaWatchProvider>()
                                     countryData?.flatrate?.forEach { p ->
                                         p.providerName?.let {
-                                            richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Stream", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
+                                            richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Stream", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId, url = countryData?.link))
                                         }
                                     }
                                     countryData?.rent?.forEach { p ->
                                         p.providerName?.let {
-                                            richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Rent", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
+                                            richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Rent", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId, url = countryData?.link))
                                         }
                                     }
                                     countryData?.buy?.forEach { p ->
                                         p.providerName?.let {
-                                            richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Buy", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
+                                            richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Buy", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId, url = countryData?.link))
                                         }
                                     }
                                     if (richList.isNotEmpty()) {
@@ -541,7 +595,7 @@ object TraktSyncEngine {
 
                         if (pageEntities.isNotEmpty()) {
                             val persisted = authManager.runIfSessionValid(sessionEpoch) {
-                                dao.insertItems(pageEntities)
+                                TraktOutbox.persistInbound(db, pageEntities, authManager.syncSessionId())
                             }
                             if (!persisted) {
                                 Log.i(TAG, "Session invalidated during movies sync; aborting.")
@@ -554,17 +608,23 @@ object TraktSyncEngine {
                             hasMore = false
                         } else {
                             page++
-                            authManager.setSyncCheckpointPage(page)
+                            checkpoint(currentStep, page)
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed syncing watched movies on page $page: ${e.message}", e)
                         throw e
                     }
                 }
+                if (authManager.isSyncWatchedEnabled()) authManager.acknowledgeCategory("movies", dirtyCategories["movies"])
                 currentStep = STEP_RATINGS
                 currentPage = 1
-                authManager.setSyncCheckpointStep(STEP_RATINGS)
-                authManager.setSyncCheckpointPage(1)
+                checkpoint(STEP_RATINGS, 1)
+            }
+
+            // Disabled or unchanged categories must not strand later enabled phases.
+            if (currentStep == STEP_MOVIES) {
+                currentStep = STEP_RATINGS; currentPage = 1
+                checkpoint(STEP_RATINGS, 1)
             }
 
             // ──────────────────────────────────────────────
@@ -576,23 +636,24 @@ object TraktSyncEngine {
                 return@withContext Result.failure(IllegalStateException("Session disconnected or invalidated"))
             }
 
-            if (shouldSyncRatings && (currentStep == STEP_RATINGS)) {
+            if (shouldSyncRatings && currentStep.startsWith(STEP_RATINGS)) {
                 updateProgress("Downloading personal ratings...", 0.70f)
                 try {
-                    var showRatingPage = 1
-                    var hasMoreShowRatings = true
+                    var showRatingPage = if (currentStep == "RATINGS_SHOWS") currentPage else 1
+                    var hasMoreShowRatings = currentStep != "RATINGS_MOVIES"
                     while (hasMoreShowRatings) {
                         if (authManager.isSessionInvalid(sessionEpoch)) {
                             Log.i(TAG, "Session invalidated during show ratings sync; aborting.")
                             _syncStatus.value = TraktSyncStatus.Idle
                             return@withContext Result.failure(IllegalStateException("Session disconnected or invalidated"))
                         }
+                        checkpoint("RATINGS_SHOWS", showRatingPage)
                         val showRatings = getApiService().getShowRatings(page = showRatingPage, limit = PAGE_SIZE)
                         val entitiesToUpdate = mutableListOf<SavedItemEntity>()
                         for (r in showRatings) {
                             if (authManager.isSessionInvalid(sessionEpoch)) break
                             val traktId = r.show?.ids?.trakt ?: continue
-                            val entity = dao.getItemByTraktId(traktId)
+                            val entity = dao.getItemByTraktId(traktId, "tv")
                             if (entity != null && entity.userRating != r.rating) {
                                 entitiesToUpdate.add(entity.copy(userRating = r.rating))
                                 ratingsCount++
@@ -600,7 +661,7 @@ object TraktSyncEngine {
                         }
                         if (entitiesToUpdate.isNotEmpty()) {
                             val persisted = authManager.runIfSessionValid(sessionEpoch) {
-                                entitiesToUpdate.forEach { dao.insertItem(it) }
+                                TraktOutbox.persistInbound(db, entitiesToUpdate, authManager.syncSessionId())
                             }
                             if (!persisted) {
                                 Log.i(TAG, "Session invalidated during show ratings sync; aborting.")
@@ -612,7 +673,7 @@ object TraktSyncEngine {
                         else showRatingPage++
                     }
 
-                    var movieRatingPage = 1
+                    var movieRatingPage = if (currentStep == "RATINGS_MOVIES") currentPage else 1
                     var hasMoreMovieRatings = true
                     while (hasMoreMovieRatings) {
                         if (authManager.isSessionInvalid(sessionEpoch)) {
@@ -620,12 +681,13 @@ object TraktSyncEngine {
                             _syncStatus.value = TraktSyncStatus.Idle
                             return@withContext Result.failure(IllegalStateException("Session disconnected or invalidated"))
                         }
+                        checkpoint("RATINGS_MOVIES", movieRatingPage)
                         val movieRatings = getApiService().getMovieRatings(page = movieRatingPage, limit = PAGE_SIZE)
                         val entitiesToUpdate = mutableListOf<SavedItemEntity>()
                         for (r in movieRatings) {
                             if (authManager.isSessionInvalid(sessionEpoch)) break
                             val traktId = r.movie?.ids?.trakt ?: continue
-                            val entity = dao.getItemByTraktId(traktId)
+                            val entity = dao.getItemByTraktId(traktId, "movie")
                             if (entity != null && entity.userRating != r.rating) {
                                 entitiesToUpdate.add(entity.copy(userRating = r.rating))
                                 ratingsCount++
@@ -633,7 +695,7 @@ object TraktSyncEngine {
                         }
                         if (entitiesToUpdate.isNotEmpty()) {
                             val persisted = authManager.runIfSessionValid(sessionEpoch) {
-                                entitiesToUpdate.forEach { dao.insertItem(it) }
+                                TraktOutbox.persistInbound(db, entitiesToUpdate, authManager.syncSessionId())
                             }
                             if (!persisted) {
                                 Log.i(TAG, "Session invalidated during movie ratings sync; aborting.")
@@ -645,12 +707,18 @@ object TraktSyncEngine {
                         else movieRatingPage++
                     }
                 } catch (e: Exception) {
-                    Log.w(TAG, "Ratings sync encountered issue: ${e.message}")
+                    throw e // Keep this phase checkpoint; never report a partially downloaded category as success.
                 }
+                if (authManager.isSyncRatingsEnabled()) authManager.acknowledgeCategory("ratings", dirtyCategories["ratings"])
                 currentStep = STEP_WATCHLIST
                 currentPage = 1
-                authManager.setSyncCheckpointStep(STEP_WATCHLIST)
-                authManager.setSyncCheckpointPage(1)
+                checkpoint(STEP_WATCHLIST, 1)
+            }
+
+            // Disabled or unchanged categories must not strand later enabled phases.
+            if (currentStep.startsWith(STEP_RATINGS)) {
+                currentStep = STEP_WATCHLIST; currentPage = 1
+                checkpoint(STEP_WATCHLIST, 1)
             }
 
             // ──────────────────────────────────────────────
@@ -662,23 +730,25 @@ object TraktSyncEngine {
                 return@withContext Result.failure(IllegalStateException("Session disconnected or invalidated"))
             }
 
-            if (shouldSyncWatchlist && (currentStep == STEP_WATCHLIST)) {
+            if (shouldSyncWatchlist && currentStep.startsWith(STEP_WATCHLIST)) {
                 updateProgress("Downloading watchlist...", 0.85f)
                 try {
-                    var showWatchlistPage = 1
-                    var hasMoreShowWatchlist = true
+                    var showWatchlistPage = if (currentStep == "WATCHLIST_SHOWS") currentPage else 1
+                    var hasMoreShowWatchlist = currentStep != "WATCHLIST_MOVIES"
                     while (hasMoreShowWatchlist) {
                         if (authManager.isSessionInvalid(sessionEpoch)) {
                             Log.i(TAG, "Session invalidated during show watchlist sync; aborting.")
                             _syncStatus.value = TraktSyncStatus.Idle
                             return@withContext Result.failure(IllegalStateException("Session disconnected or invalidated"))
                         }
+                        checkpoint("WATCHLIST_SHOWS", showWatchlistPage)
                         val watchlistShows = getApiService().getWatchlistShows(page = showWatchlistPage, limit = PAGE_SIZE)
                         val pageEntities = mutableListOf<SavedItemEntity>()
                         for (w in watchlistShows) {
                             val show = w.show ?: continue
+                            if (locallyRemoved(db, "tv", show.ids)) continue
                             val traktId = show.ids.trakt
-                            val existing = dao.getItemByTraktId(traktId)
+                            val existing = dao.getItemByTraktId(traktId, "tv") ?: show.ids.tmdb?.let { dao.getItemByTmdbId(it, "tv") }
                             if (existing == null) {
                                 val entity = SavedItemEntity(
                                     id = UUID.randomUUID().toString(),
@@ -690,7 +760,7 @@ object TraktSyncEngine {
                                     extractedText = show.overview,
                                     thumbnailPath = null,
                                     mediaType = "tv",
-                                    watchStatus = "Plan to Watch",
+                                    watchStatus = "Plan to Watch", inWatchlist = true,
                                     releaseYear = show.year?.toString(),
                                     rating = show.rating,
                                     status = show.status,
@@ -701,11 +771,14 @@ object TraktSyncEngine {
                                 )
                                 pageEntities.add(entity)
                                 watchlistCount++
+                            } else {
+                                pageEntities.add(existing.copy(inWatchlist = true, traktId = traktId, tmdbId = show.ids.tmdb ?: existing.tmdbId, imdbId = show.ids.imdb ?: existing.imdbId))
+                                watchlistCount++
                             }
                         }
                         if (pageEntities.isNotEmpty()) {
                             val persisted = authManager.runIfSessionValid(sessionEpoch) {
-                                dao.insertItems(pageEntities)
+                                TraktOutbox.persistInbound(db, pageEntities, authManager.syncSessionId())
                             }
                             if (!persisted) {
                                 Log.i(TAG, "Session invalidated before inserting watchlist shows; aborting.")
@@ -717,7 +790,7 @@ object TraktSyncEngine {
                         else showWatchlistPage++
                     }
 
-                    var movieWatchlistPage = 1
+                    var movieWatchlistPage = if (currentStep == "WATCHLIST_MOVIES") currentPage else 1
                     var hasMoreMovieWatchlist = true
                     while (hasMoreMovieWatchlist) {
                         if (authManager.isSessionInvalid(sessionEpoch)) {
@@ -725,12 +798,14 @@ object TraktSyncEngine {
                             _syncStatus.value = TraktSyncStatus.Idle
                             return@withContext Result.failure(IllegalStateException("Session disconnected or invalidated"))
                         }
+                        checkpoint("WATCHLIST_MOVIES", movieWatchlistPage)
                         val watchlistMovies = getApiService().getWatchlistMovies(page = movieWatchlistPage, limit = PAGE_SIZE)
                         val pageEntities = mutableListOf<SavedItemEntity>()
                         for (w in watchlistMovies) {
                             val movie = w.movie ?: continue
+                            if (locallyRemoved(db, "movie", movie.ids)) continue
                             val traktId = movie.ids.trakt
-                            val existing = dao.getItemByTraktId(traktId)
+                            val existing = dao.getItemByTraktId(traktId, "movie") ?: movie.ids.tmdb?.let { dao.getItemByTmdbId(it, "movie") }
                             if (existing == null) {
                                 val entity = SavedItemEntity(
                                     id = UUID.randomUUID().toString(),
@@ -742,7 +817,7 @@ object TraktSyncEngine {
                                     extractedText = movie.overview,
                                     thumbnailPath = null,
                                     mediaType = "movie",
-                                    watchStatus = "Plan to Watch",
+                                    watchStatus = "Plan to Watch", inWatchlist = true,
                                     releaseYear = movie.year?.toString(),
                                     rating = movie.rating,
                                     runtime = movie.runtime,
@@ -753,11 +828,14 @@ object TraktSyncEngine {
                                 )
                                 pageEntities.add(entity)
                                 watchlistCount++
+                            } else {
+                                pageEntities.add(existing.copy(inWatchlist = true, traktId = traktId, tmdbId = movie.ids.tmdb ?: existing.tmdbId, imdbId = movie.ids.imdb ?: existing.imdbId))
+                                watchlistCount++
                             }
                         }
                         if (pageEntities.isNotEmpty()) {
                             val persisted = authManager.runIfSessionValid(sessionEpoch) {
-                                dao.insertItems(pageEntities)
+                                TraktOutbox.persistInbound(db, pageEntities, authManager.syncSessionId())
                             }
                             if (!persisted) {
                                 Log.i(TAG, "Session invalidated before inserting watchlist movies; aborting.")
@@ -769,9 +847,13 @@ object TraktSyncEngine {
                         else movieWatchlistPage++
                     }
                 } catch (e: Exception) {
-                    Log.w(TAG, "Watchlist sync encountered issue: ${e.message}")
+                    throw e // Retry this phase without losing already persisted pages.
                 }
+                if (authManager.isSyncWatchlistEnabled()) authManager.acknowledgeCategory("watchlist", dirtyCategories["watchlist"])
             }
+
+            // Include edits made while inbound pages were downloading.
+            TraktOutbox.drain(context, getApiService())
 
             // Sync successfully finished - clear checkpoints
             val finalized = authManager.runIfSessionValid(sessionEpoch) {
@@ -806,6 +888,7 @@ object TraktSyncEngine {
 
             Result.success(summary)
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Log.e(TAG, "Trakt sync execution error: ${e.message}", e)
             val errorMsg = e.localizedMessage ?: "Sync encountered an unexpected error."
             _syncStatus.value = TraktSyncStatus.Error(errorMsg)
@@ -839,21 +922,49 @@ object TraktSyncEngine {
         var updated = false
         var currentBackdrop = item.backdropUrl
         var currentThumbnail = item.thumbnailPath
+        var currentTrailer = item.trailerUrl
         var richWatchProviders = item.richWatchProviders.toMutableList()
+
+        if (currentTrailer.isNullOrBlank() && traktId != null && traktId > 0) {
+            try {
+                currentTrailer = if (isTv) getApiService().getShowSummary(traktId.toString()).trailer
+                    else getApiService().getMovieSummary(traktId.toString()).trailer
+                updated = updated || !currentTrailer.isNullOrBlank()
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: Exception) { /* Keep locally cached metadata when the provider is unavailable. */ }
+        }
 
         // 1. Fetch Trakt Ratings distribution & Stats (if Trakt item)
         if (traktId != null && traktId > 0 && isTv && progress.ratingDistribution.isEmpty()) {
-            val slug = item.content.substringAfterLast("/").takeIf { it.isNotBlank() } ?: traktId.toString()
+            val slug = traktId.toString()
             try {
+                // Season navigation must not depend on optional ratings/stats succeeding.
+                val seasonsRes = getApiService().getShowSeasons(slug)
+                progress = progress.copy(seasons = seasonsRes.map { remote ->
+                    val local = progress.seasons.firstOrNull { it.seasonNumber == remote.number }
+                    (local ?: TvSeasonProgress(remote.number)).copy(title = remote.title ?: local?.title,
+                        totalEpisodes = remote.aired_episodes ?: remote.episode_count ?: local?.totalEpisodes ?: 0)
+                }.ifEmpty { progress.seasons })
+                updated = updated || seasonsRes.isNotEmpty()
                 val ratingsRes = getApiService().getShowRatings(slug)
                 val statsRes = getApiService().getShowStats(slug)
-                val seasonsRes = getApiService().getShowSeasons(slug)
+                val people = getApiService().getShowPeople(slug)
 
                 val seasonQuality = seasonsRes.filter { it.number > 0 && it.rating != null }.map {
                     SeasonQualityPoint(seasonNumber = it.number, ratingPercent = (it.rating!! * 10).toInt())
                 }.sortedBy { it.seasonNumber }
 
+                val seasons = seasonsRes.map { remote ->
+                    val local = progress.seasons.firstOrNull { it.seasonNumber == remote.number }
+                    (local ?: TvSeasonProgress(remote.number)).copy(title = remote.title ?: local?.title,
+                        totalEpisodes = remote.aired_episodes ?: remote.episode_count ?: local?.totalEpisodes ?: 0)
+                }
                 progress = progress.copy(
+                    seasons = seasons.ifEmpty { progress.seasons },
+                    cast = people.cast.orEmpty().take(40).mapNotNull { credit ->
+                        credit.person?.let { person -> MediaCastMember(person.name,
+                            credit.character ?: credit.characters?.joinToString(", ")) }
+                    }.ifEmpty { progress.cast },
                     ratingDistribution = ratingsRes.distribution ?: emptyMap(),
                     traktRatingPercent = (ratingsRes.rating * 10).toInt(),
                     traktVotes = ratingsRes.votes,
@@ -870,7 +981,7 @@ object TraktSyncEngine {
         }
 
         // 2. Fetch TMDb Credits (Actors / Cast)
-        if (tmdbId != null && tmdbId > 0 && progress.cast.isEmpty()) {
+        if (tmdbKey.isNotBlank() && tmdbId != null && tmdbId > 0 && progress.cast.isEmpty()) {
             try {
                 val credits = if (isTv) {
                     com.example.data.remote.MediaApiClient.tmdbApiService.getTvCredits(tmdbId, tmdbKey)
@@ -897,7 +1008,7 @@ object TraktSyncEngine {
         }
 
         // 3. Fetch Season 1 Episodes with Still Images & Runtimes (for TV shows)
-        if (tmdbId != null && tmdbId > 0 && isTv) {
+        if (tmdbKey.isNotBlank() && tmdbId != null && tmdbId > 0 && isTv) {
             val needsEpisodeDetails = progress.seasons.any { s -> s.episodes.any { it.stillPath == null || it.title == null } }
             if (needsEpisodeDetails || progress.seasons.isEmpty()) {
                 try {
@@ -951,7 +1062,7 @@ object TraktSyncEngine {
         }
 
         // 4. Fetch Watch Providers & Backdrop if missing
-        if (tmdbId != null && tmdbId > 0 && (currentBackdrop.isNullOrBlank() || richWatchProviders.isEmpty())) {
+        if (tmdbKey.isNotBlank() && tmdbId != null && tmdbId > 0 && (currentBackdrop.isNullOrBlank() || richWatchProviders.isEmpty())) {
             try {
                 val details = if (isTv) {
                     com.example.data.remote.MediaApiClient.tmdbApiService.getTvDetails(tmdbId, tmdbKey)
@@ -974,12 +1085,12 @@ object TraktSyncEngine {
 
                 countryData?.flatrate?.forEach { p ->
                     p.providerName?.let {
-                        fetchedProviders.add(MediaWatchProvider(name = it, type = "Stream", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
+                        fetchedProviders.add(MediaWatchProvider(name = it, type = "Stream", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId, url = countryData?.link))
                     }
                 }
                 countryData?.buy?.forEach { p ->
                     p.providerName?.let {
-                        fetchedProviders.add(MediaWatchProvider(name = it, type = "Buy", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
+                        fetchedProviders.add(MediaWatchProvider(name = it, type = "Buy", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId, url = countryData?.link))
                     }
                 }
 
@@ -994,6 +1105,7 @@ object TraktSyncEngine {
 
         if (updated) {
             val enrichedItem = item.copy(
+                trailerUrl = currentTrailer,
                 thumbnailPath = currentThumbnail,
                 backdropUrl = currentBackdrop,
                 richWatchProviders = richWatchProviders,
@@ -1001,10 +1113,20 @@ object TraktSyncEngine {
                 showProgress = progress
             )
             val entity = dao.getItemById(item.id)
-            if (entity != null) {
+            if (entity != null && !entity.isDeleted) {
+                val latest = TvShowProgress.fromJson(entity.showProgressJson)
+                if (latest != null && entity.updatedAt != item.updatedAt) {
+                    progress = progress.copy(totalWatched = latest.totalWatched, completed = latest.completed,
+                        lastWatchedSeason = latest.lastWatchedSeason, lastWatchedEpisode = latest.lastWatchedEpisode,
+                        seasons = progress.seasons.map { metadata ->
+                            val watched = latest.seasons.firstOrNull { it.seasonNumber == metadata.seasonNumber }
+                            if (watched == null) metadata else metadata.copy(episodes = watched.episodes, watchedEpisodes = watched.watchedEpisodes)
+                        })
+                }
                 dao.insertItem(
                     entity.copy(
-                        thumbnailPath = currentThumbnail,
+                        trailerUrl = currentTrailer,
+                thumbnailPath = currentThumbnail,
                         backdropUrl = currentBackdrop,
                         watchProvidersJson = MediaWatchProvider.listToJson(richWatchProviders),
                         showProgressJson = progress.toJson(),
@@ -1033,280 +1155,91 @@ object TraktSyncEngine {
         }
     }
 
-    /**
-     * Toggles watch state for a single TV episode and pushes the mutation to Trakt.
-     */
-    suspend fun markEpisodeWatched(
-        context: Context,
-        item: SavedItem,
-        seasonNumber: Int,
-        episodeNumber: Int,
-        isWatched: Boolean
-    ): Result<Unit> = withContext(Dispatchers.IO) {
-        val authManager = TraktAuthManager.getInstance(context)
-        val mutationEpoch = authManager.currentSessionEpoch()
-        val db = AppDatabase.getDatabase(context)
-        val dao = db.savedItemDao()
+    internal fun ids(item: SavedItem): TraktSyncIds {
+        require((item.traktId ?: 0) > 0 || (item.tmdbId ?: 0) > 0 || !item.imdbId.isNullOrBlank()) { "This item has no sync identity" }
+        return TraktSyncIds(trakt = item.traktId?.takeIf { it > 0 }, tmdb = item.tmdbId?.takeIf { it > 0 }, imdb = item.imdbId?.takeIf { it.isNotBlank() })
+    }
+    private fun watchedTime() = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:00'Z'", Locale.US).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }.format(Date())
+    private suspend fun mutate(action: suspend () -> Unit): Result<Unit> = try {
+        action(); Result.success(Unit)
+    } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+    catch (failure: Exception) { Result.failure(failure) }
 
-        // 1. Update local database atomically
-        val currentProgress = item.showProgress ?: TvShowProgress()
-        val updatedSeasons = currentProgress.seasons.map { s ->
-            if (s.seasonNumber == seasonNumber) {
-                val updatedEps = s.episodes.map { ep ->
-                    if (ep.episodeNumber == episodeNumber) {
-                        ep.copy(isWatched = isWatched, lastWatchedAt = if (isWatched) System.currentTimeMillis() else null)
-                    } else ep
-                }
-                s.copy(
-                    episodes = updatedEps,
-                    watchedEpisodes = updatedEps.count { it.isWatched }
-                )
-            } else s
+    suspend fun markEpisodeWatched(context: Context, item: SavedItem, seasonNumber: Int,
+        episodeNumber: Int, isWatched: Boolean): Result<Unit> = withContext(Dispatchers.IO) { mutate {
+        require(seasonNumber >= 0 && episodeNumber > 0)
+        val payload = TraktSyncPayload(shows = listOf(TraktSyncShowPayload(ids(item), seasons = listOf(
+            TraktSyncSeasonPayload(seasonNumber, episodes = listOf(TraktSyncEpisodePayload(episodeNumber,
+                watched_at = if (isWatched) watchedTime() else null)))))))
+        TraktOutbox.change(context, item.id, "episode:$seasonNumber:$episodeNumber", if (isWatched) "history:add" else "history:remove", payload) { entity ->
+            val progress = TvShowProgress.fromJson(entity.showProgressJson) ?: TvShowProgress()
+            val seasons = progress.seasons.toMutableList()
+            val index = seasons.indexOfFirst { it.seasonNumber == seasonNumber }
+            val season = seasons.getOrNull(index) ?: TvSeasonProgress(seasonNumber = seasonNumber)
+            val episodes = season.episodes.toMutableList()
+            val epIndex = episodes.indexOfFirst { it.episodeNumber == episodeNumber }
+            val old = episodes.getOrNull(epIndex) ?: TvEpisodeProgress(seasonNumber = seasonNumber, episodeNumber = episodeNumber)
+            val changed = old.copy(isWatched = isWatched, plays = if (isWatched) old.plays.coerceAtLeast(1) else 0,
+                lastWatchedAt = if (isWatched) System.currentTimeMillis() else null)
+            if (epIndex >= 0) episodes[epIndex] = changed else episodes += changed
+            val updated = season.copy(episodes = episodes.sortedBy { it.episodeNumber }, watchedEpisodes = episodes.count { it.isWatched })
+            if (index >= 0) seasons[index] = updated else seasons += updated
+            val watched = seasons.filter { it.seasonNumber > 0 }.sumOf { it.watchedEpisodes }
+            val complete = progress.totalAired > 0 && watched >= progress.totalAired
+            entity.copy(showProgressJson = progress.copy(seasons = seasons.sortedBy { it.seasonNumber }, totalWatched = watched,
+                completed = complete, lastWatchedSeason = if (isWatched) seasonNumber else progress.lastWatchedSeason,
+                lastWatchedEpisode = if (isWatched) episodeNumber else progress.lastWatchedEpisode).toJson(),
+                watchStatus = if (complete) "Completed" else if (watched > 0) "Watching" else "Plan to Watch",
+                lastWatchedAt = if (isWatched) System.currentTimeMillis() else entity.lastWatchedAt, updatedAt = System.currentTimeMillis())
         }
+    } }
 
-        val totalWatched = updatedSeasons.sumOf { it.watchedEpisodes }
-        val isComplete = currentProgress.totalAired > 0 && totalWatched >= currentProgress.totalAired
-
-        val newProgress = currentProgress.copy(
-            seasons = updatedSeasons,
-            totalWatched = totalWatched,
-            lastWatchedSeason = if (isWatched) seasonNumber else currentProgress.lastWatchedSeason,
-            lastWatchedEpisode = if (isWatched) episodeNumber else currentProgress.lastWatchedEpisode,
-            completed = isComplete
-        )
-
-        val entity = dao.getItemById(item.id)
-        if (entity != null) {
-            dao.insertItem(
-                entity.copy(
-                    watchStatus = if (isComplete) "Completed" else if (totalWatched > 0) "Watching" else "Plan to Watch",
-                    showProgressJson = newProgress.toJson(),
-                    lastWatchedAt = if (isWatched) System.currentTimeMillis() else entity.lastWatchedAt,
-                    updatedAt = System.currentTimeMillis()
-                )
-            )
+    suspend fun markMovieWatched(context: Context, item: SavedItem, isWatched: Boolean): Result<Unit> = withContext(Dispatchers.IO) { mutate {
+        val payload = TraktSyncPayload(movies = listOf(TraktSyncItemPayload(ids(item), watched_at = if (isWatched) watchedTime() else null)))
+        TraktOutbox.change(context, item.id, "movie:watched", if (isWatched) "history:add" else "history:remove", payload) { entity ->
+            entity.copy(watchStatus = if (isWatched) "Completed" else "Plan to Watch", watchStatusOverride = if (isWatched) "Completed" else "Plan to Watch",
+                lastWatchedAt = if (isWatched) System.currentTimeMillis() else null, updatedAt = System.currentTimeMillis())
         }
+    } }
 
-        // 2. Outbound sync to Trakt with rate limiting
-        if (authManager.isSessionInvalid(mutationEpoch) || !authManager.hasValidToken()) {
-            return@withContext Result.success(Unit)
+    suspend fun rateItem(context: Context, item: SavedItem, rating: Int): Result<Unit> = withContext(Dispatchers.IO) { mutate {
+        require(rating in 0..10)
+        val movie = item.mediaType.equals("movie", true)
+        val payload = if (movie) TraktSyncPayload(movies = listOf(TraktSyncItemPayload(ids(item), rating = rating)))
+            else TraktSyncPayload(shows = listOf(TraktSyncShowPayload(ids(item), rating = rating)))
+        TraktOutbox.change(context, item.id, "rating", if (rating > 0) "rating:add" else "rating:remove", payload) { entity ->
+            entity.copy(userRating = rating.takeIf { it > 0 }, updatedAt = System.currentTimeMillis())
         }
+    } }
 
-        throttleWrite()
-
-        if (authManager.isSessionInvalid(mutationEpoch) || !authManager.hasValidToken()) {
-            return@withContext Result.success(Unit)
+    suspend fun setWatchStatus(context: Context, item: SavedItem, status: String): Result<Unit> = withContext(Dispatchers.IO) {
+        require(status in listOf("Plan to Watch", "Watching", "Completed", "Dropped"))
+        if (status == "Completed" && item.mediaType.equals("movie", true)) {
+            val watched = markMovieWatched(context, item, true)
+            if (watched.isFailure) return@withContext watched
+            return@withContext toggleWatchlist(context, item, false)
         }
-
-        val nowIso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
-            timeZone = TimeZone.getTimeZone("UTC")
-        }.format(Date())
-
-        val payload = TraktSyncPayload(
-            shows = listOf(
-                TraktSyncShowPayload(
-                    ids = TraktIds(
-                        trakt = item.traktId ?: 0L,
-                        tmdb = item.tmdbId,
-                        imdb = item.imdbId
-                    ),
-                    seasons = listOf(
-                        TraktSyncSeasonPayload(
-                            number = seasonNumber,
-                            episodes = listOf(
-                                TraktSyncEpisodePayload(
-                                    number = episodeNumber,
-                                    watched_at = if (isWatched) nowIso else null
-                                )
-                            )
-                        )
-                    )
-                )
-            )
-        )
-
-        try {
-            if (isWatched) {
-                getApiService().addToHistory(payload)
-            } else {
-                getApiService().removeFromHistory(payload)
+        val result = toggleWatchlist(context, item, status == "Plan to Watch")
+        if (result.isSuccess) {
+            val db = AppDatabase.getDatabase(context)
+            db.withTransaction {
+                val current = db.savedItemDao().getItemById(item.id) ?: error("Item no longer exists")
+                check(!current.isDeleted) { "Restore the item from Trash first" }
+                db.savedItemDao().insertItem(current.copy(watchStatus = status, watchStatusOverride = status, updatedAt = System.currentTimeMillis()))
             }
-            Result.success(Unit)
-        } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
-            Log.e(TAG, "Failed outbound episode watch sync: ${e.message}", e)
-            Result.failure(e)
         }
+        result
     }
 
-    /**
-     * Toggles watch state for an entire Movie and pushes to Trakt.
-     */
-    suspend fun markMovieWatched(context: Context, item: SavedItem, isWatched: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
-        val authManager = TraktAuthManager.getInstance(context)
-        val mutationEpoch = authManager.currentSessionEpoch()
-        val db = AppDatabase.getDatabase(context)
-        val dao = db.savedItemDao()
-
-        val entity = dao.getItemById(item.id)
-        if (entity != null) {
-            dao.insertItem(
-                entity.copy(
-                    watchStatus = if (isWatched) "Completed" else "Plan to Watch",
-                    lastWatchedAt = if (isWatched) System.currentTimeMillis() else null,
-                    updatedAt = System.currentTimeMillis()
-                )
-            )
+    suspend fun toggleWatchlist(context: Context, item: SavedItem, inWatchlist: Boolean): Result<Unit> = withContext(Dispatchers.IO) { mutate {
+        val movie = item.mediaType.equals("movie", true)
+        val payload = if (movie) TraktSyncPayload(movies = listOf(TraktSyncItemPayload(ids(item))))
+            else TraktSyncPayload(shows = listOf(TraktSyncShowPayload(ids(item))))
+        TraktOutbox.change(context, item.id, "watchlist", if (inWatchlist) "watchlist:add" else "watchlist:remove", payload) { entity ->
+            entity.copy(inWatchlist = inWatchlist, watchStatus = entity.watchStatusOverride ?: if (inWatchlist && entity.lastWatchedAt == null) "Plan to Watch" else entity.watchStatus,
+                updatedAt = System.currentTimeMillis())
         }
-
-        if (authManager.isSessionInvalid(mutationEpoch) || !authManager.hasValidToken()) {
-            return@withContext Result.success(Unit)
-        }
-
-        throttleWrite()
-
-        if (authManager.isSessionInvalid(mutationEpoch) || !authManager.hasValidToken()) {
-            return@withContext Result.success(Unit)
-        }
-
-        val nowIso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
-            timeZone = TimeZone.getTimeZone("UTC")
-        }.format(Date())
-
-        val traktId = item.traktId ?: 0L
-        val payload = TraktSyncPayload(
-            movies = listOf(
-                TraktSyncItemPayload(
-                    ids = TraktIds(trakt = traktId, tmdb = item.tmdbId, imdb = item.imdbId),
-                    watched_at = if (isWatched) nowIso else null
-                )
-            )
-        )
-
-        try {
-            if (isWatched) {
-                getApiService().addToHistory(payload)
-            } else {
-                getApiService().removeFromHistory(payload)
-            }
-            Result.success(Unit)
-        } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
-            Log.e(TAG, "Failed outbound movie watch sync: ${e.message}", e)
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Rates an item (1 to 10) and pushes the rating to Trakt.
-     */
-    suspend fun rateItem(context: Context, item: SavedItem, rating: Int): Result<Unit> = withContext(Dispatchers.IO) {
-        val authManager = TraktAuthManager.getInstance(context)
-        val mutationEpoch = authManager.currentSessionEpoch()
-        val db = AppDatabase.getDatabase(context)
-        val dao = db.savedItemDao()
-
-        val entity = dao.getItemById(item.id)
-        if (entity != null) {
-            dao.insertItem(entity.copy(userRating = if (rating > 0) rating else null, updatedAt = System.currentTimeMillis()))
-        }
-
-        if (authManager.isSessionInvalid(mutationEpoch) || !authManager.hasValidToken()) {
-            return@withContext Result.success(Unit)
-        }
-
-        throttleWrite()
-
-        if (authManager.isSessionInvalid(mutationEpoch) || !authManager.hasValidToken()) {
-            return@withContext Result.success(Unit)
-        }
-
-        val traktId = item.traktId ?: 0L
-        val isMovie = item.mediaType?.lowercase() == "movie"
-
-        val payload = if (isMovie) {
-            TraktSyncPayload(
-                movies = listOf(
-                    TraktSyncItemPayload(
-                        ids = TraktIds(trakt = traktId, tmdb = item.tmdbId, imdb = item.imdbId),
-                        rating = rating
-                    )
-                )
-            )
-        } else {
-            TraktSyncPayload(
-                shows = listOf(
-                    TraktSyncShowPayload(
-                        ids = TraktIds(trakt = traktId, tmdb = item.tmdbId, imdb = item.imdbId),
-                        rating = rating
-                    )
-                )
-            )
-        }
-
-        try {
-            if (rating > 0) {
-                getApiService().addRatings(payload)
-            } else {
-                getApiService().removeRatings(payload)
-            }
-            Result.success(Unit)
-        } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
-            Log.e(TAG, "Failed outbound rating sync: ${e.message}", e)
-            Result.failure(e)
-        }
-    }
-
-    /**
-     * Toggles watchlist status and pushes mutation to Trakt.
-     */
-    suspend fun toggleWatchlist(context: Context, item: SavedItem, inWatchlist: Boolean): Result<Unit> = withContext(Dispatchers.IO) {
-        val authManager = TraktAuthManager.getInstance(context)
-        val mutationEpoch = authManager.currentSessionEpoch()
-        val db = AppDatabase.getDatabase(context)
-        val dao = db.savedItemDao()
-
-        val entity = dao.getItemById(item.id)
-        if (entity != null) {
-            val currentStatus = if (inWatchlist) "Plan to Watch" else if (entity.watchStatus == "Plan to Watch") null else entity.watchStatus
-            dao.insertItem(entity.copy(watchStatus = currentStatus, updatedAt = System.currentTimeMillis()))
-        }
-
-        if (authManager.isSessionInvalid(mutationEpoch) || !authManager.hasValidToken()) {
-            return@withContext Result.success(Unit)
-        }
-
-        throttleWrite()
-
-        if (authManager.isSessionInvalid(mutationEpoch) || !authManager.hasValidToken()) {
-            return@withContext Result.success(Unit)
-        }
-
-        val traktId = item.traktId ?: 0L
-        val isMovie = item.mediaType?.lowercase() == "movie"
-
-        val payload = if (isMovie) {
-            TraktSyncPayload(
-                movies = listOf(TraktSyncItemPayload(ids = TraktIds(trakt = traktId, tmdb = item.tmdbId, imdb = item.imdbId)))
-            )
-        } else {
-            TraktSyncPayload(
-                shows = listOf(TraktSyncShowPayload(ids = TraktIds(trakt = traktId, tmdb = item.tmdbId, imdb = item.imdbId)))
-            )
-        }
-
-        try {
-            if (inWatchlist) {
-                getApiService().addToWatchlist(payload)
-            } else {
-                getApiService().removeFromWatchlist(payload)
-            }
-            Result.success(Unit)
-        } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
-            Log.e(TAG, "Failed outbound watchlist sync: ${e.message}", e)
-            Result.failure(e)
-        }
-    }
+    } }
 }

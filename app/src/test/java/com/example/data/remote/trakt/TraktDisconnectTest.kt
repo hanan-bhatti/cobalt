@@ -43,7 +43,7 @@ import org.robolectric.annotation.Config
 import okhttp3.ResponseBody.Companion.toResponseBody
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [36], application = android.app.Application::class)
 class TraktDisconnectTest {
 
     private lateinit var context: Context
@@ -357,6 +357,10 @@ class FakeTraktCredentialStore : TraktCredentialStore {
 }
 
 class FakeTraktApiService : TraktApiService {
+    override suspend fun getPlaybackEpisodes(page: Int, limit: Int): List<TraktPlaybackEpisode> = emptyList()
+    override suspend fun getMovieSummary(id: String): TraktMovie = TraktMovie()
+    override suspend fun getShowSummary(id: String): TraktShow = TraktShow()
+    override suspend fun searchMedia(query: String, limit: Int): List<TraktSearchResult> = emptyList()
     var revokeCalled = false
     var lastRevokeRequest: TraktRevokeTokenRequest? = null
     var lastRevokeAuthHeader: String? = null

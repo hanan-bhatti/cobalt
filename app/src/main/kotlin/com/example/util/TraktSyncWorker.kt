@@ -50,6 +50,11 @@ class TraktSyncWorker(
         }
 
         return try {
+            if (inputData.getBoolean("upload_only", false)) {
+                authManager.refreshAccessTokenIfNeeded()
+                com.example.data.remote.trakt.TraktOutbox.drain(applicationContext, TraktSyncEngine.getApiService())
+                return Result.success()
+            }
             val result = TraktSyncEngine.performSync(
                 context = applicationContext,
                 isBackground = true
@@ -61,8 +66,11 @@ class TraktSyncWorker(
                 Result.retry()
             }
         } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
             Log.e(TAG, "Worker execution failed: ${e.message}", e)
-            Result.failure()
+            Result.retry()
+        } finally {
+            if (authManager.hasValidToken()) runCatching { scheduleDeferredRetry(applicationContext) }
         }
     }
 
@@ -70,23 +78,53 @@ class TraktSyncWorker(
         private const val TAG = "TraktSyncWorker"
         const val ONE_TIME_WORK_NAME = "cobalt_trakt_sync_immediate"
         const val PERIODIC_WORK_NAME = "cobalt_trakt_sync_periodic"
+        const val DEFERRED_WORK_NAME = "cobalt_trakt_sync_deferred"
 
-        fun enqueueOneTimeSync(context: Context) {
+        private val uploadScheduleLock = Any()
+
+        fun enqueueOneTimeSync(context: Context, uploadOnly: Boolean = false) {
             if ((com.example.notes.StartupCrashGuard.shouldPause(context) || com.example.notes.NoteMigrationManager.shouldPauseBackground(context))) return
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
 
             val request = OneTimeWorkRequestBuilder<TraktSyncWorker>()
+                .setInputData(androidx.work.workDataOf("upload_only" to uploadOnly))
                 .setConstraints(constraints)
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS)
                 .build()
 
-            WorkManager.getInstance(context).enqueueUniqueWork(
-                ONE_TIME_WORK_NAME,
-                ExistingWorkPolicy.REPLACE,
-                request
-            )
+            val manager = WorkManager.getInstance(context)
+            if (uploadOnly) {
+                // Called from the IO outbox writer. Keep at most one waiting upload behind the active worker.
+                synchronized(uploadScheduleLock) {
+                    val query = androidx.work.WorkQuery.Builder.fromUniqueWorkNames(listOf(ONE_TIME_WORK_NAME))
+                        .addStates(listOf(androidx.work.WorkInfo.State.ENQUEUED, androidx.work.WorkInfo.State.BLOCKED)).build()
+                    val waiting = manager.getWorkInfos(query).get().isNotEmpty()
+                    if (!waiting) manager.enqueueUniqueWork(ONE_TIME_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, request).result.get()
+                }
+            } else manager.enqueueUniqueWork(ONE_TIME_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, request)
+
+        }
+
+        suspend fun scheduleDeferredRetry(context: Context) {
+            val auth = TraktAuthManager.getInstance(context)
+            if (!auth.hasValidToken() || com.example.notes.StartupCrashGuard.shouldPause(context) ||
+                com.example.notes.NoteMigrationManager.shouldPauseBackground(context)) return
+            val next = com.example.data.local.AppDatabase.getDatabase(context).traktOutboxDao()
+                .nextRetryAt(auth.syncSessionId(), System.currentTimeMillis()) ?: return
+            val manager = WorkManager.getInstance(context)
+            synchronized(uploadScheduleLock) {
+                val query = androidx.work.WorkQuery.Builder.fromUniqueWorkNames(listOf(DEFERRED_WORK_NAME))
+                    .addStates(listOf(androidx.work.WorkInfo.State.ENQUEUED, androidx.work.WorkInfo.State.BLOCKED)).build()
+                if (manager.getWorkInfos(query).get().isNotEmpty()) return
+                val request = OneTimeWorkRequestBuilder<TraktSyncWorker>()
+                    .setInputData(androidx.work.workDataOf("upload_only" to true))
+                    .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                    .setInitialDelay((next - System.currentTimeMillis()).coerceAtLeast(1000L), TimeUnit.MILLISECONDS)
+                    .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.SECONDS).build()
+                manager.enqueueUniqueWork(DEFERRED_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, request).result.get()
+            }
         }
 
         fun schedulePeriodicSync(context: Context, repeatHours: Long = 24) {
@@ -110,6 +148,7 @@ class TraktSyncWorker(
             val wm = WorkManager.getInstance(context)
             wm.cancelUniqueWork(ONE_TIME_WORK_NAME)
             wm.cancelUniqueWork(PERIODIC_WORK_NAME)
+            wm.cancelUniqueWork(DEFERRED_WORK_NAME)
         }
     }
 }

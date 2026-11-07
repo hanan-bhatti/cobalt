@@ -36,7 +36,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [36])
+@Config(sdk = [36], application = android.app.Application::class)
 class TraktPkceAuthTest {
 
     private lateinit var context: Context
@@ -55,6 +55,7 @@ class TraktPkceAuthTest {
             credentialStore = credentialStore
         )
         TraktAuthManager.setInstanceForTesting(authManager)
+        TraktSyncEngine.apiServiceProvider = { fakeApiService }
     }
 
     @After
@@ -63,6 +64,7 @@ class TraktPkceAuthTest {
             authManager.disconnect()
         }
         TraktAuthManager.setInstanceForTesting(null)
+        TraktSyncEngine.apiServiceProvider = null
     }
 
     @Test
@@ -85,7 +87,7 @@ class TraktPkceAuthTest {
         val (authUri, state) = authManager.createPkceAuthorizationUri()
 
         assertEquals("https", authUri.scheme)
-        assertEquals("trakt.tv", authUri.host)
+        assertEquals("auth.trakt.tv", authUri.host)
         assertEquals("/oauth/authorize", authUri.path)
         assertEquals("code", authUri.getQueryParameter("response_type"))
         assertEquals(TraktAuthManager.DEFAULT_CLIENT_ID, authUri.getQueryParameter("client_id"))

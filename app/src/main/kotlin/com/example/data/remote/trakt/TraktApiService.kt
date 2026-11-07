@@ -25,6 +25,9 @@ import retrofit2.http.POST
 import retrofit2.http.Query
 
 interface TraktApiService {
+    @GET("search/movie,show?extended=full")
+    suspend fun searchMedia(@Query("query") query: String, @Query("limit") limit: Int = 20): List<TraktSearchResult>
+
 
     // ==========================================
     // 1. AUTHENTICATION & DEVICE CODE FLOW
@@ -143,6 +146,15 @@ interface TraktApiService {
     // ==========================================
     // 5. SHOW ENRICHMENT & DETAILED PROGRESS
     // ==========================================
+
+    @GET("movies/{id}?extended=full")
+    suspend fun getMovieSummary(@retrofit2.http.Path("id") id: String): TraktMovie
+
+    @GET("shows/{id}?extended=full")
+    suspend fun getShowSummary(@retrofit2.http.Path("id") id: String): TraktShow
+
+    @GET("sync/playback/episodes")
+    suspend fun getPlaybackEpisodes(@Query("page") page: Int = 1, @Query("limit") limit: Int = 100): List<TraktPlaybackEpisode>
 
     @GET("shows/{id}/progress/watched")
     suspend fun getShowWatchedProgress(

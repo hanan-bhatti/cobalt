@@ -55,98 +55,77 @@ object TraktClient {
         .addLast(KotlinJsonAdapterFactory())
         .build()
 
-    private val writeLock = Any()
-    @Volatile
-    private var lastWriteTimestamp = 0L
-
-    private fun throttleWriteCallIfNeeded(method: String) {
-        if (method.equals("POST", ignoreCase = true) ||
-            method.equals("PUT", ignoreCase = true) ||
-            method.equals("DELETE", ignoreCase = true)
-        ) {
-            synchronized(writeLock) {
-                val now = System.currentTimeMillis()
-                val elapsed = now - lastWriteTimestamp
-                if (elapsed < 1100L) {
-                    try {
-                        Thread.sleep(1100L - elapsed)
-                    } catch (_: InterruptedException) {}
-                }
-                lastWriteTimestamp = System.currentTimeMillis()
+    var retryNotBeforeProvider: (() -> Long)? = null
+    var saveRetryNotBefore: ((Long) -> Unit)? = null
+    private val pacingLock = Any()
+    private var lastRequestNanos = 0L
+    private fun waitForRequest(method: String) {
+        val remaining = (retryNotBeforeProvider?.invoke() ?: 0L) - System.currentTimeMillis()
+        if (remaining > 20_000) throw java.io.IOException("Trakt rate limit: sync will resume later.")
+        fun pause(millis: Long) {
+            if (millis <= 0) return
+            try { Thread.sleep(millis) }
+            catch (interrupted: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw java.io.InterruptedIOException("Trakt request cancelled")
             }
+        }
+        pause(remaining)
+        synchronized(pacingLock) {
+            val spacing = if (method == "GET") 650L else 1100L
+            val elapsed = (System.nanoTime() - lastRequestNanos) / 1_000_000
+            pause(spacing - elapsed)
+            lastRequestNanos = System.nanoTime()
         }
     }
 
     private val okHttpClient: OkHttpClient = OkHttpClient.Builder()
+        // A lost POST response must not be retried blindly: watch-history adds are not idempotent.
+        .retryOnConnectionFailure(false)
         .addInterceptor { chain ->
             val original = chain.request()
-            throttleWriteCallIfNeeded(original.method)
-
-            val apiKey = clientIdProvider?.invoke()?.takeIf { it.isNotBlank() } ?: TraktAuthManager.DEFAULT_CLIENT_ID
-            val requestBuilder = original.newBuilder()
+            val oauth = original.url.encodedPath.startsWith("/oauth/")
+            val url = if (oauth && original.url.host == "api.trakt.tv")
+                original.url.newBuilder().host("auth.trakt.tv").build() else original.url
+            val builder = original.newBuilder().url(url)
                 .header("Content-Type", "application/json")
                 .header("User-Agent", "Cobalt/2.2.3 (Android)")
                 .header("trakt-api-version", "2")
-                .header("trakt-api-key", apiKey)
-
+                .header("trakt-api-key", clientIdProvider?.invoke()?.takeIf { it.isNotBlank() } ?: TraktAuthManager.DEFAULT_CLIENT_ID)
             val token = tokenProvider?.invoke()
-            if (!token.isNullOrBlank() && original.header("Authorization") == null) {
-                requestBuilder.header("Authorization", "Bearer $token")
-            }
-
-            val request = requestBuilder.build()
-            val startMs = System.currentTimeMillis()
-            Log.d(HTTP_TAG, "--> ${request.method} ${request.url}")
-
-            var response: okhttp3.Response? = null
-            var attempts = 0
-            val maxAttempts = 3
-
-            while (attempts < maxAttempts) {
-                attempts++
-                try {
-                    response = chain.proceed(request)
-                    if (response.code == 429) {
-                        val retryAfterSec = response.header("Retry-After")?.toLongOrNull() ?: (2L * attempts)
-                        Log.w(HTTP_TAG, "Trakt 429 Rate Limit hit. Backing off for ${retryAfterSec}s before attempt $attempts...")
+            if (!oauth && !token.isNullOrBlank() && original.header("Authorization") == null) builder.header("Authorization", "Bearer $token")
+            val request = builder.build()
+            var attempt = 0
+            while (true) {
+                if (chain.call().isCanceled()) throw java.io.InterruptedIOException("Trakt request cancelled")
+                waitForRequest(request.method)
+                val response = try { chain.proceed(request) }
+                catch (failure: java.io.IOException) {
+                    if (request.method != "GET" || ++attempt >= 3 || chain.call().isCanceled()) throw failure
+                    continue
+                }
+                // Do not log URLs, OAuth response bodies, user history or tokens.
+                Log.d(HTTP_TAG, "Trakt HTTP status ${response.code}")
+                if (response.code == 429) {
+                    val seconds = response.header("Retry-After")?.toLongOrNull()?.coerceAtLeast(1)
+                        ?: (2L shl attempt.coerceAtMost(4)) + kotlin.random.Random.nextLong(1, 4)
+                    val until = System.currentTimeMillis() + seconds.coerceAtMost(Long.MAX_VALUE / 2000) * 1000
+                    saveRetryNotBefore?.invoke(until)
+                    if (request.method == "GET" && seconds <= 20 && ++attempt < 3) {
                         response.close()
-                        try {
-                            Thread.sleep((retryAfterSec * 1000L) + 250L)
-                        } catch (_: InterruptedException) {}
                         continue
                     }
-                    break
-                } catch (e: Exception) {
-                    if (attempts >= maxAttempts) {
-                        val elapsed = System.currentTimeMillis() - startMs
-                        Log.e(HTTP_TAG, "<-- HTTP FAILED: ${request.method} ${request.url} after ${elapsed}ms: ${e.message}", e)
-                        throw e
-                    }
-                    try {
-                        Thread.sleep(1000L * attempts)
-                    } catch (_: InterruptedException) {}
                 }
+                // Return the final response OPEN, including 429, so Retrofit preserves its error.
+                return@addInterceptor response
             }
-
-            val finalResponse = response ?: throw java.io.IOException("Failed after $maxAttempts attempts")
-            val durationMs = System.currentTimeMillis() - startMs
-            val peekedBody = try {
-                finalResponse.peekBody(2048).string()
-            } catch (_: Exception) {
-                "<body peek unavailable>"
-            }
-
-            if (finalResponse.isSuccessful) {
-                Log.d(HTTP_TAG, "<-- ${finalResponse.code} ${request.method} ${request.url} (${durationMs}ms) [body: ${peekedBody.take(200)}]")
-            } else {
-                Log.w(HTTP_TAG, "<-- ${finalResponse.code} ${request.method} ${request.url} (${durationMs}ms) [error: ${peekedBody.take(300)}]")
-            }
-
-            finalResponse
+            @Suppress("UNREACHABLE_CODE")
+            throw java.io.IOException("Trakt request did not finish")
         }
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(25, TimeUnit.SECONDS)
         .writeTimeout(15, TimeUnit.SECONDS)
+        .callTimeout(60, TimeUnit.SECONDS)
         .build()
 
     @Volatile
