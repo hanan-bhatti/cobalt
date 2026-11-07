@@ -43,6 +43,10 @@ class TrashManager(context: Context,
                     }
                     trash.insert(TrashEntryEntity(id, time, TrashPolicy.expiresAt(time, useTrash), !useTrash))
                     check(dao.setDeleted(id, true, time) == 1)
+                    database.traktOutboxDao().deleteItem(id)
+                    if (item.type == "MEDIA" && !dao.hasOtherMediaIdentity(item.id, item.mediaType.orEmpty(),
+                        item.traktId ?: 0L, item.tmdbId ?: 0, item.imdbId.orEmpty()))
+                        database.mediaTombstoneDao().put(com.example.data.local.MediaTombstoneEntity.from(item.toDomainModel(), time))
                 }
             } catch (error: Throwable) {
                 // If commit status is uncertain, leave verified copies rather than deleting live data.
@@ -84,6 +88,8 @@ class TrashManager(context: Context,
             database.withTransaction {
                 check(dao.setDeleted(id, false, now()) == 1)
                 trash.remove(id)
+                if (item.type == "MEDIA") database.mediaTombstoneDao().clearMatching(item.mediaType.orEmpty(),
+                    item.traktId?.toString().orEmpty(), item.tmdbId?.toString().orEmpty(), item.imdbId.orEmpty())
                 if (prefix != null) dao.insertNoteSearch(com.example.data.local.NoteSearchEntity(id, item.title, prefix))
             }
             // Search entries stayed intact; active-query filters hide them while in Trash.
@@ -195,6 +201,8 @@ class TrashManager(context: Context,
         }
         database.withTransaction {
             dao.deleteNoteSearch(id)
+            database.traktEpisodeDao().deleteItem(id)
+            database.traktOutboxDao().deleteItem(id)
             dao.deleteById(id)
             trash.remove(id)
         }

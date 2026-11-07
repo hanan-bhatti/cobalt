@@ -79,6 +79,41 @@ class TrashManagerTest {
             assertFalse(durable.exists())
         }
     }
+    @Test fun megabyteMediaAccountingFollowsTrashRestoreAndPurge() = runBlocking {
+        Fixture().use { f ->
+            f.manager.setEnabled(true)
+            val manager = NoteStorageManager(f.context, f.database, f.store)
+            val cases = listOf(Triple(SavedItemType.IMAGE, "images", "png"),
+                Triple(SavedItemType.VIDEO, "videos", "mp4"), Triple(SavedItemType.AUDIO, "audio", "wav"))
+            for ((type, directory, extension) in cases) {
+                val id = java.util.UUID.randomUUID().toString()
+                val file = File(f.context.filesDir, "media/$directory/$id.$extension")
+                file.parentFile!!.mkdirs()
+                // Accounting works on bytes; decoding/playback is tested separately on device.
+                file.outputStream().use { output -> repeat(32) { output.write(ByteArray(65_536) { 42 }) } }
+                val item = SavedItem(id = id, type = type, title = "Media accounting", content = if (type == SavedItemType.AUDIO) "" else file.path,
+                    thumbnailPath = if (type == SavedItemType.AUDIO) file.path else null)
+                f.ids.add(id); f.database.savedItemDao().insertItem(SavedItemEntity.fromDomainModel(item))
+                val before = manager.scan()
+                assertTrue(before.media >= file.length())
+                val typeBytes = when (type) { SavedItemType.IMAGE -> before.images; SavedItemType.VIDEO -> before.video; else -> before.audio }
+                assertTrue(typeBytes >= file.length())
+                f.manager.delete(id)
+                val trashed = manager.scan()
+                assertEquals(before.media - 2_097_152, trashed.media)
+                assertEquals(before.trash + 2_097_152, trashed.trash)
+                f.manager.restore(id)
+                assertEquals(before.media, manager.scan().media)
+                assertTrue(file.exists())
+                f.manager.delete(id); f.manager.deleteForever(id)
+                assertFalse(file.exists())
+                val purged = manager.scan()
+                assertEquals(before.media - 2_097_152, purged.media)
+                assertEquals(before.trash, purged.trash)
+            }
+        }
+    }
+
     @Test fun permanentDeletionKeepsSharedMediaUntilItsLastOwnerIsRemoved() = runBlocking {
         Fixture().use { f ->
             val directory = File(f.context.filesDir, "media/images").also { it.mkdirs() }
