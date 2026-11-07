@@ -1751,6 +1751,10 @@ fun CaptureScreen(
             viewModel.updateActiveCaptureItem { it.copy(content = updated.text, bodyLoaded = true) }
         }
     }
+    // Keep dialog commands alive when opening the dialog hides/disposes the IME toolbar.
+    val composeFormattingCommand = key(item.id) {
+        com.example.ui.components.rememberNoteFormattingCommand(textContent, ::applyEditorText)
+    }
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, item.id) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
@@ -1981,7 +1985,7 @@ fun CaptureScreen(
                             MarkdownAccessoryToolbar(
                                 textFieldValue = textContent,
                                 onApplyFormat = ::applyEditorText,
-                                onNativeCommand = if (fileEditing) viewModel::formatContinuousEditor else null,
+                                onNativeCommand = if (fileEditing) viewModel::formatContinuousEditor else composeFormattingCommand,
                                 enabled = !fileEditing || (fileEditor.document != null && !fileEditor.busy),
                                 isPreviewMode = isPreviewMode,
                                 onTogglePreview = { if (!fileEditing || !fileEditor.busy) isPreviewMode = !isPreviewMode },

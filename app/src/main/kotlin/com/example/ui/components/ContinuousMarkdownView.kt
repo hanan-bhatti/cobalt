@@ -39,7 +39,13 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
     var message: (String) -> Unit = {}
     var pasteProgress: (Float?) -> Unit = {}
     var onTool: (String) -> Unit = {}
-    private val freeze: (Boolean) -> Unit = { isEditable = !it && paste?.isActive != true }
+    private var preservingIme = false
+    private fun setEditingAvailable(value: Boolean) {
+        preservingIme = document != null && document?.frozen == false
+        try { isEditable = value } finally { preservingIme = false }
+    }
+    override fun hideSoftInput() { if (!preservingIme) super.hideSoftInput() }
+    private val freeze: (Boolean) -> Unit = { setEditingAvailable(!it && paste?.isActive != true) }
     private val format: (String) -> Unit = { command ->
         if (document?.pendingEdit?.isActive != true) when (command) {
             "undo" -> if (canUndo() && isEditable) undo()
@@ -51,6 +57,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
     }
 
     init {
+        setDisableSoftKbdIfHardKbdAvailable(false)
         setBackgroundColor(android.graphics.Color.TRANSPARENT)
         isLineNumberEnabled = false
         isHighlightCurrentLine = false
@@ -267,7 +274,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
         if (!isEditable || doc.pendingEdit?.isActive == true) return
         val position = cursor.left
         val revision = doc.revision
-        isEditable = false
+        setEditingAvailable(false)
         doc.pendingEdit = scope.launch {
             try {
                 val frozen = doc.snapshot()
@@ -324,7 +331,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
         val left = cursor.left
         val right = cursor.right
         val version = doc.revision
-        isEditable = false
+        setEditingAvailable(false)
         pasteProgress(0f)
         paste = scope.launch {
             var batch = false
@@ -396,7 +403,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
                 message(error.message ?: "Paste failed; original text retained.")
             } finally {
                 if (batch) text.endBatchEdit()
-                isEditable = !doc.frozen
+                setEditingAvailable(!doc.frozen)
                 pasteProgress(null)
                 if (doc.pendingEdit === currentCoroutineContext()[Job]) doc.pendingEdit = null
             }
@@ -497,7 +504,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
                 if (matches.isEmpty()) { message("No matches"); return@launch }
                 if (replacement == null) { select(matches.first(), matches.first() + query.length, false); return@launch }
                 if (doc.frozen || paste?.isActive == true) return@launch
-                isEditable = false
+                setEditingAvailable(false)
                 applying = true
                 pasteProgress(0f)
                 beginStandaloneEdit(); batch = true
@@ -521,7 +528,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
                 message(error.message ?: "Search could not finish. The saved note is retained.")
             } finally {
                 if (batch) text.endBatchEdit()
-                if (applying) { isEditable = !doc.frozen; pasteProgress(null) }
+                if (applying) { setEditingAvailable(!doc.frozen); pasteProgress(null) }
                 if (doc.pendingEdit === currentCoroutineContext()[Job]) doc.pendingEdit = null
             }
         }.also { if (replacement != null) doc.pendingEdit = it }
@@ -580,7 +587,7 @@ internal class ContinuousMarkdownView(context: Context) : CodeEditor(context) {
         val line = text.getLineString(lineNumber)
         if (!com.example.notes.MarkdownListEditing.canHandle(line, cursor.leftColumn, backspace)) return false
         val position = cursor.left; val lineStart = position - cursor.leftColumn; val version = doc.revision
-        isEditable = false
+        setEditingAvailable(false)
         doc.pendingEdit = scope.launch {
             try {
                 val frozen = doc.snapshot()

@@ -78,6 +78,29 @@ class DiskMarkdownViewTest {
             assertEquals(command, "sample", f.text())
         }
     }
+    @Test fun rapidHardwareUndoRedoRetainsEveryAcceptedAction() {
+        Fixture("sample").use { f ->
+            f.open()
+            repeat(10) {
+                f.document.onFormat!!.invoke("Heading1")
+                pump { f.view.isEditable && f.document.pendingEdit?.isActive != true }
+            }
+            val edited = f.text()
+            assertNotEquals("sample", edited)
+            fun shortcut(code: Int) {
+                assertTrue(f.view.onKeyDown(code, android.view.KeyEvent(0L, 0L,
+                    android.view.KeyEvent.ACTION_DOWN, code, 0, android.view.KeyEvent.META_CTRL_ON)))
+            }
+            repeat(10) { shortcut(android.view.KeyEvent.KEYCODE_Z) }
+            pump { f.view.isEditable && f.document.pendingEdit?.isActive != true }
+            assertEquals("sample", f.text())
+            repeat(10) { shortcut(android.view.KeyEvent.KEYCODE_Y) }
+            pump { f.view.isEditable && f.document.pendingEdit?.isActive != true }
+            assertEquals(edited, f.text())
+            assertNotNull(f.view.onCreateInputConnection(EditorInfo()))
+        }
+    }
+
     @Test fun linkAtAnEmptyCursorHasAnEditableLabel() {
         Fixture("sample").use { f ->
             f.open(6); f.document.onFormat!!.invoke("Link")

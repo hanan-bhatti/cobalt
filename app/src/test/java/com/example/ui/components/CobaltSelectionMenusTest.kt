@@ -96,6 +96,22 @@ class CobaltSelectionMenusTest {
             assertEquals(5, value.text.lines().count { it.startsWith('|') })
         }
     }
+    @Test fun tableDialogSurvivesKeyboardToolbarDisposal() {
+        var value by mutableStateOf(TextFieldValue("before\n", TextRange(7)))
+        var keyboard by mutableStateOf(true)
+        compose.setContent { MaterialTheme { CobaltSelectionMenuHost {
+            val command = rememberNoteFormattingCommand(value, { value = it })
+            val controller = LocalCobaltSelectionController.current!!
+            LaunchedEffect(controller.createTable) { if (controller.createTable != null) keyboard = false }
+            if (keyboard) CobaltTableToolbarActions(value, { value = it }, onNativeCommand = command)
+        } } }
+        compose.onNodeWithContentDescription("Insert table").performClick()
+        compose.onNodeWithContentDescription("Insert table").assertDoesNotExist()
+        compose.onNodeWithText("Insert").performClick()
+        compose.waitUntil(10_000) { value.text.contains("Column 1") }
+        compose.runOnIdle { assertEquals(5, value.text.lines().count { it.startsWith('|') }) }
+    }
+
     @Test fun inlineFolderRequestsFocusAndReleasesEditingState() {
         var visible by mutableStateOf(false)
         var editing = false

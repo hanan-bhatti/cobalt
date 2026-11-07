@@ -114,7 +114,7 @@ internal fun CobaltSelectionFormattingScope(value: TextFieldValue, onChange: (Te
 }
 
 @Composable
-private fun rememberNoteFormattingCommand(value: TextFieldValue, onChange: (TextFieldValue) -> Unit): (String) -> Unit {
+internal fun rememberNoteFormattingCommand(value: TextFieldValue, onChange: (TextFieldValue) -> Unit): (String) -> Unit {
     val controller = LocalCobaltSelectionController.current
     val scope = rememberCoroutineScope()
     val latestValue by rememberUpdatedState(value)

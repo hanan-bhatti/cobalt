@@ -42,6 +42,8 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
     private var loading = false
     private var loadFailed = false
     private var blocked = false
+    private var queuedActions = 0
+    private var preservingIme = false
     private var backpressure = false
     private var hostEditable = true
     private var isRestoringScroll = false
@@ -62,7 +64,15 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
     var message: (String) -> Unit = {}
     var progress: (Float?) -> Unit = {}
     var tool: (String) -> Unit = {}
-    private val freeze: (Boolean) -> Unit = { isEditable = hostEditable && !it && !loading && !loadFailed && !blocked && !backpressure }
+    private val freeze: (Boolean) -> Unit = { frozen ->
+        setEditingAvailable(hostEditable && !frozen && !loading && !loadFailed && !blocked && !backpressure)
+    }
+    // Sora's setEditable(false) hides IME. An IO barrier is temporary, not a user dismissal.
+    private fun setEditingAvailable(value: Boolean) {
+        preservingIme = hostEditable && !released
+        try { isEditable = value } finally { preservingIme = false }
+    }
+    override fun hideSoftInput() { if (!preservingIme) super.hideSoftInput() }
     private val format: (String) -> Unit = { command ->
         when (command) {
             "undo" -> undo()
@@ -73,6 +83,7 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
         }
     }
     init {
+        setDisableSoftKbdIfHardKbdAvailable(false)
         setBackgroundColor(android.graphics.Color.TRANSPARENT)
         isLineNumberEnabled = false; isHighlightCurrentLine = false; isHighlightCurrentBlock = false
         isHighlightBracketPair = false; isDisplayLnPanel = false; isCursorAnimationEnabled = false
@@ -94,7 +105,7 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
             total += inserted.length - removed
             anchor = position + inserted.length; caret = anchor
             syncDocumentSelection()
-            if (pending.size >= 48 || text.length > DiskTextModel.MAX_VIEW_CHARACTERS + 8192) { backpressure = true; isEditable = false }
+            if (pending.size >= 48 || text.length > DiskTextModel.MAX_VIEW_CHARACTERS + 8192) { backpressure = true; setEditingAvailable(false) }
             if (delivery?.isActive != true) delivery = scope.launch { yield(); deliver() }
         }
         subscribeEvent(SelectionChangeEvent::class.java) { event, _ ->
@@ -136,7 +147,7 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
         val batch = pending.toList()
         val accepted = session.record(batch, pendingBefore, DiskTextModel.Position(anchor, caret), final)
         if (accepted) { pending.clear(); backpressure = false; freeze(document?.frozen != false) }
-        else { backpressure = true; isEditable = false }
+        else { backpressure = true; setEditingAvailable(false) }
         return accepted
     }
     private fun visiblePosition(): Int {
@@ -162,7 +173,7 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
         loading = true
         isRestoringScroll = keepScroll
         targetAnchorChar = target
-        isEditable = false
+        setEditingAvailable(false)
         try {
             delivery?.join(); check(pending.isEmpty()) { "Native edits need recovery before changing the viewport" }
             val previousVelocity = if (keepScroll && !scroller.isFinished) {
@@ -220,7 +231,6 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
             }
 
             restoreAnchor(target, pixel, oldX, previousVelocity, reveal)
-            (context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).restartInput(this)
         } catch (cancel: CancellationException) { throw cancel }
         catch (_: Exception) {
             loadFailed = true
@@ -230,6 +240,12 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
         finally {
             loading = false
             freeze(document?.frozen != false)
+            // Restart only after editability is restored: Sora returns null while blocked.
+            if (isEditable && isFocused) post {
+                if (!released && isEditable && isFocused) {
+                    (context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).restartInput(this)
+                }
+            }
             triggerScrollbar()
         }
     }
@@ -249,14 +265,34 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
         invalidate()
     }
     private fun action(invalidateSyntax: Boolean = true, block: suspend () -> Unit) {
-        if (loading || blocked || document?.frozen != false) return
         val owner = document ?: return
+        if (released || owner.frozen) return
+        if (queuedActions >= 64) {
+            message("Editor actions are still finishing. Wait before trying again.")
+            return
+        }
+        // Join the preceding action instead of dropping clicks while it reloads the viewport.
+        // pendingEdit always points to the tail, so Save waits for the entire accepted sequence.
+        val previous = owner.pendingEdit
+        queuedActions++
         owner.pendingEdit = scope.launch {
-            blocked = true; isEditable = false
-            try { delivery?.join(); session.flush(); session.select(anchor, caret); if (invalidateSyntax) listFences.invalidate(0); block() }
-            catch (cancel: CancellationException) { throw cancel }
+            try {
+                previous?.join()
+                rewindow?.join()
+                if (released || document !== owner) return@launch
+                blocked = true; setEditingAvailable(false)
+                delivery?.join(); session.flush(); session.select(anchor, caret)
+                if (invalidateSyntax) listFences.invalidate(0)
+                block()
+            } catch (cancel: CancellationException) { throw cancel }
             catch (_: Exception) { message("This action did not finish. Original text and recoverable edits are retained.") }
-            finally { blocked = false; progress(null); freeze(owner.frozen) }
+            finally {
+                queuedActions--
+                blocked = false; progress(null); freeze(owner.frozen)
+                if (isEditable && isFocused) {
+                    (context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).restartInput(this@DiskMarkdownView)
+                }
+            }
         }
     }
     override fun undo() { action { session.undo(); restoreModelSelection() } }
@@ -512,6 +548,11 @@ internal class DiskMarkdownView(context: Context) : CodeEditor(context) {
         }
     }
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (!released && hostEditable && event.isCtrlPressed && !event.isAltPressed &&
+            (keyCode == KeyEvent.KEYCODE_Z || keyCode == KeyEvent.KEYCODE_Y)) {
+            if (keyCode == KeyEvent.KEYCODE_Y || event.isShiftPressed) redo() else undo()
+            return true
+        }
         if (keyCode == KeyEvent.KEYCODE_DEL && !event.isCtrlPressed && !event.isAltPressed && assistList(true)) return true
         if (keyCode == KeyEvent.KEYCODE_ENTER && !event.isShiftPressed && !event.isCtrlPressed && !event.isAltPressed && assistList(false)) return true
 
