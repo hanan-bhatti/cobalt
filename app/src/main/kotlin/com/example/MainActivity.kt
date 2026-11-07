@@ -403,7 +403,7 @@ class MainActivity : ComponentActivity() {
                                             }
                                         }
                                     }
-                                    .hazeSource(hazeState)
+                                    .then(if (useBlur) Modifier.hazeSource(hazeState) else Modifier)
                             ) {
                                  // Standard Home and Authentication navigation flow
                                  NavHost(
