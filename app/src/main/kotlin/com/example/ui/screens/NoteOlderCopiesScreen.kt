@@ -68,8 +68,10 @@ fun NoteOlderCopiesScreen(onBack: () -> Unit) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(copy.note.title.ifBlank { "Untitled note" }, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.titleSmall)
+                        Text("${formatNoteSize(context, copy.bytes)} note" + if (copy.delta) " · Delta version" else " · Full version",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(formatNoteSize(context, copy.bytes), style = MaterialTheme.typography.labelLarge,
+                            Text("${formatNoteSize(context, copy.storedBytes)} stored", style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary)
                             Text(DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(copy.created)),
                                 maxLines = 1, style = MaterialTheme.typography.bodySmall,

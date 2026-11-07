@@ -25,6 +25,7 @@ fun CaptureDraftRecoveryScreen(onBack: () -> Unit) {
     val recovery = remember(context) { CaptureDraftRecovery(context) }
     val scope = rememberCoroutineScope()
     var entries by remember { mutableStateOf<List<CaptureDraftRecovery.Entry>>(emptyList()) }
+    var storage by remember { mutableStateOf<com.example.notes.NoteStorageManager.Report?>(null) }
     var busy by remember { mutableStateOf(true) }
     var message by remember { mutableStateOf<String?>(null) }
     var exportId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -32,7 +33,7 @@ fun CaptureDraftRecoveryScreen(onBack: () -> Unit) {
     var exportBytes by rememberSaveable { mutableLongStateOf(0) }
     var exportRecord by rememberSaveable { mutableStateOf("") }
     var exportToken by rememberSaveable { mutableStateOf<String?>(null) }
-    suspend fun refresh() { entries = recovery.list() }
+    suspend fun refresh() { entries = recovery.list(); storage = com.example.notes.NoteStorageManager(context).scan() }
     fun perform(action: suspend () -> String) {
         if (busy) return
         busy = true
@@ -59,6 +60,10 @@ fun CaptureDraftRecoveryScreen(onBack: () -> Unit) {
     }
     NoteSettingsPage("Draft recovery", "Interrupted edits and notes not saved to the archive", onBack, itemSpacing = 8.dp,
         actions = { TextButton(onClick = { perform { refresh(); "Drafts refreshed" } }, enabled = !busy) { Text("Refresh") } }) {
+        storage?.let { report -> item {
+            StorageActionCard("Edit recovery on disk", formatNoteSize(context, report.recovery),
+                "Working buffers and edit journals: ${formatNoteSize(context, report.liveEditBuffers)}. Other retained recovery data: ${formatNoteSize(context, report.stagedRecovery)}. These files protect edits after interruptions; they are not app cache and are not deleted by Clear cache.")
+        } }
         item { StorageMessage("Recover creates a new note with the complete draft. You can also export a Markdown copy. Close its editor before recovering a draft.") }
         if (busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         message?.let { text -> item { StorageMessage(text) } }

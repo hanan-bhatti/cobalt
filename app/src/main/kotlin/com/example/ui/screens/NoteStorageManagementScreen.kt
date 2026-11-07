@@ -62,7 +62,7 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                             ExpressiveSettingsNavigationItem("Manage notes", onClick = { open("recovery") },
                                 subtitle = "Read, export or delete your notes", shape = connectedPillShape(0, 5))
                             ExpressiveSettingsNavigationItem("Draft recovery", onClick = { open("drafts") },
-                                subtitle = "Recover interrupted and unsaved edits", shape = connectedPillShape(1, 5))
+                                subtitle = "Recover interrupted and unsaved edits", trailingBadge = report?.let { formatNoteSize(context, it.recovery) }, shape = connectedPillShape(1, 5))
                             ExpressiveSettingsNavigationItem("Trash", onClick = { open("trash") },
                                 subtitle = "Restore items or delete them forever", trailingBadge = report?.let { "${it.trashCount} · ${formatNoteSize(context, it.trash)}" },
                                 shape = connectedPillShape(2, 5))
@@ -95,7 +95,7 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                 NoteSettingsPage("Version history", "Earlier versions, with current notes kept intact", { navigation.popBackStack() }) {
                     item {
                         StorageActionCard("Saved history", report?.let { formatNoteSize(context, it.older) } ?: "—",
-                            "Previous versions use space even when the current note is small. Cleanup removes only the versions you review.")
+                            "This is actual disk space used by previous versions. A delta stores changes and needs a retained full base. A version's complete note size can be much larger than its stored changes. Cleanup removes only the versions you review.")
                     }
                     item {
                         ExpressiveSettingsSelectorItem("Versions to keep",
@@ -126,7 +126,7 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                     actions = { TextButton(onClick = ::refresh, enabled = !busy) { Text("Refresh") } }) {
                     item {
                         StorageActionCard("App cache", report?.let { formatNoteSize(context, it.cache) } ?: "—",
-                            "Clear rebuildable previews, idle workspace and temporary exports older than 24 hours. Notes, history, active edits, recordings and recent shares stay intact.")
+                            "Includes rebuildable previews, workspace and temporary exports. ${report?.let { formatNoteSize(context, it.protectedCache) } ?: "—"} is protected or too recent to clear. Active edits, recordings and recent shares stay intact; temporary exports become eligible after 24 hours.")
                     }
                     item {
                         val amount = report?.clearableCache ?: 0

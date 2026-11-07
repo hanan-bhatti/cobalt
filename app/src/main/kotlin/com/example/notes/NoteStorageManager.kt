@@ -29,7 +29,8 @@ class NoteStorageManager(context: Context,
         val protectedCache: Long get() = (cache - clearableCache).coerceAtLeast(0)
     }
     data class CleanupResult(val bytes: Long, val files: Int)
-    data class OlderCopy(val note: com.example.data.model.SavedItem, val hash: String, val bytes: Long, val created: Long)
+    data class OlderCopy(val note: com.example.data.model.SavedItem, val hash: String, val bytes: Long, val created: Long,
+        val storedBytes: Long = bytes, val delta: Boolean = false)
     data class RetainedMedia(val relativePath: String, val bytes: Long, val modified: Long)
     data class UnlinkedReview(val notes: List<NoteStorageFile>, val media: List<RetainedMedia>) {
         val bytes get() = notes.sumOf { it.bytes } + media.sumOf { it.bytes }
@@ -52,13 +53,17 @@ class NoteStorageManager(context: Context,
             val eligible = store.maintenanceFiles().filter { entry ->
                 val note = metadata[entry.directoryKey]
                 note != null && entry.hash != null && entry.hash != note.contentHash
-            }.sortedByDescending { it.modified }.take(200)
+            }.groupBy { it.directoryKey to it.hash }
+                .values.sortedByDescending { group -> group.maxOf { it.modified } }.take(200)
             val summaries = HashMap<String, com.example.data.model.SavedItem>()
-            eligible.mapNotNull { entry ->
+            eligible.mapNotNull { entries ->
+                val entry = entries.first()
                 val id = metadata.getValue(entry.directoryKey).id
                 val note = summaries[id] ?: database.savedItemDao().getItemById(id)?.toDomainModel()?.also { summaries[id] = it }
                 note?.takeUnless { it.isDeleted }?.let {
-                    OlderCopy(it, entry.hash!!, store.size(id, entry.hash) ?: return@mapNotNull null, entry.modified)
+                    OlderCopy(it, entry.hash!!, store.size(id, entry.hash) ?: return@mapNotNull null,
+                        entries.maxOf { file -> file.modified }, entries.sumOf { file -> file.bytes },
+                        entries.all { file -> file.name.endsWith(".delta") })
                 }
             }
         }

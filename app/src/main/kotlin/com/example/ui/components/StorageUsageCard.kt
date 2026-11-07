@@ -32,7 +32,7 @@ fun StorageUsageCard(report: NoteStorageManager.Report?, busy: Boolean) {
         StorageSegment("History", report?.older ?: 0, colors.tertiary),
         StorageSegment("Trash", report?.trash ?: 0, colors.error),
         StorageSegment("Unlinked", report?.unattached ?: 0, colors.secondary),
-        StorageSegment("Recovery", report?.recovery ?: 0, colors.tertiaryContainer),
+        StorageSegment("Edit recovery", report?.recovery ?: 0, colors.tertiaryContainer),
         StorageSegment("Cache", report?.cache ?: 0, colors.primaryContainer),
         StorageSegment("Database & settings", (report?.database ?: 0) + (report?.other ?: 0), colors.outline)
     )
@@ -66,6 +66,11 @@ fun StorageUsageCard(report: NoteStorageManager.Report?, busy: Boolean) {
                             style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                     }
                 }
+                Text("Media: images ${formatNoteSize(context, report.images)} · video ${formatNoteSize(context, report.video)} · audio ${formatNoteSize(context, report.audio)}" +
+                    if (report.otherMedia > 0) " · other ${formatNoteSize(context, report.otherMedia)}" else "",
+                    style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+                Text("Edit recovery includes working buffers and interrupted edits, not just recoverable notes. Cache includes protected recent shares and active work.",
+                    style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                 if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             }
         }
