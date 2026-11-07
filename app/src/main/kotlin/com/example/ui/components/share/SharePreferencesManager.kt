@@ -29,6 +29,7 @@ object SharePreferencesManager {
     private const val KEY_SHARE_STYLE = "share_link_style"
     private const val KEY_IMAGE_SHARE_STYLE = "share_image_style"
     private const val KEY_MOVIE_SHARE_STYLE = "share_movie_style"
+    private const val KEY_NOTE_SHARE_STYLE = "share_note_style"
 
     fun isAttributionEnabled(context: Context): Boolean =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -80,6 +81,20 @@ object SharePreferencesManager {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .putString(KEY_MOVIE_SHARE_STYLE, style.name)
+            .apply()
+    }
+
+    fun getNoteShareStyle(context: Context): NoteShareStyle {
+        val name = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_NOTE_SHARE_STYLE, NoteShareStyle.EDITORIAL.name)
+        return runCatching { NoteShareStyle.valueOf(name ?: NoteShareStyle.EDITORIAL.name) }
+            .getOrDefault(NoteShareStyle.EDITORIAL)
+    }
+
+    fun setNoteShareStyle(context: Context, style: NoteShareStyle) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_NOTE_SHARE_STYLE, style.name)
             .apply()
     }
 }
