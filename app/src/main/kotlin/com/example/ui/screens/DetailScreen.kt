@@ -135,8 +135,10 @@ fun DetailScreen(
         val targetId = itemId?.takeIf { it.isNotBlank() } ?: active?.id
         if (!targetId.isNullOrBlank()) {
             val summary = allItems.find { it.id == targetId }
-            if (active?.id == targetId && (summary == null || active.contentHash == summary.contentHash)) active
-            else summary ?: active
+            if (active?.id == targetId && com.example.notes.NotePersistence.isNote(active) &&
+                (summary == null || active.contentHash == summary.contentHash)) {
+                summary?.copy(content = active.content, bodyLoaded = active.bodyLoaded) ?: active
+            } else summary ?: active
         } else {
             activeItem
         }
@@ -157,6 +159,10 @@ fun DetailScreen(
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var showLinkShareSheet by remember { mutableStateOf(false) }
+    var showImageShareSheet by remember { mutableStateOf(false) }
+    var showMovieShareSheet by remember { mutableStateOf(false) }
+    var isLinkCopied by remember { mutableStateOf(false) }
+    var isDescCopied by remember { mutableStateOf(false) }
 
     val localHazeState = remember { HazeState() }
 
@@ -442,6 +448,10 @@ fun DetailScreen(
                             onClick = {
                                 if (item.type == SavedItemType.LINK) {
                                     showLinkShareSheet = true
+                                } else if (item.type == SavedItemType.IMAGE) {
+                                    showImageShareSheet = true
+                                } else if (item.type == SavedItemType.MEDIA) {
+                                    showMovieShareSheet = true
                                 } else {
                                     viewModel.shareItem(item, context)
                                 }
@@ -523,6 +533,10 @@ fun DetailScreen(
                                     onClick = {
                                         if (item.type == SavedItemType.LINK) {
                                             showLinkShareSheet = true
+                                        } else if (item.type == SavedItemType.IMAGE) {
+                                            showImageShareSheet = true
+                                        } else if (item.type == SavedItemType.MEDIA) {
+                                            showMovieShareSheet = true
                                         } else {
                                             viewModel.shareItem(item, context)
                                         }
@@ -745,19 +759,21 @@ fun DetailScreen(
                                     .clickable {
                                         coroutineScope.launch {
                                             clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Cobalt Content", descriptionToShow)))
+                                            isDescCopied = true
+                                            kotlinx.coroutines.delay(1800)
+                                            isDescCopied = false
                                         }
-                                        Toast.makeText(context, "Copied to clipboard!", Toast.LENGTH_SHORT).show()
                                     }
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
                                 Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_copy),
+                                    painter = painterResource(id = if (isDescCopied) R.drawable.ic_custom_copy_success else R.drawable.ic_custom_copy),
                                     contentDescription = "Copy",
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Text(
-                                    text = "Copy",
+                                    text = if (isDescCopied) "Copied!" else "Copy",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
@@ -823,15 +839,17 @@ fun DetailScreen(
                                         )
                                     }
                                     Icon(
-                                        painter = painterResource(id = R.drawable.ic_custom_copy),
+                                        painter = painterResource(id = if (isLinkCopied) R.drawable.ic_custom_copy_success else R.drawable.ic_custom_copy),
                                         contentDescription = "Copy",
                                         modifier = Modifier
                                             .size(20.dp)
                                             .clickable {
                                                 coroutineScope.launch {
                                                     clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Cobalt Content", item.content)))
+                                                    isLinkCopied = true
+                                                    kotlinx.coroutines.delay(1800)
+                                                    isLinkCopied = false
                                                 }
-                                                Toast.makeText(context, "Copied!", Toast.LENGTH_SHORT).show()
                                             },
                                         tint = MaterialTheme.colorScheme.primary
                                     )
@@ -1038,7 +1056,7 @@ fun DetailScreen(
         com.example.ui.components.ExpressiveConfirmationDialog(
             onDismissRequest = { showDeleteConfirm = false },
             title = "Delete Archive",
-            message = "Are you sure you want to delete this item? This action cannot be undone.",
+            message = viewModel.deletionMessage(),
             confirmButtonText = "Delete",
             onConfirm = {
                 showDeleteConfirm = false
@@ -1054,6 +1072,20 @@ fun DetailScreen(
         com.example.ui.components.share.LinkShareBottomSheet(
             item = item,
             onDismissRequest = { showLinkShareSheet = false }
+        )
+    }
+
+    if (showImageShareSheet && item.type == SavedItemType.IMAGE) {
+        com.example.ui.components.share.ImageShareBottomSheet(
+            item = item,
+            onDismissRequest = { showImageShareSheet = false }
+        )
+    }
+
+    if (showMovieShareSheet && item.type == SavedItemType.MEDIA) {
+        com.example.ui.components.share.MovieShareBottomSheet(
+            item = item,
+            onDismissRequest = { showMovieShareSheet = false }
         )
     }
 }
