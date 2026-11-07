@@ -307,18 +307,25 @@ fun MovieShareBottomSheet(
                 }
             }
 
-            // Intercept horizontal deltas so parent bottom sheet does not deadlock on swipes
+            // Pass horizontal touch deltas cleanly to HorizontalPager while absorbing
+            // boundary overscroll so the parent bottom sheet does not bounce or stutter
             val pagerScrollInterop = remember {
                 object : NestedScrollConnection {
                     override fun onPreScroll(
                         available: Offset,
                         source: NestedScrollSource
                     ): Offset {
-                        return if (kotlin.math.abs(available.x) > kotlin.math.abs(available.y)) {
-                            Offset(available.x, 0f)
-                        } else {
-                            Offset.Zero
-                        }
+                        // Return Zero to let the child HorizontalPager consume horizontal gestures
+                        return Offset.Zero
+                    }
+
+                    override fun onPostScroll(
+                        consumed: Offset,
+                        available: Offset,
+                        source: NestedScrollSource
+                    ): Offset {
+                        // Absorb unconsumed horizontal delta at pager boundaries to prevent sheet bounce
+                        return Offset(available.x, 0f)
                     }
                 }
             }
