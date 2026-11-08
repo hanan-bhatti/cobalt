@@ -24,10 +24,11 @@ internal object LinkMetadataExtractor {
         }
         val resolved = first?.location() ?: url
         val metadata = first?.let(::parse) ?: LinkMetadata()
-        if (metadata != LinkMetadata() || !isSocial(resolved)) return metadata
+        if (!isSocial(resolved) || (metadata.title != null && metadata.description != null && metadata.imageUrl != null)) return metadata
         // Social sites can serve public link-preview tags separately from their app shell.
         // At most one fallback; HTTP 429/rate limits are never retried here.
-        return runCatching { parse(load(resolved, PREVIEW)) }.getOrDefault(metadata)
+        val fallback = runCatching { parse(load(resolved, PREVIEW)) }.getOrDefault(LinkMetadata())
+        return LinkMetadata(metadata.title ?: fallback.title, metadata.description ?: fallback.description, metadata.imageUrl ?: fallback.imageUrl)
     }
 
     private fun load(url: String, agent: String): Document {
