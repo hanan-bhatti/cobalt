@@ -27,6 +27,8 @@ import org.xmlpull.v1.XmlPullParser
 import kotlin.math.roundToInt
 
 /** Five half-step stars map exactly to Trakt's integer 1–10 scores. Reuses Cobalt's star geometry. */
+// getXml also reads compiled vector XML; this drawable is the existing XML vector, not a bitmap.
+@android.annotation.SuppressLint("ResourceType")
 @Composable
 internal fun StarRatingInput(value: Int, onChange: (Int) -> Unit, modifier: Modifier = Modifier, onCommit: ((Int) -> Unit)? = null) {
     val context = LocalContext.current

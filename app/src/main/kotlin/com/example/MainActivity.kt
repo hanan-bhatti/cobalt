@@ -137,6 +137,20 @@ class MainActivity : ComponentActivity() {
     private val viewModel: CobaltViewModel by viewModels()
     private val pendingNavDestination = androidx.compose.runtime.mutableStateOf<String?>(null)
 
+    override fun onResume() {
+        super.onResume()
+        lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            if (com.example.notes.StartupCrashGuard.shouldPause(this@MainActivity) || com.example.notes.NoteMigrationManager.shouldPauseBackground(this@MainActivity)) return@launch
+            val auth = com.example.data.remote.trakt.TraktAuthManager.getInstance(this@MainActivity)
+            val prefs = getSharedPreferences("cobalt_prefs", MODE_PRIVATE)
+            val now = System.currentTimeMillis()
+            if (auth.hasValidToken() && now - prefs.getLong("trakt_foreground_check", 0L) >= 60_000L) {
+                prefs.edit().putLong("trakt_foreground_check", now).apply()
+                runCatching { com.example.util.TraktSyncWorker.enqueueOneTimeSync(this@MainActivity, keepExisting = true) }
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (getSharedPreferences("cobalt_settings", MODE_PRIVATE).getBoolean("hide_recents", false)) {
@@ -636,12 +650,19 @@ class MainActivity : ComponentActivity() {
                                     composable("trakt_sync_settings") {
                                         ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
                                             com.example.ui.screens.MediaSettingsScreen(onBack = { navController.popBackStack() },
-                                                onTrakt = { navController.navigate("trakt_account_settings") }, onTmdb = { navController.navigate("movie_api_key") })
+                                                onTrakt = { navController.navigate("trakt_account_settings") }, onTmdb = { navController.navigate("movie_api_key") },
+                                                onPending = { navController.navigate("trakt_pending_changes") })
                                         }
                                     }
                                     composable("trakt_account_settings") {
                                         ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
                                             com.example.ui.screens.TraktSyncSettingsScreen(viewModel, onNavigateBack = { navController.popBackStack() })
+                                        }
+                                    }
+                                    composable("trakt_pending_changes") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.PendingTraktChangesScreen(viewModel, onBack = { navController.popBackStack() },
+                                                onAccount = { navController.navigate("trakt_account_settings") })
                                         }
                                     }
                                     composable("edge_panel_settings") {

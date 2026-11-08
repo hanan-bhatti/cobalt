@@ -46,4 +46,8 @@ class MediaProvidersTest {
         }
         assertEquals("http://10.0.2.2:8080/v4/", MediaProviderSettings.validateJikanUrl("http://10.0.2.2:8080/v4"))
     }
+    @Test fun aConflictingSecondaryProviderIdCannotMergeDifferentTitles() {
+        val one = MediaSearchResultItem("a", "Same title", "movie", releaseYear = "2026", traktId = 1, tmdbId = 1)
+        assertEquals(2, MediaIdentity.merge(listOf(one, one.copy(id = "b", tmdbId = 2)), "trakt").size)
+    }
 }

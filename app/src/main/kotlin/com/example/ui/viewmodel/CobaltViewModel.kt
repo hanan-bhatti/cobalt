@@ -545,7 +545,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         // 2. Check for duplicate or trash recovery
         viewModelScope.launch {
             try {
-                val existing = repository.findExistingMediaItem(item.tmdbId, item.traktId, item.imdbId, item.id)
+                val existing = repository.findExistingMediaItem(item.tmdbId, item.traktId, item.imdbId, item.id, item.mediaType)
                 if (existing != null && !existing.isDeleted) {
                     showToast("\"${item.title}\" is already in your library.")
                     return@launch
@@ -557,7 +557,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 } else {
                     showToast("Saved ${item.title} to Cobalt!")
                 }
-                repository.enrichMediaItemDetails(saved)
+                // Rich catalogue refresh happens when the saved title is opened.
             } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
             catch (_: Exception) { showToast("Could not save this media item. Please retry.") }
         }
@@ -569,12 +569,15 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             try {
             val enriched = repository.enrichMediaItemDetails(item, saveToDb)
             if (!saveToDb) {
-                _activeCaptureItem.value = enriched
+                val current = _activeCaptureItem.value
+                if (current?.id == item.id) _activeCaptureItem.value = enriched.copy(title = current.title, content = current.content,
+                    timestamp = current.timestamp, folders = current.folders, watchStatus = current.watchStatus,
+                    inWatchlist = current.inWatchlist, userRating = current.userRating)
             } else if (_activeDetailItem.value?.id == item.id) {
                 _activeDetailItem.value = enriched
             }
             } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
-            catch (_: Exception) { showToast("Couldn’t refresh media details. Saved information is kept.") }
+            catch (_: Exception) { /* Background catalogue refresh keeps saved information without interrupting reading. */ }
         }
     }
 
@@ -2059,6 +2062,10 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                         com.example.notes.NoteGeneration(original.contentHash, original.byteLength, original.preview),
                         com.example.notes.NoteGeneration(saved.contentHash!!, saved.byteLength, saved.preview))
                     saved
+                } else if (finalItem.type == SavedItemType.MEDIA && (editOriginalId == null || editOriginalId != finalItem.id)) {
+                    repository.saveNewMediaItem(finalItem)
+                } else if (finalItem.type == SavedItemType.MEDIA) {
+                    repository.saveEditedMediaItem(finalItem)
                 } else repository.saveItem(finalItem, pendingMediaBytes) { progress -> _saveProgress.value = progress }
 
                 if (editOriginalId != null && editOriginalId != finalItem.id) {

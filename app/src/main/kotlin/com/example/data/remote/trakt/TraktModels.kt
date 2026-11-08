@@ -130,7 +130,15 @@ data class TraktMovie(
     val overview: String? = null,
     val runtime: Int? = null,
     val rating: Double? = null,
-    val votes: Int? = null
+    val votes: Int? = null,
+    val tagline: String? = null,
+    val released: String? = null,
+    val status: String? = null,
+    val country: String? = null,
+    val language: String? = null,
+    val certification: String? = null,
+    val homepage: String? = null,
+    val genres: List<String>? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -158,7 +166,12 @@ data class TraktShow(
     val country: String? = null,
     val language: String? = null,
     val genres: List<String>? = null,
-    val aired_episodes: Int? = null
+    val aired_episodes: Int? = null,
+    val first_aired: String? = null,
+    val total_runtime: Int? = null,
+    val ending: String? = null,
+    val tagline: String? = null,
+    val homepage: String? = null
 )
 
 // ==========================================

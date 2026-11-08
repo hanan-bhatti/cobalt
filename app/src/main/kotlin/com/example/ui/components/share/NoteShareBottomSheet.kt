@@ -147,11 +147,21 @@ fun NoteShareBottomSheet(
             FloatingHeroSheetLayout(
                 modifier = Modifier.fillMaxWidth(),
                 heroCard = {
+                    val heroHorizontalPadding = when (selectedStyle) {
+                        NoteShareStyle.DOCUMENT -> 8.dp
+                        NoteShareStyle.MINIMAL -> 16.dp
+                        NoteShareStyle.COMPACT -> 14.dp
+                    }
+                    val heroMaxWidth = when (selectedStyle) {
+                        NoteShareStyle.DOCUMENT -> 580.dp
+                        NoteShareStyle.MINIMAL -> 460.dp
+                        NoteShareStyle.COMPACT -> 440.dp
+                    }
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .widthIn(max = 440.dp)
-                            .padding(horizontal = 20.dp)
+                            .widthIn(max = heroMaxWidth)
+                            .padding(horizontal = heroHorizontalPadding)
                             .shadow(
                                 elevation = 14.dp,
                                 shape = RoundedCornerShape(26.dp),
@@ -289,7 +299,7 @@ fun NoteShareBottomSheet(
                                 // Option 1: Share as Card (High-Resolution 4K Image)
                                 ShareActionRowItem(
                                     icon = painterResource(id = R.drawable.ic_custom_image),
-                                    title = "Share card image (4K)",
+                                    title = "Share card image",
                                     subtitle = "High-resolution ${selectedStyle.displayName} visual card",
                                     trailing = {
                                         if (isExporting) {

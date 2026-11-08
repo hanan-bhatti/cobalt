@@ -2,6 +2,22 @@
 
 ### Fixes
 
+- Add inline half-star ratings with swipe selection, four local watch statuses,
+  a bookmark toggle and paged season/episode sheets with locally cached details.
+- Share one media-save path across Capture and Side Dock, retain TMDB/Trakt
+  identities, and batch durable Trakt changes without reimporting the catalogue
+  for each edit. Retain unmatched IDs for retry and protect local deletes.
+- Consolidate Trakt, TMDB and Jikan configuration under Media & Providers;
+  support source priority, private Jikan v4 servers and cached manga facts.
+- Play YouTube trailers inside the app using the existing play/pause icons;
+  pause offscreen and in the background, and offer retry for failed playback.
+- Redesign Media & Providers hierarchy, match the Jikan input to app styling,
+  keep focused fields above the keyboard, and give pending changes their own page.
+- Upload pre-login movie/TV choices, recover legacy Capture provider IDs,
+  apply remote removals, and retain queued changes when Trakt reaches capacity.
+- Use reading labels for manga and keep Jikan catalogue entries out of Trakt writes.
+- Simplify watch-provider chips to supplied logos, names and available prices.
+
 - Support selecting and copying parts of rendered notes with a shared rounded
   selection toolbar, existing icons and long-press action labels. Editor tools
   use a single row with a More menu; Read aloud is excluded.

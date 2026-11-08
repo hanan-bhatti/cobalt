@@ -25,6 +25,9 @@ import retrofit2.http.POST
 import retrofit2.http.Query
 
 interface TraktApiService {
+    @GET("search/tmdb/{id}")
+    suspend fun lookupTmdb(@retrofit2.http.Path("id") id: Int, @Query("type") type: String): List<TraktSearchResult>
+
     @GET("search/movie,show?extended=full")
     suspend fun searchMedia(@Query("query") query: String, @Query("limit") limit: Int = 20): List<TraktSearchResult>
 
@@ -79,7 +82,8 @@ interface TraktApiService {
         @Query("limit") limit: Int? = null
     ): List<TraktWatchedMovieItem>
 
-    @GET("sync/watched/shows?extended=full")
+    // Since June 2026, season/episode history requires the progress extension.
+    @GET("sync/watched/shows?extended=progress")
     suspend fun getWatchedShows(
         @Query("page") page: Int? = null,
         @Query("limit") limit: Int? = null
@@ -149,6 +153,13 @@ interface TraktApiService {
 
     @GET("movies/{id}?extended=full")
     suspend fun getMovieSummary(@retrofit2.http.Path("id") id: String): TraktMovie
+
+    @GET("movies/{id}/ratings")
+    suspend fun getMovieCommunityRatings(@retrofit2.http.Path("id") id: String): TraktRatingsResponse
+    @GET("movies/{id}/stats")
+    suspend fun getMovieStats(@retrofit2.http.Path("id") id: String): TraktStatsResponse
+    @GET("movies/{id}/people")
+    suspend fun getMoviePeople(@retrofit2.http.Path("id") id: String): TraktCastResponse
 
     @GET("shows/{id}?extended=full")
     suspend fun getShowSummary(@retrofit2.http.Path("id") id: String): TraktShow

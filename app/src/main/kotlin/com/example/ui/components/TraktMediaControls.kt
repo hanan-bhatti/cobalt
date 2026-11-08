@@ -53,7 +53,7 @@ fun TraktMediaControls(item: SavedItem, notify: (String) -> Unit) {
         scope.launch {
             try { action().getOrThrow(); notify(if (connected) "Saved locally. Trakt sync queued." else "Saved on this device.") }
             catch (cancel: CancellationException) { throw cancel }
-            catch (_: Exception) { notify("This change could not be saved. Please retry.") }
+            catch (_: Exception) { choice = item.userRating ?: 0; notify("This change could not be saved. Please retry.") }
             finally { busy = false }
         }
     }
@@ -108,7 +108,7 @@ internal fun MediaActivityContent(item: SavedItem, busy: Boolean, onRate: (Int) 
                 }
             }
         }
-        if (item.mediaType == "tv" && item.traktId != null && item.showProgress?.seasons.isNullOrEmpty()) {
+        if (item.mediaType == "tv" && item.hasTraktIdentity() && item.showProgress?.seasons.isNullOrEmpty()) {
             TextButton(onClick = { onSeason(1) }, contentPadding = PaddingValues(horizontal = 0.dp)) { Text("Seasons & episodes") }
         }
     }
@@ -236,9 +236,7 @@ internal fun SeasonEpisodeRow(episode: TraktEpisodeEntity, season: TvSeasonProgr
     val playback = episode.playbackProgress?.takeIf { it.isFinite() && it > 0 && it <= 100 }
     val completion = playback?.let { (it / 100).toFloat() } ?: if (watched) 1f else null
     val thumbnail = episode.thumbnailUrl ?: progress?.stillPath
-    val date = remember(episode.airDate) { try {
-        episode.airDate?.take(10)?.let { java.time.LocalDate.parse(it).format(java.time.format.DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.MEDIUM)) }
-    } catch (_: Exception) { null } }
+    val date = remember(episode.airDate) { TraktDates.displayDate(episode.airDate) }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(Modifier.size(width = 96.dp, height = 60.dp).clip(RoundedCornerShape(10.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {

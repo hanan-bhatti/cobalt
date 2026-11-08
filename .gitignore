@@ -37,3 +37,6 @@ firebase-debug.*.log
 # Generated Python bytecode from local fixture/test tools.
 __pycache__/
 *.py[cod]
+
+# Isolated media validation outputs; keeps concurrent build caches separate.
+/app/build-media-validation/

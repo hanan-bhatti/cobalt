@@ -83,6 +83,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.data.model.SavedItem
+import com.example.media.toSavedMedia
 import com.example.data.model.SavedItemType
 import com.example.ui.components.VideoPlayer
 import com.example.ui.components.InlineNewFolderCreator
@@ -2782,37 +2783,10 @@ fun CaptureScreen(
                                     .padding(vertical = 6.dp)
                                     .clip(RoundedCornerShape(16.dp))
                                     .clickable {
+                                        val tempItem = result.toSavedMedia()
                                         viewModel.updateActiveCaptureItem { current ->
-                                            current.copy(
-                                                id = result.id,
-                                                title = result.title,
-                                                content = result.overview ?: "",
-                                                thumbnailPath = result.posterUrl,
-                                                backdropUrl = result.backdropUrl,
-                                                mediaType = result.mediaType,
-                                                watchStatus = "Plan to Watch",
-                                                releaseYear = result.releaseYear,
-                                                genres = result.genres,
-                                                watchProviders = result.watchProviders,
-                                                trailerUrl = result.trailerUrl,
-                                                folders = listOf("Media")
-                                            )
+                                            tempItem.copy(timestamp = current.timestamp)
                                         }
-                                        val tempItem = item.copy(
-                                            id = result.id,
-                                            title = result.title,
-                                            content = result.overview ?: "",
-                                            thumbnailPath = result.posterUrl,
-                                            backdropUrl = result.backdropUrl,
-                                            mediaType = result.mediaType,
-                                            watchStatus = "Plan to Watch",
-                                            releaseYear = result.releaseYear,
-                                            genres = result.genres,
-                                            watchProviders = result.watchProviders,
-                                            trailerUrl = result.trailerUrl,
-                                            folders = listOf("Media")
-                                        )
-                                        viewModel.enrichMediaItem(tempItem, saveToDb = false)
                                     }
                             ) {
                                 Row(
@@ -2842,6 +2816,7 @@ fun CaptureScreen(
                                             "movie" -> "Movie"
                                             "tv" -> "TV Show"
                                             "anime" -> "Anime"
+                                            "manga" -> "Manga"
                                             else -> result.mediaType
                                         }
                                         Text(

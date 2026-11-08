@@ -46,15 +46,15 @@ object LegalDocs {
 
         Connecting Trakt is optional. Authentication primarily uses the OAuth 2.0 Authorization Code flow with Proof Key for Code Exchange (PKCE) via your web browser and a verified HTTPS App Link callback (`https://cobalt.hanan-bhatti.site/callback`), or alternatively the Device Code flow at `trakt.tv/activate`. Cobalt never handles, sees, or stores your Trakt password.
 
-        When connected, Cobalt reads your Trakt profile, watched movie and TV history (including episode plays), ratings, and watchlist. Cobalt sends updates to Trakt when you mark movies or episodes as watched, rate items, or change watchlist status. Cobalt runs an initial sync upon connecting and updates when you tap "Sync Now". Cobalt does not run scheduled periodic background sync.
+        When connected, Cobalt reads your Trakt profile, watched movie and TV history (including episode plays), ratings, and watchlist. Cobalt also uploads supported movie and TV choices saved before connecting. Local changes are kept in a durable queue and sent when a connection is available, subject to your category switches. Cobalt syncs on connection, when requested, during eligible app starts, and through a daily background schedule managed by Android. Anime and manga catalogue data from Jikan remain local and do not synchronize with a MyAnimeList account.
 
         Disconnecting Trakt clears your stored Trakt tokens and session details locally and attempts server-side revocation on Trakt's servers. If your device is offline or the revocation request fails, local disconnect still completes, and you can revoke Cobalt's access at any time through your Trakt account settings on trakt.tv. Previously synchronized items remain in your local Cobalt library. Disconnecting Trakt, uninstalling Cobalt, or deleting local items does not remove your watch history, ratings, or watchlist from your Trakt account.
 
         **5. YouTube Trailers**
 
-        Trailer playback in media details uses an embedded Android WebView that loads the YouTube embed player. Network requests to YouTube and Google begin automatically whenever you open the detail screen of a movie or TV show that includes a trailer link.
+        Trailer thumbnails may load when shown. Tapping Play loads YouTube's embedded player inside an Android WebView. Cobalt identifies the player using the installed application ID. Playback pauses when the app moves into the background or the player leaves the visible area.
 
-        The embedded player runs with JavaScript, web storage, and third-party cookies enabled. YouTube and Google process these requests under their own terms and privacy practices. This external web playback is independent of Cobalt, which contains no analytics or tracking SDKs.
+        The embedded player uses JavaScript and web storage; third-party cookies are disabled. YouTube and Google process playback requests under their own terms and privacy practices. Provider restrictions can prevent an individual trailer from playing; Retry and an explicit provider link remain available. Cobalt contains no analytics or tracking SDKs.
 
         **6. Crash Reports and Feedback**
 

@@ -73,6 +73,26 @@ class MediaControlsUiTest {
         compose.setContent { MaterialTheme { SeasonEpisodeRow(episode,null) } }
         compose.onNodeWithText("In progress · 35%").assertIsDisplayed()
     }
+    @Test fun mangaMoreInfoShowsCatalogueFactsRatingAndSourceWithoutASynopsis() {
+        compose.setContent { MaterialTheme { Surface { MediaMoreInfoContent(SavedItem(type = SavedItemType.MEDIA,
+            title = "Manga", content = "", mediaType = "manga", rating = 9.5,
+            mediaFacts = MediaFacts("Jikan", "https://myanimelist.net/manga/2", chapterCount = 42, publicationStatus = "Publishing"))) } } }
+        compose.onNodeWithText("Chapters").assertExists()
+        compose.onNodeWithText("42").assertExists()
+        compose.onNodeWithText("Publishing").assertExists()
+        compose.onNodeWithText("MyAnimeList rating").assertExists()
+        compose.onNodeWithText("9.5/10").assertExists()
+        compose.onNodeWithText("MyAnimeList", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Ratings").assertDoesNotExist()
+    }
+    @Test fun moreInfoUsesActualExternalRatingsAndIncludesMetacritic() {
+        compose.setContent { MaterialTheme { Surface { MediaMoreInfoContent(item().copy(
+            showProgress = TvShowProgress(imdbRating = "8.7", rottenTomatoesScore = "94", metacriticScore = "78/100"))) } } }
+        compose.onNodeWithContentDescription("IMDb: 8.7/10").assertExists()
+        compose.onNodeWithContentDescription("Rotten Tomatoes critics: 94%").assertExists()
+        compose.onNodeWithText("Metacritic 78/100").assertExists()
+        compose.onNodeWithContentDescription("Popcornmeter audience", substring = true).assertDoesNotExist()
+    }
     @Test fun episodeSheetScreenshots() {
         var dark by mutableStateOf(false)
         val rows = (1..4).map { TraktEpisodeEntity("show",1,it,"Episode $it: A clean title", "A short synopsis stays below the episode facts.", "2026-11-07",42,8.0) }

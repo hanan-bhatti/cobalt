@@ -10,6 +10,9 @@ internal object MediaIdentity {
     private fun same(a: MediaSearchResultItem, b: MediaSearchResultItem): Boolean {
         if (a.mediaType != b.mediaType) return false
         if (a.id == b.id) return true
+        if (a.traktId != null && b.traktId != null && a.traktId != b.traktId) return false
+        if (a.tmdbId != null && b.tmdbId != null && a.tmdbId != b.tmdbId) return false
+        if (a.imdbId != null && b.imdbId != null && a.imdbId != b.imdbId) return false
         val jikanPrefix = "jikan_${a.mediaType}_"
         if (a.id.startsWith(jikanPrefix) && b.id.startsWith(jikanPrefix))
             return a.id.substringAfterLast('_') == b.id.substringAfterLast('_')

@@ -122,10 +122,10 @@ object TraktClient {
             @Suppress("UNREACHABLE_CODE")
             throw java.io.IOException("Trakt request did not finish")
         }
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(25, TimeUnit.SECONDS)
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
         .writeTimeout(15, TimeUnit.SECONDS)
-        .callTimeout(60, TimeUnit.SECONDS)
+        .callTimeout(25, TimeUnit.SECONDS)
         .build()
 
     @Volatile

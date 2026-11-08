@@ -212,13 +212,13 @@ fun MediaHubFilterBottomSheet(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 SettingsSubsectionHeader(
-                    title = "WATCH STATUS",
+                    title = "PROGRESS STATUS",
                     description = if (selectedStatus != "All") "Filtered: $selectedStatus" else "All statuses"
                 )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     statusFilters.forEach { status ->
                         FilterChip(selected = selectedStatus == status, onClick = { viewModel.setMediaHubFilterStatus(status) },
-                            label = { Text(when(status) { "Completed" -> "Watched"; "Watching" -> "In progress"; else -> status }) })
+                            label = { Text(when(status) { "Plan to Watch" -> "Planned"; "Watching" -> "In progress"; else -> status }) })
                     }
                 }
             }
@@ -232,7 +232,7 @@ fun MediaHubFilterBottomSheet(
                 ) {
                     SettingsSubsectionHeader(
                         title = "MEDIA FORMAT",
-                        description = "Filter by movies, TV series, or anime"
+                        description = "Filter by movies, TV series, anime or manga"
                     )
                     LazyRow(
                         state = typeListState,

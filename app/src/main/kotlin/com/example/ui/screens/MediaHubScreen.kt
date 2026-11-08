@@ -222,7 +222,7 @@ fun MediaHubScreen(
                                 color = MaterialTheme.colorScheme.onBackground
                             )
                             Text(
-                                text = "MOVIES, TV SHOWS & ANIME",
+                                text = "MOVIES, TV, ANIME & MANGA",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.secondary,
@@ -282,7 +282,7 @@ fun MediaHubScreen(
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_custom_search),
-                    contentDescription = "Search Movies & Anime",
+                    contentDescription = "Search media",
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -409,7 +409,7 @@ fun MediaHubContent(
                         text = if (hasActiveFilters)
                             "No media items match your active filters."
                         else
-                            "Your media collection is empty. Tap 'Search Media' below to discover and save movies, TV shows, and anime!",
+                            "Your media collection is empty. Search to save movies, TV shows, anime and manga.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -629,7 +629,7 @@ fun MediaItemCard(
                 modifier = Modifier.padding(top = 2.dp)
             ) {
                 Text(
-                    text = status,
+                    text = com.example.media.mediaStatusLabel(status, item.mediaType),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Medium,
                     color = statusFg,

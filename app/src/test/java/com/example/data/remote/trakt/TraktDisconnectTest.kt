@@ -25,10 +25,12 @@ import com.example.data.local.SavedItemEntity
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -168,7 +170,8 @@ class TraktDisconnectTest {
 
     @Test
     fun testDisconnectDuringTokenRefresh_cannotRestoreSession() = runBlocking {
-        logInWithMockTokens("old_expired_token")
+        authManager.saveTokens(TraktTokenResponse(access_token = "old_expired_token",
+            refresh_token = "refresh_xyz_456", expires_in = 60L))
         fakeApiService.refreshTokenDelayMs = 250L
 
         // Launch refreshAccessTokenIfNeeded in background
@@ -201,19 +204,25 @@ class TraktDisconnectTest {
                 show = TraktShow(
                     title = "Stale Test Show",
                     ids = TraktIds(trakt = 99999L)
-                )
+                ),
+                seasons = emptyList()
             )
         )
-        fakeApiService.getWatchedShowsDelayMs = 200L
+        val requestEntered = CompletableDeferred<Unit>()
+        val releaseResponse = CompletableDeferred<Unit>()
+        fakeApiService.onGetWatchedShows = {
+            requestEntered.complete(Unit)
+            releaseResponse.await()
+        }
 
         val syncJob = async(Dispatchers.IO) {
             TraktSyncEngine.performSync(context)
         }
 
-        delay(50L) // Wait for sync to start and enter in-flight network call
+        withTimeout(10_000) { requestEntered.await() }
 
         // Disconnect while sync is running in flight
-        val disconnectResult = authManager.disconnect()
+        val disconnectResult = try { authManager.disconnect() } finally { releaseResponse.complete(Unit) }
         assertTrue(disconnectResult.success)
 
         val syncResult = syncJob.await()
@@ -357,6 +366,10 @@ class FakeTraktCredentialStore : TraktCredentialStore {
 }
 
 class FakeTraktApiService : TraktApiService {
+    override suspend fun lookupTmdb(id: Int, type: String): List<TraktSearchResult> = emptyList()
+    override suspend fun getMovieCommunityRatings(id: String) = TraktRatingsResponse()
+    override suspend fun getMovieStats(id: String) = TraktStatsResponse()
+    override suspend fun getMoviePeople(id: String) = TraktCastResponse()
     override suspend fun getPlaybackEpisodes(page: Int, limit: Int): List<TraktPlaybackEpisode> = emptyList()
     override suspend fun getMovieSummary(id: String): TraktMovie = TraktMovie()
     override suspend fun getShowSummary(id: String): TraktShow = TraktShow()
@@ -378,6 +391,7 @@ class FakeTraktApiService : TraktApiService {
     var watchedMoviesToReturn = listOf<TraktWatchedMovieItem>()
     var watchedShowsToReturn = listOf<TraktWatchedShowItem>()
     var getWatchedShowsDelayMs = 0L
+    var onGetWatchedShows: (suspend () -> Unit)? = null
 
     var addToHistoryCalled = false
 
@@ -449,11 +463,13 @@ class FakeTraktApiService : TraktApiService {
 
     override suspend fun getLastActivities(): TraktLastActivitiesResponse = TraktLastActivitiesResponse()
     override suspend fun getWatchedMovies(page: Int?, limit: Int?): List<TraktWatchedMovieItem> = watchedMoviesToReturn
+        .drop(((page ?: 1) - 1) * (limit ?: 100)).take(limit ?: 100)
     override suspend fun getWatchedShows(page: Int?, limit: Int?): List<TraktWatchedShowItem> {
+        onGetWatchedShows?.invoke()
         if (getWatchedShowsDelayMs > 0) {
             delay(getWatchedShowsDelayMs)
         }
-        return watchedShowsToReturn
+        return watchedShowsToReturn.drop(((page ?: 1) - 1) * (limit ?: 100)).take(limit ?: 100)
     }
     override suspend fun getWatchlistMovies(page: Int?, limit: Int?): List<TraktWatchlistItem> = emptyList()
     override suspend fun getWatchlistShows(page: Int?, limit: Int?): List<TraktWatchlistItem> = emptyList()

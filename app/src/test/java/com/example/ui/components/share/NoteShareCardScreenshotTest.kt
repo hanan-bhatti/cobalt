@@ -150,13 +150,31 @@ class NoteShareCardScreenshotTest {
     }
 
     @Test
-    fun note_share_compact_light_screenshot() {
+    fun note_share_minimal_truncated_light_screenshot() {
         composeTestRule.setContent {
             MyApplicationTheme(darkTheme = false, dynamicColor = false) {
-                Box(modifier = Modifier.width(340.dp).padding(16.dp)) {
+                Box(modifier = Modifier.width(360.dp).padding(16.dp)) {
                     NoteShareCard(
                         item = sampleMarkdownNote,
                         noteBody = sampleMarkdownNote.content,
+                        style = NoteShareStyle.MINIMAL,
+                        showAttribution = true,
+                        tagline = "Archived in Cobalt"
+                    )
+                }
+            }
+        }
+        composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/note_share_minimal_truncated_light.png")
+    }
+
+    @Test
+    fun note_share_compact_light_screenshot() {
+        composeTestRule.setContent {
+            MyApplicationTheme(darkTheme = false, dynamicColor = false) {
+                Box(modifier = Modifier.width(360.dp).padding(16.dp)) {
+                    NoteShareCard(
+                        item = sampleShortNote,
+                        noteBody = sampleShortNote.content,
                         style = NoteShareStyle.COMPACT,
                         showAttribution = true,
                         tagline = "Archived in Cobalt"

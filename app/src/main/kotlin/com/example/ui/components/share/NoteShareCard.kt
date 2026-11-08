@@ -19,6 +19,7 @@
 package com.example.ui.components.share
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
@@ -30,6 +31,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,11 +51,97 @@ import java.util.Date
 import java.util.Locale
 
 /**
+ * Truncation result for Minimal Note memo layout.
+ */
+internal data class MinimalTruncation(
+    val truncatedMarkdown: String,
+    val remainingLines: Int
+)
+
+/**
+ * Extracts a concise excerpt for the Compact style, specifically tailored for small notes.
+ * Extracts quotes, one-liners, or the primary opening thought without heavy headers or tables.
+ */
+internal fun extractCompactNoteContent(noteBody: String): String {
+    val clean = noteBody.trim()
+    if (clean.isBlank()) return ""
+
+    // 1. If the note is already short and not a complex markdown structure
+    val lines = clean.lines().map { it.trim() }.filter { it.isNotBlank() }
+    if (lines.size <= 3 && lines.none { it.startsWith("|") || it.startsWith("#") }) {
+        return clean.removePrefix(">").trim()
+    }
+
+    // 2. If the note contains a blockquote, quotes make perfect compact punchy cards
+    val quoteLines = lines.filter { it.startsWith(">") }
+    if (quoteLines.isNotEmpty()) {
+        return quoteLines.joinToString(" ") { it.removePrefix(">").trim() }.take(180)
+    }
+
+    // 3. Extract the first meaningful body paragraph (skipping raw headers, table bars, or list markers)
+    val bodyParagraph = lines.firstOrNull { line ->
+        !line.startsWith("#") &&
+        !line.startsWith("|") &&
+        !line.startsWith("-") &&
+        !line.startsWith("*") &&
+        !line.startsWith("```")
+    }
+
+    if (!bodyParagraph.isNullOrBlank()) {
+        return bodyParagraph.take(180)
+    }
+
+    // 4. Fallback: clean the first line of markdown symbols
+    val firstLine = lines.firstOrNull() ?: clean
+    return firstLine.replace(Regex("^#+\\s*"), "").replace(Regex("^>+\\s*"), "").take(140)
+}
+
+/**
+ * Computes line-limited content for the Minimal memo card with line counting and soft fade.
+ */
+internal fun computeMinimalContent(noteBody: String, maxLines: Int = 7): MinimalTruncation {
+    val clean = noteBody.trim()
+    if (clean.isBlank()) return MinimalTruncation("", 0)
+
+    val lines = clean.lines()
+    val nonBlankLines = lines.filter { it.isNotBlank() }
+
+    // If explicit non-blank lines exceed maxLines
+    if (nonBlankLines.size > maxLines) {
+        var count = 0
+        var cutIndex = 0
+        for ((index, line) in lines.withIndex()) {
+            if (line.isNotBlank()) count++
+            if (count == maxLines) {
+                cutIndex = index + 1
+                break
+            }
+        }
+        val preview = lines.take(cutIndex).joinToString("\n").trimEnd()
+        val remaining = nonBlankLines.size - maxLines
+        return MinimalTruncation(preview, remaining)
+    }
+
+    // If there are few explicit lines but words wrap heavily
+    val words = clean.split(Regex("\\s+")).filter { it.isNotBlank() }
+    val wordsPerLineEstimate = 9
+    val estimatedLines = words.size / wordsPerLineEstimate
+    if (estimatedLines > maxLines && words.size > maxLines * wordsPerLineEstimate) {
+        val keepWords = maxLines * wordsPerLineEstimate
+        val preview = words.take(keepWords).joinToString(" ")
+        val remaining = maxOf(1, (words.size - keepWords) / wordsPerLineEstimate)
+        return MinimalTruncation(preview, remaining)
+    }
+
+    return MinimalTruncation(clean, 0)
+}
+
+/**
  * Aesthetic Note Card component for social sharing and 4K high-resolution PNG export.
  * Features 3 distinct layouts powered by Cobalt's native Markdown engine:
  * 1. Document (Editorial layout with metadata header, bold title, divider, complete Markdown document)
- * 2. Minimal (Clean, distraction-free memo presentation with prominent title and pure Markdown body)
- * 3. Compact (Punchy card format optimized for sharing to Twitter/X, Instagram, or WhatsApp)
+ * 2. Minimal (Clean, distraction-free memo presentation with prominent title, line limitation, and soft fade with +N more lines)
+ * 3. Compact (Small wide card format with NO TITLE, optimized for small notes and quick punchy sharing)
  */
 @Composable
 fun NoteShareCard(
@@ -103,9 +192,15 @@ fun NoteShareCard(
     }
 
     val cardWidthModifier = when (style) {
-        NoteShareStyle.COMPACT -> Modifier.widthIn(min = 280.dp, max = 380.dp)
-        NoteShareStyle.MINIMAL -> Modifier.widthIn(min = 320.dp, max = 500.dp)
-        NoteShareStyle.DOCUMENT -> Modifier.widthIn(min = 340.dp, max = 560.dp)
+        NoteShareStyle.COMPACT -> Modifier.widthIn(min = 300.dp, max = 460.dp)
+        NoteShareStyle.MINIMAL -> Modifier.widthIn(min = 320.dp, max = 480.dp)
+        NoteShareStyle.DOCUMENT -> Modifier.widthIn(min = 340.dp, max = 620.dp)
+    }
+
+    val outerCardPadding = when (style) {
+        NoteShareStyle.DOCUMENT -> PaddingValues(horizontal = 8.dp, vertical = 10.dp)
+        NoteShareStyle.MINIMAL -> PaddingValues(horizontal = 12.dp, vertical = 12.dp)
+        NoteShareStyle.COMPACT -> PaddingValues(horizontal = 12.dp, vertical = 10.dp)
     }
 
     // Outer export frame with variable adaptive width
@@ -119,7 +214,7 @@ fun NoteShareCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(outerCardPadding),
             horizontalAlignment = Alignment.End
         ) {
             when (style) {
@@ -148,7 +243,6 @@ fun NoteShareCard(
                 NoteShareStyle.COMPACT -> {
                     CompactNoteCard(
                         item = item,
-                        title = displayTitle,
                         noteBody = noteBody,
                         preparedDoc = preparedDoc,
                         wordCount = wordCount,
@@ -200,7 +294,7 @@ fun NoteShareCard(
 
 /**
  * Style 1: Editorial Document Card
- * Structured document layout featuring category pill, creation date, reading metrics,
+ * Structured document layout featuring creation date, reading metrics,
  * bold title with subtle divider, and Cobalt's full native markdown engine.
  */
 @Composable
@@ -224,10 +318,10 @@ private fun EditorialNoteCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(horizontal = 14.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Header: Date • Word Count
+            // Header: Date • Word Count • Reading Time
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -251,6 +345,17 @@ private fun EditorialNoteCard(
                         fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Text(
+                        text = "•",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    )
+                    Text(
+                        text = "$readingTimeMin min read",
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
@@ -261,8 +366,8 @@ private fun EditorialNoteCard(
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontFamily = cobaltTypography.textFontFamily,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 17.5.sp,
-                        lineHeight = 22.sp
+                        fontSize = 18.sp,
+                        lineHeight = 23.sp
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
@@ -288,8 +393,8 @@ private fun EditorialNoteCard(
 
 /**
  * Style 2: Minimalist Clean Memo Card
- * Distraction-free, pure focus on the note content with no top metadata pill bar or heavy divider.
- * Clean, generous typography and subtle timestamp footer.
+ * Distraction-free, pure focus on the note content with no top metadata bar or divider.
+ * Keeps a calibrated line limit and renders a soft fade with "+N more lines" when content overflows.
  */
 @Composable
 private fun MinimalNoteCard(
@@ -301,6 +406,11 @@ private fun MinimalNoteCard(
     cobaltTypography: CobaltTypography,
     modifier: Modifier = Modifier
 ) {
+    val truncation = remember(noteBody) { computeMinimalContent(noteBody, maxLines = 7) }
+    val truncatedDoc = remember(truncation.truncatedMarkdown) {
+        if (truncation.truncatedMarkdown == noteBody) preparedDoc else parseSafeMarkdown(truncation.truncatedMarkdown)
+    }
+
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -310,10 +420,10 @@ private fun MinimalNoteCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(horizontal = 18.dp, vertical = 18.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Title: Clean prominent title without clutter
+            // Clean prominent title without clutter (if present)
             if (!title.isNullOrBlank()) {
                 Text(
                     text = title,
@@ -330,12 +440,49 @@ private fun MinimalNoteCard(
                 Spacer(modifier = Modifier.height(2.dp))
             }
 
-            // Native Markdown Engine
-            MarkdownText(
-                markdown = noteBody,
-                prepared = preparedDoc,
+            // Note Content with soft fade + "+N more lines" when truncated
+            Box(
                 modifier = Modifier.fillMaxWidth()
-            )
+            ) {
+                MarkdownText(
+                    markdown = truncation.truncatedMarkdown,
+                    prepared = truncatedDoc,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (truncation.remainingLines > 0) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(60.dp)
+                            .align(Alignment.BottomCenter)
+                            .background(
+                                Brush.verticalGradient(
+                                    0.0f to MaterialTheme.colorScheme.surface.copy(alpha = 0f),
+                                    0.45f to MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                                    1.0f to MaterialTheme.colorScheme.surface
+                                )
+                            ),
+                        contentAlignment = Alignment.BottomCenter
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f),
+                            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                            modifier = Modifier.padding(bottom = 2.dp)
+                        ) {
+                            Text(
+                                text = "+${truncation.remainingLines} more lines",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary,
+                                letterSpacing = 0.2.sp,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+                }
+            }
 
             // Discreet Date Footer
             Row(
@@ -355,14 +502,14 @@ private fun MinimalNoteCard(
 }
 
 /**
- * Style 3: Compact Punchy Card
- * Tighter, high-density format optimized for sharing to Twitter/X, Instagram, or WhatsApp.
- * Compact padding, single-row metadata header, prominent title, and focused excerpt.
+ * Style 3: Compact Small Wide Card
+ * Specially designed for small notes, quotes, punchy one-liners, and short insights.
+ * Features a wide landscape geometry, compact vertical height, NO TITLE header,
+ * clean typography, and a discreet metadata footer.
  */
 @Composable
 private fun CompactNoteCard(
     item: SavedItem,
-    title: String?,
     noteBody: String,
     preparedDoc: SafeMarkdownDocument?,
     wordCount: Int,
@@ -370,64 +517,52 @@ private fun CompactNoteCard(
     cobaltTypography: CobaltTypography,
     modifier: Modifier = Modifier
 ) {
+    val compactText = remember(noteBody) { extractCompactNoteContent(noteBody) }
+    val compactWords = remember(compactText) {
+        compactText.split(Regex("\\s+")).count { it.isNotBlank() }
+    }
+
     Surface(
         shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 90.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Compact Header: Date
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = formattedDate,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
-                )
-            }
-
-            // Title: High-impact punchy title
-            if (!title.isNullOrBlank()) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontFamily = cobaltTypography.textFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        lineHeight = 21.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            // Focused Markdown Excerpt
+            // Content: Focused markdown text with NO TITLE (tailored for small notes)
             MarkdownText(
-                markdown = noteBody,
-                prepared = preparedDoc,
-                maxLines = 10,
+                markdown = compactText,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            if (wordCount > 60) {
+            // Compact Bottom Row: Discreet Date & Word Count
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = "$wordCount words total",
-                    fontSize = 10.sp,
+                    text = formattedDate,
+                    fontSize = 10.5.sp,
                     fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    modifier = Modifier.align(Alignment.End)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
+
+                if (compactWords > 25) {
+                    Text(
+                        text = "$compactWords words",
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+                    )
+                }
             }
         }
     }

@@ -42,7 +42,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -96,7 +95,7 @@ fun MediaDetailSection(
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(item.id) {
-        viewModel.enrichMediaItem(item)
+        viewModel.enrichMediaItem(item, saveToDb = onWatchStatusChanged == null)
     }
 
     val formattedMediaType = remember(item.mediaType) {
@@ -331,7 +330,7 @@ fun MediaDetailSection(
                             tint = statusContentColor
                         )
                         Text(
-                            text = currentStatus,
+                            text = com.example.media.mediaStatusLabel(currentStatus, item.mediaType),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = statusContentColor
@@ -394,10 +393,10 @@ fun MediaDetailSection(
 
         com.example.ui.components.MediaRatingsRow(item.showProgress)
 
-        com.example.ui.components.TraktMediaControls(item, viewModel::showToast)
+        if (onWatchStatusChanged == null) com.example.ui.components.TraktMediaControls(item, viewModel::showToast)
 
         // Trakt progress is read only; local-only entries retain their existing status controls.
-        if (!item.hasTraktIdentity()) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (onWatchStatusChanged != null || !item.hasTraktIdentity()) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
                 text = "CHANGE STATUS",
                 fontSize = 11.sp,
@@ -439,30 +438,13 @@ fun MediaDetailSection(
                                         onWatchStatusChanged(status)
                                     } else {
                                         viewModel.updateSavedItem(updated)
-                                        viewModel.showToast("Status updated to $status")
-                                    }
-                                    coroutineScope.launch(Dispatchers.IO) {
-                                        try {
-                                            when (status.lowercase()) {
-                                                "completed" -> {
-                                                    if (item.mediaType?.lowercase() != "tv") {
-                                                        com.example.data.remote.trakt.TraktSyncEngine.markMovieWatched(context, updated, true)
-                                                    }
-                                                }
-                                                "plan to watch" -> {
-                                                    com.example.data.remote.trakt.TraktSyncEngine.toggleWatchlist(context, updated, true)
-                                                }
-                                                else -> {
-                                                    com.example.data.remote.trakt.TraktSyncEngine.toggleWatchlist(context, updated, false)
-                                                }
-                                            }
-                                        } catch (_: Exception) {}
+                                        viewModel.showToast("Status updated to ${com.example.media.mediaStatusLabel(status, item.mediaType)}")
                                     }
                                 }
                             }
                     ) {
                         Text(
-                            text = status,
+                            text = com.example.media.mediaStatusLabel(status, item.mediaType),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
@@ -546,20 +528,14 @@ fun MediaDetailSection(
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.onBackground
                 )
-                if (item.tagline?.isNotBlank() == true || item.runtime != null || item.budget != null || item.revenue != null || item.status != null || item.productionCompanies.isNotEmpty()) {
-                    TextButton(
-                        onClick = { showMoreInfoSheet = true },
-                        modifier = Modifier.align(Alignment.End),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "View More Info",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
+            }
+        }
+
+        if (item.mediaFacts != null || item.showProgress != null || item.traktId != null || item.tmdbId != null || item.imdbId != null ||
+            item.tagline?.isNotBlank() == true || item.runtime != null || item.budget != null || item.revenue != null || item.status != null || item.productionCompanies.isNotEmpty()) {
+            TextButton(onClick = { showMoreInfoSheet = true }, modifier = Modifier.align(Alignment.End),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) {
+                Text("View More Info", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             }
         }
 
@@ -606,7 +582,7 @@ fun MediaDetailSection(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.PlayArrow,
+                        painter = painterResource(R.drawable.ic_custom_play),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(16.dp)
@@ -704,85 +680,7 @@ fun MediaDetailSection(
             containerColor = MaterialTheme.colorScheme.surface,
             tonalElevation = 8.dp
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    text = "Additional Information",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                
-                if (!item.tagline.isNullOrBlank()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(text = "TAGLINE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
-                        Text(text = "“${item.tagline}”", style = MaterialTheme.typography.bodyMedium, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
-                    }
-                }
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    if (item.runtime != null && item.runtime > 0) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
-                            Text(text = "RUNTIME", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
-                            Text(text = "${item.runtime} mins", style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                    if (!item.status.isNullOrBlank()) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
-                            Text(text = "STATUS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
-                            Text(text = item.status, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                }
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    if (item.budget != null && item.budget > 0) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
-                            Text(text = "BUDGET", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
-                            val formattedBudget = java.text.NumberFormat.getCurrencyInstance(Locale.US).apply { maximumFractionDigits = 0 }.format(item.budget)
-                            Text(text = formattedBudget, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                    if (item.revenue != null && item.revenue > 0) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.weight(1f)) {
-                            Text(text = "REVENUE", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
-                            val formattedRevenue = java.text.NumberFormat.getCurrencyInstance(Locale.US).apply { maximumFractionDigits = 0 }.format(item.revenue)
-                            Text(text = formattedRevenue, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                }
-                
-                if (item.productionCompanies.isNotEmpty()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(text = "PRODUCTION", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
-                        Text(text = item.productionCompanies.joinToString(", "), style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-
-                if (item.traktId != null || item.tmdbId != null || !item.imdbId.isNullOrBlank()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(text = "EXTERNAL IDS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, letterSpacing = 1.sp)
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            item.traktId?.let { Text(text = "Trakt: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                            item.tmdbId?.let { Text(text = "TMDb: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                            item.imdbId?.let { Text(text = "IMDb: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                        }
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(24.dp))
-            }
+            com.example.ui.components.MediaMoreInfoContent(item)
         }
     }
 }
@@ -790,26 +688,7 @@ fun MediaDetailSection(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun YouTubeTrailerPlayer(trailerUrl: String, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val video = remember(trailerUrl) { extractYouTubeVideoId(trailerUrl) }
-    val url = video?.let { "https://www.youtube.com/watch?v=$it" } ?: trailerUrl.takeIf {
-        val parsed = Uri.parse(it); parsed.scheme == "https" && !parsed.host.isNullOrBlank()
-    }
-    if (url == null) { Text("Trailer unavailable", style = MaterialTheme.typography.bodySmall); return }
-    // YouTube embed restrictions (including error 153) must not strand playback in an app WebView.
-    // The installed player/browser handles playback, captions and provider restrictions.
-    Surface(onClick = {
-        try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-        catch (_: android.content.ActivityNotFoundException) { android.widget.Toast.makeText(context, "No app can open this trailer", android.widget.Toast.LENGTH_SHORT).show() }
-    }, shape = RoundedCornerShape(16.dp), modifier = modifier.fillMaxWidth()) {
-        Box(Modifier.aspectRatio(16f / 9f).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
-            if (video != null) AsyncImage("https://img.youtube.com/vi/$video/hqdefault.jpg", null,
-                Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary) {
-                Icon(Icons.Default.PlayArrow, "Watch trailer", Modifier.padding(16.dp).size(28.dp), tint = MaterialTheme.colorScheme.onPrimary)
-            }
-        }
-    }
+    com.example.ui.components.InAppTrailerPlayer(trailerUrl, modifier)
 }
 
 fun extractYouTubeVideoId(url: String): String? {

@@ -57,6 +57,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.data.model.SavedItem
+import com.example.media.mediaSynopsis
+import com.example.media.mediaTypeLabel
 import com.example.data.model.SavedItemType
 import com.example.data.model.getBestImagePath
 import com.example.R
@@ -190,7 +192,7 @@ fun ArchiveItemCard(
                             modifier = Modifier.size(12.dp)
                         )
                         Text(
-                            text = item.type.displayName,
+                            text = if (item.type == SavedItemType.MEDIA) mediaTypeLabel(item.mediaType) else item.type.displayName,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = typeColor,
@@ -283,8 +285,8 @@ fun ArchiveItemCard(
                 }
 
                 // Sub-description
-                val rawDesc = if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO) {
-                    item.extractedText?.trim() ?: ""
+                val rawDesc = if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO || item.type == SavedItemType.MEDIA) {
+                    if (item.type == SavedItemType.MEDIA) item.mediaSynopsis() else item.extractedText?.trim() ?: ""
                 } else {
                     item.linkDescription?.trim() ?: item.content.trim()
                 }
@@ -756,7 +758,7 @@ fun ArchiveItemRow(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = item.type.displayName.uppercase(),
+                            text = (if (item.type == SavedItemType.MEDIA) mediaTypeLabel(item.mediaType) else item.type.displayName).uppercase(),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = typeColor,
@@ -783,8 +785,8 @@ fun ArchiveItemRow(
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    val rawDesc = if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO) {
-                        item.extractedText?.trim() ?: ""
+                    val rawDesc = if (item.type == SavedItemType.IMAGE || item.type == SavedItemType.VIDEO || item.type == SavedItemType.AUDIO || item.type == SavedItemType.MEDIA) {
+                        if (item.type == SavedItemType.MEDIA) item.mediaSynopsis() else item.extractedText?.trim() ?: ""
                     } else {
                         item.linkDescription?.trim() ?: item.content.trim()
                     }

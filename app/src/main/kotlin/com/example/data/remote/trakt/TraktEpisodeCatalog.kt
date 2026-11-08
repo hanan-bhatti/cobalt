@@ -19,24 +19,45 @@ internal object TraktEpisodeCatalog {
         db: AppDatabase = AppDatabase.getDatabase(context)): String? = withContext(Dispatchers.IO) {
         val dao = db.traktEpisodeDao()
         val cached = dao.season(item.id, season)
-        val id = requireNotNull(item.traktId).also { require(it > 0) }
+        val id = item.traktId?.takeIf { it > 0 }
+        val tmdb = item.tmdbId?.takeIf { it > 0 }
+        require(id != null || tmdb != null) { "This show has no catalogue identity" }
         val auth = TraktAuthManager.getInstance(context)
         if (auth.hasValidToken()) try { auth.refreshAccessTokenIfNeeded() }
         catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
         catch (error: Exception) { if (cached.isEmpty()) throw error else return@withContext "Showing saved episodes. Refresh when connected." }
-        if (refresh || cached.isEmpty()) {
-            val episodes = TraktSyncEngine.getApiService().getShowSeasonEpisodes(id.toString(), season)
+        // Saved rows display immediately; each active season refreshes silently.
+        run {
+            val key = com.example.util.SecretPreferences(context.getSharedPreferences("cobalt_prefs", 0), "cobalt_prefs").get("tmdb_api_key").orEmpty()
+            val traktRows = if (id != null) try {
+                kotlinx.coroutines.withTimeoutOrNull(15_000) { TraktSyncEngine.getApiService().getShowSeasonEpisodes(id.toString(), season) }
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: Exception) { null } else null
+            val tmdbRows = if (tmdb != null && key.isNotBlank()) try {
+                kotlinx.coroutines.withTimeoutOrNull(15_000) {
+                    (com.example.media.MediaDetailHydrator.tmdbProvider?.invoke() ?: com.example.data.remote.MediaApiClient.tmdbApiService).getTvSeasonDetails(tmdb, season, key).episodes
+                }
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+            catch (_: Exception) { null } else null
+            if (traktRows == null && tmdbRows == null) {
+                if (cached.isEmpty()) throw java.io.IOException("Episode providers are unavailable")
+                return@withContext "Showing saved episodes. Refresh when connected."
+            }
+            val episodes = (traktRows.orEmpty().map { it.number } + tmdbRows.orEmpty().map { it.episodeNumber }).distinct().sorted().map { number ->
+                val t = traktRows?.firstOrNull { it.number == number }
+                val m = tmdbRows?.firstOrNull { it.episodeNumber == number }
+                TraktEpisodeEntity(item.id, season, number, m?.name ?: t?.title, m?.overview ?: t?.overview,
+                    m?.airDate ?: t?.first_aired, m?.runtime ?: t?.runtime, m?.voteAverage ?: t?.rating,
+                    m?.stillPath?.let { "https://image.tmdb.org/t/p/w300$it" } ?: episodeThumbnail(t?.images),
+                    cached.firstOrNull { it.number == number }?.playbackProgress)
+            }
             db.withTransaction {
                 if (db.savedItemDao().isItemDeleted(item.id) != false) return@withTransaction
                 dao.deleteSeason(item.id, season)
-                for (batch in episodes.chunked(100)) dao.put(batch.map { episode ->
-                    TraktEpisodeEntity(item.id, season, episode.number, episode.title, episode.overview,
-                        episode.first_aired, episode.runtime, episode.rating, episodeThumbnail(episode.images),
-                        cached.firstOrNull { it.number == episode.number }?.playbackProgress)
-                })
+                for (batch in episodes.chunked(100)) dao.put(batch)
             }
         }
-        if (!TraktAuthManager.getInstance(context).hasValidToken()) return@withContext null
+        if (id == null || !TraktAuthManager.getInstance(context).hasValidToken()) return@withContext null
         try {
             val positions = TraktPlaybackCache.positions(context, refresh)
                 .filter { it.show?.ids?.trakt == id && it.episode?.season == season }.associateBy { it.episode!!.number }

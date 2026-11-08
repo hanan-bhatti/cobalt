@@ -1,0 +1,17 @@
+// Same-package, same-signature build for emulator tests that retain the user's app data.
+// Invoke explicitly with -I tools/media-device-validation.gradle; release is unchanged.
+allprojects {
+    plugins.withId('com.android.application') {
+        configurations.matching { it.name == 'mediaValidationImplementation' }.all {
+            extendsFrom(project.configurations.getByName('debugImplementation'))
+        }
+        extensions.getByName('androidComponents').finalizeDsl { android ->
+            def validation = android.buildTypes.maybeCreate('mediaValidation')
+            validation.initWith(android.buildTypes.getByName('debug'))
+            validation.applicationIdSuffix = null
+            validation.manifestPlaceholders.put('appName', 'Cobalt')
+            validation.matchingFallbacks = ['debug']
+            android.testBuildType = 'mediaValidation'
+        }
+    }
+}

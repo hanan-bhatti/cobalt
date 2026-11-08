@@ -90,6 +90,7 @@ fun MovieApiKeyScreen(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .imePadding()
             .nestedScroll(topBarState.nestedScrollConnection)
     ) {
         val currentTopBarHeightDp = with(density) { topBarState.heightPx.toDp() }

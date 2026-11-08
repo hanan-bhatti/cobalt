@@ -412,7 +412,7 @@ class CobaltRepository(
                 val data = withTimeoutOrNull(5000L) { MediaApiClient.jikanService(providers.jikanUrl).searchManga(query, 10) }
                 if (data == null) unavailable.add("Jikan")
                 data?.data.orEmpty().forEach { manga -> results.add(MediaSearchResultItem(
-                    id = "jikan_manga_${manga.malId}", title = manga.titleEnglish ?: manga.title ?: "Manga",
+                    id = "jikan_manga_${manga.malId}", title = manga.titleEnglish?.takeIf { it.isNotBlank() } ?: manga.title?.takeIf { it.isNotBlank() } ?: "Manga",
                     mediaType = "manga", posterUrl = manga.images?.jpg?.largeImageUrl ?: manga.images?.jpg?.imageUrl,
                     overview = manga.synopsis, rating = manga.score, genres = manga.genres.orEmpty().mapNotNull { it.name },
                     mediaFacts = com.example.data.model.MediaFacts("Jikan", manga.url, chapterCount = manga.chapters,
@@ -434,212 +434,25 @@ class CobaltRepository(
 
     suspend fun enrichMediaItemDetails(item: SavedItem, saveToDb: Boolean = true): SavedItem = withContext(Dispatchers.IO) {
         if (item.type != SavedItemType.MEDIA) return@withContext item
-        if (item.traktId != null && com.example.data.remote.trakt.TraktAuthManager.getInstance(context).hasValidToken()) {
-            return@withContext com.example.data.remote.trakt.TraktSyncEngine.enrichShowDeepDetails(context, item)
-        }
-
-        var mediaType = item.mediaType
-        var genres = item.genres
-        var watchProviders = item.watchProviders
-        var richWatchProviders = item.richWatchProviders
-        var trailerUrl = item.trailerUrl
-        var backdropUrl = item.backdropUrl
-        var rating = item.rating
-        var runtime = item.runtime
-        var tagline = item.tagline
-        var budget = item.budget
-        var revenue = item.revenue
-        var status = item.status
-        var productionCompanies = item.productionCompanies
-        var thumbnailPath = item.thumbnailPath
-        var tmdbId: Int? = item.tmdbId
-
-        var updated = false
-
-        if (item.id.startsWith("tmdb_") || item.mediaType?.lowercase() == "movie" || item.mediaType?.lowercase() == "tv" || item.tmdbId != null || item.traktId != null) {
-            if (tmdbId == null) {
-                tmdbId = item.id.substringAfterLast("_").toIntOrNull()
-            }
-            val apiKey = getTmdbApiKey()
-
-            if (apiKey.isNotBlank()) {
-                if (tmdbId == null && item.title.isNotBlank()) {
-                    try {
-                        val searchResp = withTimeoutOrNull(4000L) {
-                            MediaApiClient.tmdbApiService.searchMulti(query = item.title, apiKey = apiKey)
-                        }
-                        val matched = searchResp?.results?.firstOrNull { it.mediaType == "tv" || it.mediaType == "movie" }
-                        if (matched != null) {
-                            tmdbId = matched.id
-                            updated = true
-                        }
-                    } catch (e: Exception) {
-                        Log.w("CobaltRepo", "TMDb search fallback failed: ${e.message}")
-                    }
-                }
-
-                if (tmdbId != null) {
-                    try {
-                        val isTv = item.mediaType?.lowercase() == "tv" || item.id.startsWith("tmdb_tv_")
-                        val details = if (isTv) {
-                            MediaApiClient.tmdbApiService.getTvDetails(tmdbId, apiKey)
-                        } else {
-                            MediaApiClient.tmdbApiService.getMovieDetails(tmdbId, apiKey)
-                        }
-
-                    if (thumbnailPath.isNullOrBlank() && details.posterPath != null) {
-                        thumbnailPath = "https://image.tmdb.org/t/p/w500${details.posterPath}"
-                        updated = true
-                    }
-
-                    if (rating == null && details.voteAverage != null) {
-                        rating = details.voteAverage
-                        updated = true
-                    }
-                    if (runtime == null && details.runtime != null) {
-                        runtime = details.runtime
-                        updated = true
-                    }
-                    if (tagline == null && details.tagline != null) {
-                        tagline = details.tagline
-                        updated = true
-                    }
-                    if (budget == null && details.budget != null) {
-                        budget = details.budget
-                        updated = true
-                    }
-                    if (revenue == null && details.revenue != null) {
-                        revenue = details.revenue
-                        updated = true
-                    }
-                    if (status == null && details.status != null) {
-                        status = details.status
-                        updated = true
-                    }
-                    if (productionCompanies.isEmpty() && details.productionCompanies != null) {
-                        productionCompanies = details.productionCompanies.mapNotNull { it.name }
-                        updated = true
-                    }
-
-                    val fetchedGenres = details.genres?.mapNotNull { it.name } ?: emptyList()
-                    val isEastAsianAnimation = details.originalLanguage?.lowercase() in listOf("ja", "zh", "ko", "cn") &&
-                            (fetchedGenres.any { it.equals("Animation", ignoreCase = true) } ||
-                             genres.any { it.equals("Animation", ignoreCase = true) })
-                    if (isEastAsianAnimation && mediaType?.lowercase() != "anime") {
-                        mediaType = "anime"
-                        updated = true
-                    }
-
-                    if (genres.isEmpty() && fetchedGenres.isNotEmpty()) {
-                        genres = fetchedGenres
-                        updated = true
-                    }
-
-                    if (backdropUrl.isNullOrBlank()) {
-                        val fetchedBackdrop = details.backdropPath?.let { "https://image.tmdb.org/t/p/w780$it" }
-                        if (!fetchedBackdrop.isNullOrBlank()) {
-                            backdropUrl = fetchedBackdrop
-                            updated = true
-                        }
-                    }
-
-                    if (trailerUrl.isNullOrBlank()) {
-                        val ytKey = details.videos?.results?.firstOrNull {
-                            it.site?.equals("YouTube", ignoreCase = true) == true &&
-                            (it.type?.equals("Trailer", ignoreCase = true) == true || it.type?.equals("Teaser", ignoreCase = true) == true)
-                        }?.key ?: details.videos?.results?.firstOrNull { it.site?.equals("YouTube", ignoreCase = true) == true }?.key
-
-                        if (ytKey != null) {
-                            trailerUrl = "https://www.youtube.com/watch?v=$ytKey"
-                            updated = true
-                        }
-                    }
-
-                    if (richWatchProviders.isEmpty()) {
-                        val richList = mutableListOf<com.example.data.model.MediaWatchProvider>()
-                        val countryMap = details.watchProviders?.results
-                        val countryData = countryMap?.get("US") ?: countryMap?.values?.firstOrNull()
-
-                        countryData?.flatrate?.forEach { p ->
-                            p.providerName?.let {
-                                richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Stream", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
-                            }
-                        }
-                        countryData?.rent?.forEach { p ->
-                            p.providerName?.let {
-                                richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Rent", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
-                            }
-                        }
-                        countryData?.buy?.forEach { p ->
-                            p.providerName?.let {
-                                richList.add(com.example.data.model.MediaWatchProvider(name = it, type = "Buy", logoUrl = p.logoPath?.let { lp -> "https://image.tmdb.org/t/p/w154$lp" }, providerId = p.providerId))
-                            }
-                        }
-
-                        if (richList.isNotEmpty()) {
-                            richWatchProviders = richList
-                            watchProviders = richList.map { it.name }
-                            updated = true
-                        }
-                    }
-                } catch (e: Exception) {
-                    Log.e("CobaltRepo", "Failed to enrich TMDb media item: ${e.message}")
-                }
+        if (item.mediaType in listOf("movie", "tv")) return@withContext com.example.media.MediaDetailHydrator.load(context, item, saveToDb, db)
+        // Jikan anime and manga keep their catalogue identity and never enter account sync.
+        if (item.mediaType != "anime" || !item.id.startsWith("jikan_anime_")) return@withContext item
+        val id = item.id.substringAfterLast('_').toIntOrNull() ?: return@withContext item
+        val streaming = try {
+            withTimeoutOrNull(8_000L) { MediaApiClient.jikanService(com.example.media.MediaProviderSettings(context).jikanUrl).getAnimeStreaming(id) }
+        } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
+        catch (_: Exception) { null }
+        val providers = streaming?.data?.mapNotNull { it.name }?.filter { it.isNotBlank() }?.distinct().orEmpty()
+        if (providers.isEmpty()) return@withContext item
+        val enriched = item.copy(watchProviders = providers)
+        if (saveToDb) db.withTransaction {
+            val current = savedItemDao.getItemById(item.id)
+            if (current != null && !current.isDeleted && !com.example.notes.NoteDeletionFence(context).deleted(item.id)) {
+                val metadata = SavedItemEntity.fromDomainModel(enriched)
+                savedItemDao.insertItem(current.copy(watchProvidersJson = metadata.watchProvidersJson))
             }
         }
-    } else if (item.mediaType != "manga" && (item.id.startsWith("jikan_") || item.mediaType?.lowercase() == "anime")) {
-            val malId = item.id.substringAfterLast("_").toIntOrNull()
-            if (malId != null && watchProviders.isEmpty()) {
-                try {
-                    val streamingResp = MediaApiClient.jikanService(com.example.media.MediaProviderSettings(context).jikanUrl).getAnimeStreaming(malId)
-                    val providers = streamingResp.data?.mapNotNull { it.name }?.filter { it.isNotBlank() }?.distinct() ?: emptyList()
-                    if (providers.isNotEmpty()) {
-                        watchProviders = providers
-                        updated = true
-                    }
-                } catch (e: Exception) {
-                    Log.e("CobaltRepo", "Failed to fetch Jikan streaming info: ${e.message}")
-                }
-            }
-        }
-
-        if (updated) {
-            val newItem = item.copy(
-                thumbnailPath = thumbnailPath,
-                mediaType = mediaType,
-                genres = genres,
-                watchProviders = watchProviders,
-                richWatchProviders = richWatchProviders,
-                trailerUrl = trailerUrl,
-                backdropUrl = backdropUrl,
-                rating = rating,
-                runtime = runtime,
-                tagline = tagline,
-                budget = budget,
-                revenue = revenue,
-                status = status,
-                productionCompanies = productionCompanies,
-                showProgress = item.showProgress,
-                tmdbId = tmdbId ?: item.tmdbId
-            )
-            if (saveToDb) {
-                // Enrichment owns catalogue fields only; never overwrite a newer rating, status or Trash operation.
-                db.withTransaction {
-                    val current = savedItemDao.getItemById(item.id)
-                    if (current != null && !current.isDeleted && !com.example.notes.NoteDeletionFence(context).deleted(item.id)) {
-                        val metadata = SavedItemEntity.fromDomainModel(newItem)
-                        savedItemDao.insertItem(current.copy(thumbnailPath = metadata.thumbnailPath, backdropUrl = metadata.backdropUrl,
-                            genresJson = metadata.genresJson, watchProvidersJson = metadata.watchProvidersJson, trailerUrl = metadata.trailerUrl,
-                            rating = metadata.rating, runtime = metadata.runtime, tagline = metadata.tagline, budget = metadata.budget,
-                            revenue = metadata.revenue, status = metadata.status, productionCompaniesJson = metadata.productionCompaniesJson,
-                            tmdbId = metadata.tmdbId ?: current.tmdbId))
-                    }
-                }
-            }
-            return@withContext newItem
-        }
-
-        return@withContext item
+        enriched
     }
 
     suspend fun updateItems(items: List<SavedItem>) = withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -834,9 +647,10 @@ class CobaltRepository(
         tmdbId: Int?,
         traktId: Long?,
         imdbId: String?,
-        id: String
+        id: String,
+        mediaKind: String? = null
     ): SavedItem? = withContext(Dispatchers.IO) {
-        savedItemDao.findMediaItemByExternalIds(tmdbId, traktId, imdbId, id)?.toDomainModel()
+        savedItemDao.findMediaItemByExternalIds(tmdbId, traktId, imdbId, id, mediaKind)?.toDomainModel()
     }
 
     suspend fun findExistingLink(url: String): SavedItem? = withContext(Dispatchers.IO) {
@@ -852,10 +666,16 @@ class CobaltRepository(
     }
 
     /** Explicit user add: checks all three IDs (tmdbId, traktId, imdbId) to prevent duplicates and recover from Trash. */
+    suspend fun saveEditedMediaItem(item: SavedItem): SavedItem = withContext(Dispatchers.IO) {
+        val supported = item.mediaType in listOf("movie", "tv") && ((item.traktId ?: 0) > 0 || (item.tmdbId ?: 0) > 0 || !item.imdbId.isNullOrBlank())
+        if (!supported) return@withContext saveItem(item)
+        com.example.data.remote.trakt.TraktOutbox.saveEditedMedia(context, sanitizeItemTitle(item), db).also { com.example.widget.WidgetUpdater.update(context) }
+    }
+
     suspend fun saveNewMediaItem(item: SavedItem): SavedItem = withContext(Dispatchers.IO) {
         require(item.type == SavedItemType.MEDIA)
         val fence = com.example.notes.NoteDeletionFence(context)
-        val existing = savedItemDao.findMediaItemByExternalIds(item.tmdbId, item.traktId, item.imdbId, item.id)
+        val existing = savedItemDao.findMediaItemByExternalIds(item.tmdbId, item.traktId, item.imdbId, item.id, item.mediaType)
         if (existing != null) {
             if (!existing.isDeleted && !fence.deleted(existing.id)) {
                 return@withContext existing.toDomainModel()
@@ -887,8 +707,8 @@ class CobaltRepository(
         val selected = sanitizeItemTitle(item.copy(id = identity))
         val supported = selected.mediaType in listOf("movie", "tv") &&
             ((selected.traktId ?: 0) > 0 || (selected.tmdbId ?: 0) > 0 || !selected.imdbId.isNullOrBlank())
-        if (supported && selected.watchStatus == "Plan to Watch") {
-            val saved = com.example.data.remote.trakt.TraktOutbox.savePlannedMedia(context, selected, db)
+        if (supported) {
+            val saved = com.example.data.remote.trakt.TraktOutbox.saveCapturedMedia(context, selected, db)
             com.example.widget.WidgetUpdater.update(context)
             saved
         } else saveItem(selected).also {
@@ -1104,41 +924,7 @@ class CobaltRepository(
 
     suspend fun fetchLinkMetadata(urlString: String): LinkMetadata = withContext(Dispatchers.IO) {
         try {
-            val cleanUrl = if (!urlString.startsWith("http://") && !urlString.startsWith("https://")) {
-                "https://$urlString"
-            } else {
-                urlString
-            }
-
-            val document = org.jsoup.Jsoup.connect(cleanUrl)
-                .timeout(8000)
-                .maxBodySize(512 * 1024)
-                .ignoreHttpErrors(false)
-                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
-                .get()
-
-            val pageTitle = document.title().trim()
-            if (pageTitle.equals("Just a moment...", true) || pageTitle.equals("Attention Required! | Cloudflare", true) ||
-                document.select("#challenge-running, #challenge-form, script[src*=/cdn-cgi/challenge-platform/]").isNotEmpty()) {
-                return@withContext LinkMetadata(null, null, null)
-            }
-            val title = document.select("meta[property=og:title]").attr("content").takeIf { it.isNotBlank() }
-                ?: pageTitle.takeIf { it.isNotBlank() }
-                ?: document.select("meta[name=twitter:title]").attr("content").takeIf { !it.isNullOrBlank() }
-
-            val description = document.select("meta[property=og:description]").attr("content").takeIf { !it.isNullOrBlank() }
-                ?: document.select("meta[name=og:description]").attr("content").takeIf { !it.isNullOrBlank() }
-                ?: document.select("meta[name=description]").attr("content").takeIf { !it.isNullOrBlank() }
-                ?: document.select("meta[name=twitter:description]").attr("content").takeIf { !it.isNullOrBlank() }
-                ?: document.select("meta[property=twitter:description]").attr("content").takeIf { !it.isNullOrBlank() }
-                ?: document.select("meta[itemprop=description]").attr("content").takeIf { !it.isNullOrBlank() }
-
-            val imageUrl = document.select("meta[property=og:image]").firstOrNull()?.absUrl("content")?.takeIf { it.isNotBlank() }
-                ?: document.select("meta[name=twitter:image]").firstOrNull()?.absUrl("content")?.takeIf { it.isNotBlank() }
-                ?: document.select("meta[property=og:image]").attr("content").takeIf { !it.isNullOrBlank() }
-                ?: document.select("meta[name=twitter:image]").attr("content").takeIf { !it.isNullOrBlank() }
-
-            LinkMetadata(title?.trim(), description?.trim(), imageUrl)
+            com.example.links.LinkMetadataExtractor.fetch(urlString)
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             Log.w("CobaltRepo", "Link metadata unavailable")

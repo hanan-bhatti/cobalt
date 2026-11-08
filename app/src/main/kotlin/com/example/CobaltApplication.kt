@@ -39,9 +39,14 @@ class CobaltApplication : Application(), ImageLoaderFactory {
             if (!com.example.notes.StartupCrashGuard.shouldPause(this@CobaltApplication) &&
                 !com.example.notes.NoteMigrationManager.shouldPauseBackground(this@CobaltApplication)) runCatching {
                 val auth = com.example.data.remote.trakt.TraktAuthManager.getInstance(this@CobaltApplication)
-                if (auth.hasValidToken() && com.example.data.local.AppDatabase.getDatabase(this@CobaltApplication)
-                    .traktOutboxDao().pending(auth.syncSessionId(), 1).isNotEmpty())
-                    com.example.util.TraktSyncWorker.enqueueOneTimeSync(this@CobaltApplication, uploadOnly = true)
+                if (auth.hasValidToken()) {
+                    val needsImport = !auth.librarySeeded(auth.syncSessionId()) || auth.getSyncCheckpointStep() != null ||
+                        System.currentTimeMillis() - auth.getLastSyncTimestamp() >= 15 * 60_000L
+                    val pending = com.example.data.local.AppDatabase.getDatabase(this@CobaltApplication)
+                        .traktOutboxDao().pending(auth.syncSessionId(), 1).isNotEmpty()
+                    if (needsImport || pending) com.example.util.TraktSyncWorker.enqueueOneTimeSync(this@CobaltApplication, uploadOnly = !needsImport)
+                    com.example.util.TraktSyncWorker.schedulePeriodicSync(this@CobaltApplication)
+                }
                 if (auth.hasValidToken()) com.example.util.TraktSyncWorker.scheduleDeferredRetry(this@CobaltApplication)
             }
             com.example.data.cleanup.LegacyPathTitleCleanup.runCleanup(this@CobaltApplication)

@@ -42,7 +42,7 @@ internal fun NoteBodyPlainText(reader: LegacyNoteRecovery, note: RecoveryNote, m
         } catch (cancel: CancellationException) { throw cancel }
         catch (_: Exception) { unavailable = true }
     }
-    BoxWithConstraints(modifier) {
+    Box(modifier) {
         // Stream text in bounded 16 KB chunks allowing natural full-width paragraph wrapping
         val chunkBytes = NoteSizePolicy.IO_CHUNK_BYTES
         val length = metadata?.byteLength ?: 0

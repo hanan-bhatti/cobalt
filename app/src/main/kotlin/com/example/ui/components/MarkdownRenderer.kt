@@ -579,24 +579,51 @@ private fun MarkdownTable(
             .padding(vertical = 8.dp)
     ) {
         val availableWidth = maxWidth
-        val colMinWidths = remember(columnCount, colMaxChars) {
+        val isMultiCol = columnCount >= 3
+        val equalShare = (availableWidth / columnCount).coerceAtLeast(36.dp)
+
+        val colMinWidths = remember(columnCount, colMaxChars, availableWidth) {
             (0 until columnCount).map { c ->
                 val chars = colMaxChars.getOrElse(c) { 3 }
                 when {
-                    chars <= 4 -> 80.dp
-                    chars <= 8 -> 110.dp
-                    else -> 175.dp
+                    chars <= 4 -> minOf(38.dp, equalShare)
+                    chars <= 8 -> minOf(58.dp, equalShare)
+                    else -> minOf(85.dp, (equalShare * 1.25f).coerceAtLeast(58.dp))
                 }
             }
         }
         val minTableWidth = remember(colMinWidths) { colMinWidths.fold(0.dp) { acc, w -> acc + w } }
+        val needsScroll = minTableWidth > availableWidth
         val totalTableWidth = if (availableWidth > minTableWidth) availableWidth else minTableWidth
 
-        val colWidths = remember(columnCount, totalTableWidth, colMaxChars, totalChars, colMinWidths) {
-            (0 until columnCount).map { c ->
-                val ratio = colMaxChars[c].toFloat() / totalChars
-                maxOf(colMinWidths[c], totalTableWidth * ratio)
+        val colWidths = remember(columnCount, totalTableWidth, colMaxChars, totalChars, colMinWidths, needsScroll, availableWidth) {
+            if (!needsScroll && availableWidth > 0.dp) {
+                // Distribute availableWidth proportionally without horizontal overflow
+                val raw = (0 until columnCount).map { c ->
+                    val ratio = colMaxChars[c].toFloat() / totalChars
+                    maxOf(colMinWidths[c], availableWidth * ratio)
+                }
+                val rawSum = raw.fold(0.dp) { acc, w -> acc + w }
+                if (rawSum > availableWidth) {
+                    val excess = rawSum - availableWidth
+                    raw.map { w -> maxOf(34.dp, w - excess / columnCount) }
+                } else {
+                    raw
+                }
+            } else {
+                (0 until columnCount).map { c ->
+                    val ratio = colMaxChars[c].toFloat() / totalChars
+                    maxOf(colMinWidths[c], totalTableWidth * ratio)
+                }
             }
+        }
+
+        val scrollModifier = if (needsScroll) {
+            Modifier
+                .horizontalFadingEdges(scrollState, fadeWidth = 16.dp)
+                .horizontalScroll(scrollState)
+        } else {
+            Modifier
         }
 
         Box(
@@ -608,11 +635,14 @@ private fun MarkdownTable(
                     MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
                     RoundedCornerShape(8.dp)
                 )
-                .horizontalFadingEdges(scrollState, fadeWidth = 16.dp)
-                .horizontalScroll(scrollState)
+                .then(scrollModifier)
         ) {
             Column(
-                modifier = Modifier.width(colWidths.fold(0.dp) { acc, w -> acc + w })
+                modifier = if (needsScroll) {
+                    Modifier.width(colWidths.fold(0.dp) { acc, w -> acc + w })
+                } else {
+                    Modifier.fillMaxWidth()
+                }
             ) {
                 rows.forEachIndexed { rowIndex, row ->
                     val isHeader = row.isHeader
@@ -656,7 +686,10 @@ private fun MarkdownTable(
                                             )
                                         }
                                     }
-                                    .padding(horizontal = 12.dp, vertical = 9.dp)
+                                    .padding(
+                                        horizontal = if (columnCount >= 4) 6.dp else if (isMultiCol) 7.dp else 12.dp,
+                                        vertical = if (isMultiCol) 7.dp else 9.dp
+                                    )
                             ) {
                                 if (cellNode != null) {
                                     val cellText = buildAnnotatedString {
@@ -672,6 +705,7 @@ private fun MarkdownTable(
                                         )
                                     }
                                     val finalCellText = cellText.withSearchHighlight(LocalSearchHighlight.current, primaryColor)
+                                    val fontScale = if (columnCount >= 4) 0.72f else if (columnCount == 3) 0.78f else 0.82f
                                     MarkdownInlineText(
                                         text = finalCellText,
                                         modifier = Modifier.fillMaxWidth(),
@@ -682,10 +716,10 @@ private fun MarkdownTable(
                                             else -> TextAlign.Start
                                         },
                                         color = if (isHeader) MaterialTheme.colorScheme.onSurface else color,
-                                        fontSize = if (isHeader) (typo.body.fontSize.value * 0.85f).sp else (typo.body.fontSize.value * 0.8f).sp,
+                                        fontSize = if (isHeader) (typo.body.fontSize.value * fontScale * 1.05f).sp else (typo.body.fontSize.value * fontScale).sp,
                                         fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
                                         fontFamily = typo.textFontFamily,
-                                        lineHeight = (typo.body.fontSize.value * 0.85f * typo.lineHeightMultiplier).sp
+                                        lineHeight = (typo.body.fontSize.value * fontScale * typo.lineHeightMultiplier * 1.15f).sp
                                     )
                                 }
                             }

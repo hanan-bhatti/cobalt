@@ -92,7 +92,24 @@ data class TmdbDetailsResponse(
     @param:Json(name = "created_by") val createdBy: List<TmdbCreator>? = null,
     @param:Json(name = "networks") val networks: List<TmdbNetwork>? = null,
     @param:Json(name = "origin_country") val originCountry: List<String>? = null,
-    @param:Json(name = "content_ratings") val contentRatings: TmdbContentRatingsResponse? = null
+    @param:Json(name = "content_ratings") val contentRatings: TmdbContentRatingsResponse? = null,
+    @param:Json(name = "external_ids") val externalIds: TmdbExternalIds? = null,
+    @param:Json(name = "credits") val credits: TmdbCreditsResponse? = null,
+    @param:Json(name = "seasons") val seasons: List<TmdbSeasonSummary>? = null,
+    @param:Json(name = "number_of_episodes") val numberOfEpisodes: Int? = null,
+    @param:Json(name = "episode_run_time") val episodeRunTime: List<Int>? = null,
+    @param:Json(name = "vote_count") val voteCount: Int? = null,
+    @param:Json(name = "homepage") val homepage: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class TmdbExternalIds(@param:Json(name = "imdb_id") val imdbId: String? = null)
+
+@JsonClass(generateAdapter = true)
+data class TmdbSeasonSummary(
+    @param:Json(name = "season_number") val seasonNumber: Int,
+    @param:Json(name = "name") val name: String? = null,
+    @param:Json(name = "episode_count") val episodeCount: Int? = null
 )
 
 @JsonClass(generateAdapter = true)

@@ -51,8 +51,10 @@ class TraktSyncWorker(
 
         return try {
             if (inputData.getBoolean("upload_only", false)) {
+                TraktSyncEngine.uploadStarted()
                 authManager.refreshAccessTokenIfNeeded()
-                com.example.data.remote.trakt.TraktOutbox.drain(applicationContext, TraktSyncEngine.getApiService())
+                val sent = com.example.data.remote.trakt.TraktOutbox.drain(applicationContext, TraktSyncEngine.getApiService())
+                TraktSyncEngine.uploadFinished(sent)
                 return Result.success()
             }
             val result = TraktSyncEngine.performSync(
@@ -63,12 +65,13 @@ class TraktSyncWorker(
                 Result.success()
             } else {
                 Log.w(TAG, "Sync finished with failure: ${result.exceptionOrNull()?.message}")
-                Result.retry()
+                if (com.example.data.remote.trakt.TraktFailurePolicy.retryable(result.exceptionOrNull())) Result.retry() else Result.failure()
             }
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
             Log.e(TAG, "Worker execution failed: ${e.message}", e)
-            Result.retry()
+            if (authManager.hasValidToken()) TraktSyncEngine.uploadFailed(e)
+            if (com.example.data.remote.trakt.TraktFailurePolicy.retryable(e)) Result.retry() else Result.failure()
         } finally {
             if (authManager.hasValidToken()) runCatching { scheduleDeferredRetry(applicationContext) }
         }
@@ -82,7 +85,7 @@ class TraktSyncWorker(
 
         private val uploadScheduleLock = Any()
 
-        fun enqueueOneTimeSync(context: Context, uploadOnly: Boolean = false) {
+        fun enqueueOneTimeSync(context: Context, uploadOnly: Boolean = false, keepExisting: Boolean = false) {
             if ((com.example.notes.StartupCrashGuard.shouldPause(context) || com.example.notes.NoteMigrationManager.shouldPauseBackground(context))) return
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -103,7 +106,7 @@ class TraktSyncWorker(
                     val waiting = manager.getWorkInfos(query).get().isNotEmpty()
                     if (!waiting) manager.enqueueUniqueWork(ONE_TIME_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, request).result.get()
                 }
-            } else manager.enqueueUniqueWork(ONE_TIME_WORK_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, request)
+            } else manager.enqueueUniqueWork(ONE_TIME_WORK_NAME, if (keepExisting) ExistingWorkPolicy.KEEP else ExistingWorkPolicy.APPEND_OR_REPLACE, request)
 
         }
 

@@ -165,6 +165,11 @@ class TraktAuthManager(
         return id
     }
 
+    internal fun librarySeeded(session: String) = prefs.getString("library_seed_session", null) == session
+    internal fun markLibrarySeeded(session: String) {
+        check(prefs.edit().putString("library_seed_session", session).commit()) { "Could not retain library sync state" }
+    }
+
     fun getClientId(): String {
         return prefs.getString(KEY_CUSTOM_CLIENT_ID, null)?.takeIf { it.isNotBlank() } ?: DEFAULT_CLIENT_ID
     }
@@ -269,6 +274,11 @@ class TraktAuthManager(
 
     fun getLastSyncTimestamp(): Long = prefs.getLong(KEY_LAST_SYNC_TIMESTAMP, 0L)
     fun setLastSyncTimestamp(timestamp: Long) = prefs.edit().putLong(KEY_LAST_SYNC_TIMESTAMP, timestamp).apply()
+
+    internal fun isSyncContractCurrent(): Boolean = prefs.getInt(KEY_SYNC_CONTRACT, 0) == SYNC_CONTRACT_VERSION
+    internal fun markSyncContractCurrent() {
+        check(prefs.edit().putInt(KEY_SYNC_CONTRACT, SYNC_CONTRACT_VERSION).commit()) { "Could not save sync version" }
+    }
 
     fun getLastSyncSummary(): String? = prefs.getString(KEY_LAST_SYNC_SUMMARY, null)
     fun setLastSyncSummary(summary: String) = prefs.edit().putString(KEY_LAST_SYNC_SUMMARY, summary).apply()
@@ -473,14 +483,8 @@ class TraktAuthManager(
     private val secureRandom = SecureRandom()
 
     private fun base64UrlEncode(bytes: ByteArray): String {
-        return try {
-            android.util.Base64.encodeToString(
-                bytes,
-                android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
-            )
-        } catch (e: Exception) {
-            java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
-        }
+        return android.util.Base64.encodeToString(bytes,
+            android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
     }
 
     fun generateCodeVerifier(): String {
@@ -753,9 +757,9 @@ class TraktAuthManager(
         val now = System.currentTimeMillis()
         val currentAccessToken = secrets.get(KEY_ACCESS_TOKEN)
 
-        // Refresh if within 2 days of expiration or already expired
-        val twoDaysMs = 2 * 24 * 60 * 60 * 1000L
-        if (now + twoDaysMs < expiresAt && !currentAccessToken.isNullOrBlank()) {
+        // A short safety window avoids rotating valid tokens on every catalogue refresh.
+        val refreshWindowMs = 5 * 60_000L
+        if (now + refreshWindowMs < expiresAt && !currentAccessToken.isNullOrBlank()) {
             return@withContext currentAccessToken
         }
 
@@ -782,7 +786,8 @@ class TraktAuthManager(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e(TAG, "Failed to refresh Trakt access token: ${e.message}", e)
-            return@withContext if (!isSessionInvalid(startEpoch)) currentAccessToken else null
+            if (!isSessionInvalid(startEpoch) && now < expiresAt) return@withContext currentAccessToken
+            throw e
         }
     }
     }
@@ -916,6 +921,8 @@ class TraktAuthManager(
         private const val KEY_SYNC_RATINGS = "trakt_sync_ratings"
         private const val KEY_SYNC_TV_PROGRESS = "trakt_sync_tv_progress"
         private const val KEY_LAST_SYNC_TIMESTAMP = "trakt_last_sync_timestamp"
+        private const val KEY_SYNC_CONTRACT = "trakt_sync_contract_version"
+        private const val SYNC_CONTRACT_VERSION = 1
         private const val KEY_LAST_SYNC_SUMMARY = "trakt_last_sync_summary"
         private const val KEY_CHECKPOINT_STEP = "trakt_checkpoint_step"
         private const val KEY_CHECKPOINT_PAGE = "trakt_checkpoint_page"
