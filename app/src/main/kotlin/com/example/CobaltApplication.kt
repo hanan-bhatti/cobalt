@@ -14,8 +14,30 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class CobaltApplication : Application(), ImageLoaderFactory {
+    companion object {
+        @Volatile
+        var isAppInForeground: Boolean = false
+            private set
+    }
+
     override fun onCreate() {
         super.onCreate()
+        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            private var startedActivities = 0
+            override fun onActivityStarted(activity: android.app.Activity) {
+                startedActivities++
+                isAppInForeground = startedActivities > 0
+            }
+            override fun onActivityStopped(activity: android.app.Activity) {
+                startedActivities = maxOf(0, startedActivities - 1)
+                isAppInForeground = startedActivities > 0
+            }
+            override fun onActivityCreated(activity: android.app.Activity, savedInstanceState: android.os.Bundle?) {}
+            override fun onActivityResumed(activity: android.app.Activity) {}
+            override fun onActivityPaused(activity: android.app.Activity) {}
+            override fun onActivitySaveInstanceState(activity: android.app.Activity, outState: android.os.Bundle) {}
+            override fun onActivityDestroyed(activity: android.app.Activity) {}
+        })
         if (BuildConfig.DEBUG) {
             android.os.StrictMode.setThreadPolicy(
                 android.os.StrictMode.ThreadPolicy.Builder()

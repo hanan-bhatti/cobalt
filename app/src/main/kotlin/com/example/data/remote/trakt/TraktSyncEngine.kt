@@ -157,7 +157,7 @@ object TraktSyncEngine {
         fun updateProgress(msg: String, fraction: Float) {
             _syncStatus.value = TraktSyncStatus.Syncing(msg, fraction)
             onProgressUpdate?.invoke(msg, fraction)
-            if (isBackground) {
+            if (isBackground && !com.example.CobaltApplication.isAppInForeground) {
                 TraktNotificationHelper.showProgressNotification(
                     context = context,
                     message = msg,
@@ -165,6 +165,8 @@ object TraktSyncEngine {
                     total = 100,
                     indeterminate = fraction <= 0f
                 )
+            } else if (com.example.CobaltApplication.isAppInForeground) {
+                TraktNotificationHelper.cancelNotification(context)
             }
         }
 
@@ -242,8 +244,10 @@ object TraktSyncEngine {
                         _syncStatus.value = TraktSyncStatus.Success(0, upToDateMsg)
                         authManager.setLastSyncTimestamp(syncStartedAt)
                         authManager.setLastSyncSummary(upToDateMsg)
-                        if (isBackground) {
+                        if (isBackground && !com.example.CobaltApplication.isAppInForeground && pending > 0) {
                             TraktNotificationHelper.showCompleteNotification(context, upToDateMsg)
+                        } else {
+                            TraktNotificationHelper.cancelNotification(context)
                         }
                         return@withContext Result.success(summary)
                     }
@@ -899,11 +903,13 @@ object TraktSyncEngine {
 
             _syncStatus.value = TraktSyncStatus.Success(totalItems, summary.message)
 
-            if (isBackground) {
+            if (isBackground && !com.example.CobaltApplication.isAppInForeground && totalItems > 0) {
                 TraktNotificationHelper.showCompleteNotification(
                     context = context,
                     summary = summary.message
                 )
+            } else {
+                TraktNotificationHelper.cancelNotification(context)
             }
 
             Result.success(summary)
@@ -918,8 +924,10 @@ object TraktSyncEngine {
             Log.e(TAG, "Trakt sync execution error: ${e.message}", e)
             val errorMsg = TraktFailurePolicy.message(e)
             _syncStatus.value = TraktSyncStatus.Error(errorMsg)
-            if (isBackground) {
+            if (isBackground && !com.example.CobaltApplication.isAppInForeground) {
                 TraktNotificationHelper.showErrorNotification(context, errorMsg)
+            } else {
+                TraktNotificationHelper.cancelNotification(context)
             }
             Result.failure(e)
         }

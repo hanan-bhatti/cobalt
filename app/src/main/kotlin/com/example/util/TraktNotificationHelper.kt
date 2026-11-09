@@ -31,21 +31,31 @@ import com.example.R
 
 object TraktNotificationHelper {
 
-    const val CHANNEL_ID = "cobalt_trakt_sync"
+    const val CHANNEL_ID = "cobalt_trakt_sync_silent"
+    private const val LEGACY_CHANNEL_ID = "cobalt_trakt_sync"
     const val NOTIFICATION_ID = 2028
 
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+
+            // Purge the noisy legacy channel if it exists on device
+            try {
+                manager.deleteNotificationChannel(LEGACY_CHANNEL_ID)
+            } catch (_: Exception) {}
+
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "Trakt.tv Sync",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Background synchronization of movies, TV shows, and watch progress"
-                setShowBadge(true)
+                description = "Silent background synchronization of movies, TV shows, and watch progress"
+                setShowBadge(false)
+                enableVibration(false)
+                vibrationPattern = null
+                setSound(null, null)
             }
-            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-            manager?.createNotificationChannel(channel)
+            manager.createNotificationChannel(channel)
         }
     }
 
@@ -79,6 +89,9 @@ object TraktNotificationHelper {
             .setOngoing(true)
             .setAutoCancel(false)
             .setOnlyAlertOnce(true)
+            .setSilent(true)
+            .setSound(null)
+            .setVibrate(null)
             .setContentIntent(pendingIntent)
             .setPriority(NotificationCompat.PRIORITY_LOW)
 
@@ -121,8 +134,12 @@ object TraktNotificationHelper {
             .setStyle(NotificationCompat.BigTextStyle().bigText(summary))
             .setOngoing(false)
             .setAutoCancel(true)
+            .setSilent(true)
+            .setSound(null)
+            .setVibrate(null)
+            .setTimeoutAfter(8_000L)
             .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
 
         try {
             notificationManager.notify(NOTIFICATION_ID, builder.build())
@@ -145,7 +162,11 @@ object TraktNotificationHelper {
             .setContentText(errorMessage)
             .setOngoing(false)
             .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setSilent(true)
+            .setSound(null)
+            .setVibrate(null)
+            .setTimeoutAfter(15_000L)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
 
         try {
             notificationManager.notify(NOTIFICATION_ID, builder.build())

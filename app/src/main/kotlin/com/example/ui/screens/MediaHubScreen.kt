@@ -257,7 +257,6 @@ fun MediaHubScreen(
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_custom_settings),
                                 contentDescription = "Media settings",
-                                tint = Color(0xFFED1C24),
                                 modifier = Modifier.size(24.dp)
                             )
                         }
