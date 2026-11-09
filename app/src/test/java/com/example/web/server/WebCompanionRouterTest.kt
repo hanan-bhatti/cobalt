@@ -28,6 +28,8 @@ import org.junit.Before
 import org.junit.Test
 import java.nio.charset.StandardCharsets
 
+@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
+@org.robolectric.annotation.Config(sdk = [28], application = android.app.Application::class)
 class WebCompanionRouterTest {
 
     private lateinit var securityManager: WebCompanionSecurityManager
@@ -196,7 +198,7 @@ class WebCompanionRouterTest {
             rawUri = "/api/auth/logout",
             path = "/api/auth/logout",
             queryParams = emptyMap(),
-            headers = mapOf("Authorization" to "Bearer $token"),
+            headers = mapOf("Authorization" to "Bearer $token", "Content-Type" to "application/json"),
             body = ByteArray(0),
             clientIp = "192.168.1.50"
         )

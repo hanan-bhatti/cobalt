@@ -152,7 +152,8 @@ object EditorSessionRegistry {
      */
     fun refreshWebHeartbeat(noteId: String, sessionToken: String): Boolean = synchronized(lock) {
         val current = webLocksByNoteId[noteId] ?: return false
-        if (current.sessionToken == sessionToken) {
+        if (_mobileActiveNoteId.value != noteId && current.sessionToken == sessionToken &&
+            timeProvider() - current.lastHeartbeatAt <= webLockHeartbeatTimeoutMs) {
             current.lastHeartbeatAt = timeProvider()
             return true
         }
@@ -227,4 +228,10 @@ object EditorSessionRegistry {
         _mobileActiveNoteId.value = null
         webLocksByNoteId.clear()
     }
+
+    fun releaseSession(sessionToken: String) = synchronized(lock) {
+        webLocksByNoteId.entries.removeIf { it.value.sessionToken == sessionToken }
+    }
+
+    fun clearWebLocks() = synchronized(lock) { webLocksByNoteId.clear() }
 }

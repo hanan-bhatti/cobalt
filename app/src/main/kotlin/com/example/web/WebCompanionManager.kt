@@ -48,7 +48,7 @@ object WebCompanionManager {
     private const val NOTIFICATION_CHANNEL_ID = "cobalt_web_companion"
     private const val NOTIFICATION_ID = 2030
 
-    val securityManager = WebCompanionSecurityManager()
+    val securityManager = WebCompanionSecurityManager(onSessionsRevoked = { com.example.web.session.EditorSessionRegistry.clearWebLocks() })
 
     private var server: CobaltEmbeddedServer? = null
     private var router: WebCompanionRouter? = null
@@ -59,8 +59,7 @@ object WebCompanionManager {
     private val _serverUrl = MutableStateFlow<String?>(null)
     val serverUrl: StateFlow<String?> = _serverUrl.asStateFlow()
 
-    private val _activePin = MutableStateFlow("")
-    val activePin: StateFlow<String> = _activePin.asStateFlow()
+    val activePin: StateFlow<String> = securityManager.pinState
 
     private val _activePort = MutableStateFlow(8080)
     val activePort: StateFlow<Int> = _activePort.asStateFlow()
@@ -79,37 +78,43 @@ object WebCompanionManager {
         if (_isRunning.value) return true
 
         val localIp = getLocalIpAddress(context)
-        val freshPin = securityManager.rotatePin()
+        securityManager.rotatePin()
 
-        router = WebCompanionRouter(
+        val activeRouter = WebCompanionRouter(
             securityManager = securityManager,
             repositoryProvider = { repo },
             databaseProvider = { db },
             contextProvider = { context.applicationContext }
         )
 
+        router = activeRouter
+
         val embeddedServer = CobaltEmbeddedServer(
             requestedPort = port,
             securityManager = securityManager,
             allowedAddressesProvider = {
                 val ipList = mutableListOf("localhost", "127.0.0.1")
-                if (localIp != "127.0.0.1") ipList.add(localIp)
+                val currentIp = getLocalIpAddress(context)
+                if (currentIp != "127.0.0.1") ipList.add(currentIp)
                 ipList
             },
-            handler = { req -> router!!.handleRequest(req) }
+            handler = { req -> activeRouter.handleRequest(req) }
         )
 
-        val actualPort = embeddedServer.start(scope)
+        val actualPort = try { embeddedServer.start(scope) } catch (_: Exception) {
+            securityManager.reset()
+            router = null
+            return false
+        }
         if (actualPort <= 0) return false
 
         server = embeddedServer
         _activePort.value = actualPort
-        _activePin.value = freshPin
         val url = "http://$localIp:$actualPort"
         _serverUrl.value = url
         _isRunning.value = true
 
-        showForegroundNotification(context, url, freshPin)
+        showServerNotification(context, url)
         return true
     }
 
@@ -127,7 +132,6 @@ object WebCompanionManager {
 
         _isRunning.value = false
         _serverUrl.value = null
-        _activePin.value = ""
 
         cancelNotification(context)
     }
@@ -138,10 +142,9 @@ object WebCompanionManager {
     @Synchronized
     fun rotatePin(context: Context): String {
         val newPin = securityManager.rotatePin()
-        _activePin.value = newPin
         val currentUrl = _serverUrl.value
         if (currentUrl != null && _isRunning.value) {
-            showForegroundNotification(context, currentUrl, newPin)
+            showServerNotification(context, currentUrl)
         }
         return newPin
     }
@@ -191,7 +194,7 @@ object WebCompanionManager {
         return "127.0.0.1"
     }
 
-    private fun showForegroundNotification(context: Context, url: String, pin: String) {
+    private fun showServerNotification(context: Context, url: String) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -222,7 +225,7 @@ object WebCompanionManager {
             .setSmallIcon(R.drawable.ic_custom_globe)
             .setColor(android.graphics.Color.parseColor("#38BDF8"))
             .setContentTitle("Web Companion Active")
-            .setContentText("$url • PIN: $pin")
+            .setContentText("$url • Open Cobalt for the PIN")
             .setOngoing(true)
             .setAutoCancel(false)
             .setSilent(true)

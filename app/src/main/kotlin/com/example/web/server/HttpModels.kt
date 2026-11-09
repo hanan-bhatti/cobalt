@@ -89,13 +89,20 @@ data class HttpRequest(
         fun sanitizePath(rawUri: String): String {
             val withoutQuery = rawUri.substringBefore('?')
             val decoded = try {
-                URLDecoder.decode(withoutQuery, "UTF-8")
+                URLDecoder.decode(withoutQuery.replace("+", "%2B"), "UTF-8")
             } catch (_: Exception) {
                 withoutQuery
             }
             val segments = decoded.replace('\\', '/')
                 .split('/')
-                .filter { it.isNotEmpty() && it != "." && it != ".." }
+                .fold(mutableListOf<String>()) { result, segment ->
+                    when (segment) {
+                        "", "." -> Unit
+                        ".." -> if (result.isNotEmpty()) result.removeAt(result.lastIndex)
+                        else -> result.add(segment)
+                    }
+                    result
+                }
 
             return "/" + segments.joinToString("/")
         }
@@ -200,8 +207,7 @@ data class HttpResponse(
         ): HttpResponse {
             val headers = mutableMapOf(
                 "Content-Type" to contentType,
-                "Content-Length" to bytes.size.toString(),
-                "Accept-Ranges" to "bytes"
+                "Content-Length" to bytes.size.toString()
             ).apply { putAll(extraHeaders) }
 
             return HttpResponse(
@@ -282,11 +288,13 @@ data class HttpResponse(
             301 -> "Moved Permanently"
             302 -> "Found"
             304 -> "Not Modified"
+            405 -> "Method Not Allowed"
+            413 -> "Payload Too Large"
+            415 -> "Unsupported Media Type"
             400 -> "Bad Request"
             401 -> "Unauthorized"
             403 -> "Forbidden"
             404 -> "Not Found"
-            405 -> "Method Not Allowed"
             409 -> "Conflict"
             429 -> "Too Many Requests"
             500 -> "Internal Server Error"

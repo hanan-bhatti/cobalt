@@ -144,4 +144,12 @@ class EditorSessionRegistryTest {
         assertTrue(EditorSessionRegistry.releaseWebLock("note-release", "token-release"))
         assertEquals(NoteLockState.Unlocked, EditorSessionRegistry.getNoteLockState("note-release"))
     }
+
+    @Test fun clearingWebSessionsPreservesMobileLock() {
+        EditorSessionRegistry.acquireMobileLock("mobile")
+        EditorSessionRegistry.acquireWebLock("web", "token", "127.0.0.1")
+        EditorSessionRegistry.clearWebLocks()
+        assertTrue(EditorSessionRegistry.isNoteLockedOnMobile("mobile"))
+        assertEquals(NoteLockState.Unlocked, EditorSessionRegistry.getNoteLockState("web"))
+    }
 }

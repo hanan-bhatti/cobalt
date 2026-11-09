@@ -256,6 +256,33 @@ class CobaltRepository(
 
     suspend fun getItemForOpen(id: String): SavedItem? = notePersistence.load(id)
 
+    /** The desktop editor is bounded independently of the phone's large-note editor. */
+    suspend fun getItemForWeb(id: String, maxBytes: Int): SavedItem? = withContext(Dispatchers.IO) {
+        val item = notePersistence.load(id, includeSmallBody = false) ?: return@withContext null
+        if (!com.example.notes.NotePersistence.isNote(item)) return@withContext item
+        check(!item.bodyMissing) { "Note body is unavailable. Recover it on your phone." }
+        require(item.byteLength <= maxBytes) { "This note is too large for the web editor. Open it on your phone." }
+        val text = notePersistence.store.open(id, requireNotNull(item.contentHash)).use { input ->
+            val bytes = ByteArrayOutputStream()
+            val buffer = ByteArray(16 * 1024)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                require(bytes.size().toLong() + count <= maxBytes) { "Note exceeds the web editor limit." }
+                bytes.write(buffer, 0, count)
+            }
+            bytes.toString("UTF-8")
+        }
+        item.copy(content = text, bodyLoaded = true)
+    }
+
+    suspend fun saveNoteFromWeb(item: SavedItem, beforeCommit: () -> Unit): SavedItem = withContext(Dispatchers.IO) {
+        require(com.example.notes.NotePersistence.isNote(item))
+        notePersistence.save(sanitizeItemTitle(item), beforeCommit = beforeCommit).also {
+            com.example.widget.WidgetUpdater.update(context)
+        }
+    }
+
     fun readFileBytes(filePath: String): ByteArray? {
         return try {
             val file = File(filePath)

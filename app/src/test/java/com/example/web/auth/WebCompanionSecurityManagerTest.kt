@@ -156,4 +156,33 @@ class WebCompanionSecurityManagerTest {
         assertFalse("Null host must be rejected", manager.isValidHost(null, localIps))
         assertFalse("Empty host must be rejected", manager.isValidHost("", localIps))
     }
+
+    @Test fun numericPinIgnoresDeviceLocaleAndRotationPublishesState() {
+        val previous = java.util.Locale.getDefault()
+        try {
+            java.util.Locale.setDefault(java.util.Locale.forLanguageTag("ar"))
+            var resets = 0
+            val manager = WebCompanionSecurityManager(onSessionsRevoked = { resets++ })
+            val first = manager.currentPin
+            val next = manager.rotatePin()
+            assertTrue(next.matches(Regex("[0-9]{4}")))
+            assertNotEquals(first, next)
+            assertEquals(next, manager.pinState.value)
+            assertEquals(1, resets)
+        } finally { java.util.Locale.setDefault(previous) }
+    }
+    @Test fun requestBudgetAllowsNormalEditBurstButStillLimitsFloods() {
+        val time = AtomicLong(1000)
+        val manager = WebCompanionSecurityManager(timeProvider = { time.get() })
+        repeat(60) { assertFalse(manager.isRateLimited("local")) }
+        assertTrue(manager.isRateLimited("local"))
+        time.addAndGet(500)
+        assertFalse(manager.isRateLimited("local"))
+    }
+    @Test fun ipv6LoopbackAndMalformedHostsAreHandled() {
+        val manager = WebCompanionSecurityManager()
+        assertTrue(manager.isValidHost("[::1]:8080", emptyList()))
+        assertFalse(manager.isValidHost("localhost@evil.example", emptyList()))
+        assertFalse(manager.isValidHost("localhost/path", emptyList()))
+    }
 }

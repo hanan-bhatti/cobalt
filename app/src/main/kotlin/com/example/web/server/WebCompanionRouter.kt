@@ -28,6 +28,13 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.InputStream
+import java.io.ByteArrayOutputStream
+import com.example.BuildConfig
+import com.example.data.model.SavedItem
+import com.example.data.model.SavedItemType
+import com.example.web.session.LockAcquisitionResult
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
 
 /**
  * Request router for the Cobalt Local Web Companion.
@@ -45,11 +52,16 @@ class WebCompanionRouter(
     val securityManager: WebCompanionSecurityManager,
     val repositoryProvider: () -> CobaltRepository?,
     val databaseProvider: () -> AppDatabase?,
-    val contextProvider: () -> Context? = { null }
+    val contextProvider: () -> Context? = { null },
+    val noteStoreProvider: () -> WebNoteStore? = { repositoryProvider()?.let(::RepositoryWebNoteStore) }
 ) {
 
     suspend fun handleRequest(request: HttpRequest): HttpResponse {
         val path = request.path
+        if (request.method !in setOf("GET", "POST", "PUT", "DELETE")) return HttpResponse.text(405, "Method not allowed")
+        if (request.method != "GET" && !request.header("Content-Type").orEmpty().startsWith("application/json", true)) {
+            return HttpResponse.text(415, "JSON content type required")
+        }
 
         // 1. Public Authentication & Theme Endpoints
         if (path == "/api/auth/login" && request.method == "POST") {
@@ -78,21 +90,26 @@ class WebCompanionRouter(
 
         // 4. Authenticated API Endpoints
         return when {
-            path == "/api/status" && request.method == "GET" -> handleStatus(request)
+            path == "/api/status" && request.method == "GET" -> handleStatus()
             path == "/api/notes" && request.method == "GET" -> handleNotesList(request)
-            path.startsWith("/api/notes/") && request.method == "GET" -> {
-                val id = path.removePrefix("/api/notes/").substringBefore('/')
-                handleNoteDetail(id, request)
+            path.startsWith("/api/notes/") -> {
+                val segments = path.removePrefix("/api/notes/").split('/')
+                when {
+                    segments.size == 1 && request.method == "GET" -> handleNoteDetail(segments[0], request)
+                    segments.size == 1 && request.method == "PUT" -> handleNoteSave(segments[0], request, token)
+                    segments.size == 2 && segments[1] == "lock" -> handleNoteLock(segments[0], request, token)
+                    else -> HttpResponse.notFound()
+                }
             }
             path.startsWith("/api/media/") && request.method == "GET" -> {
                 val mediaId = path.removePrefix("/api/media/").substringBefore('/')
-                handleMediaStream(mediaId, request)
+                handleMediaStream(mediaId)
             }
             else -> HttpResponse.notFound("Endpoint not found")
         }
     }
 
-    private fun handleLogin(request: HttpRequest): HttpResponse {
+    private suspend fun handleLogin(request: HttpRequest): HttpResponse {
         val json = try { JSONObject(request.textBody()) } catch (_: Exception) { null }
         val pin = json?.optString("pin")?.trim() ?: ""
 
@@ -114,6 +131,7 @@ class WebCompanionRouter(
                 )
             }
             is AuthResult.InvalidPin -> {
+                delay(auth.penaltyDelayMs)
                 HttpResponse.json(
                     statusCode = 401,
                     json = JSONObject().apply {
@@ -141,7 +159,10 @@ class WebCompanionRouter(
     private fun handleLogout(request: HttpRequest): HttpResponse {
         val token = extractSessionToken(request)
         if (token != null) {
-            securityManager.revokeSession(token)
+            if (securityManager.isValidSession(token, request.clientIp)) {
+                securityManager.revokeSession(token)
+                EditorSessionRegistry.releaseSession(token)
+            }
         }
         val clearCookie = "cobalt_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0"
         return HttpResponse.json(
@@ -162,47 +183,29 @@ class WebCompanionRouter(
         )
     }
 
-    private suspend fun handleStatus(request: HttpRequest): HttpResponse {
-        val db = databaseProvider()
-        val totalCount = try {
-            db?.savedItemDao()?.getAllItems()?.size ?: 0
-        } catch (_: Exception) {
-            0
-        }
+    private suspend fun handleStatus(): HttpResponse {
+        val totalCount = noteStoreProvider()?.list(null)?.size ?: 0
 
         return HttpResponse.json(
             statusCode = 200,
             json = JSONObject().apply {
                 put("app", "Cobalt")
-                put("version", "2.3.0")
+                put("version", BuildConfig.VERSION_NAME)
                 put("totalNotes", totalCount)
             }.toString()
         )
     }
 
     private suspend fun handleNotesList(request: HttpRequest): HttpResponse {
-        val db = databaseProvider() ?: return HttpResponse.serverError("Database unavailable")
-        val page = (request.queryParams["page"]?.toIntOrNull() ?: 1).coerceAtLeast(1)
+        val store = noteStoreProvider() ?: return HttpResponse.serverError("Repository unavailable")
+        val page = (request.queryParams["page"]?.toIntOrNull() ?: 1).coerceIn(1, 1_000_000)
         val limit = (request.queryParams["limit"]?.toIntOrNull() ?: 25).coerceIn(1, 100)
-        val query = request.queryParams["q"]?.trim()
         val folder = request.queryParams["folder"]?.trim()
         val type = request.queryParams["type"]?.trim()?.uppercase()
-
-        val rawItems = try {
-            if (!query.isNullOrEmpty()) {
-                db.savedItemDao().searchNoteFiles(query)
-            } else {
-                db.savedItemDao().getAllItems()
-            }
-        } catch (_: Exception) {
-            emptyList()
-        }
-
-        // Filter active notes and criteria
-        val filtered = rawItems.filter { item ->
-            !item.isDeleted &&
-            (folder.isNullOrEmpty() || item.foldersJson.contains(folder)) &&
-            (type.isNullOrEmpty() || item.type.uppercase() == type)
+        val filtered = store.list(request.queryParams["q"]?.trim()).filter { item ->
+            !item.isDeleted && (folder.isNullOrEmpty() || folder in item.folders) &&
+                (type.isNullOrEmpty() || item.type.name == type ||
+                    type == "ATTACHMENT" && item.type in setOf(SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.AUDIO))
         }
 
         val totalItems = filtered.size
@@ -220,13 +223,13 @@ class WebCompanionRouter(
             val obj = JSONObject().apply {
                 put("id", item.id)
                 put("title", item.title.ifBlank { "Untitled Note" })
-                put("type", item.type)
-                put("preview", item.preview ?: (item.content.take(200)))
+                put("type", item.type.name)
+                put("preview", item.preview.ifBlank { if (item.type in setOf(SavedItemType.TEXT, SavedItemType.CODE, SavedItemType.LINK)) item.content.take(200) else item.type.displayName })
                 put("timestamp", item.timestamp)
                 put("updatedAt", item.updatedAt)
                 put("byteLength", item.byteLength)
                 put("isLockedByMobile", isLocked)
-                val folders = runCatching { JSONArray(item.foldersJson) }.getOrDefault(JSONArray())
+                val folders = JSONArray(item.folders)
                 put("folders", folders)
             }
             itemsArray.put(obj)
@@ -244,63 +247,125 @@ class WebCompanionRouter(
     }
 
     private suspend fun handleNoteDetail(id: String, request: HttpRequest): HttpResponse {
-        if (id.isBlank()) return HttpResponse.notFound("Note ID missing")
-        val repo = repositoryProvider()
-        val db = databaseProvider()
-
-        val fullItem = repo?.getItemForOpen(id)
-            ?: db?.savedItemDao()?.getItemById(id)?.let { entity ->
-                com.example.data.model.SavedItem(
-                    id = entity.id,
-                    type = try {
-                        com.example.data.model.SavedItemType.valueOf(entity.type)
-                    } catch (_: Exception) {
-                        com.example.data.model.SavedItemType.TEXT
-                    },
-                    title = entity.title,
-                    content = entity.content,
-                    timestamp = entity.timestamp,
-                    updatedAt = entity.updatedAt,
-                    folders = emptyList()
-                )
-            }
-
-        if (fullItem == null) {
-            return HttpResponse.notFound("Note not found")
-        }
-
-        val isLocked = EditorSessionRegistry.isNoteLockedOnMobile(id)
-        val obj = JSONObject().apply {
-            put("id", fullItem.id)
-            put("title", fullItem.title.ifBlank { "Untitled Note" })
-            put("type", fullItem.type.name)
-            put("content", fullItem.content)
-            put("timestamp", fullItem.timestamp)
-            put("updatedAt", fullItem.updatedAt)
-            put("isLockedByMobile", isLocked)
-            if (isLocked) {
-                put("lockReason", "This note is currently open in the editor on your phone. Read-only.")
-            }
-            val foldersArray = JSONArray()
-            fullItem.folders.forEach { foldersArray.put(it) }
-            put("folders", foldersArray)
-        }
-
-        return HttpResponse.json(200, obj.toString())
+        val store = noteStoreProvider() ?: return HttpResponse.serverError("Repository unavailable")
+        val item = try { store.read(id) } catch (_: IllegalArgumentException) {
+            return HttpResponse.text(413, "This note exceeds the 5 MB web limit. Open it on your phone.")
+        } ?: return HttpResponse.notFound("Note not found")
+        if (item.isDeleted) return HttpResponse.notFound()
+        return noteResponse(item, request)
     }
 
-    private suspend fun handleMediaStream(mediaId: String, request: HttpRequest): HttpResponse {
+    private fun noteResponse(item: SavedItem, request: HttpRequest): HttpResponse {
+        val editable = item.type in setOf(SavedItemType.TEXT, SavedItemType.CODE)
+        val locked = EditorSessionRegistry.isNoteLockedOnMobile(item.id)
+        return HttpResponse.json(200, JSONObject().apply {
+            put("id", item.id)
+            put("title", item.title)
+            put("type", item.type.name)
+            put("content", if (editable || item.type == SavedItemType.LINK) item.content else item.extractedText.orEmpty())
+            put("timestamp", item.timestamp)
+            put("updatedAt", item.updatedAt)
+            put("contentHash", item.contentHash ?: JSONObject.NULL)
+            put("byteLength", item.byteLength)
+            put("editable", editable && !item.bodyMissing)
+            put("isLockedByMobile", locked)
+            put("isLockedByOtherWeb", EditorSessionRegistry.canWriteNote(item.id, extractSessionToken(request)) is LockAcquisitionResult.ConflictWeb)
+            put("folders", JSONArray(item.folders))
+            if (item.type in setOf(SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.AUDIO)) {
+                put("mediaUrl", "/api/media/${java.net.URLEncoder.encode(item.id, "UTF-8").replace("+", "%20")}")
+            }
+        }.toString())
+    }
+
+    private suspend fun handleNoteLock(id: String, request: HttpRequest, token: String): HttpResponse {
+        if (request.method == "DELETE") {
+            EditorSessionRegistry.releaseWebLock(id, token)
+            return HttpResponse.json(200, "{\"released\":true}")
+        }
+        if (request.method == "PUT") {
+            return if (EditorSessionRegistry.refreshWebHeartbeat(id, token)) HttpResponse.json(200, "{\"renewed\":true}")
+            else HttpResponse.conflict("Editing lock expired or your phone is editing this note. Your draft is retained.")
+        }
+        if (request.method != "POST") return HttpResponse.text(405, "Method not allowed")
+        val item = try { noteStoreProvider()?.read(id) } catch (_: IllegalArgumentException) {
+            return HttpResponse.text(413, "This note exceeds the 5 MB web limit. Open it on your phone.")
+        } ?: return HttpResponse.notFound()
+        if (item.isDeleted) return HttpResponse.notFound()
+        if (item.type !in setOf(SavedItemType.TEXT, SavedItemType.CODE)) return HttpResponse.text(405, "Only notes and code are editable")
+        return when (EditorSessionRegistry.acquireWebLock(id, token, request.clientIp)) {
+            LockAcquisitionResult.Granted -> noteResponse(item, request)
+            else -> HttpResponse.conflict("This note is being edited on your phone or in another browser.")
+        }
+    }
+
+    private suspend fun handleNoteSave(id: String, request: HttpRequest, token: String): HttpResponse {
+        val json = try { JSONObject(request.textBody()) } catch (_: Exception) { return HttpResponse.text(400, "Invalid JSON") }
+        if (json.opt("title") !is String || json.opt("content") !is String || json.opt("updatedAt") !is Number || !json.has("contentHash")) {
+            return HttpResponse.text(400, "Title, content and base revision are required")
+        }
+        val revision = json.get("updatedAt") as Number
+        if (revision.toDouble() != revision.toLong().toDouble() || revision.toLong() < 0 ||
+            !json.isNull("contentHash") && json.opt("contentHash") !is String) return HttpResponse.text(400, "Invalid base revision")
+        val content = json.getString("content")
+        val title = json.getString("title").trim()
+        if (title.length > 512) return HttpResponse.text(400, "Title is too long")
+        if (content.toByteArray(Charsets.UTF_8).size > WebNoteStore.MAX_BODY_BYTES) return HttpResponse.text(413, "Web notes are limited to 5 MB")
+        val store = noteStoreProvider() ?: return HttpResponse.serverError("Repository unavailable")
+        val item = try { store.read(id) } catch (_: IllegalArgumentException) {
+            return HttpResponse.text(413, "This note exceeds the 5 MB web limit. Open it on your phone.")
+        } ?: return HttpResponse.notFound()
+        if (item.isDeleted) return HttpResponse.notFound()
+        if (item.type !in setOf(SavedItemType.TEXT, SavedItemType.CODE)) return HttpResponse.text(405, "Only notes and code are editable")
+        val baseHash = if (json.isNull("contentHash")) null else json.getString("contentHash")
+        if (item.updatedAt != json.getLong("updatedAt") || item.contentHash != baseHash) {
+            return HttpResponse.conflict("This note changed since you opened it. Your draft is retained; reopen before saving.")
+        }
+        val guard = {
+            check(securityManager.isValidSession(token, request.clientIp)) { "Session expired; reconnect before saving." }
+            check(EditorSessionRegistry.refreshWebHeartbeat(id, token) &&
+                EditorSessionRegistry.canWriteNote(id, token) == LockAcquisitionResult.Granted) {
+                "This note is being edited elsewhere or its lock expired. Your draft is retained."
+            }
+        }
+        return try {
+            guard()
+            val saved = store.save(item.copy(title = title, content = content, bodyLoaded = true), guard)
+            noteResponse(saved, request)
+        } catch (cancel: CancellationException) { throw cancel
+        } catch (_: IllegalStateException) {
+            HttpResponse.conflict("The note changed or its editing lock is unavailable. Your draft is retained; reopen before saving.")
+        } catch (_: java.io.IOException) {
+            HttpResponse.conflict("Could not commit this note. Your draft is retained. Check the note on your phone.")
+        }
+    }
+
+    private suspend fun handleMediaStream(mediaId: String): HttpResponse {
         if (mediaId.isBlank()) return HttpResponse.notFound("Media ID missing")
         val db = databaseProvider() ?: return HttpResponse.notFound()
         val item = db.savedItemDao().getItemById(mediaId) ?: return HttpResponse.notFound()
 
-        val file = File(item.content)
+        if (item.isDeleted || item.type !in setOf("IMAGE", "VIDEO", "AUDIO")) return HttpResponse.notFound()
+        val context = contextProvider() ?: return HttpResponse.notFound()
+        val file = File(item.content).canonicalFile
+        val roots = listOfNotNull(context.filesDir, context.cacheDir, context.getExternalFilesDir(null))
+        if (roots.none { file.path.startsWith(it.canonicalPath + File.separator) }) return HttpResponse.notFound()
         if (!file.exists() || !file.isFile) {
             return HttpResponse.notFound("Media file not found")
         }
 
+        if (file.length() > 10_485_760) return HttpResponse.text(413, "Attachment is too large for the web viewer")
         val bytes = try {
-            file.readBytes()
+            file.inputStream().use { input ->
+                val output = ByteArrayOutputStream()
+                val buffer = ByteArray(16 * 1024)
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    if (output.size() + count > 10_485_760) return HttpResponse.text(413, "Attachment is too large for the web viewer")
+                    output.write(buffer, 0, count)
+                }
+                output.toByteArray()
+            }
         } catch (_: Exception) {
             return HttpResponse.serverError("Unable to read media file")
         }
@@ -311,6 +376,7 @@ class WebCompanionRouter(
 
     private fun serveStaticAsset(rawPath: String): HttpResponse {
         val path = if (rawPath == "/" || rawPath.isBlank()) "/index.html" else rawPath
+        if (path !in setOf("/index.html", "/app.js", "/style.css")) return HttpResponse.notFound("Asset not found")
         val assetPath = "web" + (if (path.startsWith("/")) path else "/$path")
 
         val context = contextProvider()
@@ -318,7 +384,7 @@ class WebCompanionRouter(
             try {
                 context.assets.open(assetPath)
             } catch (_: Exception) {
-                try { context.assets.open("web/index.html") } catch (_: Exception) { null }
+                null
             }
         } else {
             javaClass.classLoader?.getResourceAsStream(assetPath)
@@ -353,6 +419,11 @@ class WebCompanionRouter(
                 "png" -> "image/png"
                 "jpg", "jpeg" -> "image/jpeg"
                 "webp" -> "image/webp"
+                "mp4" -> "video/mp4"
+                "mp3" -> "audio/mpeg"
+                "m4a" -> "audio/mp4"
+                "wav" -> "audio/wav"
+                "ogg" -> "audio/ogg"
                 "ico" -> "image/x-icon"
                 "woff2" -> "font/woff2"
                 "woff" -> "font/woff"

@@ -133,20 +133,10 @@ class CobaltEmbeddedServerTest {
         }
         val port = server!!.start(testScope)
 
-        // Request with spoofed malicious external host header
-        val url = URL("http://127.0.0.1:$port/api/test")
-        val conn = (url.openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            setRequestProperty("Host", "attacker.evil.com:8080")
-            connectTimeout = 3000
-            readTimeout = 3000
-        }
-
-        try {
-            val code = conn.responseCode
-            assertEquals("Spoofed Host header must be rejected with 403 Forbidden", 403, code)
-        } finally {
-            conn.disconnect()
+        java.net.Socket("127.0.0.1", port).use { socket ->
+            socket.soTimeout = 3000
+            socket.getOutputStream().write("GET /api/test HTTP/1.1\r\nHost: attacker.evil.com:8080\r\n\r\n".toByteArray())
+            assertTrue(socket.getInputStream().bufferedReader().readLine().contains("403"))
         }
     }
 
@@ -170,10 +160,40 @@ class CobaltEmbeddedServerTest {
         try {
             val code = conn.responseCode
             assertEquals(204, code)
-            val allowMethods = conn.getHeaderField("Access-Control-Allow-Methods")
+            val allowMethods = conn.getHeaderField("Allow")
             assertTrue(allowMethods != null && allowMethods.contains("GET"))
         } finally {
             conn.disconnect()
         }
     }
+
+    private fun raw(request: String): String {
+        if (server == null) {
+            server = CobaltEmbeddedServer(requestedPort = 0, securityManager = securityManager) { HttpResponse.text(200, "OK") }
+            server!!.start(testScope)
+        }
+        return java.net.Socket("127.0.0.1", server!!.actualPort).use {
+            it.soTimeout = 3000
+            it.getOutputStream().write(request.toByteArray())
+            it.getInputStream().bufferedReader().readText()
+        }
+    }
+    @Test fun invalidAndDuplicateLengthsAreRejected() {
+        listOf("-1", "eleven", "10485761").forEach { length ->
+            assertTrue(raw("POST /api/test HTTP/1.1\r\nHost: localhost\r\nContent-Length: $length\r\n\r\n").contains("400 Bad Request"))
+        }
+        assertTrue(raw("POST /api/test HTTP/1.1\r\nHost: localhost\r\nContent-Length: 0\r\ncontent-length: 0\r\n\r\n").contains("400 Bad Request"))
+    }
+    @Test fun oversizedHeaderAndTransferEncodingAreRejected() {
+        assertTrue(raw("GET / HTTP/1.1\r\nHost: localhost\r\nX-Large: ${"x".repeat(5000)}\r\n\r\n").contains("400 Bad Request"))
+        assertTrue(raw("POST / HTTP/1.1\r\nHost: localhost\r\nTransfer-Encoding: chunked\r\n\r\n0\r\n\r\n").contains("400 Bad Request"))
+    }
+    @Test fun crossOriginAndOptionsCannotBypassHostChecks() {
+        assertTrue(raw("OPTIONS / HTTP/1.1\r\nHost: evil.example\r\n\r\n").contains("403 Forbidden"))
+        assertTrue(raw("POST / HTTP/1.1\r\nHost: localhost\r\nOrigin: http://evil.example\r\nContent-Length: 0\r\n\r\n").contains("403 Forbidden"))
+        val good = raw("GET / HTTP/1.1\r\nHost: localhost\r\nOrigin: http://localhost\r\n\r\n")
+        assertTrue(good.contains("200 OK"))
+        assertFalse(good.contains("Access-Control-Allow-Origin"))
+    }
+    @Test fun plusInNoteIdsIsPreserved() { assertEquals("/api/notes/a+b", HttpRequest.sanitizePath("/api/notes/a%2Bb")) }
 }

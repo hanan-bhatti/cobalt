@@ -19,6 +19,8 @@
 package com.example.web.auth
 
 import java.security.SecureRandom
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -96,16 +98,20 @@ class WebCompanionSecurityManager(
     private val lockoutDurationMs: Long = 10 * 60 * 1000L, // 10 minutes
     private val sessionInactivityTimeoutMs: Long = 2 * 60 * 60 * 1000L, // 2 hours
     private val globalTripwireThreshold: Int = 12,
-    private val requestsPerMinute: Int = 60,
-    private val burstCapacity: Int = 20,
+    private val requestsPerMinute: Int = 120,
+    private val burstCapacity: Int = 60,
     private val timeProvider: () -> Long = System::currentTimeMillis,
-    private val secureRandom: SecureRandom = SecureRandom()
+    private val secureRandom: SecureRandom = SecureRandom(),
+    private val onSessionsRevoked: () -> Unit = {}
 ) {
 
     private val lock = Any()
 
     @Volatile
     private var _currentPin: String = ""
+
+    private val _pinState = MutableStateFlow("")
+    val pinState = _pinState.asStateFlow()
 
     private val sessionsByToken = ConcurrentHashMap<String, WebSession>()
     private val attemptsByIp = ConcurrentHashMap<String, IpAttemptRecord>()
@@ -116,6 +122,7 @@ class WebCompanionSecurityManager(
         get() = synchronized(lock) {
             if (_currentPin.isEmpty()) {
                 _currentPin = generate4DigitPin()
+                _pinState.value = _currentPin
             }
             _currentPin
         }
@@ -125,7 +132,11 @@ class WebCompanionSecurityManager(
      * and resets lockout tracking.
      */
     fun rotatePin(): String = synchronized(lock) {
-        _currentPin = generate4DigitPin()
+        var next = generate4DigitPin()
+        while (next == _currentPin) next = generate4DigitPin()
+        _currentPin = next
+        _pinState.value = _currentPin
+        onSessionsRevoked()
         sessionsByToken.clear()
         attemptsByIp.clear()
         cumulativeFailedAttempts.set(0)
@@ -138,13 +149,14 @@ class WebCompanionSecurityManager(
      */
     fun verifyPin(candidate: String, clientIp: String): AuthResult = synchronized(lock) {
         val now = timeProvider()
+        if (attemptsByIp.size >= 256 && !attemptsByIp.containsKey(clientIp)) return AuthResult.LockedOut(600)
         val record = attemptsByIp.getOrPut(clientIp) { IpAttemptRecord() }
 
         // Check if IP is currently locked out
         if (record.lockedUntil > now) {
             val remainingSec = ((record.lockedUntil - now) / 1000L).coerceAtLeast(1L)
             return AuthResult.LockedOut(remainingSec)
-        } else if (record.lockedUntil in 1 until now) {
+        } else if (record.lockedUntil > 0 && record.lockedUntil <= now) {
             // Lockout expired, reset attempts for this IP
             record.failureCount = 0
             record.lockedUntil = 0L
@@ -164,6 +176,8 @@ class WebCompanionSecurityManager(
             record.failureCount = 0
             record.lockedUntil = 0L
 
+            sessionsByToken.entries.removeIf { now - it.value.lastActiveAt > sessionInactivityTimeoutMs }
+            if (sessionsByToken.size >= 64) sessionsByToken.entries.minByOrNull { it.value.lastActiveAt }?.let { sessionsByToken.remove(it.key) }
             val token = generateSessionToken()
             val session = WebSession(
                 token = token,
@@ -198,7 +212,7 @@ class WebCompanionSecurityManager(
     /**
      * Checks if a session token is valid and active. Updates its last-active timestamp.
      */
-    fun isValidSession(token: String, clientIp: String? = null): Boolean {
+    fun isValidSession(token: String, clientIp: String? = null): Boolean = synchronized(lock) {
         if (token.isBlank()) return false
         val session = sessionsByToken[token] ?: return false
         val now = timeProvider()
@@ -238,6 +252,7 @@ class WebCompanionSecurityManager(
     fun isRateLimited(clientIp: String): Boolean {
         val now = timeProvider()
         val refillRatePerMs = requestsPerMinute.toDouble() / 60_000.0
+        if (rateBucketsByIp.size >= 256 && !rateBucketsByIp.containsKey(clientIp)) return true
         val bucket = rateBucketsByIp.getOrPut(clientIp) {
             TokenBucket(
                 maxTokens = burstCapacity.toDouble(),
@@ -256,14 +271,17 @@ class WebCompanionSecurityManager(
      */
     fun isValidHost(hostHeader: String?, allowedAddresses: Collection<String>): Boolean {
         if (hostHeader.isNullOrBlank()) return false
-        val hostOnly = hostHeader.substringBefore(':').trim().lowercase()
+        val hostOnly = try { java.net.URI("http://$hostHeader").let {
+            if (it.rawUserInfo != null || !it.rawPath.isNullOrEmpty() || it.rawQuery != null || it.rawFragment != null) return false
+            it.host?.removeSurrounding("[", "]")?.lowercase() ?: return false
+        } } catch (_: Exception) { return false }
 
         if (hostOnly == "localhost" || hostOnly == "127.0.0.1" || hostOnly == "::1") {
             return true
         }
 
         return allowedAddresses.any { allowed ->
-            val cleanAllowed = allowed.substringBefore(':').trim().lowercase()
+            val cleanAllowed = allowed.removeSurrounding("[", "]").trim().lowercase()
             cleanAllowed == hostOnly
         }
     }
@@ -273,7 +291,7 @@ class WebCompanionSecurityManager(
      */
     private fun generate4DigitPin(): String {
         val code = secureRandom.nextInt(10000)
-        return "%04d".format(code)
+        return code.toString().padStart(4, '0')
     }
 
     /**
@@ -290,6 +308,8 @@ class WebCompanionSecurityManager(
      */
     fun reset() = synchronized(lock) {
         _currentPin = ""
+        _pinState.value = ""
+        onSessionsRevoked()
         sessionsByToken.clear()
         attemptsByIp.clear()
         rateBucketsByIp.clear()

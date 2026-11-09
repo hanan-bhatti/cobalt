@@ -43,7 +43,7 @@ object WebThemeExporter {
 
         return try {
             val prefs = context.getSharedPreferences("cobalt_settings", Context.MODE_PRIVATE)
-            val themeMode = prefs.getString("theme_mode", "System Default") ?: "System Default"
+            val themeMode = prefs.getString("theme_mode", "Light") ?: "Light"
             val dynamicColor = prefs.getBoolean("dynamic_color", true)
 
             val isDark = when (themeMode) {

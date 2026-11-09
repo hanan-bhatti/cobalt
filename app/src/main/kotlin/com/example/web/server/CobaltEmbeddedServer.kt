@@ -34,18 +34,17 @@ import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketException
+import java.net.URI
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Semaphore
+import kotlinx.coroutines.CancellationException
 import java.nio.charset.StandardCharsets
 
 /**
  * Lightweight, zero-dependency, coroutine-based HTTP/1.1 server running locally on Android.
  *
- * Design & Security Guarantees:
- * 1. Zero external server libraries (100% pure Kotlin/Java sockets, no F-Droid R8/scanner risk).
- * 2. Non-blocking coroutine execution on Dispatchers.IO with 0% CPU consumption when idle.
- * 3. Socket timeout guards (15 seconds) against slowloris attacks.
- * 4. Automatic DNS-rebinding protection via Host-header validation.
- * 5. Built-in rate limiting per client IP.
- * 6. Hard bounded request parsing (16KB headers, 10MB bodies) preventing out-of-memory issues.
+ * Requests have bounded headers/bodies and read timeouts. At most eight client sockets
+ * are served concurrently. The browser client is same-origin; cross-origin access is denied.
  */
 class CobaltEmbeddedServer(
     val requestedPort: Int = 8080,
@@ -53,6 +52,9 @@ class CobaltEmbeddedServer(
     val allowedAddressesProvider: () -> Collection<String> = { emptyList() },
     val handler: suspend (HttpRequest) -> HttpResponse
 ) {
+
+    private val clients = ConcurrentHashMap.newKeySet<Socket>()
+    private val slots = Semaphore(8)
 
     private var serverSocket: ServerSocket? = null
     private var serverJob: Job? = null
@@ -88,7 +90,11 @@ class CobaltEmbeddedServer(
         _isRunning = true
 
         serverJob = scope.launch(Dispatchers.IO) {
-            acceptLoop(socket)
+            try { acceptLoop(socket) } finally {
+                runCatching { socket.close() }
+                clients.forEach { runCatching { it.close() } }
+                _isRunning = false
+            }
         }
 
         return _actualPort
@@ -105,6 +111,7 @@ class CobaltEmbeddedServer(
             serverSocket?.close()
         } catch (_: Exception) {}
         serverSocket = null
+        clients.forEach { runCatching { it.close() } }
         serverJob?.cancel()
         serverJob = null
         _actualPort = 0
@@ -115,8 +122,13 @@ class CobaltEmbeddedServer(
             while (isActive && _isRunning) {
                 try {
                     val clientSocket = socket.accept()
+                    if (!slots.tryAcquire()) { clientSocket.close(); continue }
+                    clients.add(clientSocket)
                     launch(Dispatchers.IO) {
-                        handleClient(clientSocket)
+                        try { handleClient(clientSocket) } finally {
+                            clients.remove(clientSocket)
+                            slots.release()
+                        }
                     }
                 } catch (e: SocketException) {
                     // Socket closed on stop()
@@ -142,29 +154,21 @@ class CobaltEmbeddedServer(
                 return
             }
 
-            // 1. Handle CORS pre-flight OPTIONS request
-            if (request.method.equals("OPTIONS", ignoreCase = true)) {
-                writeResponse(
-                    output,
-                    HttpResponse(
-                        statusCode = 204,
-                        statusMessage = "No Content",
-                        headers = mapOf(
-                            "Access-Control-Allow-Origin" to "*",
-                            "Access-Control-Allow-Methods" to "GET, POST, PUT, DELETE, OPTIONS",
-                            "Access-Control-Allow-Headers" to "Content-Type, Authorization",
-                            "Access-Control-Max-Age" to "86400"
-                        )
-                    )
-                )
-                return
-            }
-
             // 2. Anti-DNS Rebinding verification
             val hostHeader = request.header("Host")
             val allowed = allowedAddressesProvider()
             if (!securityManager.isValidHost(hostHeader, allowed)) {
                 writeResponse(output, HttpResponse.forbidden("Invalid Host header (anti-rebinding protection)"))
+                return
+            }
+
+            val origin = request.header("Origin")
+            if (origin != null && !sameOrigin(origin, hostHeader)) {
+                writeResponse(output, HttpResponse.forbidden("Cross-origin access denied"))
+                return
+            }
+            if (request.method == "OPTIONS") {
+                writeResponse(output, HttpResponse(204, "No Content", mapOf("Allow" to "GET, POST, PUT, DELETE, OPTIONS")))
                 return
             }
 
@@ -180,8 +184,9 @@ class CobaltEmbeddedServer(
             // 4. Dispatch to route handler
             val response = try {
                 handler(request)
-            } catch (e: Exception) {
-                HttpResponse.serverError(e.message ?: "Internal Error")
+            } catch (cancel: CancellationException) { throw cancel
+            } catch (_: Exception) {
+                HttpResponse.serverError("Unable to complete request")
             }
 
             writeResponse(output, response)
@@ -200,7 +205,7 @@ class CobaltEmbeddedServer(
     private fun parseRequest(input: InputStream, clientIp: String): HttpRequest? {
         val requestLine = readLine(input, maxBytes = 4096) ?: return null
         val parts = requestLine.split(' ')
-        if (parts.size < 2) return null
+        if (parts.size != 3 || parts[2] !in setOf("HTTP/1.0", "HTTP/1.1") || !parts[1].startsWith("/") || parts[1].startsWith("//")) return null
 
         val method = parts[0].uppercase()
         val rawUri = parts[1]
@@ -211,7 +216,7 @@ class CobaltEmbeddedServer(
         val headers = mutableMapOf<String, String>()
         var headerBytesRead = 0
         while (true) {
-            val line = readLine(input, maxBytes = 4096) ?: break
+            val line = readLine(input, maxBytes = 4096) ?: return null
             if (line.isEmpty()) break // End of headers
             headerBytesRead += line.length
             if (headerBytesRead > 16_384) return null // Header too large
@@ -220,13 +225,16 @@ class CobaltEmbeddedServer(
             if (colonIdx > 0) {
                 val key = line.substring(0, colonIdx).trim()
                 val value = line.substring(colonIdx + 1).trim()
+                if (!key.matches(Regex("[A-Za-z0-9-]+")) || headers.keys.any { it.equals(key, true) }) return null
                 headers[key] = value
-            }
+            } else return null
         }
 
         // Read body if Content-Length present (capped at 10MB)
-        val contentLength = headers.entries.find { it.key.equals("Content-Length", ignoreCase = true) }
-            ?.value?.toIntOrNull() ?: 0
+        if (headers.keys.any { it.equals("Transfer-Encoding", true) }) return null
+        val lengthHeader = headers.entries.find { it.key.equals("Content-Length", true) }?.value
+        val contentLength = if (lengthHeader == null) 0 else lengthHeader.toIntOrNull() ?: return null
+        if (contentLength !in 0..10_485_760) return null
 
         val body = if (contentLength in 1..10_485_760) {
             val buffer = ByteArray(contentLength)
@@ -265,7 +273,9 @@ class CobaltEmbeddedServer(
             put("Connection", "close")
             put("X-Content-Type-Options", "nosniff")
             put("X-Frame-Options", "DENY")
-            put("Access-Control-Allow-Origin", "*")
+            put("Cache-Control", "no-store")
+            put("Referrer-Policy", "no-referrer")
+            put("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
             putAll(response.headers)
             if (!containsKey("Content-Length")) {
                 put("Content-Length", response.body.size.toString())
@@ -293,15 +303,23 @@ class CobaltEmbeddedServer(
         while (count < maxBytes) {
             val b = input.read()
             if (b == -1) {
-                return if (out.size() == 0) null else out.toString(StandardCharsets.UTF_8.name())
+                return null
             }
             if (b == '\n'.code) {
-                break
+                return out.toString(StandardCharsets.UTF_8.name())
             } else if (b != '\r'.code) {
                 out.write(b)
-                count++
             }
+            count++
         }
-        return out.toString(StandardCharsets.UTF_8.name())
+        return null
     }
+
+    private fun sameOrigin(origin: String, host: String?): Boolean = try {
+        val uri = URI(origin)
+        val expected = URI("http://$host")
+        uri.scheme == "http" && uri.host != null && uri.host.equals(expected.host, true) &&
+            (if (uri.port == -1) 80 else uri.port) == (if (expected.port == -1) 80 else expected.port) &&
+            uri.rawUserInfo == null && uri.rawQuery == null && uri.rawFragment == null && uri.rawPath.isNullOrEmpty()
+    } catch (_: Exception) { false }
 }
