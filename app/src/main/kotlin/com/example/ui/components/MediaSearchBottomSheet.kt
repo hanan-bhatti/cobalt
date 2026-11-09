@@ -259,7 +259,7 @@ fun MediaSearchResultCard(
                     ) {
                         val formattedType = when (item.mediaType.lowercase()) {
                             "movie" -> "Movie"
-                            "tv", "tv show", "tv_show" -> "TV"
+                            "tv", "tv show", "tv_show" -> "TV shows"
                             "anime" -> "Anime"
                             else -> item.mediaType.replaceFirstChar { it.uppercase() }
                         }

@@ -108,7 +108,7 @@ fun MediaHubScreen(
         val types = allMediaItems.mapNotNull { it.mediaType?.lowercase() }.toSet()
         val list = mutableListOf("All Types")
         if (types.contains("movie")) list.add("Movies")
-        if (types.contains("tv") || types.contains("tv show") || types.contains("tv_show")) list.add("TV")
+        if (types.contains("tv") || types.contains("tv show") || types.contains("tv_show")) list.add("TV shows")
         if (types.contains("anime")) list.add("Anime")
         if (types.contains("manga")) list.add("Manga")
         list
@@ -119,7 +119,7 @@ fun MediaHubScreen(
             when (selectedType) {
                 "All Types" -> true
                 "Movies" -> item.mediaType?.lowercase() == "movie"
-                "TV" -> item.mediaType?.lowercase() in listOf("tv", "tv show", "tv_show")
+                "TV shows" -> item.mediaType?.lowercase() in listOf("tv", "tv show", "tv_show")
                 "Anime" -> item.mediaType?.lowercase() == "anime"
                 "Manga" -> item.mediaType?.lowercase() == "manga"
                 else -> true
@@ -155,7 +155,7 @@ fun MediaHubScreen(
             when (selectedType) {
                 "All Types" -> true
                 "Movies" -> item.mediaType?.lowercase() == "movie"
-                "TV" -> item.mediaType?.lowercase() in listOf("tv", "tv show", "tv_show")
+                "TV shows" -> item.mediaType?.lowercase() in listOf("tv", "tv show", "tv_show")
                 "Anime" -> item.mediaType?.lowercase() == "anime"
                 "Manga" -> item.mediaType?.lowercase() == "manga"
                 else -> true
@@ -494,7 +494,7 @@ fun MediaItemCard(
     val imagePath = item.getBestImagePath()
     val formattedType = when (item.mediaType?.lowercase()) {
         "movie" -> "Movie"
-        "tv", "tv show", "tv_show" -> "TV"
+        "tv", "tv show", "tv_show" -> "TV shows"
         "anime" -> "Anime"
         else -> item.mediaType?.replaceFirstChar { it.uppercase() } ?: "Media"
     }

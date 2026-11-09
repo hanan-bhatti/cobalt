@@ -162,7 +162,7 @@ fun NoteActionsBottomSheet(
                 )
                 NoteActionRowItem(
                     icon = painterResource(id = R.drawable.ic_custom_outline),
-                    title = "Outline",
+                    title = "Note outline",
                     subtitle = "Jump to headings & sections",
                     onClick = {
                         onDismissRequest()
@@ -176,8 +176,8 @@ fun NoteActionsBottomSheet(
                 if (item.byteLength < NoteSizePolicy.TIER_B_MAX_BYTES) {
                     NoteActionRowItem(
                         icon = painterResource(id = R.drawable.ic_custom_markdown),
-                        title = if (plain) "Plain Text Mode" else "Markdown Mode",
-                        subtitle = if (plain) "Viewing raw unformatted text" else "Formatted rich preview",
+                        title = "Markdown view",
+                        subtitle = if (plain) "Off · reading plain text" else "On · reading formatted Markdown",
                         trailing = {
                             Switch(
                                 checked = !plain,
@@ -236,7 +236,7 @@ fun NoteActionsBottomSheet(
                 )
                 NoteActionRowItem(
                     icon = painterResource(id = R.drawable.ic_custom_share),
-                    title = "Share Note",
+                    title = "Share note",
                     subtitle = "Send content to other apps",
                     onClick = {
                         onDismissRequest()
@@ -325,7 +325,7 @@ fun NoteOutlineBottomSheet(
                     }
                     Column {
                         Text(
-                            text = "Note Outline",
+                            text = "Note outline",
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
                             color = MaterialTheme.colorScheme.onSurface
@@ -588,7 +588,7 @@ fun NoteFloatingSearchBar(
             ) {
                 if (query.isEmpty()) {
                     Text(
-                        text = "Find in note...",
+                        text = "Find in note…",
                         fontSize = 15.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                     )

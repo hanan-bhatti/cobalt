@@ -168,12 +168,12 @@ enum class SettingsCategory(
     ),
     STORAGE_RECOVERY(
         title = "Storage",
-        subtitle = "Notes, Trash, version history and cache",
+        subtitle = "Saved notes, draft recovery, Trash, saved history and cache",
         iconRes = R.drawable.ic_custom_storage
     ),
     DATA_MIGRATION(
         title = "Data Migration",
-        subtitle = "Markdown storage and conversion results",
+        subtitle = "Note storage update and verification results",
         iconRes = R.drawable.ic_custom_sync
     ),
     SYSTEM_HEALTH(

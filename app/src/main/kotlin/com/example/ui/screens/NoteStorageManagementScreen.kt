@@ -77,7 +77,7 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                         SettingsSubsectionHeader("YOUR CONTENT")
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             ExpressiveSettingsNavigationItem(
-                                title = "Manage notes",
+                                title = "Saved notes",
                                 onClick = { open("recovery") },
                                 subtitle = "Browse and inspect your saved notes",
                                 shape = connectedPillShape(0, 3)
@@ -103,7 +103,7 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                     item {
                         SettingsSubsectionHeader("HISTORY & COPIES")
                         ExpressiveSettingsNavigationItem(
-                            title = "Version history",
+                            title = "Saved history",
                             onClick = { open("history") },
                             subtitle = "Inspect older note versions and edit history",
                             trailingBadge = report?.let { formatNoteSize(context, it.older) },
@@ -144,18 +144,18 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
         composable("history") {
             NoteStorageRoute(navigation, this) {
                 NoteSettingsPage(
-                    title = "Version history",
+                    title = "Saved history",
                     subtitle = "Earlier note versions and edit history",
                     onBack = { navigation.popBackStack() },
                     onRefresh = ::refresh,
                     isRefreshing = busy
                 ) {
                     item {
-                        SettingsSubsectionHeader("HISTORY RETENTION", description = "Cobalt retains earlier revisions so you can restore changes anytime.")
+                        SettingsSubsectionHeader("HISTORY RETENTION", description = "Review retained revisions that are available to restore or export.")
                         StorageActionCard(
                             "Saved history",
                             report?.let { formatNoteSize(context, it.older) },
-                            "Cleaning older revisions frees storage while keeping your current notes completely intact.",
+                            "Cleaning eligible older revisions excludes current saved notes. Removed revisions cannot be restored.",
                             isLoading = report == null && busy
                         )
                     }

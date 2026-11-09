@@ -154,7 +154,7 @@ fun NoteRecoveryScreen(onExitSafeMode: () -> Unit, safeMode: Boolean = StartupCr
         }
     }
     val listBody: @Composable () -> Unit = {
-        val titleText = if (safeMode) "Safe Mode" else "Manage notes"
+        val titleText = if (safeMode) "Safe Mode" else "Saved notes"
         val subtitleText = if (safeMode) "Recover or export your notes before restarting" else "Read, export or delete your notes"
         NoteSettingsPage(titleText, subtitleText, ::back, itemSpacing = 2.dp, listState = recoveryListState) {
             item {

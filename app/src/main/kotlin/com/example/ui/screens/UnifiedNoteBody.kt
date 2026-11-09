@@ -122,13 +122,22 @@ fun NoteDetailActions(
     }
 
     IconButton(
+        onClick = onStartSearch,
+        enabled = !busy,
+        modifier = Modifier.bounceClick().testTag("detail_find_in_note_button")
+    ) {
+        Icon(painterResource(R.drawable.ic_custom_search), contentDescription = "Find in note",
+            modifier = Modifier.size(22.dp))
+    }
+
+    IconButton(
         onClick = { menu = true },
         enabled = !busy,
         modifier = Modifier.bounceClick().testTag("detail_more_options_button")
     ) {
         Icon(
             painter = painterResource(id = R.drawable.ic_custom_more_vert),
-            contentDescription = "More note options",
+            contentDescription = "Note actions",
             modifier = Modifier.size(22.dp)
         )
     }
