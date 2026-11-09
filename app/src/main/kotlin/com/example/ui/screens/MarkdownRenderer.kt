@@ -26,7 +26,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.text.withLink
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,18 +34,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.LinkInteractionListener
-import androidx.compose.ui.text.TextLinkStyles
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -55,80 +58,165 @@ import com.example.utils.isRtlText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val linkRegex = Regex("""\[([^\]]+)]\(([^)]+)\)""")
+private val tokenRegex = Regex(
+    """(\[[^\]]+]\([^)]+\))|(\*\*[^*]+\*\*)|(`[^`]+`)|(https?://[^\s()<>]+(?:\([^\s()<>]+\)|[^\s`!()\[\]{};:'".,<>?«»“”‘’]))"""
+)
+private val markdownLinkRegex = Regex("""\[([^\]]+)]\(([^)]+)\)""")
 private val boldRegex = Regex("""\*\*([^*]+)\*\*""")
+private val inlineCodeRegex = Regex("""`([^`]+)`""")
+private val headerRegex = Regex("""^(#{1,6})\s+(.+)$""")
+private val dividerRegex = Regex("""^[-*_]{3,}$""")
+private val boldHeaderRegex = Regex("""^\*\*([^*]+)\*\*$""")
 
 private sealed class MdBlock {
-    data class Header(val text: String) : MdBlock()
+    data class Header(val text: String, val level: Int = 1) : MdBlock()
     data class Paragraph(val raw: String) : MdBlock()
     data class Bullet(val raw: String) : MdBlock()
+    data object Divider : MdBlock()
 }
 
 private fun parseBlocks(markdown: String): List<MdBlock> {
-    val lines = markdown.split("\n").map { it.trim() }
+    val lines = markdown.split("\n")
     val blocks = mutableListOf<MdBlock>()
     for (line in lines) {
         if (line.isBlank()) continue
-        val isHeaderOnly = boldRegex.matches(line) && !line.contains(":")
+
+        // Check for indented continuation of a previous bullet
+        if ((line.startsWith("  ") || line.startsWith("\t")) && blocks.isNotEmpty() && blocks.last() is MdBlock.Bullet) {
+            val prev = blocks.last() as MdBlock.Bullet
+            blocks[blocks.lastIndex] = MdBlock.Bullet(prev.raw + "\n" + line.trim())
+            continue
+        }
+
+        val trimmed = line.trim()
+        val atxMatch = headerRegex.find(trimmed)
+        val isBoldHeader = boldHeaderRegex.matches(trimmed) && !trimmed.contains(":")
+
         when {
-            isHeaderOnly -> blocks.add(MdBlock.Header(boldRegex.find(line)!!.groupValues[1]))
-            line.startsWith("- ") || line.startsWith("* ") -> blocks.add(MdBlock.Bullet(line.removePrefix("- ").removePrefix("* ")))
-            else -> blocks.add(MdBlock.Paragraph(line))
+            dividerRegex.matches(trimmed) -> {
+                blocks.add(MdBlock.Divider)
+            }
+            atxMatch != null -> {
+                val level = atxMatch.groupValues[1].length
+                val text = atxMatch.groupValues[2].trim().removeSurrounding("**").trim()
+                blocks.add(MdBlock.Header(text = text, level = level))
+            }
+            isBoldHeader -> {
+                val text = boldHeaderRegex.find(trimmed)!!.groupValues[1].trim()
+                blocks.add(MdBlock.Header(text = text, level = 2))
+            }
+            trimmed.startsWith("- ") || trimmed.startsWith("* ") -> {
+                blocks.add(MdBlock.Bullet(trimmed.substring(2).trim()))
+            }
+            else -> {
+                blocks.add(MdBlock.Paragraph(trimmed))
+            }
         }
     }
     return blocks
+}
+
+private fun appendLink(
+    builder: AnnotatedString.Builder,
+    label: String,
+    url: String,
+    context: android.content.Context,
+    isDark: Boolean,
+    primaryColor: Color,
+    onLinkClick: ((String) -> Unit)?
+) {
+    val targetUrl = url.trim().let {
+        if (it.startsWith("http://") || it.startsWith("https://")) it else "https://$it"
+    }
+    if (targetUrl.isBlank()) {
+        builder.append(label)
+        return
+    }
+    val linkStyles = TextLinkStyles(
+        style = SpanStyle(
+            color = primaryColor,
+            textDecoration = TextDecoration.Underline,
+            fontWeight = FontWeight.SemiBold
+        )
+    )
+    val linkListener = LinkInteractionListener { annotation ->
+        val clickedUrl = (annotation as? LinkAnnotation.Url)?.url ?: targetUrl
+        if (onLinkClick != null) {
+            onLinkClick(clickedUrl)
+        } else {
+            CobaltCustomTabsLauncher.launch(
+                context = context,
+                url = clickedUrl,
+                isDarkTheme = isDark
+            )
+        }
+    }
+    builder.withLink(LinkAnnotation.Url(url = targetUrl, styles = linkStyles, linkInteractionListener = linkListener)) {
+        append(label)
+    }
 }
 
 @Composable
 private fun buildRichText(raw: String, onLinkClick: ((String) -> Unit)? = null): AnnotatedString {
     val context = LocalContext.current
     val isDark = isSystemInDarkTheme()
+    val primaryColor = MaterialTheme.colorScheme.primary
     val builder = AnnotatedString.Builder()
     var cursor = 0
-    val combined = Regex("""(\*\*[^*]+\*\*)|(\[[^\]]+]\([^)]+\))""")
-    for (match in combined.findAll(raw)) {
+
+    for (match in tokenRegex.findAll(raw)) {
         if (match.range.first > cursor) {
             builder.append(raw.substring(cursor, match.range.first))
         }
         val token = match.value
-        if (token.startsWith("**")) {
-            val inner = boldRegex.find(token)!!.groupValues[1]
-            builder.withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(inner) }
-        } else {
-            val m = linkRegex.find(token)!!
-            val label = m.groupValues[1]
-            val url = m.groupValues[2]
-            val linkStyles = TextLinkStyles(
-                style = SpanStyle(
-                    color = MaterialTheme.colorScheme.primary,
-                    textDecoration = TextDecoration.Underline,
-                    fontWeight = FontWeight.SemiBold
-                )
-            )
-            val linkListener = LinkInteractionListener { annotation ->
-                val clickedUrl = (annotation as? LinkAnnotation.Url)?.url ?: url
-                if (onLinkClick != null) {
-                    onLinkClick(clickedUrl)
+        when {
+            token.startsWith("[") && token.endsWith(")") && token.contains("](") -> {
+                val m = markdownLinkRegex.find(token)
+                if (m != null) {
+                    val label = m.groupValues[1]
+                    val url = m.groupValues[2]
+                    appendLink(builder, label, url, context, isDark, primaryColor, onLinkClick)
                 } else {
-                    CobaltCustomTabsLauncher.launch(
-                        context = context,
-                        url = clickedUrl,
-                        isDarkTheme = isDark
-                    )
+                    builder.append(token)
                 }
             }
-            builder.withLink(LinkAnnotation.Url(url = url, styles = linkStyles, linkInteractionListener = linkListener)) {
-                append(label)
+            token.startsWith("**") && token.endsWith("**") && token.length >= 4 -> {
+                val inner = boldRegex.find(token)?.groupValues?.get(1) ?: token.substring(2, token.length - 2)
+                builder.withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                    append(inner)
+                }
             }
+            token.startsWith("`") && token.endsWith("`") && token.length >= 2 -> {
+                val inner = inlineCodeRegex.find(token)?.groupValues?.get(1) ?: token.substring(1, token.length - 1)
+                builder.withStyle(
+                    SpanStyle(
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                ) {
+                    append(inner)
+                }
+            }
+            token.startsWith("http://") || token.startsWith("https://") -> {
+                appendLink(builder, token, token, context, isDark, primaryColor, onLinkClick)
+            }
+            else -> builder.append(token)
         }
         cursor = match.range.last + 1
     }
-    if (cursor < raw.length) builder.append(raw.substring(cursor))
+    if (cursor < raw.length) {
+        builder.append(raw.substring(cursor))
+    }
     return builder.toAnnotatedString()
 }
 
 @Composable
-private fun RichTextLine(raw: String, style: androidx.compose.ui.text.TextStyle, onLinkClick: ((String) -> Unit)? = null) {
+private fun RichTextLine(
+    raw: String,
+    style: androidx.compose.ui.text.TextStyle,
+    modifier: Modifier = Modifier,
+    onLinkClick: ((String) -> Unit)? = null
+) {
     val text = buildRichText(raw, onLinkClick)
     val isRtl = isRtlText(text.text)
     CompositionLocalProvider(LocalLayoutDirection provides if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
@@ -139,7 +227,7 @@ private fun RichTextLine(raw: String, style: androidx.compose.ui.text.TextStyle,
                 textDirection = TextDirection.Content
             ),
             textAlign = if (isRtl) TextAlign.Right else TextAlign.Left,
-            modifier = Modifier.fillMaxWidth()
+            modifier = modifier.fillMaxWidth()
         )
     }
 }
@@ -176,41 +264,61 @@ fun ExpressiveMarkdown(
                 }
             ) {
                 when (block) {
+                    is MdBlock.Divider -> {
+                        HorizontalDivider(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 10.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                            thickness = 1.dp
+                        )
+                    }
                     is MdBlock.Header -> {
                         val isRtl = isRtlText(block.text)
                         CompositionLocalProvider(LocalLayoutDirection provides if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(top = if (index == 0) 0.dp else 20.dp, bottom = 6.dp),
+                                    .padding(
+                                        top = if (index == 0) 0.dp else if (block.level <= 2) 20.dp else 12.dp,
+                                        bottom = if (block.level <= 2) 6.dp else 4.dp
+                                    ),
                                 horizontalAlignment = if (isRtl) Alignment.End else Alignment.Start
                             ) {
+                                val headerStyle = when (block.level) {
+                                    1 -> MaterialTheme.typography.titleLarge
+                                    2 -> MaterialTheme.typography.titleMedium
+                                    else -> MaterialTheme.typography.titleSmall
+                                }
                                 Text(
                                     text = block.text,
-                                    style = MaterialTheme.typography.titleMedium.copy(textDirection = TextDirection.Content),
+                                    style = headerStyle.copy(textDirection = TextDirection.Content),
                                     fontWeight = FontWeight.ExtraBold,
                                     textAlign = if (isRtl) TextAlign.Right else TextAlign.Left,
                                     modifier = Modifier.fillMaxWidth(),
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = if (block.level <= 2) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
                                 )
-                                Box(
-                                    modifier = Modifier
-                                        .padding(top = 6.dp)
-                                        .height(3.dp)
-                                        .width(32.dp)
-                                        .clip(RoundedCornerShape(50))
-                                        .background(MaterialTheme.colorScheme.primary)
-                                )
+                                if (block.level <= 2) {
+                                    Box(
+                                        modifier = Modifier
+                                            .padding(top = 6.dp)
+                                            .height(3.dp)
+                                            .width(32.dp)
+                                            .clip(RoundedCornerShape(50))
+                                            .background(MaterialTheme.colorScheme.primary)
+                                    )
+                                }
                             }
                         }
                     }
                     is MdBlock.Paragraph -> {
-                        RichTextLine(
-                            raw = block.raw,
-                            style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
-                            onLinkClick = onLinkClick
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Box(modifier = Modifier.padding(bottom = 6.dp)) {
+                            RichTextLine(
+                                raw = block.raw,
+                                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
+                                onLinkClick = onLinkClick
+                            )
+                        }
                     }
                     is MdBlock.Bullet -> {
                         Row(
@@ -227,6 +335,7 @@ fun ExpressiveMarkdown(
                             RichTextLine(
                                 raw = block.raw,
                                 style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
+                                modifier = Modifier.weight(1f),
                                 onLinkClick = onLinkClick
                             )
                         }
