@@ -10,7 +10,7 @@ This document tracks every atomic change, file created/modified, and verificatio
 | :--- | :--- | :---: | :--- |
 | **01** | **PIN Creator & Security Manager** | ✅ Complete | 4-digit rotating PIN, progressive lockout, global tripwire, session tokens, and rate limiter. |
 | **02** | **Editor Session Registry** | ✅ Complete | Active note lock registry preventing writes to notes open in mobile editor; hooked into `CobaltViewModel`. |
-| **03** | **Embedded Server Engine** | ⏳ Pending | Lightweight coroutine-based HTTP/1.1 server for LAN endpoints. |
+| **03** | **Embedded Server Engine** | ✅ Complete | Lightweight coroutine-based HTTP/1.1 server for LAN endpoints, zero external dependencies. |
 | **04** | **Notes API Endpoints** | ⏳ Pending | Paginated note listing, detail retrieval, media streaming. |
 | **05** | **Web Client Assets** | ⏳ Pending | Clean, minimal single-page web app (HTML/CSS/JS) with PIN auth and markdown reader. |
 | **06** | **Android UI & Service** | ⏳ Pending | Web Companion settings card, start/stop toggle, active PIN & IP display. |
@@ -19,7 +19,21 @@ This document tracks every atomic change, file created/modified, and verificatio
 
 ## Atomic Step Details
 
-### Step 02: Editor Session Registry (`EditorSessionRegistry`)
+### Step 03: Embedded Server Engine (`CobaltEmbeddedServer`)
+- **Package**: `com.example.web.server`
+- **Source**:
+  - `app/src/main/kotlin/com/example/web/server/HttpModels.kt`
+  - `app/src/main/kotlin/com/example/web/server/CobaltEmbeddedServer.kt`
+- **Key Capabilities**:
+  - Pure Kotlin/Java socket server running on `Dispatchers.IO` (0% CPU at idle, zero external dependencies, 100% safe for F-Droid).
+  - Path traversal defense (`HttpRequest.sanitizePath` filters `..` and relative jumps).
+  - 15-second socket read timeouts against slowloris attacks.
+  - Automatic DNS-rebinding verification against allowed local network hosts.
+  - Per-IP rate limiting before request dispatch.
+  - Automatic CORS `OPTIONS` preflight resolution.
+  - Safe request bounding (16KB headers, 10MB body max).
+- **Unit Tests**: `app/src/test/java/com/example/web/server/CobaltEmbeddedServerTest.kt`
+
 - **Package**: `com.example.web.session`
 - **Source**: `app/src/main/kotlin/com/example/web/session/EditorSessionRegistry.kt`
 - **Integration**: `app/src/main/kotlin/com/example/ui/viewmodel/CobaltViewModel.kt`
