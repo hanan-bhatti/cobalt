@@ -1,8 +1,8 @@
 # Commit ledger: v2.2.2 to current development source
 
-Base: `v2.2.2`. End: `6669da6`. 219 commits, oldest first.
+Base: `v2.2.2`. End: `672e8b8`. 222 commits, oldest first.
 
-This indexes every commit message and changed-file list in the range. Commit titles are historical wording, not claims that a feature passed this emulator review. Earlier editor/storage/share designs were superseded; use the final-behavior comparison for the current architecture. Device testing in this session applies to the downloaded v2.2.2 APK.
+This indexes every commit message and changed-file list in the range. Commit titles are historical wording, not claims that a feature passed this emulator review. Earlier editor/storage/share designs were superseded; use the final-behavior comparison for the current architecture. Runtime evidence identifies the downloaded v2.2.2 APK and the current signed build separately in the comparison report.
 
 | Commit | Recorded change | Changed files | Kind |
 | --- | --- | ---: | --- |
@@ -225,6 +225,10 @@ This indexes every commit message and changed-file list in the range. Commit tit
 | [2e0aea4](https://github.com/hanan-bhatti/cobalt/commit/2e0aea48aa70111fca26543267dbe19947d4ee5b) | fix(storage): add ExperimentalMaterial3Api opt-in for storage bottom sheet | 2 | Implementation |
 | [29d0e9b](https://github.com/hanan-bhatti/cobalt/commit/29d0e9b8d1306d9a1822216dc0637c5f78976802) | feat(feedback): redesign reporter header with minimal version tag and fix share icon mismatch across feedback and survey | 4 | Implementation |
 | [6669da6](https://github.com/hanan-bhatti/cobalt/commit/6669da603c5775bd7ab51ecefb6934c21952d8ac) | fix: replace deprecated rememberModalBottomSheetState and Locale constructor | 2 | Implementation |
+
+| [f93fa2f](https://github.com/hanan-bhatti/cobalt/commit/f93fa2f56c640942c3e90327af5ae77f3a9bfbb4) | feat(markdown-share): restore horizontal scrolling tables with edge fade and redesign note share templates | 3 | Implementation |
+| [171a551](https://github.com/hanan-bhatti/cobalt/commit/171a5517d2be8180bf919b252532982326b241fe) | docs(release): update changelog, metadata, and version comparison records | 9 | Verification record |
+| [672e8b8](https://github.com/hanan-bhatti/cobalt/commit/672e8b8b5fdefe4fbcf4e47c6106f2483caef16b) | feat(share): scale card typography relative to template geometry while preserving custom fonts | 1 | Implementation |
 
 ## Commit bodies
 

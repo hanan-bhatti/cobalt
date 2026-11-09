@@ -1,7 +1,7 @@
 AntiFeatures:
   NonFreeNet:
-    en-US: Relies on proprietary network services (Gemini and TMDb) for optional AI
-      OCR, transcription, and media lookup features.
+    en-US: Relies on proprietary network services (Gemini, TMDb and Trakt) for optional
+      AI OCR, transcription, media lookup and account synchronization features.
 Categories:
   - Bookmark
   - Note

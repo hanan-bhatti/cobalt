@@ -107,7 +107,10 @@ feature or device. Version name/code remain 2.2.3/19.
   connected controls, themes and image/file export. Keep sheet swipes independent
   of vertical drag handling; randomize attribution on sheet launch.
 - Provide Document, Minimal and Compact note cards, Markdown file export and bounded
-  clipboard copy. Downsample oversized image sources and bound export dimensions.
+  clipboard copy. Restore horizontally scrolling Markdown tables with edge fades;
+  redesign A4 document, memo and quote layouts with typography scaled to the
+  template while retaining chosen font families. Downsample oversized image
+  sources and bound export dimensions.
 - Add local FOSS fonts and licenses, live text/font previews and per-role typography
   preferences applied to reader, editor, code and Markdown layouts.
 - Add adaptive local review reminders, custom delivery time, Gemini usage/daily
