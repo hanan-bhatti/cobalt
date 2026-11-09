@@ -147,37 +147,36 @@ fun NoteShareBottomSheet(
             FloatingHeroSheetLayout(
                 modifier = Modifier.fillMaxWidth(),
                 heroCard = {
-                    val heroHorizontalPadding = when (selectedStyle) {
-                        NoteShareStyle.DOCUMENT -> 8.dp
-                        NoteShareStyle.MINIMAL -> 16.dp
-                        NoteShareStyle.COMPACT -> 14.dp
+                    val heroWidth = when (selectedStyle) {
+                        NoteShareStyle.DOCUMENT -> 280.dp
+                        NoteShareStyle.MINIMAL -> 280.dp
+                        NoteShareStyle.COMPACT -> 310.dp
                     }
-                    val heroMaxWidth = when (selectedStyle) {
-                        NoteShareStyle.DOCUMENT -> 580.dp
-                        NoteShareStyle.MINIMAL -> 460.dp
-                        NoteShareStyle.COMPACT -> 440.dp
+                    val heroShape = when (selectedStyle) {
+                        NoteShareStyle.DOCUMENT -> RoundedCornerShape(4.dp)
+                        NoteShareStyle.MINIMAL -> RoundedCornerShape(18.dp)
+                        NoteShareStyle.COMPACT -> RoundedCornerShape(18.dp)
                     }
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .widthIn(max = heroMaxWidth)
-                            .padding(horizontal = heroHorizontalPadding)
+                            .width(heroWidth)
+                            .padding(horizontal = 4.dp)
                             .shadow(
-                                elevation = 14.dp,
-                                shape = RoundedCornerShape(26.dp),
-                                spotColor = Color.Black.copy(alpha = 0.28f),
-                                ambientColor = Color.Black.copy(alpha = 0.16f)
+                                elevation = 12.dp,
+                                shape = heroShape,
+                                spotColor = Color.Black.copy(alpha = 0.22f),
+                                ambientColor = Color.Black.copy(alpha = 0.12f)
                             )
                             .border(
                                 width = 1.dp,
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-                                shape = RoundedCornerShape(26.dp)
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                                shape = heroShape
                             )
-                            .clip(RoundedCornerShape(26.dp))
+                            .clip(heroShape)
                             .drawWithContent {
                                 drawContent()
                                 if (triggerCapture) {
-                                    val scale = 2.5f
+                                    val scale = 3.5f
                                     val w = (size.width * scale).toInt()
                                     val h = (size.height * scale).toInt()
                                     if (w > 0 && h > 0) {

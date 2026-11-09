@@ -579,148 +579,141 @@ private fun MarkdownTable(
             .padding(vertical = 8.dp)
     ) {
         val availableWidth = maxWidth
-        val isMultiCol = columnCount >= 3
-        val equalShare = (availableWidth / columnCount).coerceAtLeast(36.dp)
 
-        val colMinWidths = remember(columnCount, colMaxChars, availableWidth) {
+        val naturalColWidths = remember(columnCount, colMaxChars) {
             (0 until columnCount).map { c ->
-                val chars = colMaxChars.getOrElse(c) { 3 }
+                val chars = colMaxChars.getOrElse(c) { 4 }
                 when {
-                    chars <= 4 -> minOf(38.dp, equalShare)
-                    chars <= 8 -> minOf(58.dp, equalShare)
-                    else -> minOf(85.dp, (equalShare * 1.25f).coerceAtLeast(58.dp))
+                    chars <= 4 -> 60.dp
+                    chars <= 9 -> 100.dp
+                    chars <= 20 -> 140.dp
+                    chars <= 35 -> 180.dp
+                    else -> 240.dp
                 }
             }
         }
-        val minTableWidth = remember(colMinWidths) { colMinWidths.fold(0.dp) { acc, w -> acc + w } }
-        val needsScroll = minTableWidth > availableWidth
-        val totalTableWidth = if (availableWidth > minTableWidth) availableWidth else minTableWidth
+        val naturalTotalWidth = remember(naturalColWidths) {
+            naturalColWidths.fold(0.dp) { acc, w -> acc + w }
+        }
+        val needsScroll = naturalTotalWidth > availableWidth
 
-        val colWidths = remember(columnCount, totalTableWidth, colMaxChars, totalChars, colMinWidths, needsScroll, availableWidth) {
-            if (!needsScroll && availableWidth > 0.dp) {
-                // Distribute availableWidth proportionally without horizontal overflow
-                val raw = (0 until columnCount).map { c ->
-                    val ratio = colMaxChars[c].toFloat() / totalChars
-                    maxOf(colMinWidths[c], availableWidth * ratio)
-                }
-                val rawSum = raw.fold(0.dp) { acc, w -> acc + w }
-                if (rawSum > availableWidth) {
-                    val excess = rawSum - availableWidth
-                    raw.map { w -> maxOf(34.dp, w - excess / columnCount) }
-                } else {
-                    raw
+        val colWidths = remember(naturalColWidths, naturalTotalWidth, availableWidth, needsScroll) {
+            if (!needsScroll && naturalTotalWidth > 0.dp && availableWidth > naturalTotalWidth) {
+                // When table fits on screen, expand columns proportionally to fill available space
+                val extra = availableWidth - naturalTotalWidth
+                naturalColWidths.map { w ->
+                    val ratio = w / naturalTotalWidth
+                    w + extra * ratio
                 }
             } else {
-                (0 until columnCount).map { c ->
-                    val ratio = colMaxChars[c].toFloat() / totalChars
-                    maxOf(colMinWidths[c], totalTableWidth * ratio)
-                }
+                naturalColWidths
             }
         }
-
-        val scrollModifier = if (needsScroll) {
-            Modifier
-                .horizontalFadingEdges(scrollState, fadeWidth = 16.dp)
-                .horizontalScroll(scrollState)
-        } else {
-            Modifier
+        val effectiveTableWidth = remember(colWidths) {
+            colWidths.fold(0.dp) { acc, w -> acc + w }
         }
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(10.dp))
                 .border(
-                    0.5.dp,
-                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
-                    RoundedCornerShape(8.dp)
+                    0.75.dp,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    RoundedCornerShape(10.dp)
                 )
-                .then(scrollModifier)
         ) {
-            Column(
+            Box(
                 modifier = if (needsScroll) {
-                    Modifier.width(colWidths.fold(0.dp) { acc, w -> acc + w })
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalFadingEdges(scrollState, fadeWidth = 24.dp)
+                        .horizontalScroll(scrollState)
                 } else {
                     Modifier.fillMaxWidth()
                 }
             ) {
-                rows.forEachIndexed { rowIndex, row ->
-                    val isHeader = row.isHeader
-                    val rowBg = if (isHeader) {
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-                    } else if (rowIndex % 2 == 1) {
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f)
+                Column(
+                    modifier = if (needsScroll) {
+                        Modifier.width(effectiveTableWidth)
                     } else {
-                        Color.Transparent
+                        Modifier.fillMaxWidth()
                     }
+                ) {
+                    rows.forEachIndexed { rowIndex, row ->
+                        val isHeader = row.isHeader
+                        val rowBg = if (isHeader) {
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                        } else if (rowIndex % 2 == 1) {
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f)
+                        } else {
+                            Color.Transparent
+                        }
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(rowBg)
-                            .drawBehind {
-                                drawLine(
-                                    color = Color.Gray.copy(alpha = 0.2f),
-                                    start = Offset(0f, size.height),
-                                    end = Offset(size.width, size.height),
-                                    strokeWidth = 0.5.dp.toPx()
-                                )
-                            },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        for (colIndex in 0 until columnCount) {
-                            val cellNode = row.cells.getOrNull(colIndex)
-                            val cellWidth = colWidths[colIndex]
-                            val isLastCol = colIndex == columnCount - 1
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(rowBg)
+                                .drawBehind {
+                                    drawLine(
+                                        color = Color.Gray.copy(alpha = 0.2f),
+                                        start = Offset(0f, size.height),
+                                        end = Offset(size.width, size.height),
+                                        strokeWidth = 0.5.dp.toPx()
+                                    )
+                                },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            for (colIndex in 0 until columnCount) {
+                                val cellNode = row.cells.getOrNull(colIndex)
+                                val cellWidth = colWidths[colIndex]
+                                val isLastCol = colIndex == columnCount - 1
 
-                            Box(
-                                modifier = Modifier
-                                    .width(cellWidth)
-                                    .drawBehind {
-                                        if (!isLastCol) {
-                                            drawLine(
-                                                color = Color.Gray.copy(alpha = 0.15f),
-                                                start = Offset(size.width, 0f),
-                                                end = Offset(size.width, size.height),
-                                                strokeWidth = 0.5.dp.toPx()
+                                Box(
+                                    modifier = Modifier
+                                        .width(cellWidth)
+                                        .drawBehind {
+                                            if (!isLastCol) {
+                                                drawLine(
+                                                    color = Color.Gray.copy(alpha = 0.15f),
+                                                    start = Offset(size.width, 0f),
+                                                    end = Offset(size.width, size.height),
+                                                    strokeWidth = 0.5.dp.toPx()
+                                                )
+                                            }
+                                        }
+                                        .padding(horizontal = 10.dp, vertical = 9.dp)
+                                ) {
+                                    if (cellNode != null) {
+                                        val cellText = buildAnnotatedString {
+                                            AppendInlineNodes(
+                                                node = cellNode,
+                                                color = color,
+                                                primaryColor = primaryColor,
+                                                onLinkClick = onLinkClick,
+                                                context = context,
+                                                isDark = isDark,
+                                                decorateLinks = decorateLinks,
+                                                typography = typo
                                             )
                                         }
-                                    }
-                                    .padding(
-                                        horizontal = if (columnCount >= 4) 6.dp else if (isMultiCol) 7.dp else 12.dp,
-                                        vertical = if (isMultiCol) 7.dp else 9.dp
-                                    )
-                            ) {
-                                if (cellNode != null) {
-                                    val cellText = buildAnnotatedString {
-                                        AppendInlineNodes(
-                                            node = cellNode,
-                                            color = color,
-                                            primaryColor = primaryColor,
-                                            onLinkClick = onLinkClick,
-                                            context = context,
-                                            isDark = isDark,
-                                            decorateLinks = decorateLinks,
-                                            typography = typo
+                                        val finalCellText = cellText.withSearchHighlight(LocalSearchHighlight.current, primaryColor)
+                                        MarkdownInlineText(
+                                            text = finalCellText,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            textAlign = when ((cellNode as? TableCell)?.alignment) {
+                                                TableCell.Alignment.LEFT -> TextAlign.Left
+                                                TableCell.Alignment.CENTER -> TextAlign.Center
+                                                TableCell.Alignment.RIGHT -> TextAlign.Right
+                                                else -> TextAlign.Start
+                                            },
+                                            color = if (isHeader) MaterialTheme.colorScheme.onSurface else color,
+                                            fontSize = if (isHeader) 13.5.sp else 13.sp,
+                                            fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
+                                            fontFamily = typo.textFontFamily,
+                                            lineHeight = 18.sp
                                         )
                                     }
-                                    val finalCellText = cellText.withSearchHighlight(LocalSearchHighlight.current, primaryColor)
-                                    val fontScale = if (columnCount >= 4) 0.72f else if (columnCount == 3) 0.78f else 0.82f
-                                    MarkdownInlineText(
-                                        text = finalCellText,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        textAlign = when ((cellNode as? TableCell)?.alignment) {
-                                            TableCell.Alignment.LEFT -> TextAlign.Left
-                                            TableCell.Alignment.CENTER -> TextAlign.Center
-                                            TableCell.Alignment.RIGHT -> TextAlign.Right
-                                            else -> TextAlign.Start
-                                        },
-                                        color = if (isHeader) MaterialTheme.colorScheme.onSurface else color,
-                                        fontSize = if (isHeader) (typo.body.fontSize.value * fontScale * 1.05f).sp else (typo.body.fontSize.value * fontScale).sp,
-                                        fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
-                                        fontFamily = typo.textFontFamily,
-                                        lineHeight = (typo.body.fontSize.value * fontScale * typo.lineHeightMultiplier * 1.15f).sp
-                                    )
                                 }
                             }
                         }
