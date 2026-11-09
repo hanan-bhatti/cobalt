@@ -12,14 +12,28 @@ This document tracks every atomic change, file created/modified, and verificatio
 | **02** | **Editor Session Registry** | ✅ Complete | Active note lock registry preventing writes to notes open in mobile editor; hooked into `CobaltViewModel`. |
 | **03** | **Embedded Server Engine** | ✅ Complete | Lightweight coroutine-based HTTP/1.1 server for LAN endpoints, zero external dependencies. |
 | **04** | **Notes API Endpoints** | ✅ Complete | Paginated note listing, detail retrieval, PIN auth login/logout, media streaming. |
-| **05** | **Web Client Assets** | ⏳ Pending | Clean, minimal single-page web app (HTML/CSS/JS) with PIN auth and markdown reader. |
+| **05** | **Web Client Assets** | ✅ Complete | Clean, responsive SPA (HTML/CSS/JS) mirroring phone's theme and dynamic wallpaper colors. |
 | **06** | **Android UI & Service** | ⏳ Pending | Web Companion settings card, start/stop toggle, active PIN & IP display. |
 
 ---
 
 ## Atomic Step Details
 
-### Step 04: Notes API Endpoints & Request Routing (`WebCompanionRouter`)
+### Step 05: Web Client Assets & Real-Time Phone Theme Sync
+- **Package / Assets**: `app/src/main/assets/web/`
+- **Files**:
+  - `app/src/main/kotlin/com/example/web/server/WebThemeExporter.kt`
+  - `app/src/main/assets/web/index.html`
+  - `app/src/main/assets/web/style.css`
+  - `app/src/main/assets/web/app.js`
+- **Key Capabilities**:
+  - **Dynamic Theme Synchronization**: `GET /api/theme` exports the active Android theme (Dark, Light, or Android 12+ Material You Dynamic wallpaper colors) as CSS custom properties (`--primary-color`, `--bg-color`, `--surface-color`, etc.). The web app immediately adopts your phone's exact palette.
+  - **PIN Auth Modal**: 4-digit PIN authentication overlay with lockout countdown timers and auto-focus.
+  - **Fast Card Grid**: Paginated 25-note chunks with search debounce (300ms) and type filters (Notes, Code, Links, Media).
+  - **On-Demand Reader**: Loads full markdown body only when note is clicked.
+  - **Mobile Lock Alert**: Displays warning badge on cards and banner in reader if note is actively being edited on the phone.
+  - **Self-Contained Markdown Engine**: Formats headers, code fences, blockquotes, lists, tables, and images without external libraries.
+
 - **Package**: `com.example.web.server`
 - **Source**: `app/src/main/kotlin/com/example/web/server/WebCompanionRouter.kt`
 - **Key Capabilities**:

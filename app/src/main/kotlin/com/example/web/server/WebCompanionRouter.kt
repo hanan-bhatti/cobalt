@@ -51,7 +51,7 @@ class WebCompanionRouter(
     suspend fun handleRequest(request: HttpRequest): HttpResponse {
         val path = request.path
 
-        // 1. Public Authentication Endpoints
+        // 1. Public Authentication & Theme Endpoints
         if (path == "/api/auth/login" && request.method == "POST") {
             return handleLogin(request)
         }
@@ -60,6 +60,9 @@ class WebCompanionRouter(
         }
         if (path == "/api/auth/logout" && request.method == "POST") {
             return handleLogout(request)
+        }
+        if (path == "/api/theme" && request.method == "GET") {
+            return HttpResponse.json(200, WebThemeExporter.exportThemeJson(contextProvider()))
         }
 
         // 2. Static Web Assets (Public so login page UI loads in browser)
