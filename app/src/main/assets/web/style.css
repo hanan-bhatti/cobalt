@@ -544,3 +544,35 @@ body {
     z-index: 20;
   }
 }
+
+[hidden] { display: none !important; }
+.reader-actions, .editor-footer { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.reader-actions { flex-shrink: 0; }
+#note-editor { padding: 20px 0; display: flex; flex-direction: column; gap: 12px; }
+#note-editor label { font-size: 13px; color: var(--primary-color); font-weight: 600; }
+#edit-title, #edit-body { width: 100%; color: var(--on-surface); background: var(--surface-container); border: 1px solid var(--outline-color); border-radius: 12px; padding: 14px; font: inherit; }
+#edit-body { min-height: 45vh; resize: vertical; font-family: var(--font-mono); font-size: 14px; line-height: 1.65; }
+#edit-title:focus, #edit-body:focus { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+.editor-footer .btn-primary { width: auto; padding: 10px 18px; }
+#edit-message { flex: 1; min-width: 160px; font-size: 13px; }
+.reader-body .plain-note { white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; }
+.reader-body img, .reader-body video { max-width: 100%; border-radius: 12px; }
+.reader-body audio { max-width: 100%; }
+.reader-body table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+.reader-body td, .reader-body th { border: 1px solid var(--outline-color); padding: 8px 12px; text-align: left; }
+button:disabled { opacity: .45; cursor: default; }
+.note-card:focus-visible, button:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+@media (max-width: 700px) { .reader-actions { width: 100%; } .note-card-title { flex-wrap: wrap; } }
+
+#back-notes-btn { display: none; }
+.reader-body a { color: var(--primary-color); text-underline-offset: 3px; }
+@media (max-width: 768px) {
+  body { height: 100dvh; }
+  .top-bar { flex-wrap: wrap; }
+  .search-box { order: 3; flex-basis: 100%; max-width: none; }
+  #back-notes-btn { display: inline-block; }
+  .reader-header { padding: 16px; }
+  .reader-title { font-size: 20px; overflow-wrap: anywhere; }
+  .reader-body { padding: 20px; }
+  #note-editor { padding: 16px; }
+}

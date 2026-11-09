@@ -8,13 +8,32 @@ let state = {
   selectedNoteId: null,
   activeFilterType: '',
   searchQuery: '',
-  searchDebounceTimer: null
+  searchDebounceTimer: null,
+  currentNote: null,
+  editing: false,
+  saving: false,
+  noteRequest: 0,
+  listRequest: 0,
+  heartbeat: null,
+  lockoutTimer: null,
+  acquiringLock: false
 };
 
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   checkAuth();
   setupEventListeners();
+  setInterval(async () => {
+    if (!state.authenticated) return;
+    try {
+      const result = await api('/api/auth/status');
+      if (!result.authenticated) {
+        state.authenticated = false;
+        setConnection('Locked');
+        document.getElementById('auth-modal').style.display = 'flex';
+      }
+    } catch (_) { setConnection('Disconnected'); }
+  }, 15000);
 });
 
 // 1. Theme Synchronization (Mirrors phone's Material You / Dark Theme)
@@ -54,13 +73,16 @@ async function checkAuth() {
     const modal = document.getElementById('auth-modal');
     if (state.authenticated) {
       modal.style.display = 'none';
+      setConnection("Phone Connected");
       loadNotes(1);
     } else {
+      setConnection('Locked');
       modal.style.display = 'flex';
       document.getElementById('pin-input').focus();
     }
   } catch (err) {
     console.error('Auth status check failed:', err);
+    setConnection('Disconnected');
     document.getElementById('auth-modal').style.display = 'flex';
   }
 }
@@ -69,9 +91,10 @@ async function submitLogin() {
   const pinInput = document.getElementById('pin-input');
   const errorEl = document.getElementById('modal-error');
   const btn = document.getElementById('login-btn');
+  if (btn.disabled) return;
   const pin = pinInput.value.trim();
 
-  if (!pin || pin.length < 4) {
+  if (!/^\d{4}$/.test(pin)) {
     errorEl.textContent = 'Please enter a 4-digit PIN.';
     return;
   }
@@ -91,9 +114,10 @@ async function submitLogin() {
       state.authenticated = true;
       document.getElementById('auth-modal').style.display = 'none';
       pinInput.value = '';
+      setConnection("Phone Connected");
       loadNotes(1);
     } else if (res.status === 429) {
-      startLockoutCountdown(data.remainingLockoutSeconds || 60);
+      startLockoutCountdown(data.retryAfterSeconds || 60);
     } else {
       errorEl.textContent = data.message || 'Incorrect PIN.';
       pinInput.value = '';
@@ -102,7 +126,7 @@ async function submitLogin() {
   } catch (err) {
     errorEl.textContent = 'Connection error. Ensure your phone and PC are on the same Wi-Fi.';
   } finally {
-    btn.disabled = false;
+    btn.disabled = Boolean(state.lockoutTimer);
   }
 }
 
@@ -115,11 +139,13 @@ function startLockoutCountdown(seconds) {
   input.disabled = true;
   let remaining = seconds;
 
-  const timer = setInterval(() => {
+  clearInterval(state.lockoutTimer);
+  state.lockoutTimer = setInterval(() => {
     errorEl.textContent = `Too many failed attempts. Locked out for ${remaining}s...`;
     remaining--;
     if (remaining < 0) {
-      clearInterval(timer);
+      clearInterval(state.lockoutTimer);
+      state.lockoutTimer = null;
       btn.disabled = false;
       input.disabled = false;
       errorEl.textContent = 'You may now try again.';
@@ -129,16 +155,47 @@ function startLockoutCountdown(seconds) {
 }
 
 async function logout() {
-  try {
-    await fetch('/api/auth/logout', { method: 'POST' });
-  } catch (_) {}
+  if (!await leaveEditor()) return;
+  try { await api('/api/auth/logout', { method: 'POST', body: '{}' }); } catch (_) {}
   state.authenticated = false;
+  state.notes = [];
+  state.currentNote = null;
+  state.selectedNoteId = null;
+  state.noteRequest++;
+  state.listRequest++;
+  document.getElementById('notes-list').replaceChildren();
+  document.getElementById('reader-body').replaceChildren();
+  document.getElementById('reader-content').style.display = 'none';
+  document.getElementById('empty-state').style.display = 'flex';
   document.getElementById('auth-modal').style.display = 'flex';
   document.getElementById('pin-input').value = '';
+  setConnection('Locked');
+}
+
+function setConnection(text) { document.getElementById('connection-status').textContent = text; }
+async function api(path, options = {}) {
+  const res = await fetch(path, { credentials: 'same-origin', ...options,
+    headers: { 'Content-Type': 'application/json', ...options.headers } });
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch (_) { data = { message: text }; }
+  if (!res.ok) {
+    if (res.status === 401) {
+      state.authenticated = false;
+      setConnection('Locked');
+      document.getElementById('auth-modal').style.display = 'flex';
+    }
+    const error = new Error(data.message || `Request failed (${res.status})`);
+    error.status = res.status;
+    throw error;
+  }
+  setConnection(state.authenticated ? 'Phone Connected' : 'Locked');
+  return data;
 }
 
 // 3. Notes Loading & Pagination
 async function loadNotes(page = 1) {
+  const requestId = ++state.listRequest;
   state.page = page;
   const listEl = document.getElementById('notes-list');
   listEl.innerHTML = '<div style="padding: 24px; text-align: center; opacity: 0.6;">Loading notes...</div>';
@@ -151,12 +208,8 @@ async function loadNotes(page = 1) {
   if (state.activeFilterType) params.set('type', state.activeFilterType);
 
   try {
-    const res = await fetch(`/api/notes?${params.toString()}`);
-    if (res.status === 401) {
-      checkAuth();
-      return;
-    }
-    const data = await res.json();
+    const data = await api(`/api/notes?${params.toString()}`);
+    if (requestId !== state.listRequest) return;
 
     state.notes = data.items || [];
     state.page = data.page || 1;
@@ -166,6 +219,8 @@ async function loadNotes(page = 1) {
     renderNotesList();
     renderPagination();
   } catch (err) {
+    if (requestId !== state.listRequest) return;
+    setConnection(err.status === 401 ? 'Locked' : 'Connection error');
     listEl.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--danger-color);">Failed to load notes. Check connection.</div>';
   }
 }
@@ -180,6 +235,9 @@ function renderNotesList() {
   listEl.innerHTML = '';
   state.notes.forEach(note => {
     const card = document.createElement('div');
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openNote(note.id); } });
     card.className = `note-card ${note.id === state.selectedNoteId ? 'active' : ''}`;
     card.onclick = () => openNote(note.id);
 
@@ -212,111 +270,167 @@ function renderPagination() {
 
 // 4. Note Detail & Markdown Rendering
 async function openNote(id) {
+  if (!await leaveEditor()) return;
+  const requestId = ++state.noteRequest;
   state.selectedNoteId = id;
-  renderNotesList(); // Update active card highlighting
-
-  const readerPane = document.getElementById('reader-pane');
-  const emptyState = document.getElementById('empty-state');
-  const readerContent = document.getElementById('reader-content');
-
-  emptyState.style.display = 'none';
-  readerContent.style.display = 'block';
-  document.getElementById('reader-body').innerHTML = '<div style="opacity: 0.6; padding: 32px 0;">Loading note content...</div>';
-
+  state.currentNote = null;
+  renderNotesList();
+  document.getElementById('reader-pane').classList.add('active-mobile');
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('reader-content').style.display = 'block';
+  document.getElementById('edit-note-btn').disabled = true;
+  document.getElementById('copy-note-btn').disabled = true;
+  document.getElementById('reader-body').textContent = 'Loading note…';
   try {
-    const res = await fetch(`/api/notes/${id}`);
-    if (res.status === 401) {
-      checkAuth();
-      return;
-    }
-    const note = await res.json();
-
-    document.getElementById('reader-title').textContent = note.title || 'Untitled Note';
-    document.getElementById('reader-date').textContent = note.updatedAt
-      ? `Last updated ${new Date(note.updatedAt).toLocaleString()}`
-      : '';
-
-    const tagsContainer = document.getElementById('reader-tags');
-    tagsContainer.innerHTML = '';
-    if (Array.isArray(note.folders)) {
-      note.folders.forEach(f => {
-        const pill = document.createElement('span');
-        pill.className = 'tag-pill';
-        pill.textContent = f;
-        tagsContainer.appendChild(pill);
-      });
-    }
-
-    const lockAlert = document.getElementById('mobile-lock-alert');
-    if (note.isLockedByMobile) {
-      lockAlert.style.display = 'flex';
-      lockAlert.innerHTML = `
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C9.24 2 7 4.24 7 7v3H6c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-8c0-1.1-.9-2-2-2h-1V7c0-2.76-2.24-5-5-5zm3 8H9V7c0-1.66 1.34-3 3-3s3 1.34 3 3v3z"/></svg>
-        <span>This note is open in Cobalt on your phone. Modifications must be completed on your device.</span>
-      `;
-    } else {
-      lockAlert.style.display = 'none';
-    }
-
-    document.getElementById('reader-body').innerHTML = renderMarkdown(note.content || '');
+    const note = await api(`/api/notes/${encodeURIComponent(id)}`);
+    if (requestId !== state.noteRequest) return;
+    state.currentNote = note;
+    renderNote(note);
   } catch (err) {
-    document.getElementById('reader-body').innerHTML = '<div style="color: var(--danger-color);">Failed to load note content.</div>';
+    if (requestId !== state.noteRequest) return;
+    document.getElementById('reader-body').textContent = err.message || 'Could not load note.';
   }
 }
 
-// 5. Lightweight Built-in Markdown Engine
-function renderMarkdown(md) {
-  if (!md) return '<p style="opacity: 0.5;">Empty note</p>';
+function renderNote(note) {
+  document.getElementById('reader-title').textContent = note.title || 'Untitled Note';
+  document.getElementById('reader-date').textContent = `Last updated ${new Date(note.updatedAt).toLocaleString()}`;
+  const tags = document.getElementById('reader-tags');
+  tags.replaceChildren();
+  (note.folders || []).forEach(folder => { const pill = document.createElement('span'); pill.className = 'tag-pill'; pill.textContent = folder; tags.append(pill); });
+  const lock = document.getElementById('mobile-lock-alert');
+  lock.style.display = note.isLockedByMobile || note.isLockedByOtherWeb ? 'flex' : 'none';
+  lock.textContent = note.isLockedByMobile ? 'Your phone is editing this note. You can read it here.' : 'Another browser is editing this note.';
+  document.getElementById('edit-note-btn').disabled = !note.editable || note.isLockedByMobile || note.isLockedByOtherWeb;
+  document.getElementById('copy-note-btn').disabled = false;
+  const body = document.getElementById('reader-body');
+  if (note.type === 'CODE' || note.content.length > 200000) {
+    const pre = document.createElement('div'); pre.className = 'plain-note'; pre.textContent = note.content; body.replaceChildren(pre);
+  } else { body.innerHTML = renderMarkdown(note.content || ''); }
+  if (note.mediaUrl) {
+    const element = document.createElement(note.type === 'IMAGE' ? 'img' : note.type === 'VIDEO' ? 'video' : 'audio');
+    element.src = note.mediaUrl; element.controls = true; element.alt = note.title; body.prepend(element);
+    element.addEventListener('error', () => { const error = document.createElement('p'); error.textContent = 'Attachment unavailable here. Open it on your phone.'; element.replaceWith(error); });
+  }
+}
 
-  // Pre-process code blocks to prevent inner formatting
-  const codeBlocks = [];
-  let html = md.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
-    const idx = codeBlocks.length;
-    codeBlocks.push(`<pre><code class="language-${lang}">${escapeHtml(code.trim())}</code></pre>`);
-    return `%%CODEBLOCK_${idx}%%`;
-  });
+async function beginEdit() {
+  if (!state.currentNote || state.editing || state.acquiringLock) return;
+  const id = state.currentNote.id;
+  state.acquiringLock = true;
+  document.getElementById('edit-note-btn').disabled = true;
+  try {
+    const base = await api(`/api/notes/${encodeURIComponent(id)}/lock`, { method: 'POST', body: '{}' });
+    state.currentNote = base;
+    state.editing = true;
+    document.getElementById('edit-title').value = base.title;
+    document.getElementById('edit-body').value = base.content;
+    document.getElementById('note-editor').hidden = false;
+    document.getElementById('reader-body').hidden = true;
+    document.getElementById('edit-note-btn').disabled = true;
+    document.getElementById('edit-message').textContent = 'Changes stay here until you save.';
+    document.getElementById('edit-body').focus();
+    state.heartbeat = setInterval(async () => {
+      try { await api(`/api/notes/${encodeURIComponent(id)}/lock`, { method: 'PUT', body: '{}' }); }
+      catch (err) { document.getElementById('edit-message').textContent = `${err.message} Copy your draft before leaving.`; }
+    }, 20000);
+  } catch (err) { document.getElementById('mobile-lock-alert').style.display = 'flex'; document.getElementById('mobile-lock-alert').textContent = err.message; document.getElementById('edit-note-btn').disabled = false; }
+  finally { state.acquiringLock = false; }
+}
 
-  // Process headers
-  html = html
-    .replace(/^#### (.*$)/gim, '<h4>$1</h4>')
-    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-    .replace(/^# (.*$)/gim, '<h1>$1</h1>');
+function editorDirty() {
+  return state.editing && (document.getElementById('edit-title').value !== state.currentNote.title || document.getElementById('edit-body').value !== state.currentNote.content.replace(/\r\n?/g, '\n'));
+}
+async function leaveEditor(saved = false) {
+  if (state.saving || state.acquiringLock) return false;
+  if (!state.editing) return true;
+  if (!saved && editorDirty() && !window.confirm('Discard your unsaved changes?')) return false;
+  clearInterval(state.heartbeat);
+  try { await api(`/api/notes/${encodeURIComponent(state.currentNote.id)}/lock`, { method: 'DELETE', body: '{}' }); } catch (_) {}
+  state.editing = false;
+  document.getElementById('note-editor').hidden = true;
+  document.getElementById('reader-body').hidden = false;
+  document.getElementById('edit-title').value = '';
+  document.getElementById('edit-body').value = '';
+  if (state.currentNote) renderNote(state.currentNote);
+  return true;
+}
+async function saveNote(event) {
+  event.preventDefault();
+  if (!state.editing || state.saving) return;
+  const base = state.currentNote;
+  const edited = document.getElementById('edit-body').value;
+  const content = edited === base.content.replace(/\r\n?/g, '\n') ? base.content : edited;
+  const message = document.getElementById('edit-message');
+  if (new TextEncoder().encode(content).length > 5000000) { message.textContent = 'The web editor supports up to 5 MB. Your draft is still here.'; return; }
+  state.saving = true;
+  document.getElementById('save-note-btn').disabled = true;
+  document.getElementById('cancel-edit-btn').disabled = true;
+  document.getElementById('edit-title').disabled = true;
+  document.getElementById('edit-body').disabled = true;
+  message.textContent = 'Saving to your phone…';
+  try {
+    const saved = await api(`/api/notes/${encodeURIComponent(base.id)}`, { method: 'PUT', body: JSON.stringify({ title: document.getElementById('edit-title').value, content, updatedAt: base.updatedAt, contentHash: base.contentHash }) });
+    state.saving = false;
+    state.currentNote = saved;
+    await leaveEditor(true);
+    document.getElementById('reader-date').textContent = 'Saved to your phone';
+    loadNotes(state.page);
+  } catch (err) { message.textContent = `${err.message} Your unsaved text is still here.`; }
+  finally { state.saving = false; document.getElementById('save-note-btn').disabled = false; document.getElementById('cancel-edit-btn').disabled = false; document.getElementById('edit-title').disabled = false; document.getElementById('edit-body').disabled = false; }
+}
 
-  // Blockquotes
-  html = html.replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>');
-
-  // Horizontal Rule
-  html = html.replace(/^---$/gim, '<hr style="border: none; border-top: 1px solid var(--outline-color); margin: 20px 0;">');
-
-  // Inline formatting
-  html = html
-    .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
-    .replace(/\*(.*?)\*/gim, '<em>$1</em>')
-    .replace(/`([^`]+)`/gim, '<code>$1</code>');
-
-  // Links and Images
-  html = html.replace(/!\[(.*?)\]\((.*?)\)/gim, '<img alt="$1" src="$2" style="max-width: 100%; border-radius: 8px; margin: 12px 0;">');
-  html = html.replace(/\[(.*?)\]\((.*?)\)/gim, '<a href="$2" target="_blank" rel="noopener" style="color: var(--primary-color); text-decoration: underline;">$1</a>');
-
-  // Unordered Lists
-  html = html.replace(/^\s*-\s+(.*$)/gim, '<li>$1</li>');
-  html = html.replace(/(<li>[\s\S]*?<\/li>)/gim, '<ul>$1</ul>');
-
-  // Paragraphs
-  html = html.split('\n\n').map(p => {
-    if (p.startsWith('<h') || p.startsWith('<pre') || p.startsWith('<ul') || p.startsWith('<blockquote') || p.startsWith('<hr')) {
-      return p;
+// Raw HTML is text, links have an allowlist, and only authenticated local media is embedded.
+function inlineMarkdown(text) {
+  const pattern = /(`[^`]+`|!?\[[^\]\n]*\]\([^\s)]*\)|\*\*[^*\n]+\*\*|\*[^*\n]+\*)/g;
+  let out = '', offset = 0;
+  for (const match of text.matchAll(pattern)) {
+    out += escapeHtml(text.slice(offset, match.index));
+    const token = match[0];
+    if (token.startsWith('`')) out += `<code>${escapeHtml(token.slice(1, -1))}</code>`;
+    else if (token.startsWith('**')) out += `<strong>${escapeHtml(token.slice(2, -2))}</strong>`;
+    else if (token.startsWith('*')) out += `<em>${escapeHtml(token.slice(1, -1))}</em>`;
+    else {
+      const parts = token.match(/^(!?)\[([^\]]*)\]\(([^)]*)\)$/);
+      const [, image, label, url] = parts;
+      const local = /^\/api\/media\/[A-Za-z0-9_%.-]+$/.test(url);
+      if (image && local) out += `<img alt="${escapeHtml(label)}" src="${escapeHtml(url)}">`;
+      else if (/^https?:\/\//i.test(url) || local) out += `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
+      else out += escapeHtml(token);
     }
-    return `<p>${p.replace(/\n/g, '<br>')}</p>`;
-  }).join('');
-
-  // Restore code blocks
-  codeBlocks.forEach((block, idx) => {
-    html = html.replace(`%%CODEBLOCK_${idx}%%`, block);
-  });
-
-  return html;
+    offset = match.index + token.length;
+  }
+  return out + escapeHtml(text.slice(offset));
+}
+function renderMarkdown(md) {
+  if (!md) return '<p>Empty note</p>';
+  const lines = md.split(/\r?\n/), blocks = [];
+  let code = null, paragraph = [], list = [];
+  const flush = () => {
+    if (paragraph.length) blocks.push(`<p>${paragraph.map(inlineMarkdown).join('<br>')}</p>`);
+    if (list.length) blocks.push(`<ul>${list.map(t => `<li>${inlineMarkdown(t)}</li>`).join('')}</ul>`);
+    paragraph = []; list = [];
+  };
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.startsWith('```')) { flush(); if (code !== null) { blocks.push(`<pre><code>${escapeHtml(code.join('\n'))}</code></pre>`); code = null; } else code = []; continue; }
+    if (code !== null) { code.push(line); continue; }
+    if (!line.trim()) { flush(); continue; }
+    const heading = line.match(/^(#{1,6}) (.*)$/);
+    if (heading) { flush(); blocks.push(`<h${heading[1].length}>${inlineMarkdown(heading[2])}</h${heading[1].length}>`); continue; }
+    if (line.startsWith('> ')) { flush(); blocks.push(`<blockquote>${inlineMarkdown(line.slice(2))}</blockquote>`); continue; }
+    if (/^[-*] /.test(line)) { if (paragraph.length) flush(); list.push(line.slice(2)); continue; }
+    if (/^---+$/.test(line)) { flush(); blocks.push('<hr>'); continue; }
+    if (line.includes('|') && i + 1 < lines.length && /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(lines[i + 1])) {
+      flush(); const cells = row => row.replace(/^\s*\||\|\s*$/g, '').split('|').map(c => inlineMarkdown(c.trim()));
+      let table = `<table><thead><tr>${cells(line).map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>`; i++;
+      while (i + 1 < lines.length && lines[i + 1].includes('|')) table += `<tr>${cells(lines[++i]).map(c => `<td>${c}</td>`).join('')}</tr>`;
+      blocks.push(table + '</tbody></table>'); continue;
+    }
+    if (list.length) flush(); paragraph.push(line);
+  }
+  flush(); if (code !== null) blocks.push(`<pre><code>${escapeHtml(code.join('\n'))}</code></pre>`);
+  return blocks.join('');
 }
 
 function escapeHtml(str) {
@@ -362,15 +476,24 @@ function setupEventListeners() {
 
   document.getElementById('logout-btn').addEventListener('click', logout);
 
-  document.getElementById('copy-note-btn').addEventListener('click', () => {
-    const title = document.getElementById('reader-title').textContent;
-    const body = document.getElementById('reader-body').innerText;
-    const textToCopy = `${title}\n\n${body}`;
-    navigator.clipboard.writeText(textToCopy).then(() => {
-      const btn = document.getElementById('copy-note-btn');
-      const originalText = btn.innerHTML;
-      btn.innerHTML = '<span>Copied!</span>';
-      setTimeout(() => btn.innerHTML = originalText, 1500);
-    });
+  document.getElementById('back-notes-btn').addEventListener('click', async () => {
+    if (await leaveEditor()) document.getElementById('reader-pane').classList.remove('active-mobile');
+  });
+  document.getElementById('edit-note-btn').addEventListener('click', beginEdit);
+  document.getElementById('cancel-edit-btn').addEventListener('click', () => leaveEditor());
+  document.getElementById('note-editor').addEventListener('submit', saveNote);
+  window.addEventListener('beforeunload', event => { if (editorDirty() || state.saving) { event.preventDefault(); event.returnValue = ''; } });
+  document.getElementById('copy-note-btn').addEventListener('click', async () => {
+    if (!state.currentNote) return;
+    const text = `${state.currentNote.title}\n\n${state.editing ? document.getElementById('edit-body').value : state.currentNote.content}`;
+    try {
+      if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(text);
+      else {
+        const input = document.createElement('textarea'); input.value = text; input.style.position = 'fixed'; input.style.opacity = '0'; document.body.append(input); input.select();
+        const copied = document.execCommand('copy'); input.remove(); if (!copied) throw new Error('Copy failed');
+      }
+      document.getElementById('copy-note-btn').textContent = 'Copied!';
+      setTimeout(() => document.getElementById('copy-note-btn').textContent = 'Copy Text', 1500);
+    } catch (_) { document.getElementById('copy-note-btn').textContent = 'Select text to copy'; }
   });
 }

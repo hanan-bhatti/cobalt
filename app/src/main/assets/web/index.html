@@ -20,13 +20,13 @@
       <svg viewBox="0 0 24 24">
         <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
       </svg>
-      <input type="text" id="search-input" placeholder="Search your knowledge base...">
+      <input type="text" id="search-input" aria-label="Search saved items" placeholder="Search your knowledge base...">
     </div>
 
     <div class="header-actions">
       <div class="status-pill">
         <div class="status-dot"></div>
-        <span>Phone Connected</span>
+        <span id="connection-status" role="status">Connecting…</span>
       </div>
       <button class="btn-icon" id="logout-btn" title="Lock & Disconnect">
         <svg viewBox="0 0 24 24">
@@ -41,11 +41,12 @@
     <!-- Left Pane: Notes Cards List -->
     <section class="notes-pane">
       <div class="filter-bar">
-        <button class="filter-chip active" data-type="">All Notes</button>
+        <button class="filter-chip active" data-type="">All Items</button>
         <button class="filter-chip" data-type="TEXT">Notes</button>
         <button class="filter-chip" data-type="CODE">Code</button>
         <button class="filter-chip" data-type="LINK">Links</button>
-        <button class="filter-chip" data-type="MEDIA">Media</button>
+        <button class="filter-chip" data-type="MEDIA">Movies & Shows</button>
+        <button class="filter-chip" data-type="ATTACHMENT">Attachments</button>
       </div>
 
       <div class="notes-list" id="notes-list">
@@ -72,7 +73,11 @@
         <div class="reader-header">
           <div class="note-card-title">
             <h1 class="reader-title" id="reader-title">Untitled Note</h1>
-            <button class="pagination-btn" id="copy-note-btn">Copy Text</button>
+            <div class="reader-actions">
+              <button class="pagination-btn" id="back-notes-btn">← Back to items</button>
+              <button class="pagination-btn" id="edit-note-btn" disabled>Edit Note</button>
+              <button class="pagination-btn" id="copy-note-btn">Copy Text</button>
+            </div>
           </div>
           <div class="reader-meta-row">
             <span id="reader-date" style="font-size: 13px; opacity: 0.65;"></span>
@@ -80,6 +85,17 @@
           </div>
           <div class="mobile-lock-alert" id="mobile-lock-alert" style="display: none;"></div>
         </div>
+        <form id="note-editor" hidden>
+          <label for="edit-title">Title</label>
+          <input id="edit-title" maxlength="512" autocomplete="off">
+          <label for="edit-body">Note text · Markdown</label>
+          <textarea id="edit-body" spellcheck="false"></textarea>
+          <div class="editor-footer">
+            <span id="edit-message" role="status" aria-live="polite">Changes stay here until you save.</span>
+            <button type="button" class="pagination-btn" id="cancel-edit-btn">Cancel</button>
+            <button type="submit" class="btn-primary" id="save-note-btn">Save Changes</button>
+          </div>
+        </form>
         <article class="reader-body" id="reader-body">
           <!-- Formatted Markdown content rendered here -->
         </article>
@@ -99,7 +115,7 @@
       <p style="font-size: 13px; opacity: 0.7; margin-bottom: 20px;">
         Enter the 4-digit PIN generated on your Android device to unlock your notes.
       </p>
-      <input type="password" id="pin-input" class="pin-input" maxlength="4" placeholder="••••" autocomplete="off" autofocus>
+      <input type="password" id="pin-input" aria-label="Four-digit PIN" inputmode="numeric" class="pin-input" maxlength="4" placeholder="••••" autocomplete="off" autofocus>
       <button class="btn-primary" id="login-btn">Connect & Unlock</button>
       <div class="modal-error" id="modal-error"></div>
     </div>

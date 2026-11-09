@@ -145,7 +145,7 @@ fun WebCompanionSettingsScreen(
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
-                                        text = if (isRunning) "Listening on local Wi-Fi" else "Zero battery and CPU usage",
+                                        text = if (isRunning) "Listening on the local network" else "Server is stopped",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -269,14 +269,14 @@ fun WebCompanionSettingsScreen(
             item {
                 SettingsSubsectionHeader(
                     title = "Server Controls",
-                    description = "Activate the local offline server to browse notes from your laptop.",
-                    tooltipText = "The server runs strictly on your local Wi-Fi. No data is sent over the internet."
+                    description = "Read and edit notes from your laptop while Cobalt is running.",
+                    tooltipText = "Use a trusted local network. This address uses HTTP. Android may stop the server when Cobalt is closed."
                 )
 
                 ExpressiveSettingsGroup {
                     ExpressiveSettingsSwitchItem(
                         title = "Enable Web Companion",
-                        subtitle = if (isRunning) "Active at ${serverUrl ?: ""}" else "Offline (0% CPU)",
+                        subtitle = if (isRunning) "Active at ${serverUrl ?: ""}" else "Server is stopped",
                         checked = isRunning,
                         onCheckedChange = { enable ->
                             if (enable) {
@@ -323,7 +323,7 @@ fun WebCompanionSettingsScreen(
             item {
                 SettingsSubsectionHeader(
                     title = "Security & Protection",
-                    description = "Multi-tier defense protecting your private knowledge base.",
+                    description = "PIN access and checks for conflicting edits.",
                     tooltipText = "Cobalt enforces 4-digit PIN authentication, rate limiting, and editor conflict locking."
                 )
 
