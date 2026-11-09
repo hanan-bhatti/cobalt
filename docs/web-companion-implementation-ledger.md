@@ -19,7 +19,21 @@ This document tracks every atomic change, file created/modified, and verificatio
 
 ## Atomic Step Details
 
-### Step 01: PIN Creator & Security Manager (`WebCompanionSecurityManager`)
+### Step 02: Editor Session Registry (`EditorSessionRegistry`)
+- **Package**: `com.example.web.session`
+- **Source**: `app/src/main/kotlin/com/example/web/session/EditorSessionRegistry.kt`
+- **Integration**: `app/src/main/kotlin/com/example/ui/viewmodel/CobaltViewModel.kt`
+- **Key Capabilities**:
+  - `mobileActiveNoteId`: StateFlow tracking the note ID open on the phone.
+  - Multi-client exclusive web lock with heartbeat tracking (60s stale timeout).
+  - Preempts web write attempts with `LockAcquisitionResult.ConflictMobile`.
+  - **Edge-Case Hardening**:
+    - **Back Button / BackHandler**: Both `CaptureScreen.kt:1634` and `MainActivity.kt:296` call `viewModel.cancelCapture()` on Android back button/gesture, setting `editOriginalId = null` and releasing the mobile lock.
+    - **Close / Cancel Icon**: Top-bar close button invokes `cancelCapture()`, releasing the lock.
+    - **Save Completion**: Successful save automatically releases the lock.
+    - **ViewModel Teardown**: `CobaltViewModel.onCleared()` guarantees lock release on activity/viewmodel destruction.
+- **Unit Tests**: `app/src/test/java/com/example/web/session/EditorSessionRegistryTest.kt`
+
 - **Package**: `com.example.web.auth`
 - **Source**: `app/src/main/kotlin/com/example/web/auth/WebCompanionSecurityManager.kt`
 - **Key Capabilities**:
