@@ -1612,7 +1612,7 @@ fun FolderBrowseItemRow(
                             modifier = Modifier.size(18.dp)
                         )
                     },
-                    text = { Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
+                    text = { Text(viewModel.deletionAction(), color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) },
                     onClick = {
                         showContextMenu = false
                         confirmDelete = true
@@ -1626,8 +1626,8 @@ fun FolderBrowseItemRow(
         }
     }
     if (confirmDelete) com.example.ui.components.ExpressiveConfirmationDialog(
-        onDismissRequest = { confirmDelete = false }, title = "Delete item",
-        message = viewModel.deletionMessage(), confirmButtonText = "Delete",
+        onDismissRequest = { confirmDelete = false }, title = viewModel.deletionAction(),
+        message = viewModel.deletionMessage(), confirmButtonText = viewModel.deletionAction(),
         onConfirm = { confirmDelete = false; viewModel.deleteSavedItem(item) },
         dismissButtonText = "Cancel", isDestructive = true)
 

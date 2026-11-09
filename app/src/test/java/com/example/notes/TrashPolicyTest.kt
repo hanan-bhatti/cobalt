@@ -5,6 +5,8 @@ import org.junit.Test
 
 class TrashPolicyTest {
     @Test fun warningMatchesRetentionAndUndoOnlyDeletion() {
+        assertEquals("Move to Trash", TrashPolicy.deletionAction(true))
+        assertEquals("Delete permanently", TrashPolicy.deletionAction(false))
         assertTrue(TrashPolicy.deletionMessage(true).contains("30 days"))
         assertFalse(TrashPolicy.deletionMessage(true).contains("cannot be undone"))
         assertTrue(TrashPolicy.deletionMessage(false).contains("Trash is off"))

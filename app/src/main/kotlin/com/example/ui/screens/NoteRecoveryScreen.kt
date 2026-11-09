@@ -49,6 +49,7 @@ fun NoteRecoveryScreen(onExitSafeMode: () -> Unit, safeMode: Boolean = StartupCr
     navigationBack: Boolean = false) {
     val context = LocalContext.current
     val reader = remember { LegacyNoteRecovery(context) }
+    val trash = remember { com.example.notes.TrashManager(context) }
     val scope = rememberCoroutineScope()
     var notes by remember { mutableStateOf<List<RecoveryNote>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
@@ -240,8 +241,9 @@ fun NoteRecoveryScreen(onExitSafeMode: () -> Unit, safeMode: Boolean = StartupCr
         }
     }
     deleteId?.let { id -> ExpressiveConfirmationDialog(onDismissRequest = { deleteId = null },
-        title = "Delete this note?", message = "This follows your Storage → Trash setting. With Trash enabled, you can restore it for 30 days.",
-        confirmButtonText = "Delete note", onConfirm = {
+        title = com.example.notes.TrashPolicy.deletionAction(trash.enabled()),
+        message = com.example.notes.TrashPolicy.deletionMessage(trash.enabled()),
+        confirmButtonText = com.example.notes.TrashPolicy.deletionAction(trash.enabled()), onConfirm = {
             deleteId = null; busy = true
             scope.launch {
                 try { reader.delete(id); if (selectedId == id) navigation.popBackStack() }
@@ -257,12 +259,13 @@ fun NoteRecoveryScreen(onExitSafeMode: () -> Unit, safeMode: Boolean = StartupCr
 
 @Composable
 private fun RecoveryNoteMenu(note: RecoveryNote, busy: Boolean, onExport: () -> Unit, onDelete: () -> Unit) {
+    val deletionAction = recoveryDeletionAction()
     var expanded by remember(note.id) { mutableStateOf(false) }
     Box {
         IconButton(onClick = { expanded = true }, enabled = !busy) { Icon(painterResource(R.drawable.ic_custom_more_vert), "Options for ${note.title}") }
         NoteContextMenu(expanded, onDismiss = { expanded = false }) {
             NoteContextAction("Export Markdown", R.drawable.ic_custom_export) { expanded = false; onExport() }
-            NoteContextAction("Delete note", R.drawable.ic_custom_delete, destructive = true) { expanded = false; onDelete() }
+            NoteContextAction(deletionAction, R.drawable.ic_custom_delete, destructive = true) { expanded = false; onDelete() }
         }
     }
 }
@@ -279,6 +282,7 @@ private fun RecoveryNoteCard(
     onDelete: () -> Unit
 ) {
     val context = LocalContext.current
+    val deletionAction = recoveryDeletionAction()
     var menu by remember(note.id) { mutableStateOf(false) }
     Surface(
         shape = connectedPillShape(index, total),
@@ -345,7 +349,7 @@ private fun RecoveryNoteCard(
                 NoteContextMenu(menu, onDismiss = { menu = false }) {
                     NoteContextAction("Read content", R.drawable.ic_custom_text) { menu = false; onRead() }
                     NoteContextAction("Export Markdown", R.drawable.ic_custom_export) { menu = false; onExport() }
-                    NoteContextAction("Delete note", R.drawable.ic_custom_delete, destructive = true) { menu = false; onDelete() }
+                    NoteContextAction(deletionAction, R.drawable.ic_custom_delete, destructive = true) { menu = false; onDelete() }
                 }
             }
         }
@@ -360,4 +364,12 @@ private fun RecoveryNoteSize(bytes: Long) {
             style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary, maxLines = 1)
     }
+}
+
+@Composable
+private fun recoveryDeletionAction(): String {
+    val context = LocalContext.current
+    val enabled = context.getSharedPreferences("note_storage_management", android.content.Context.MODE_PRIVATE)
+        .getBoolean("trash_enabled", true)
+    return com.example.notes.TrashPolicy.deletionAction(enabled)
 }

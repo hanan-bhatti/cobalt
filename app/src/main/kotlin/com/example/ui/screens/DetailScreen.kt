@@ -440,7 +440,7 @@ fun DetailScreen(
                         ) {
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_custom_delete),
-                                contentDescription = "Delete item",
+                                contentDescription = viewModel.deletionAction(),
                                 tint = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
                                 modifier = Modifier.size(22.dp)
                             )
@@ -1061,9 +1061,9 @@ fun DetailScreen(
     if (showDeleteConfirm) {
         com.example.ui.components.ExpressiveConfirmationDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = "Delete Archive",
+            title = viewModel.deletionAction(),
             message = viewModel.deletionMessage(),
-            confirmButtonText = "Delete",
+            confirmButtonText = viewModel.deletionAction(),
             onConfirm = {
                 showDeleteConfirm = false
                 viewModel.deleteSavedItem(item)

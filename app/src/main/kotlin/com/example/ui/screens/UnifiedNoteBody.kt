@@ -164,6 +164,7 @@ fun NoteDetailActions(
             onShare = {
                 onShareClick?.invoke() ?: viewModel.shareItem(item, context)
             },
+            trashEnabled = viewModel.trashEnabled(),
             onDelete = {
                 onDeleteClick?.invoke()
             },

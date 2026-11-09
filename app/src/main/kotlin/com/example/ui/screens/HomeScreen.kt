@@ -1054,9 +1054,9 @@ fun HomeScreen(
     if (itemToDelete != null) {
         com.example.ui.components.ExpressiveConfirmationDialog(
             onDismissRequest = { itemToDelete = null },
-            title = "Delete Item",
+            title = viewModel.deletionAction(),
             message = viewModel.deletionMessage(),
-            confirmButtonText = "Delete",
+            confirmButtonText = viewModel.deletionAction(),
             onConfirm = {
                 itemToDelete?.let {
                     viewModel.deleteSavedItem(it)
@@ -1071,9 +1071,9 @@ fun HomeScreen(
     if (showBulkDeleteConfirm) {
         com.example.ui.components.ExpressiveConfirmationDialog(
             onDismissRequest = { showBulkDeleteConfirm = false },
-            title = "Delete Selected Items",
+            title = viewModel.deletionAction(),
             message = viewModel.deletionMessage(plural = true),
-            confirmButtonText = "Delete",
+            confirmButtonText = viewModel.deletionAction(),
             onConfirm = {
                 viewModel.deleteSelectedItems()
                 showBulkDeleteConfirm = false

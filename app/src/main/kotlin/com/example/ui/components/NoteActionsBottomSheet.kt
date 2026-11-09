@@ -96,6 +96,7 @@ fun NoteActionsBottomSheet(
     onExportMarkdown: () -> Unit,
     onShare: () -> Unit,
     onDelete: () -> Unit,
+    trashEnabled: Boolean,
     onDismissRequest: () -> Unit
 ) {
     val context = LocalContext.current
@@ -251,8 +252,8 @@ fun NoteActionsBottomSheet(
             ) {
                 NoteActionRowItem(
                     icon = painterResource(id = R.drawable.ic_custom_delete),
-                    title = "Delete Note",
-                    subtitle = "Permanently remove or delete this note",
+                    title = com.example.notes.TrashPolicy.deletionAction(trashEnabled),
+                    subtitle = if (trashEnabled) "Restore from Storage → Trash for 30 days" else "Trash is off; only a brief Undo is available",
                     iconTint = MaterialTheme.colorScheme.error,
                     iconBgColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f),
                     titleColor = MaterialTheme.colorScheme.error,

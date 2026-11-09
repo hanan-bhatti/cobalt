@@ -2058,7 +2058,7 @@ fun CaptureScreen(
                             ) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_custom_delete),
-                                    contentDescription = "Delete item",
+                                    contentDescription = viewModel.deletionAction(),
                                     tint = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -3369,9 +3369,9 @@ fun CaptureScreen(
     if (showDeleteConfirm) {
         com.example.ui.components.ExpressiveConfirmationDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = "Delete Archive",
+            title = viewModel.deletionAction(),
             message = viewModel.deletionMessage(),
-            confirmButtonText = "Delete",
+            confirmButtonText = viewModel.deletionAction(),
             onConfirm = {
                 showDeleteConfirm = false
                 safeClearFocus()

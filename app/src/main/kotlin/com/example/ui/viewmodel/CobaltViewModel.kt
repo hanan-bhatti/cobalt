@@ -1394,6 +1394,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     var undoExpiresAt: Long = 0
         private set
     fun trashEnabled(): Boolean = com.example.notes.TrashManager(getApplication()).enabled()
+    fun deletionAction(): String = com.example.notes.TrashPolicy.deletionAction(trashEnabled())
     fun deletionMessage(plural: Boolean = false): String = com.example.notes.TrashPolicy.deletionMessage(trashEnabled(), plural)
     fun clearUndoToast() {
         undoDismissJob?.cancel(); undoDismissJob = null

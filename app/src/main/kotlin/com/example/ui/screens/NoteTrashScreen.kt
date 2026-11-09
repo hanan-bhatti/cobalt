@@ -47,7 +47,7 @@ fun NoteTrashScreen(manager: TrashManager, onBack: () -> Unit) {
         try {
             manager.expire()
         } catch (cancel: CancellationException) { throw cancel }
-        catch (_: Exception) { notice = "Some expired items could not be removed yet. You can retry Delete forever." }
+        catch (_: Exception) { notice = "Some expired items could not be removed yet. You can retry Delete permanently." }
         try { manager.observe().collect { list -> sizes = manager.ownedSizes(); rows = list } }
         catch (cancel: CancellationException) { throw cancel }
         catch (_: Exception) { notice = "Trash could not be loaded. Your retained files have not been discarded." }
@@ -58,7 +58,7 @@ fun NoteTrashScreen(manager: TrashManager, onBack: () -> Unit) {
     }
     NoteSettingsPage(
         title = "Trash",
-        subtitle = "Deleted items stay recoverable for 30 days",
+        subtitle = if (enabled) "Deleted items stay recoverable for 30 days" else "Trash is off for new deletions",
         onBack = onBack,
         itemSpacing = 8.dp,
         onRefresh = { perform { manager.expire(); "Trash updated" } },
@@ -80,7 +80,7 @@ fun NoteTrashScreen(manager: TrashManager, onBack: () -> Unit) {
                 checked = enabled,
                 enabled = !busy && rows != null,
                 subtitle = if (enabled) "Deleted items stay in Trash for 30 days before permanent deletion."
-                    else "Items are permanently deleted immediately upon deletion.",
+                    else "New deletions have a 30-second Undo window, then are permanently removed.",
                 onCheckedChange = { value -> if (!value) turnOff = true else perform { manager.setEnabled(true); "Trash enabled" } }
             )
         }
@@ -162,7 +162,7 @@ fun NoteTrashScreen(manager: TrashManager, onBack: () -> Unit) {
                                     menu = false; perform { manager.restore(item.id); "Item restored" }
                                 }
                             }
-                            NoteContextAction("Delete forever", R.drawable.ic_custom_delete, destructive = true) {
+                            NoteContextAction("Delete permanently", R.drawable.ic_custom_delete, destructive = true) {
                                 menu = false; removing = item
                             }
                         }
@@ -178,9 +178,9 @@ fun NoteTrashScreen(manager: TrashManager, onBack: () -> Unit) {
         text = { Text("New deletions will keep only a 30-second Undo window before permanent removal. Items already in Trash keep their existing deadline.") },
         confirmButtonText = "Turn off", onConfirm = { turnOff = false; perform { manager.setEnabled(false); "Trash disabled for new deletions" } },
         dismissButtonText = "Cancel", onDismiss = { turnOff = false })
-    removing?.let { item -> ExpressiveAlertDialog(onDismissRequest = { removing = null }, title = "Delete forever?",
+    removing?.let { item -> ExpressiveAlertDialog(onDismissRequest = { removing = null }, title = "Delete permanently?",
         text = { Text("Permanently remove this item, all its saved versions and recovery files? This cannot be undone.") },
-        confirmButtonText = "Delete forever", onConfirm = { removing = null; perform { manager.deleteForever(item.id, item.deletedAt); "Item permanently deleted" } },
+        confirmButtonText = "Delete permanently", onConfirm = { removing = null; perform { manager.deleteForever(item.id, item.deletedAt); "Item permanently deleted" } },
         dismissButtonText = "Cancel", onDismiss = { removing = null }) }
     emptying?.let { reviewed -> ExpressiveAlertDialog(onDismissRequest = { emptying = null }, title = "Empty Trash?",
         text = { Text("Permanently remove ${reviewed.size} items and their saved versions and recovery files? This cannot be undone.") },
