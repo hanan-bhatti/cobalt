@@ -20,6 +20,7 @@ import com.example.ui.components.*
 import kotlinx.coroutines.*
 
 /** One storage hub with focused actions; the existing settings shell owns theme and predictive back. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteStorageManagementScreen(onBack: () -> Unit) {
     val context = LocalContext.current

@@ -40,9 +40,9 @@ fun ClearDisposableStorageBottomSheet(
     bytes: Long,
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
-    busy: Boolean = false,
-    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    busy: Boolean = false
 ) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
 
     ModalBottomSheet(
