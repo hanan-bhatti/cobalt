@@ -237,7 +237,12 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
         if (session.blocks.isEmpty() && !session.finished && !failure) {
             // An initially visible keyed footer must not follow itself to the end as
             // scanner batches insert real blocks before it. Start the list with content.
-            Column(Modifier.fillMaxSize().padding(contentPadding)) { header?.invoke(); NoteBodySkeleton() }
+            Column(Modifier.fillMaxSize().padding(contentPadding)) {
+                header?.invoke()
+                Text("Loading note content…", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 12.dp))
+                NoteBodySkeleton()
+            }
         } else LazyColumn(Modifier.fillMaxSize(), state = state, contentPadding = contentPadding) {
             if (header != null) item(key = "note_header") { header(); Spacer(Modifier.height(28.dp)) }
             items(session.blocks.size, key = { session.blocks[it].start }, contentType = { "note_block" }) { index ->
@@ -256,11 +261,14 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
 
                 Box(modifier = blockModifier) {
                     if (loaded == null) {
-                        // Warm ranges normally hit the cache. Reserve bounded space on a cold jump;
-                        // do not show scrolling shimmer/skeleton rows or render raw Markdown.
+                        // Keep the bounded space reservation on cold reads, with visible feedback
+                        // instead of an unexplained blank body. No additional parsing or IO jobs.
                         val wraps = ((block.end - block.start + columns - 1) / columns).toInt()
                         val lines = maxOf(block.lines, wraps).coerceIn(1, lineLimit * 2)
-                        Spacer(Modifier.height((lines * lineBaseDp * fontScale).dp))
+                        Box(Modifier.fillMaxWidth().height((lines * lineBaseDp * fontScale).dp)) {
+                            Text("Loading note content…", style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                     else if (loaded.document != null) MarkdownText(
                         markdown = loaded.text,
@@ -300,8 +308,15 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
                     }
                 }
             }
+            if (session.finished && session.blocks.isEmpty() && !failure) item(key = "note_empty") {
+                Text("This note has no text.", style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             if (!session.finished && !failure) item(key = "note_loading") {
-                if (session.blocks.isEmpty()) NoteBodySkeleton() else Spacer(Modifier.height(maxHeight))
+                Box(Modifier.fillMaxWidth().height(maxHeight)) {
+                    Text("Loading more of this note…", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
             if (failure) item(key = "note_error") { Text("This note could not be rendered. Use plain text or Export; its body is retained.") }
         }
