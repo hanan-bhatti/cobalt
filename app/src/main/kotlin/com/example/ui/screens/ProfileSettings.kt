@@ -176,6 +176,11 @@ enum class SettingsCategory(
         subtitle = "Note storage update and verification results",
         iconRes = R.drawable.ic_custom_sync
     ),
+    WEB_COMPANION(
+        title = "Web Companion",
+        subtitle = "Local browser access, rotating PIN & LAN sync",
+        iconRes = R.drawable.ic_custom_globe
+    ),
     SYSTEM_HEALTH(
         title = "System & Background Health",
         subtitle = "Battery optimization and background persistence",
@@ -198,6 +203,7 @@ fun getSettingsCategoryColors(category: SettingsCategory, isDark: Boolean): Pair
             SettingsCategory.WIDGETS -> Color(0xFF0F3320) to Color(0xFF86EFAC)
             SettingsCategory.STORAGE_RECOVERY -> Color(0xFF243529) to Color(0xFFA7F3D0)
             SettingsCategory.DATA_MIGRATION -> Color(0xFF243529) to Color(0xFFA7F3D0)
+            SettingsCategory.WEB_COMPANION -> Color(0xFF162D3B) to Color(0xFF38BDF8)
             SettingsCategory.SYSTEM_HEALTH -> Color(0xFF1B2144) to Color(0xFFA5B4FC)
         }
     } else {
@@ -210,6 +216,7 @@ fun getSettingsCategoryColors(category: SettingsCategory, isDark: Boolean): Pair
             SettingsCategory.WIDGETS -> Color(0xFFD1FAE5) to Color(0xFF047857)
             SettingsCategory.STORAGE_RECOVERY -> Color(0xFFD1FAE5) to Color(0xFF065F46)
             SettingsCategory.DATA_MIGRATION -> Color(0xFFD1FAE5) to Color(0xFF065F46)
+            SettingsCategory.WEB_COMPANION -> Color(0xFFE0F2FE) to Color(0xFF0284C7)
             SettingsCategory.SYSTEM_HEALTH -> Color(0xFFE0E7FF) to Color(0xFF4338CA)
         }
     }
@@ -462,6 +469,10 @@ fun SettingsCategoryDetailScreen(
     }
     if (category == SettingsCategory.DATA_MIGRATION) {
         NoteMigrationScreen(startup = false, onDone = {}, onBack = onNavigateBack)
+        return
+    }
+    if (category == SettingsCategory.WEB_COMPANION) {
+        WebCompanionSettingsScreen(viewModel = viewModel, onNavigateBack = onNavigateBack)
         return
     }
 

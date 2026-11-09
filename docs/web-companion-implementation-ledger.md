@@ -13,13 +13,33 @@ This document tracks every atomic change, file created/modified, and verificatio
 | **03** | **Embedded Server Engine** | ✅ Complete | Lightweight coroutine-based HTTP/1.1 server for LAN endpoints, zero external dependencies. |
 | **04** | **Notes API Endpoints** | ✅ Complete | Paginated note listing, detail retrieval, PIN auth login/logout, media streaming. |
 | **05** | **Web Client Assets** | ✅ Complete | Clean, responsive SPA (HTML/CSS/JS) mirroring phone's theme and dynamic wallpaper colors. |
-| **06** | **Android UI & Service** | ⏳ Pending | Web Companion settings card, start/stop toggle, active PIN & IP display. |
+| **06** | **Android UI & Service** | ✅ Complete | Web Companion settings category (`ic_custom_globe`), CollapsibleCommonTopBar, Hero card, port selector. |
 
 ---
 
 ## Atomic Step Details
 
-### Step 05: Web Client Assets & Real-Time Phone Theme Sync
+### Step 06: Android UI & Service Integration (`WebCompanionSettingsScreen`)
+- **Package**: `com.example.ui.screens`, `com.example.web`
+- **Source**:
+  - `app/src/main/kotlin/com/example/web/WebCompanionManager.kt`
+  - `app/src/main/kotlin/com/example/ui/screens/WebCompanionSettingsScreen.kt`
+  - `app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt`
+  - `app/src/main/res/values/strings.xml`
+- **Key Capabilities**:
+  - **PixelPlayer M3 Expressive Architecture**:
+    - Added `SettingsCategory.WEB_COMPANION` using existing icon `R.drawable.ic_custom_globe`.
+    - Harmonized dual-tone avatar badge: Deep Sky Blue (`#162D3B` to `#38BDF8` dark, `#E0F2FE` to `#0284C7` light).
+    - Smooth scroll-driven `CollapsibleCommonTopBar(maxHeight = 160.dp)`.
+  - **Hero Status & Connection Card**:
+    - Live running indicator with pulsing state dot.
+    - One-tap copyable local URL (`http://<ip>:<port>`).
+    - Prominent 4-digit authentication PIN in bold monospace layout with live "Rotate PIN" action.
+  - **Connected Controls**:
+    - `ExpressiveSettingsSwitchItem` starting/stopping server and foreground notification.
+    - `ExpressiveSettingsSelectorItem` using standard `ModalBottomSheet` to select port (`8080`, `8888`, `9090`, `53317`).
+    - Security overview tiles showing active brute-force protection and mobile editor conflict lock.
+
 - **Package / Assets**: `app/src/main/assets/web/`
 - **Files**:
   - `app/src/main/kotlin/com/example/web/server/WebThemeExporter.kt`

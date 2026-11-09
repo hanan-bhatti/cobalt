@@ -41,4 +41,8 @@
     <string name="title_untitled_item">Untitled item</string>
     <string name="title_voice_memo_timestamp">Voice memo, %s</string>
     <string name="title_photo_timestamp">Photo, %s</string>
+
+    <!-- Web Companion -->
+    <string name="web_companion_title">Web Companion</string>
+    <string name="web_companion_subtitle">Access your notes from desktop via local Wi-Fi</string>
 </resources>
