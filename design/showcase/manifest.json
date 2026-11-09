@@ -1,0 +1,473 @@
+[
+  {
+    "slug": "01-home",
+    "label": "YOUR PERSONAL ARCHIVE",
+    "title": [
+      "A home for",
+      "what you keep."
+    ],
+    "body": [
+      "Notes, links, images, code and media.",
+      "One archive to come back to."
+    ],
+    "captures": [
+      "home-list"
+    ],
+    "layout": "hero",
+    "palette": {
+      "surface": "#EEF5EA",
+      "container": "#D6E8CF",
+      "foreground": "#173D2B",
+      "secondary": "#47634C"
+    },
+    "size": [
+      1080,
+      1920
+    ],
+    "ui": "Unmodified emulator capture; uniformly scaled and clipped by device bezel.",
+    "source_package": "com.hanan_bhatti.cobalt",
+    "raw_sha256": {
+      "home-list": "bdc8321a9dc4a8602b71e7e4c1bad774368eec5b2b42dfb71c2b4b3e335ee190"
+    }
+  },
+  {
+    "slug": "02-grid-and-list",
+    "label": "TWO WAYS TO BROWSE",
+    "title": [
+      "Your archive.",
+      "Your point of view."
+    ],
+    "body": [
+      "Switch between a compact list",
+      "and a visual grid."
+    ],
+    "captures": [
+      "home-list",
+      "home-grid-final"
+    ],
+    "layout": "duo",
+    "palette": {
+      "surface": "#F2EDFA",
+      "container": "#DDD3EE",
+      "foreground": "#382C52",
+      "secondary": "#695B7C"
+    },
+    "size": [
+      1080,
+      1920
+    ],
+    "ui": "Unmodified emulator capture; uniformly scaled and clipped by device bezel.",
+    "source_package": "com.hanan_bhatti.cobalt",
+    "raw_sha256": {
+      "home-list": "bdc8321a9dc4a8602b71e7e4c1bad774368eec5b2b42dfb71c2b4b3e335ee190",
+      "home-grid-final": "4ae13006908fcf474dd4bc3a4f4cf10f06542deab8f4b058185b1bf276d57f00"
+    }
+  },
+  {
+    "slug": "03-quick-capture",
+    "label": "CAPTURE THE MOMENT",
+    "title": [
+      "Catch it",
+      "while it’s fresh."
+    ],
+    "body": [
+      "Start a note. Save a link.",
+      "Add an image or record a memo."
+    ],
+    "captures": [
+      "add-options-final",
+      "image-reader"
+    ],
+    "layout": "capture",
+    "palette": {
+      "surface": "#FFF0E7",
+      "container": "#F7D4BD",
+      "foreground": "#57341F",
+      "secondary": "#84624B"
+    },
+    "size": [
+      1080,
+      1920
+    ],
+    "ui": "Unmodified emulator capture; uniformly scaled and clipped by device bezel.",
+    "source_package": "com.hanan_bhatti.cobalt",
+    "raw_sha256": {
+      "add-options-final": "2b43e4fcb6457627b76a3a76f0437b4764cd88028e7ac0ccd71345c2a145db80",
+      "image-reader": "eb53f7a5d13cdba1866cfdba0c20032e3d95ef713d1cb1acedbd442fba090ef8"
+    }
+  },
+  {
+    "slug": "04-notes",
+    "label": "ROOM TO THINK",
+    "title": [
+      "Make space",
+      "for a good idea."
+    ],
+    "body": [
+      "Markdown, checklists and quotes.",
+      "Ready for your next visit."
+    ],
+    "captures": [
+      "note-reader"
+    ],
+    "layout": "reader",
+    "palette": {
+      "surface": "#F8F3E8",
+      "container": "#E9DEC4",
+      "foreground": "#443A28",
+      "secondary": "#766A55"
+    },
+    "size": [
+      1080,
+      1920
+    ],
+    "ui": "Unmodified emulator capture; uniformly scaled and clipped by device bezel.",
+    "source_package": "com.hanan_bhatti.cobalt",
+    "raw_sha256": {
+      "note-reader": "13b6951dea945d440b3d99833af711203e68ffdf0382c83a35f8edc874659060"
+    }
+  },
+  {
+    "slug": "05-code",
+    "label": "SMALL THINGS WORTH SAVING",
+    "title": [
+      "Keep the snippet.",
+      "Skip the hunt."
+    ],
+    "body": [
+      "Save useful code beside",
+      "the rest of your notes."
+    ],
+    "captures": [
+      "code-reader"
+    ],
+    "layout": "tilt",
+    "palette": {
+      "surface": "#EEF2FC",
+      "container": "#D6E0F6",
+      "foreground": "#263B60",
+      "secondary": "#576B8D"
+    },
+    "size": [
+      1080,
+      1920
+    ],
+    "ui": "Unmodified emulator capture; uniformly scaled and clipped by device bezel.",
+    "source_package": "com.hanan_bhatti.cobalt",
+    "raw_sha256": {
+      "code-reader": "09faa894762a4b389dbf68ed1e36390bc243b174a7fec38af3b6d2b92af8cca7"
+    }
+  },
+  {
+    "slug": "06-links",
+    "label": "A LITTLE CONTEXT HELPS",
+    "title": [
+      "Save the link.",
+      "Keep the context."
+    ],
+    "body": [
+      "A preview, a description",
+      "and the original source."
+    ],
+    "captures": [
+      "link-detail"
+    ],
+    "layout": "link",
+    "palette": {
+      "surface": "#F8EDFA",
+      "container": "#EAD3ED",
+      "foreground": "#503052",
+      "secondary": "#7E5C80"
+    },
+    "size": [
+      1080,
+      1920
+    ],
+    "ui": "Unmodified emulator capture; uniformly scaled and clipped by device bezel.",
+    "source_package": "com.hanan_bhatti.cobalt",
+    "raw_sha256": {
+      "link-detail": "c0e6bd0c1c1310962fb2417634d18c8927e60f10e228a380f62c298f1a3964f9"
+    }
+  },
+  {
+    "slug": "07-folders",
+    "label": "ORGANIZE / 01",
+    "title": [
+      "A place for",
+      "every thread."
+    ],
+    "body": [
+      "Distinct colors. Familiar icons.",
+      "Folders for the things you care about."
+    ],
+    "captures": [
+      "folders-final"
+    ],
+    "layout": "connected",
+    "palette": {
+      "surface": "#FFF7DB",
+      "container": "#EFE0A4",
+      "foreground": "#4B421F",
+      "secondary": "#7C7047"
+    },
+    "size": [
+      1080,
+      1920
+    ],
+    "ui": "Unmodified emulator capture; uniformly scaled and clipped by device bezel.",
+    "source_package": "com.hanan_bhatti.cobalt",
+    "raw_sha256": {
+      "folders-final": "0d43575146b5681c2864794a77186ab12a08cecf599c1307799c5fe480aadcda"
+    }
+  },
+  {
+    "slug": "08-create-folder",
+    "label": "ORGANIZE / 02",
+    "title": [
+      "Give it a color.",
+      "Make it yours."
+    ],
+    "body": [
+      "Choose a name and an icon.",
+      "Pin it when you want it close."
+    ],
+    "captures": [
+      "add-folder-final"
+    ],
+    "layout": "connected",
+    "palette": {
+      "surface": "#FFF0EE",
+      "container": "#F4D0C9",
+      "foreground": "#593630",
+      "secondary": "#886159"
+    },
+    "size": [
+      1080,
+      1920
+    ],
+    "ui": "Unmodified emulator capture; uniformly scaled and clipped by device bezel.",
+    "source_package": "com.hanan_bhatti.cobalt",
+    "raw_sha256": {
+      "add-folder-final": "a5181ab91f6bac4ecec621fd2b6c4cfba1aceebb7e8451d6d5e51cfd5e30f7a5"
+    }
+  },
+  {
+    "slug": "09-pinned-folder",
+    "label": "ORGANIZE / 03",
+    "title": [
+      "Good ideas,",
+      "within reach."
+    ],
+    "body": [
+      "Pin a folder. Give your saved",
+      "thoughts a familiar place."
+    ],
+    "captures": [
+      "pinned-folder",
+      "note-reader"
+    ],
+    "layout": "connected",
+    "palette": {
+      "surface": "#E8F6F1",
+      "container": "#C5E8DD",
+      "foreground": "#214E43",
+      "secondary": "#517A6E"
+    },
+    "size": [
+      1080,
+      1920
+    ],
+    "ui": "Unmodified emulator capture; uniformly scaled and clipped by device bezel.",
+    "source_package": "com.hanan_bhatti.cobalt",
+    "raw_sha256": {
+      "pinned-folder": "b5431eaeee8df1a204039e9f4044e270aa09bacd4a61e517af28801d3600efd3",
+      "note-reader": "13b6951dea945d440b3d99833af711203e68ffdf0382c83a35f8edc874659060"
+    }
+  },
+  {
+    "slug": "10-search",
+    "label": "FIND YOUR WAY BACK",
+    "title": [
+      "Find the thought",
+      "you nearly forgot."
+    ],
+    "body": [
+      "Search your saved archive",
+      "across different content types."
+    ],
+    "captures": [
+      "search"
+    ],
+    "layout": "search",
+    "palette": {
+      "surface": "#EEF0FC",
+      "container": "#D6DAF3",
+      "foreground": "#30375F",
+      "secondary": "#61698C"
+    },
+    "size": [
+      1080,
+      1920
+    ],
+    "ui": "Unmodified emulator capture shown as a framed results close-up.",
+    "source_package": "com.hanan_bhatti.cobalt",
+    "raw_sha256": {
+      "search": "a8af18312488e559566404589f0837f5b4fb66d526460bc3a8b2d43024a39a1e"
+    }
+  },
+  {
+    "slug": "11-media-hub",
+    "label": "YOUR MEDIA HUB",
+    "title": [
+      "A little hub for",
+      "your next watch."
+    ],
+    "body": [
+      "Movies, TV shows, anime and manga.",
+      "A collection beyond your notes."
+    ],
+    "captures": [
+      "media-hub"
+    ],
+    "layout": "media",
+    "palette": {
+      "surface": "#2C223A",
+      "container": "#493556",
+      "foreground": "#F6EDFE",
+      "secondary": "#D3BFDE"
+    },
+    "size": [
+      1080,
+      1920
+    ],
+    "ui": "Unmodified emulator capture; uniformly scaled and clipped by device bezel.",
+    "source_package": "com.hanan_bhatti.cobalt",
+    "raw_sha256": {
+      "media-hub": "26da149bcbb956e30022e4ab8c6f79e59190ffa7be64b9758023dd3b0ee17d85"
+    }
+  },
+  {
+    "slug": "12-media-detail",
+    "label": "TAKE A CLOSER LOOK",
+    "title": [
+      "More than",
+      "a title to save."
+    ],
+    "body": [
+      "Explore the synopsis, rating",
+      "and watch status."
+    ],
+    "captures": [
+      "media-detail"
+    ],
+    "layout": "detail",
+    "palette": {
+      "surface": "#F5EFFE",
+      "container": "#E3D4F0",
+      "foreground": "#45305B",
+      "secondary": "#78608E"
+    },
+    "size": [
+      1080,
+      1920
+    ],
+    "ui": "Unmodified emulator capture; uniformly scaled and clipped by device bezel.",
+    "source_package": "com.hanan_bhatti.cobalt",
+    "raw_sha256": {
+      "media-detail": "2867eaddd242f1c599c334e7e0513f8eb041dc98cafdf49c40bdc7d1e1bb6aa4"
+    }
+  },
+  {
+    "slug": "13-settings",
+    "label": "THE WAY YOU USE COBALT",
+    "title": [
+      "Your archive.",
+      "Your preferences."
+    ],
+    "body": [
+      "Appearance, media providers",
+      "and the tools behind your capture flow."
+    ],
+    "captures": [
+      "settings-heatmap"
+    ],
+    "layout": "settings",
+    "palette": {
+      "surface": "#EAF5FA",
+      "container": "#CBE5EF",
+      "foreground": "#234752",
+      "secondary": "#577984"
+    },
+    "size": [
+      1080,
+      1920
+    ],
+    "ui": "Unmodified emulator capture; uniformly scaled and clipped by device bezel.",
+    "source_package": "com.hanan_bhatti.cobalt.debug",
+    "raw_sha256": {
+      "settings-heatmap": "cc2927e1eaf40c3e010a1ddffea1c192cdf4b8227e11fa5b7b3d58e6678b5de7"
+    }
+  },
+  {
+    "slug": "14-appearance",
+    "label": "A PERSONAL TOUCH",
+    "title": [
+      "Make Cobalt",
+      "feel like you."
+    ],
+    "body": [
+      "Light or dark. Dynamic color.",
+      "Frosted blur you can tune."
+    ],
+    "captures": [
+      "appearance"
+    ],
+    "layout": "appearance",
+    "palette": {
+      "surface": "#FBEFF3",
+      "container": "#EFD4DF",
+      "foreground": "#553541",
+      "secondary": "#866574"
+    },
+    "size": [
+      1080,
+      1920
+    ],
+    "ui": "Unmodified emulator capture; uniformly scaled and clipped by device bezel.",
+    "source_package": "com.hanan_bhatti.cobalt",
+    "raw_sha256": {
+      "appearance": "bc4124e499221f033215ab14e1a1ac0c84b746ddb068f11a34b3d213a1d7f38d"
+    }
+  },
+  {
+    "slug": "15-storage",
+    "label": "ON THIS DEVICE",
+    "title": [
+      "Know what’s",
+      "in your archive."
+    ],
+    "body": [
+      "Saved notes, draft recovery,",
+      "Trash and saved history."
+    ],
+    "captures": [
+      "storage"
+    ],
+    "layout": "storage",
+    "palette": {
+      "surface": "#F0F3E7",
+      "container": "#DAE3C7",
+      "foreground": "#36482A",
+      "secondary": "#657653"
+    },
+    "size": [
+      1080,
+      1920
+    ],
+    "ui": "Unmodified emulator capture; uniformly scaled and clipped by device bezel.",
+    "source_package": "com.hanan_bhatti.cobalt",
+    "raw_sha256": {
+      "storage": "db8fc7e3ce7e35c52dbf2be6666bace750dba4d1b1d6f4d22f710c8c4a06f44c"
+    }
+  }
+]
