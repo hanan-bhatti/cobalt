@@ -20,6 +20,8 @@ package com.example.ui.components.share
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
@@ -46,7 +48,6 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.model.SavedItem
 import com.example.ui.components.MarkdownText
-import com.example.ui.components.SafeMarkdownDocument
 import com.example.ui.components.parseSafeMarkdown
 import com.example.ui.theme.CobaltTypography
 import com.example.ui.theme.LocalCobaltTypography
@@ -150,120 +151,6 @@ private fun CobaltTypography.scaleForCard(targetBaseSize: Float): CobaltTypograp
 }
 
 /**
- * Truncation result for Document layout fitting standard A4 proportion.
- */
-internal data class DocumentTruncation(
-    val content: String,
-    val hasContinuation: Boolean
-)
-
-/**
- * Truncation result for Minimal Note memo layout.
- */
-internal data class MinimalTruncation(
-    val truncatedMarkdown: String,
-    val remainingLines: Int
-)
-
-/**
- * Cuts content cleanly to fit within standard A4 bounds, signaling continuation with ellipsis.
- */
-internal fun computeA4Content(noteBody: String, maxLines: Int = 18): DocumentTruncation {
-    val clean = noteBody.trim()
-    if (clean.isBlank()) return DocumentTruncation("", false)
-
-    val lines = clean.lines()
-    val nonBlankLines = lines.filter { it.isNotBlank() }
-
-    if (nonBlankLines.size > maxLines) {
-        var count = 0
-        var cutIndex = 0
-        for ((index, line) in lines.withIndex()) {
-            if (line.isNotBlank()) count++
-            if (count == maxLines) {
-                cutIndex = index + 1
-                break
-            }
-        }
-        val preview = lines.take(cutIndex).joinToString("\n").trimEnd()
-        return DocumentTruncation(preview, true)
-    }
-
-    return DocumentTruncation(clean, false)
-}
-
-/**
- * Extracts a concise excerpt for the Compact style, specifically tailored for quotes and short thoughts.
- */
-internal fun extractCompactNoteContent(noteBody: String): String {
-    val clean = noteBody.trim()
-    if (clean.isBlank()) return ""
-
-    val lines = clean.lines().map { it.trim() }.filter { it.isNotBlank() }
-    if (lines.size <= 3 && lines.none { it.startsWith("|") || it.startsWith("#") }) {
-        return clean.removePrefix(">").trim()
-    }
-
-    val quoteLines = lines.filter { it.startsWith(">") }
-    if (quoteLines.isNotEmpty()) {
-        return quoteLines.joinToString(" ") { it.removePrefix(">").trim() }.take(180)
-    }
-
-    val bodyParagraph = lines.firstOrNull { line ->
-        !line.startsWith("#") &&
-        !line.startsWith("|") &&
-        !line.startsWith("-") &&
-        !line.startsWith("*") &&
-        !line.startsWith("```")
-    }
-
-    if (!bodyParagraph.isNullOrBlank()) {
-        return bodyParagraph.take(180)
-    }
-
-    val firstLine = lines.firstOrNull() ?: clean
-    return firstLine.replace(Regex("^#+\\s*"), "").replace(Regex("^>+\\s*"), "").take(140)
-}
-
-/**
- * Computes line-limited content for the Minimal memo card.
- */
-internal fun computeMinimalContent(noteBody: String, maxLines: Int = 8): MinimalTruncation {
-    val clean = noteBody.trim()
-    if (clean.isBlank()) return MinimalTruncation("", 0)
-
-    val lines = clean.lines()
-    val nonBlankLines = lines.filter { it.isNotBlank() }
-
-    if (nonBlankLines.size > maxLines) {
-        var count = 0
-        var cutIndex = 0
-        for ((index, line) in lines.withIndex()) {
-            if (line.isNotBlank()) count++
-            if (count == maxLines) {
-                cutIndex = index + 1
-                break
-            }
-        }
-        val preview = lines.take(cutIndex).joinToString("\n").trimEnd()
-        val remaining = nonBlankLines.size - maxLines
-        return MinimalTruncation(preview, remaining)
-    }
-
-    val words = clean.split(Regex("\\s+")).filter { it.isNotBlank() }
-    val wordsPerLineEstimate = 8
-    val estimatedLines = words.size / wordsPerLineEstimate
-    if (estimatedLines > maxLines && words.size > maxLines * wordsPerLineEstimate) {
-        val keepWords = maxLines * wordsPerLineEstimate
-        val preview = words.take(keepWords).joinToString(" ")
-        val remaining = maxOf(1, (words.size - keepWords) / wordsPerLineEstimate)
-        return MinimalTruncation(preview, remaining)
-    }
-
-    return MinimalTruncation(clean, 0)
-}
-
-/**
  * Aesthetic Note Card component for social sharing and 4K high-resolution PNG export.
  * Features 3 distinct layouts:
  * 1. Document (Sharp paper corners, A4 proportions, centered top title, no metadata clutter, continuation ellipsis)
@@ -288,7 +175,6 @@ fun NoteShareCard(
         }
         currentTypography.scaleForCard(targetBaseSize)
     }
-    val preparedDoc = remember(noteBody) { parseSafeMarkdown(noteBody) }
 
     val displayTitle = remember(item.title, noteBody) {
         val t = item.title.trim()
@@ -351,7 +237,7 @@ fun NoteShareCard(
                         EditorialNoteCard(
                             title = displayTitle,
                             noteBody = noteBody,
-                            preparedDoc = preparedDoc,
+                            
                             cobaltTypography = cardTypography
                         )
                     }
@@ -359,7 +245,7 @@ fun NoteShareCard(
                         MinimalNoteCard(
                             title = displayTitle,
                             noteBody = noteBody,
-                            preparedDoc = preparedDoc,
+                            
                             cobaltTypography = cardTypography
                         )
                     }
@@ -421,13 +307,13 @@ fun NoteShareCard(
 private fun EditorialNoteCard(
     title: String?,
     noteBody: String,
-    preparedDoc: SafeMarkdownDocument?,
     cobaltTypography: CobaltTypography,
     modifier: Modifier = Modifier
 ) {
     val truncation = remember(noteBody) { computeA4Content(noteBody, maxLines = 14) }
+    val contentScroll = rememberScrollState()
     val pageDoc = remember(truncation.content) {
-        if (truncation.content == noteBody) preparedDoc else parseSafeMarkdown(truncation.content)
+        parseSafeMarkdown(truncation.content)
     }
 
     Surface(
@@ -477,12 +363,12 @@ private fun EditorialNoteCard(
                 MarkdownText(
                     markdown = truncation.content,
                     prepared = pageDoc,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().verticalScroll(contentScroll, enabled = false)
                 )
             }
 
             // Continuation ellipsis at bottom when note exceeds A4 page
-            if (truncation.hasContinuation) {
+            if (truncation.hasContinuation || contentScroll.maxValue > 0) {
                 Text(
                     text = "...",
                     style = MaterialTheme.typography.bodyLarge,
@@ -505,13 +391,13 @@ private fun EditorialNoteCard(
 private fun MinimalNoteCard(
     title: String?,
     noteBody: String,
-    preparedDoc: SafeMarkdownDocument?,
     cobaltTypography: CobaltTypography,
     modifier: Modifier = Modifier
 ) {
     val truncation = remember(noteBody) { computeMinimalContent(noteBody, maxLines = 8) }
+    val contentScroll = rememberScrollState()
     val truncatedDoc = remember(truncation.truncatedMarkdown) {
-        if (truncation.truncatedMarkdown == noteBody) preparedDoc else parseSafeMarkdown(truncation.truncatedMarkdown)
+        parseSafeMarkdown(truncation.truncatedMarkdown)
     }
 
     Surface(
@@ -555,10 +441,10 @@ private fun MinimalNoteCard(
                 MarkdownText(
                     markdown = truncation.truncatedMarkdown,
                     prepared = truncatedDoc,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().verticalScroll(contentScroll, enabled = false)
                 )
 
-                if (truncation.remainingLines > 0) {
+                if (truncation.hasContinuation || contentScroll.maxValue > 0) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -597,7 +483,8 @@ private fun CompactNoteCard(
     cobaltTypography: CobaltTypography,
     modifier: Modifier = Modifier
 ) {
-    val compactText = remember(noteBody) { extractCompactNoteContent(noteBody) }
+    val excerpt = remember(noteBody) { compactNoteExcerpt(noteBody) }
+    val compactText = excerpt.text
 
     Surface(
         shape = RoundedCornerShape(14.dp),
@@ -613,15 +500,15 @@ private fun CompactNoteCard(
                 .padding(horizontal = 22.dp, vertical = 20.dp),
             contentAlignment = Alignment.CenterStart
         ) {
-            val formattedQuote = remember(compactText) {
-                if (compactText.startsWith("\"") || compactText.startsWith("“")) compactText
+            val formattedQuote = remember(compactText, excerpt.isQuote) {
+                if (!excerpt.isQuote || compactText.startsWith("\"") || compactText.startsWith("“")) compactText
                 else "“$compactText”"
             }
             Text(
                 text = formattedQuote,
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontFamily = cobaltTypography.textFontFamily,
-                    fontStyle = FontStyle.Italic,
+                    fontStyle = if (excerpt.isQuote) FontStyle.Italic else FontStyle.Normal,
                     fontWeight = FontWeight.Medium,
                     fontSize = 15.5.sp,
                     lineHeight = 23.sp
