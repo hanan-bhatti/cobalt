@@ -1382,6 +1382,14 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private var editOriginalId: String? = null
+        set(value) {
+            field = value
+            if (value != null) {
+                com.example.web.session.EditorSessionRegistry.acquireMobileLock(value)
+            } else {
+                com.example.web.session.EditorSessionRegistry.releaseMobileLock()
+            }
+        }
     private val _isEditingItem = MutableStateFlow(false)
     val isEditingItem: StateFlow<Boolean> = _isEditingItem.asStateFlow()
 

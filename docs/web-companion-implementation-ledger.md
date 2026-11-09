@@ -9,7 +9,7 @@ This document tracks every atomic change, file created/modified, and verificatio
 | Step | Component | Status | Description |
 | :--- | :--- | :---: | :--- |
 | **01** | **PIN Creator & Security Manager** | ✅ Complete | 4-digit rotating PIN, progressive lockout, global tripwire, session tokens, and rate limiter. |
-| **02** | **Editor Session Registry** | ⏳ Pending | Active note lock registry preventing writes to notes open in mobile editor. |
+| **02** | **Editor Session Registry** | ✅ Complete | Active note lock registry preventing writes to notes open in mobile editor; hooked into `CobaltViewModel`. |
 | **03** | **Embedded Server Engine** | ⏳ Pending | Lightweight coroutine-based HTTP/1.1 server for LAN endpoints. |
 | **04** | **Notes API Endpoints** | ⏳ Pending | Paginated note listing, detail retrieval, media streaming. |
 | **05** | **Web Client Assets** | ⏳ Pending | Clean, minimal single-page web app (HTML/CSS/JS) with PIN auth and markdown reader. |
