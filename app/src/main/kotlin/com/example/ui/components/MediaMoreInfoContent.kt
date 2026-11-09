@@ -30,8 +30,9 @@ internal fun MediaMoreInfoContent(item: SavedItem) {
             progress?.ending?.let { "Ending" to it.replaceFirstChar { c -> c.titlecase() } }, item.runtime?.takeIf { it > 0 }?.let { "Runtime" to "$it min" },
             progress?.totalRuntimeFormatted?.let { "Total runtime" to it },
             progress?.network?.takeIf { it.isNotBlank() }?.let { "Network" to it },
-            progress?.country?.takeIf { it.isNotBlank() }?.let { value -> "Country" to value.split(',').joinToString(", ") {
-                java.util.Locale("", it.trim().uppercase(java.util.Locale.ROOT)).displayCountry.ifBlank { it.trim() }
+            progress?.country?.takeIf { it.isNotBlank() }?.let { value -> "Country" to value.split(',').joinToString(", ") { codeStr ->
+                val code = codeStr.trim().uppercase(java.util.Locale.ROOT)
+                runCatching { java.util.Locale.Builder().setRegion(code).build().displayCountry }.getOrNull()?.takeIf { it.isNotBlank() } ?: codeStr.trim()
             } },
             progress?.language?.takeIf { it.isNotBlank() }?.let { "Language" to java.util.Locale.forLanguageTag(it).displayLanguage.ifBlank { it } },
             progress?.contentRating?.takeIf { it.isNotBlank() }?.let { "Age rating" to it },
