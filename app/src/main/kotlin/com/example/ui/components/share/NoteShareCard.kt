@@ -28,15 +28,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,6 +50,104 @@ import com.example.ui.components.SafeMarkdownDocument
 import com.example.ui.components.parseSafeMarkdown
 import com.example.ui.theme.CobaltTypography
 import com.example.ui.theme.LocalCobaltTypography
+
+/**
+ * Scales CobaltTypography proportionally for card formats (A4 Document, Sticky Note, Quote).
+ * Preserves the user's chosen text and code font families, line height ratio, and letter spacing.
+ */
+private fun CobaltTypography.scaleForCard(targetBaseSize: Float): CobaltTypography {
+    val lineMultiplier = lineHeightMultiplier
+    val paraSpacing = (paragraphSpacingDp.value * (targetBaseSize / 16f)).coerceIn(4f, 8f).dp
+    val letterSpacingSp = targetBaseSize * (prefs.letterSpacing)
+
+    val baseBody = TextStyle(
+        fontFamily = textFontFamily,
+        fontWeight = body.fontWeight ?: FontWeight.Normal,
+        fontSize = targetBaseSize.sp,
+        lineHeight = (targetBaseSize * lineMultiplier).sp,
+        letterSpacing = letterSpacingSp.sp,
+        textDirection = TextDirection.Content
+    )
+    val bodyMedium = baseBody.copy(
+        fontSize = (targetBaseSize * 0.9375f).sp,
+        lineHeight = (targetBaseSize * 0.9375f * lineMultiplier).sp
+    )
+    val bodySmall = baseBody.copy(
+        fontSize = (targetBaseSize * 0.75f).sp,
+        lineHeight = (targetBaseSize * 0.75f * lineMultiplier).sp
+    )
+    val h1 = TextStyle(
+        fontFamily = textFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = (targetBaseSize * 1.45f).sp,
+        lineHeight = (targetBaseSize * 1.45f * 1.25f).sp,
+        letterSpacing = letterSpacingSp.sp,
+        textDirection = TextDirection.Content
+    )
+    val h2 = TextStyle(
+        fontFamily = textFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = (targetBaseSize * 1.28f).sp,
+        lineHeight = (targetBaseSize * 1.28f * 1.25f).sp,
+        letterSpacing = letterSpacingSp.sp,
+        textDirection = TextDirection.Content
+    )
+    val h3 = TextStyle(
+        fontFamily = textFontFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = (targetBaseSize * 1.14f).sp,
+        lineHeight = (targetBaseSize * 1.14f * 1.25f).sp,
+        letterSpacing = letterSpacingSp.sp,
+        textDirection = TextDirection.Content
+    )
+    val h4 = TextStyle(
+        fontFamily = textFontFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = targetBaseSize.sp,
+        lineHeight = (targetBaseSize * 1.25f).sp,
+        letterSpacing = letterSpacingSp.sp,
+        textDirection = TextDirection.Content
+    )
+    val codeSize = (targetBaseSize * 0.88f).sp
+    val inlineCode = TextStyle(
+        fontFamily = codeFontFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = codeSize,
+        lineHeight = (targetBaseSize * 0.88f * 1.3f).sp,
+        textDirection = TextDirection.Ltr
+    )
+    val codeBlock = TextStyle(
+        fontFamily = codeFontFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = codeSize,
+        lineHeight = (targetBaseSize * 0.88f * 1.4f).sp,
+        textDirection = TextDirection.Ltr
+    )
+    val quote = baseBody.copy(
+        fontStyle = FontStyle.Italic,
+        lineHeight = (targetBaseSize * lineMultiplier * 1.05f).sp
+    )
+
+    return CobaltTypography(
+        prefs = prefs,
+        textFontFamily = textFontFamily,
+        codeFontFamily = codeFontFamily,
+        body = baseBody,
+        bodyMedium = bodyMedium,
+        bodySmall = bodySmall,
+        h1 = h1,
+        h2 = h2,
+        h3 = h3,
+        h4 = h4,
+        inlineCode = inlineCode,
+        codeBlock = codeBlock,
+        quote = quote,
+        checklist = baseBody,
+        paragraphSpacingDp = paraSpacing,
+        lineHeightMultiplier = lineMultiplier,
+        letterSpacingSp = letterSpacingSp
+    )
+}
 
 /**
  * Truncation result for Document layout fitting standard A4 proportion.
@@ -67,7 +168,7 @@ internal data class MinimalTruncation(
 /**
  * Cuts content cleanly to fit within standard A4 bounds, signaling continuation with ellipsis.
  */
-internal fun computeA4Content(noteBody: String, maxLines: Int = 14): DocumentTruncation {
+internal fun computeA4Content(noteBody: String, maxLines: Int = 18): DocumentTruncation {
     val clean = noteBody.trim()
     if (clean.isBlank()) return DocumentTruncation("", false)
 
@@ -178,7 +279,15 @@ fun NoteShareCard(
     tagline: String = remember { CobaltTaglines.getRandom() },
     modifier: Modifier = Modifier
 ) {
-    val cobaltTypography = LocalCobaltTypography.current
+    val currentTypography = LocalCobaltTypography.current
+    val cardTypography = remember(currentTypography, style) {
+        val targetBaseSize = when (style) {
+            NoteShareStyle.DOCUMENT -> 10.5f
+            NoteShareStyle.MINIMAL -> 11.5f
+            NoteShareStyle.COMPACT -> 13.5f
+        }
+        currentTypography.scaleForCard(targetBaseSize)
+    }
     val preparedDoc = remember(noteBody) { parseSafeMarkdown(noteBody) }
 
     val displayTitle = remember(item.title, noteBody) {
@@ -234,28 +343,32 @@ fun NoteShareCard(
                 .padding(outerCardPadding),
             horizontalAlignment = Alignment.End
         ) {
-            when (style) {
-                NoteShareStyle.DOCUMENT -> {
-                    EditorialNoteCard(
-                        title = displayTitle,
-                        noteBody = noteBody,
-                        preparedDoc = preparedDoc,
-                        cobaltTypography = cobaltTypography
-                    )
-                }
-                NoteShareStyle.MINIMAL -> {
-                    MinimalNoteCard(
-                        title = displayTitle,
-                        noteBody = noteBody,
-                        preparedDoc = preparedDoc,
-                        cobaltTypography = cobaltTypography
-                    )
-                }
-                NoteShareStyle.COMPACT -> {
-                    CompactNoteCard(
-                        noteBody = noteBody,
-                        cobaltTypography = cobaltTypography
-                    )
+            CompositionLocalProvider(
+                LocalCobaltTypography provides cardTypography
+            ) {
+                when (style) {
+                    NoteShareStyle.DOCUMENT -> {
+                        EditorialNoteCard(
+                            title = displayTitle,
+                            noteBody = noteBody,
+                            preparedDoc = preparedDoc,
+                            cobaltTypography = cardTypography
+                        )
+                    }
+                    NoteShareStyle.MINIMAL -> {
+                        MinimalNoteCard(
+                            title = displayTitle,
+                            noteBody = noteBody,
+                            preparedDoc = preparedDoc,
+                            cobaltTypography = cardTypography
+                        )
+                    }
+                    NoteShareStyle.COMPACT -> {
+                        CompactNoteCard(
+                            noteBody = noteBody,
+                            cobaltTypography = cardTypography
+                        )
+                    }
                 }
             }
 
