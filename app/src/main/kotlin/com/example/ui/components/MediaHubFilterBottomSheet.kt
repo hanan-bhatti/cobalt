@@ -64,6 +64,7 @@ fun MediaHubFilterBottomSheet(
     val sortOptions = remember { listOf("Default", "Rating", "Newest", "Year", "Title A-Z") }
 
     val sortListState = rememberLazyListState()
+    val statusListState = rememberLazyListState()
     val typeListState = rememberLazyListState()
     val genreListState = rememberLazyListState()
 
@@ -71,6 +72,13 @@ fun MediaHubFilterBottomSheet(
         val index = sortOptions.indexOf(selectedSort)
         if (index >= 0) {
             sortListState.animateScrollToItem(index)
+        }
+    }
+
+    LaunchedEffect(selectedStatus) {
+        val index = statusFilters.indexOf(selectedStatus)
+        if (index >= 0) {
+            statusListState.animateScrollToItem(index)
         }
     }
 
@@ -131,13 +139,13 @@ fun MediaHubFilterBottomSheet(
                     }
                     Column {
                         Text(
-                            text = "Media Filters",
+                            text = "Media Hub Filters",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "MOVIES, TV SHOWS & ANIME",
+                            text = "MOVIES, TV, ANIME & MANGA",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.secondary,
@@ -215,10 +223,43 @@ fun MediaHubFilterBottomSheet(
                     title = "PROGRESS STATUS",
                     description = if (selectedStatus != "All") "Filtered: $selectedStatus" else "All statuses"
                 )
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    statusFilters.forEach { status ->
-                        FilterChip(selected = selectedStatus == status, onClick = { viewModel.setMediaHubFilterStatus(status) },
-                            label = { Text(when(status) { "Plan to Watch" -> "Planned"; "Watching" -> "In progress"; else -> status }) })
+                LazyRow(
+                    state = statusListState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalFadingEdges(lazyListState = statusListState, fadeWidth = 24.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    items(statusFilters, key = { it }) { status ->
+                        val isSelected = selectedStatus == status
+                        val label = when (status) {
+                            "Plan to Watch" -> "Planned"
+                            "Watching" -> "In progress"
+                            else -> status
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(20.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            border = BorderStroke(
+                                width = 1.dp,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                            ),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .clickable { viewModel.setMediaHubFilterStatus(status) }
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                maxLines = 1,
+                                softWrap = false,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
                     }
                 }
             }
