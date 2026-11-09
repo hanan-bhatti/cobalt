@@ -145,15 +145,15 @@ object AppVersionManager {
         ReleaseNote(
             versionName = currentVersionName,
             versionCode = currentVersionCode,
-            releaseDate = "October 30, 2026",
+            releaseDate = "Unreleased",
             tag = currentTag,
             isCurrent = true,
             isLatest = true,
             highlights = listOf(
-                "Smart Folder Ranking & Adaptive Suggestions",
-                "Elastic Fuzzy Search Engine",
-                "Gemini AI Usage Tracker & Interactive Chart",
-                "Media Activity Line Graph & UI Polish"
+                "Continuous Markdown Editing & Recoverable Drafts",
+                "Shared Note History, Saved Undo/Redo & Protected Storage Cleanup",
+                "Trakt Sync, Custom Jikan Providers & Anime/Manga Controls",
+                "Styled Sharing, Local Fonts, Smart Folders & Adaptive Reminders"
             )
         )
     )

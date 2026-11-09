@@ -1,225 +1,141 @@
-## Unreleased — single application cleanup
+## [2.2.3] - Unreleased
 
-### Fixes
+Development changes since the published v2.2.2 release. This section describes
+implemented source behavior; test results and remaining gaps are documented in
+`docs/version-comparison-v2.2.2-to-current-2026-11-09.md`. It does not certify every
+feature or device. Version name/code remain 2.2.3/19.
 
-- Add inline half-star ratings with swipe selection, four local watch statuses,
-  a bookmark toggle and paged season/episode sheets with locally cached details.
-- Share one media-save path across Capture and Side Dock, retain TMDB/Trakt
-  identities, and batch durable Trakt changes without reimporting the catalogue
-  for each edit. Retain unmatched IDs for retry and protect local deletes.
-- Consolidate Trakt, TMDB and Jikan configuration under Media & Providers;
-  support source priority, private Jikan v4 servers and cached manga facts.
-- Play YouTube trailers inside the app using the existing play/pause icons;
-  pause offscreen and in the background, and offer retry for failed playback.
-- Redesign Media & Providers hierarchy, match the Jikan input to app styling,
-  keep focused fields above the keyboard, and give pending changes their own page.
-- Upload pre-login movie/TV choices, recover legacy Capture provider IDs,
-  apply remote removals, and retain queued changes when Trakt reaches capacity.
-- Use reading labels for manga and keep Jikan catalogue entries out of Trakt writes.
-- Simplify watch-provider chips to supplied logos, names and available prices.
+### Distribution and privacy
 
-- Support selecting and copying parts of rendered notes with a shared rounded
-  selection toolbar, existing icons and long-press action labels. Editor tools
-  use a single row with a More menu; Read aloud is excluded.
-- Add Markdown table creation with row/column counts, row and column editing,
-  alignment and next-cell navigation. Table changes use existing editor history
-  and bounded background parsing; fenced code is protected.
+- Consolidate Foss/Play source flavors into one local Cobalt application. Remove
+  the retired Cobalt account, Firebase/cloud deployment and upload/download
+  services. Retain optional user-configured Gemini, media and Trakt integrations.
+- Give debug builds their own package/data and label. Build one release APK and
+  retain its R8 mapping; preserve WorkManager input-merger constructors in R8.
+- Disable automatic Android backup/device transfer; restrict shared-file paths
+  and redact application logs and throwable details.
+- Store configured API/OAuth credentials with Android Keystore-backed AES-GCM.
+  This protects credentials; it does not add biometric locking or encrypted notes.
 
-- Keep Edit as plain Markdown source and Preview as rendered content; continue lists
-  and checklists on Enter, exit empty items, and preserve literal escaped markers.
-- Apply table alignment in Preview, round inline-code backgrounds, and keep
-  next-cell navigation out of undo history when it changes only the cursor.
-- Skip the startup migration screen on fresh installations and fully migrated
-  libraries while retaining interrupted migrations and legacy drafts.
-- Keep Capture folder controls above the keyboard and remove duplicated footer space.
+### Notes, editor and reader
 
-- Render bounded Side Dock text-note previews as Markdown, retaining monospace
-  code notes, and replace the full-width action bar with a floating three-icon pill.
+- Replace inline Room note bodies with verified, recoverable storage and resumable
+  legacy migration. Keep list/search/widget/reminder reads bounded rather than
+  loading every complete note into a list row.
+- Add immutable 64 KiB text payloads, shared persistent range trees and durable
+  saved Undo/Redo in schema 15. Reuse unchanged text across saved generations and
+  lazily migrate compatible file bodies after independent SHA verification.
+- Commit saved content heads, metadata/search derivatives and navigation together.
+  Reject stale metadata epochs; protect staged roots, recovery work and readers.
+- Use synchronized SQLite rollback journaling for authoritative shared writes.
+  Preserve primary write failures, recover acknowledged drafts and retain saved
+  originals when staging/publication fails. Full-document SHA work still scales
+  with note size; storage sharing is not an instant-save guarantee or a backup.
+- Add continuous native editing with a bounded disk-backed input window, global
+  selection, Undo/Redo, cancellable paste, source styling and recoverable journals.
+  Preserve accepted operations under queue pressure and release editor file locks.
+- Keep Edit as plain Markdown source and Preview as rendered Markdown. Continue
+  lists/checklists on Enter; preserve escaped markers and nested fenced indentation.
+- Add Markdown table creation, row/column changes, alignment and next-cell actions.
+  Keep fenced code protected, retain table actions and serialize rapid Undo/Redo.
+- Add literal Find/Replace, batched replacement and heading navigation with bounded
+  result lists and overflow indicators. Keep search focus and highlight matched text.
+- Render notes incrementally with bounded parsed-block/page caches and prefetch.
+  Preserve long fence/table context, inline code, table alignment and typography;
+  support ATX headings, horizontal rules and custom-tab links.
+- Update checklist markers without reopening the reader or resetting scroll.
+  Refresh detail state after explicit Save and retain/export drafts after failures.
+- Keep Quick Note text/selection independent of delayed persistence echoes; fence
+  debounced writes so newer typing is not overwritten by stale draft completion.
 
-- Simplify Side Dock paste input with a clipboard-preview placeholder, frameless
-  paste control and Send shown only with text; pasting waits for explicit Send.
-- Let compact Dock input grow from one to three lines, use a light close glyph,
-  and show a bounded note-file prefix instead of the two-line list snippet.
-- Queue saved-link metadata independently of Capture/Dock lifetimes, preserving
-  manual descriptions on automatic retries while retaining explicit Refresh replacement.
-- Review Android shares before saving and retain document-import results/errors in
-  a bottom sheet instead of immediately dismissing them.
+### Storage, Trash and recovery
 
-- Update checklist markers in place without reopening the note, resetting its scroll
-  position, or showing a save progress bar; retain recoverable drafts on save failure.
-- Reduce Home card recomposition and scrollbar drag work; keep drag targets stable
-  as differently sized cards enter the viewport and remove delayed thumb tracking.
+- Add Storage with usage categories, history, Trash, unlinked files, recovery and
+  cache/database maintenance pages. Distinguish saved data, protected recovery,
+  disposable cache and database overhead with explicit accounting.
+- Retain deleted items for 30 days, support reviewed restoration/permanent deletion,
+  and keep required history/media references protected. Cancel deleted media work
+  and retain provider identities so remote synchronization cannot reimport deletes.
+- Retain/export/restore eligible saved versions and compact compatible older file
+  versions into verified deltas. Shared history counts additional physical storage
+  separately from the logical size of a version.
+- Protect unsaved writing, current heads, active readers, Trash and unknown retained
+  data during cleanup. Add reviewed disposable cleanup with a continuous five-second
+  hold, cancellation and stale-review checks; keep advanced cleanup collapsed.
+- Add themed skeleton loading, refreshed usage hierarchy, morphing pull-to-refresh
+  and expressive confirmation sheets. Reuse existing recovery/settings navigation.
 
-- Keep accepted editor operations when closing under queue backpressure; retain
-  unpublished paste and Undo changes when retrying a failed journal write.
-- Handle selection, emoji deletion and hardware cursor movement across the internal
-  editing viewport without adding visible editing blocks or controls.
-- Reclaim cancelled paste buffers, stop oversized input streams early, and serialize
-  permanent deletion with editor-history cleanup.
-- Preserve code indentation when long fenced blocks continue inside lists or quotes.
+### Capture, links, folders and Home
 
-- **Prevent internal cache paths and URIs as user-facing titles and descriptions (Issue #21):**
-  - Read original file display names (`OpenableColumns.DISPLAY_NAME`) at pick time across gallery, camera, and share intents before copying into app cache.
-  - Added pure `ItemTitleResolver` that sanitizes file names, strips extensions, bounds string lengths without splitting surrogate pairs, and provides localized fallbacks ("Untitled image", "Untitled video", "Untitled audio", etc.) for untitled captures.
-  - Reject internal cache paths (`/cache/`, `/data/user/`), URIs (`file:`, `content:`), and generated temporary cache names (`media_<uuid>`) across all capture pathways.
-  - Enforced single defense-in-depth sanitization choke point in `CobaltRepository` (`saveItem`, `saveItemLocallyOnly`, `saveNewMediaItem`).
-  - Added display-time guards and eliminated path leaks across card subtitles, search rows, detail headers/descriptions, folder pickers, home micro-cards, widgets, Side Dock peek rows, notifications, and share sheets.
-  - Added one-time, idempotent, crash-safe background cleanup (`LegacyPathTitleCleanup`) guarded by SharedPreferences to rename existing path-titled items and recover metadata without altering Room DB schema or note bodies.
+- Add six radial capture shortcuts and camera/gallery source sheets. Review incoming
+  Android shares before saving; keep document import results/errors visible until
+  dismissed. Receive supported text documents with strict decoding and size policy.
+- Persist link-preview jobs beyond Capture/Dock lifetimes. Keep manual descriptions
+  on automatic retries; explicit Refresh can replace them with race protection.
+  Fill missing social metadata without manufacturing unavailable facts.
+- Prevent internal cache paths, generated names and content/file URIs from becoming
+  user-facing titles. Resolve original file names, sanitize at save/display boundaries
+  and repair eligible legacy path titles (issue #21).
+- Detect duplicate folders, URLs and movie identities; show inline notices and offer
+  applicable Trash recovery rather than silently adding another item.
+- Add local smart folder ranking, fuzzy search, organization settings and a 52-week
+  capture heatmap. Persist Home filters and refine empty-state guidance.
+- Reduce Home card invalidation and scrollbar drag work; skip haze capture when blur
+  is disabled. Calculate actual media sizes for size sorting/filtering.
+- Keep inline folder controls available above the keyboard (issue #24). Dismiss
+  deletion Undo on navigation and show its remaining time with a border.
 
-- Compact eligible older note versions into verified compressed copy/insert deltas,
-  retain complete history anchors, and reconstruct/export/restore without whole-body
-  Strings. Keep the current note as Markdown and retain originals on conversion failure.
-- Prioritize visible Markdown over speculative prefetch; reduce heading-jump preparation.
-- Preserve original line endings when toggling Markdown checkboxes, including quoted
-  and ordered tasks; exclude code using CommonMark parsing.
+### Media and providers
 
-### Storage and Trash
+- Add optional Trakt OAuth PKCE/App Links, account-bound two-way synchronization,
+  persistent outbox retries, pending-change review and safe token revocation.
+  Guard disconnect/login races and retain unmatched IDs for later retry.
+- Share one movie/TV save path across Capture/Dock; reconcile TMDB/Trakt identities,
+  preserve local choices/deletions and import remote progress without replacing notes.
+- Consolidate Trakt, TMDB and Jikan into Media & Providers with source enablement and
+  priority. Add custom Jikan v4 endpoints, cached anime/manga facts and reading labels
+  for manga. Jikan items stay out of Trakt writes (local Jikan request #26).
+- Add half-star local ratings, watch/read status, bookmarks, cached season/episode
+  paging, progress and next-up details. Present provider/source ratings with supplied
+  badges and playback/streaming-provider information when available.
+- Add inline YouTube trailer playback, pause on background/offscreen, and retry.
+  A missing or blocked trailer is not represented as successful playback.
 
-- Replace the storage size rows with a themed segmented usage bar and compact
-  category breakdown, plus focused history, Trash, unlinked files and maintenance pages.
-- Keep deleted items and their versions recoverable for 30 days. Add Restore,
-  reviewed Empty Trash and resumable permanent deletion; disabling Trash retains
-  a short Undo window for new deletions.
-- Expose retained unlinked bodies/media for recovery, export or explicit cleanup.
-  Protect current notes, active recovery work, shared media and required delta anchors.
-- Add safe cache cleanup and explicit database compaction. Reuse existing delete,
-  undo, export and menu icons, and use the supplied Storage icon.
-- Move ordinary note recovery access to Storage and remove its duplicate migration link.
+### Sharing, appearance and help
 
-### Note recovery and storage management
+- Add styled Link, Image, Movie and Note share sheets with floating hero previews,
+  connected controls, themes and image/file export. Keep sheet swipes independent
+  of vertical drag handling; randomize attribution on sheet launch.
+- Provide Document, Minimal and Compact note cards, Markdown file export and bounded
+  clipboard copy. Downsample oversized image sources and bound export dimensions.
+- Add local FOSS fonts and licenses, live text/font previews and per-role typography
+  preferences applied to reader, editor, code and Markdown layouts.
+- Add adaptive local review reminders, custom delivery time, Gemini usage/daily
+  token history and interactive activity charts; show configured model names.
+- Add public product/legal/callback pages for Trakt App Links. These pages are a
+  website and OAuth callback, not a note-editing web companion.
+- Refresh release-history UI with GitHub release/changelog loading, cache/retry and
+  opt-in update checks; expand the open-source library directory.
+- Allow consecutive bug reports through Report Another/input reset (issue #23).
+  Refresh reporter/version headers and share icons across feedback and survey.
+- Add the survey's frustration question and remove default reaction/favorite-feature
+  selections. Biometric/future-feature copy and default recommendation-score bias
+  still need the user's separate survey revision.
+- Fix missing storage experimental-API opt-in and replace deprecated bottom-sheet
+  and Locale construction APIs.
 
-- Native editor autosave records checksummed operations instead of repeatedly retaining full idle checkpoints.
-- Recover journals with a disk piece table before opening the resident editor model.
-- Add Settings → Storage: human-readable sizes, explicit copy retention/cleanup, and older-copy export/restore.
-- Protect current notes, drafts, active readers and undo references during cleanup.
-- Offer direct export of unsaved editor text after a storage/save failure; retain closing models until native views release them.
-- No new dependency or network connection. The disk-backed editor has host regression coverage;
-  device, release and performance acceptance remain pending. See the editor validation report.
+### Verification and remaining scope
 
-
-- Honor Markdown mode for large notes instead of silently forcing files of 5 MB
-  and above into plain text. Text notes default to bounded lazy Markdown rendering;
-  code notes keep their plain-text default. Carry Markdown context across long
-  fences/tables and keep formatting after the link-decoration cap is reached.
-- Batch reader prefetch through a persistent handle with an estimated 8 MiB cache,
-  group small paragraphs and remove per-row fast-scroll skeletons. Cold misses
-  may still reserve space; device latency and frame-rate budgets are unmeasured.
-
-- Replace capture's separate editable ranges with a continuous native editor for
-  file notes, retaining the frameless body and keyboard-only Markdown toolbar.
-  Add global selection/IME editing, undo/redo, cancellable paste, literal find and
-  replace, heading navigation and bounded source styling. Keep complete notes
-  accessible through plain-text/export fallback when the resident model exceeds
-  the device memory estimate. Full 55 MB editing budgets remain unmet/unverified.
-- Stream file-backed piece-table ranges through one open handle per piece. Save
-  verified editor checkpoints without writing the complete body a second time.
-  Preserve legacy window drafts and saved originals during transition.
-
-- Prepare note content from a small prefix instead of parsing the full document
-  before display. Add bounded parsed-block/page caches, nearby-content prefetch
-  and static skeleton loading. Timing and memory budgets remain unmeasured.
-- Reuse existing note-action icons and the standard settings navigation engine
-  for recovery, including predictive back, depth and shared-axis transitions.
-
-- Align migration, recovery and storage-error pages with Appearance settings,
-  including saved themes, shared headers and back motion. Simplify migration
-  actions, use counted All/Large filters, single-line note titles and size badges,
-  and match folder-card context menus with action icons. Debug compilation passes;
-  device visual/back-gesture verification remains pending.
-
-- Integrate large-note reading into the original detail screen; place advanced
-  note actions in its overflow menu instead of a separate large-note interface.
-- Restore frameless capture editing and keyboard-only formatting controls.
-  Large-note editing scrolls through lazily loaded text with no section buttons;
-  native selection currently remains within the focused text range.
-- Move document import from Capture to the global Add menu. Receive/open Markdown,
-  MDX, TXT and other supported text documents from content providers, including
-  sequential multi-file shares; strictly decode UTF-8/BOM-labelled UTF-16.
-- Journal capture edits privately and commit the saved note only on Save.
-
-- Add bounded lazy Markdown blocks with plain-text fallback, section recovery,
-  saved-generation undo/redo and lifecycle journal flushing.
-- Restrict FileProvider to explicit export caches; protect integration credentials
-  with Android Keystore and add an optional Recents/screenshot privacy control.
-- Redact interpolated application logs; add recovery/write-fault/UI test sources
-  and a pull-request debug build/unit-test/lint workflow.
-
-- Consolidate Android sources and build configuration into one Cobalt application.
-- Remove discontinued cloud distribution, backend deployment sources, analytics
-  wrappers and cloud account/storage screens. Retain local email crash reporting.
-- Document outbound connections and historical credential findings.
-- Remove account state, storage-management helpers and pull-to-refresh controls.
-- Disable automatic Android backup and device transfer; retain existing note data.
-- Release verification remains in progress; this entry is not a release certification.
-- In development: private Markdown body files for every text/code note, verified
-  resumable conversion, a one-time migration prompt and a Data Migration results/retry page.
-- In development: body-free list queries, startup crash recovery and bounded
-  lazy reading and frameless range editing for large notes. Device validation is pending.
-- Preserve quick-note drafts when saving fails and stream complete Markdown when sharing notes.
-
-# Changelog
-
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [2.2.3] - 2026-10-30
-
-### Added
-- **Adaptive Smart Folder Ranking Engine (`FolderRankingEngine.kt`):**
-  - Lightweight on-device scoring algorithm that ranks folders by recency of use, assignment frequency, content-type affinity, and keyword matching against capture title/content.
-  - Supports both cold-start (alphabetical) and warm-start (ranked) modes, enabled via a new user setting.
-  - Suggested folders are indicated by a subtle **accent border glow** (1.5dp primary-tinted border + soft background tint) — replaces the old `✦` badge entirely.
-- **Elastic Fuzzy Search Engine (`ElasticFuzzySearchEngine.kt`):**
-  - Full-content search across titles, descriptions, notes, extracted text, links, folder names, and media metadata.
-  - Multi-strategy ranking: exact match → prefix match → fuzzy (Levenshtein) → token overlap, with score-weighted results.
-  - Handles typos gracefully; filters by content type and folder.
-- **Archive & Organization Settings Screen (`ArchiveOrganizationSettingsScreen.kt`):**
-  - New standalone settings page under Settings → Archive & Organization.
-  - Toggle for Smart Folder Ranking (adaptive suggestions & sorting).
-  - Toggle between Classic Category Piles Grid and GitHub-Style Activity Heatmap on the Profile page.
-  - Privacy notice: all ranking and heatmap data is computed locally with zero cloud tracking.
-- **GitHub-Style Activity Heatmap (`KnowledgeHeatmap.kt`):**
-  - 52-week scrollable contribution grid showing daily capture intensity with streaks and active day counts.
-  - Switchable from Profile page via Archive & Organization settings.
-- **Gemini AI Usage Screen (`GeminiUsageScreen.kt`):**
-  - Dedicated sub-screen under Settings showing token usage, API call counts, OCR vs Voice task breakdown, token distribution bar (prompt vs response), and 7-day interactive activity chart.
-  - Interactive vertical bar chart: tap any day to inspect token count; yesterday auto-selected when non-zero.
-  - Auto-recovery logic in `GeminiUsageTracker` backfills daily buckets from stored totals for data already captured before the tracker tracked per-day keys.
-- **Gemini Usage Tracker (`GeminiUsageTracker.kt`):**
-  - SharedPreferences-backed per-day token tracking keyed by `day_yyyy-MM-dd`.
-  - Scans all stored `day_*` keys on load for full historical coverage; recovers missing daily data from `lastUsedTimestamp` automatically.
-- **Move-to-Folder Dialog Redesign (`MoveToFolderDialog.kt`):**
-  - Sleek bottom-sheet dialog with correct folder colors, folder icons, usage counts, and ranking-aware ordering.
-  - Supports multi-select and single-select modes.
-- **Zero-Lag Share Sheet Save (`QuickShareActivity.kt`):**
-  - Instant save-and-close on share-sheet trigger; background enrichment (link metadata, OCR) continues after sheet dismissal.
-- **Custom Vector Icons:**
-  - Added `ic_custom_ai_brain.xml`, `ic_custom_api_chip.xml`, `ic_custom_organization.xml`.
-- **Media & TMDb Activity Line Graph (`MovieApiKeyScreen.kt`):**
-  - Replaced verbose "Library Distribution" bar and technical spec badges with a clean, interactive Canvas line graph.
-  - 24H / 7D / 30D range selector; smooth cubic Bézier curve with gradient fill; touch-to-scrub for per-point detail.
-
-### Changed & Improved
-- **Folder Screen Empty State:** Uses `ic_custom_folder` (closed folder) instead of `ic_custom_folder_open` for the custom-folders empty-state illustration.
-- **Profile Settings Reorganisation:**
-  - Moved "Archive & Organization" into its own top-level settings category with a dedicated `ic_custom_organization` icon.
-  - Updated Intelligence category icon to `ic_custom_ai_brain`.
-- **Gemini Usage Screen UI Polish:**
-  - Metric cards now display `in / out` token split in the subtitle line, removing a separate "Token Breakdown" section.
-  - Task rows simplified: subtitle stripped, icons tightened.
-  - Reset button demoted to a quiet `TextButton` at the bottom.
-  - Model name displayed in human-friendly form (e.g. "Gemini Flash Lite" instead of raw API slug).
-- **Side Dock Wallpaper-Aware Theme:**
-  - Side Dock now reacts to system wallpaper/theme changes without requiring a toggle or app restart.
-- **Foreground Service Type Fix (Android 12+):**
-  - `CobaltSideDockService` manifest entry now correctly declares `foregroundServiceType="specialUse"` matching the runtime `startForeground(FOREGROUND_SERVICE_TYPE_SPECIAL_USE)` call, resolving the `IllegalArgumentException: foregroundServiceType 0x00000001 is not a subset` crash on API 32+ devices.
-- **Side Dock Handle Color:**
-  - Handle now uses the app dynamic primary colour instead of a hardcoded blue.
-
-### Fixed
-- **Yesterday showing 0 tokens:** `GeminiUsageTracker.loadFromPrefs()` now indexes daily map by raw `yyyy-MM-dd` key (matching what `recordUsage` writes) in addition to the display label, so existing stored values surface correctly.
-- **Archive & Organization description text:** Removed stale `✦ indicator` reference; now reads "accent border glow".
+- Add host/device regression coverage for note migration, recovery, publication,
+  shared storage, metadata, selection, media identity/sync, sharing and typography.
+  Test additions and historical report commits are indexed in the full commit ledger.
+- Published v2.2.2 emulator testing reproduced stale reader state after Save,
+  exercised exact 100k-character note recovery and saved/opened a 400k-character
+  fixture. Performance readings are emulator snapshots, not hardware guarantees.
+- Complete app backup/restore, encrypted notes, biometric app lock, a note-editing
+  web companion and per-note image galleries are not implemented by this changelog.
+  Media/account/network features, large-file budgets and every supported Android
+  version require their own verified results; untested work is not marked passed.
 
 ## [2.2.2] - 2026-10-27
 
