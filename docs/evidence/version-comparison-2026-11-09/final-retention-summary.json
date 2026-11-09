@@ -1,0 +1,45 @@
+{
+  "records": 500,
+  "exactNoteBodies": 320,
+  "exactLocalMediaFiles": 70,
+  "foldersAndFlagsRetained": true,
+  "tmdbKeyRetainedAndEncrypted": true,
+  "originalFixtureRestored": true,
+  "dexUnchangedInMetadataRepackage": true,
+  "bundledChangelogMatchesRoot": true,
+  "finalApkSha256": "1d363ef2f79b891bcb177153131af646bd5fc1b9407a964efc177254915159a9",
+  "postReviewChangedLegacyFields": [
+    [
+      "68dca1e0-fa6b-453f-88e1-d74f6347b09c",
+      "updatedAt"
+    ],
+    [
+      "tmdb_tv_1396",
+      "extractedText"
+    ],
+    [
+      "tmdb_tv_1396",
+      "genresJson"
+    ],
+    [
+      "tmdb_tv_1396",
+      "watchProvidersJson"
+    ],
+    [
+      "tmdb_tv_1396",
+      "trailerUrl"
+    ],
+    [
+      "tmdb_tv_1396",
+      "backdropUrl"
+    ],
+    [
+      "tmdb_tv_1396",
+      "productionCompaniesJson"
+    ],
+    [
+      "tmdb_tv_1396",
+      "updatedAt"
+    ]
+  ]
+}

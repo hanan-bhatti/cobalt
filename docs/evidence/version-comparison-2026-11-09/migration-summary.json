@@ -1,0 +1,48 @@
+{
+  "baselineSchema": 6,
+  "currentSchema": 15,
+  "baselineCount": 500,
+  "currentCount": 500,
+  "missingIds": [],
+  "addedIds": [],
+  "countsByType": {
+    "TEXT": 300,
+    "IMAGE": 50,
+    "LINK": 100,
+    "AUDIO": 10,
+    "CODE": 20,
+    "VIDEO": 10,
+    "MEDIA": 10
+  },
+  "notesWithExactHashes": 320,
+  "localMediaWithExactHashes": 70,
+  "archived": 17,
+  "customFoldersUnchanged": true,
+  "tmdbKeyRetained": true,
+  "tmdbEncryptedAfter": true,
+  "migrationState": {
+    "phase": "COMPLETE",
+    "migration_required": false,
+    "total": 320,
+    "prompt_shown": 1,
+    "converted": 313,
+    "verified": 320,
+    "last_run": 1794243850349,
+    "failed": 0,
+    "completed_format": 1,
+    "errors": "[]"
+  },
+  "issues": [],
+  "baselineApkSha256": "4929519a546e53ca051da3087b185b27412204a2fbf2ee2099c29ce1e9a8776d",
+  "currentApkSha256": "959f2f4f3933f190f53025c73f8ffc6738d87e6dec19c855cb370ac77bb7f8f5",
+  "currentVersion": "2.2.3",
+  "currentVersionCode": 19,
+  "sourceCommit": "9f50ce3c92210056aa35cdbda81b718727f112b4",
+  "fixtureMethod": {
+    "uiCreated": 5,
+    "bulkSeededLegacySchema6": 495
+  },
+  "certificateSha256": "9af192bc1865c315591539bd4022e69e6a35e597384b846d3b3f272e74c6e2cb",
+  "partialResumeScreenConvertedCount": 6,
+  "notesAlreadyCommittedBeforeResume": 7
+}

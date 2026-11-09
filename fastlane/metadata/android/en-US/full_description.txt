@@ -1,4 +1,4 @@
-Cobalt is an offline-first personal archive and capture app for Android. It stores links, notes, images, audio clips, code snippets, and movie, TV, anime and manga lists locally without requiring a Cobalt account. Note history shares unchanged text with recoverable drafts and saved Undo/Redo; Room stores the metadata.
+Cobalt is an offline-first personal archive and capture app for Android. It stores links, notes, images, audio clips, code snippets, and movie, TV, anime and manga lists locally without requiring a Cobalt account. Local note storage supports shared history, recoverable drafts and saved Undo/Redo.
 
 Capture Methods:
 - Android Share Target: Save text, URLs, images, and videos directly from other apps via the system share sheet.
@@ -14,7 +14,7 @@ Organization & Viewing:
 - Search & Filters: Search across titles, content, extracted OCR text, and URLs, with filter chips for each media type.
 - Media Hub: Track movies, TV, anime and manga with local ratings, watch/read statuses, bookmarks and cached episode details. Configure TMDB, Trakt and custom Jikan v4 endpoints in Media & Providers.
 - Notes & Storage: Continuous Markdown editing, tables, search/replace, local font controls, recoverable drafts, saved versions, Trash and reviewed cleanup that protects unsaved writing.
-- Sharing: Styled note, link, image and movie cards with image/Markdown export and bounded clipboard copy.
+- Sharing: Styled note, link, image and movie cards with smaller text, readable excerpts and continuation markers, image/Markdown export and bounded clipboard copy.
 - Local Organization: Smart folder ranking, fuzzy search, capture activity and adaptive review reminders.
 
 Network & Privacy Disclosures:
@@ -26,7 +26,7 @@ Cobalt stores all data locally on your device. It does not include analytics, tr
 - Trakt: Optional user-authorized watch tracking and synchronization.
 - Updates: GitHub release checks are opt-in in Release & Updates.
 - Links and remote media: Metadata and images can contact saved URL hosts.
-- Feedback: Reports stay local until you choose to export/share them or open a pre-filled GitHub/email submission.
+- Feedback: Choose to export/share a bug report or open a pre-filled GitHub/email submission. The optional experience survey uses 1–10 sliders and opens your email app with plain-text answers; you decide whether to send them.
 
 Biometric locking, encrypted notes, a note-editing web companion and complete app backup/restore are not currently provided.
 

@@ -1,6 +1,6 @@
 # Commit ledger: v2.2.2 to current development source
 
-Base: `v2.2.2`. End: `672e8b8`. 222 commits, oldest first.
+Base: `v2.2.2`. End: `1b9b616`. 232 commits, oldest first.
 
 This indexes every commit message and changed-file list in the range. Commit titles are historical wording, not claims that a feature passed this emulator review. Earlier editor/storage/share designs were superseded; use the final-behavior comparison for the current architecture. Runtime evidence identifies the downloaded v2.2.2 APK and the current signed build separately in the comparison report.
 
@@ -225,10 +225,19 @@ This indexes every commit message and changed-file list in the range. Commit tit
 | [2e0aea4](https://github.com/hanan-bhatti/cobalt/commit/2e0aea48aa70111fca26543267dbe19947d4ee5b) | fix(storage): add ExperimentalMaterial3Api opt-in for storage bottom sheet | 2 | Implementation |
 | [29d0e9b](https://github.com/hanan-bhatti/cobalt/commit/29d0e9b8d1306d9a1822216dc0637c5f78976802) | feat(feedback): redesign reporter header with minimal version tag and fix share icon mismatch across feedback and survey | 4 | Implementation |
 | [6669da6](https://github.com/hanan-bhatti/cobalt/commit/6669da603c5775bd7ab51ecefb6934c21952d8ac) | fix: replace deprecated rememberModalBottomSheetState and Locale constructor | 2 | Implementation |
-
 | [f93fa2f](https://github.com/hanan-bhatti/cobalt/commit/f93fa2f56c640942c3e90327af5ae77f3a9bfbb4) | feat(markdown-share): restore horizontal scrolling tables with edge fade and redesign note share templates | 3 | Implementation |
 | [171a551](https://github.com/hanan-bhatti/cobalt/commit/171a5517d2be8180bf919b252532982326b241fe) | docs(release): update changelog, metadata, and version comparison records | 9 | Verification record |
 | [672e8b8](https://github.com/hanan-bhatti/cobalt/commit/672e8b8b5fdefe4fbcf4e47c6106f2483caef16b) | feat(share): scale card typography relative to template geometry while preserving custom fonts | 1 | Implementation |
+| [dcecf4a](https://github.com/hanan-bhatti/cobalt/commit/dcecf4a9267a33484f67d811032914e23c72ae64) | docs(release): sync changelog, metadata, and verification ledger with note share updates | 4 | Verification record |
+| [9f50ce3](https://github.com/hanan-bhatti/cobalt/commit/9f50ce3c92210056aa35cdbda81b718727f112b4) | fix(trakt): make sync notifications completely silent and suppress during active app use | 4 | Implementation |
+| [d325366](https://github.com/hanan-bhatti/cobalt/commit/d32536634102cffab5377817b252619bbc0c110c) | fix(survey): refresh optional ratings and send plain-text feedback by email | 7 | Implementation |
+| [23359d0](https://github.com/hanan-bhatti/cobalt/commit/23359d0faae30366b24db007320968e2b614742e) | fix(migration): clarify retained content and cumulative verification counts | 1 | Implementation |
+| [59bddac](https://github.com/hanan-bhatti/cobalt/commit/59bddac23b6c8751973b277933a333afd030e8c4) | fix(ui): make deletion actions reflect the active Trash policy | 11 | Implementation |
+| [ddcfefd](https://github.com/hanan-bhatti/cobalt/commit/ddcfefdc5d76589a229592c548264bd1eb7d22ac) | fix(storage): describe cleanup exclusions and recovery limits accurately | 4 | Implementation |
+| [e2a3ffa](https://github.com/hanan-bhatti/cobalt/commit/e2a3ffaaeed15abfafc30577e7da16b0bd16b184) | fix(reader): distinguish pending content from an empty note | 1 | Implementation |
+| [906bd85](https://github.com/hanan-bhatti/cobalt/commit/906bd85e036d7bd8c44c15e337c01a28af03a583) | fix(share): preserve Markdown blocks and mark shortened note excerpts | 3 | Implementation |
+| [4ab03e8](https://github.com/hanan-bhatti/cobalt/commit/4ab03e865c5c38ff163e7d5bf6b1a8ab5c814ec5) | refactor(ui): align navigation labels and expose Find in note | 7 | Implementation |
+| [1b9b616](https://github.com/hanan-bhatti/cobalt/commit/1b9b6166c6386188909fe7f2622ad4f07d666ea4) | fix(share): reduce card text sizes and show longer readable excerpts | 12 | Implementation |
 
 ## Commit bodies
 
@@ -266,3 +275,7 @@ Repair Trakt progress imports, durable account changes, and shared metadata hydr
 
 Include note and link rendering changes, regression coverage, live validation tools, and reports.
 
+
+### d325366
+
+Use existing theme surfaces and icons across two short steps. Reaction and recommendation use optional 1–10 sliders with explicit Clear actions. Open the existing recipient directly in an email app without requiring local saving or claiming delivery. Verify response formatting, email intents, interaction and light/dark rendering.

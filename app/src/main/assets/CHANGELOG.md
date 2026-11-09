@@ -47,6 +47,8 @@ feature or device. Version name/code remain 2.2.3/19.
   Refresh detail state after explicit Save and retain/export drafts after failures.
 - Keep Quick Note text/selection independent of delayed persistence echoes; fence
   debounced writes so newer typing is not overwritten by stale draft completion.
+- Distinguish loading, loading-more and empty-note states in the reader. Expose
+  Find in note directly from the toolbar and retain existing note actions.
 
 ### Storage, Trash and recovery
 
@@ -64,6 +66,10 @@ feature or device. Version name/code remain 2.2.3/19.
   hold, cancellation and stale-review checks; keep advanced cleanup collapsed.
 - Add themed skeleton loading, refreshed usage hierarchy, morphing pull-to-refresh
   and expressive confirmation sheets. Reuse existing recovery/settings navigation.
+- Show cumulative verified/total note counts with clearer migration instructions.
+  Label deletion as Move to Trash or Delete permanently according to the setting.
+  Explain eligible cleanup, current-content/draft exclusions and recovery limits
+  without absolute safety guarantees; keep the existing storage mechanics.
 
 ### Capture, links, folders and Home
 
@@ -84,12 +90,15 @@ feature or device. Version name/code remain 2.2.3/19.
   is disabled. Calculate actual media sizes for size sorting/filtering.
 - Keep inline folder controls available above the keyboard (issue #24). Dismiss
   deletion Undo on navigation and show its remaining time with a border.
+- Align Saved notes, Draft recovery, Saved history and TV shows navigation labels.
 
 ### Media and providers
 
 - Add optional Trakt OAuth PKCE/App Links, account-bound two-way synchronization,
   persistent outbox retries, pending-change review and safe token revocation.
   Guard disconnect/login races and retain unmatched IDs for later retry.
+  Silence synchronization notifications and suppress them while Cobalt is active;
+  remove its progress banner from the Media Hub.
 - Share one movie/TV save path across Capture/Dock; reconcile TMDB/Trakt identities,
   preserve local choices/deletions and import remote progress without replacing notes.
 - Consolidate Trakt, TMDB and Jikan into Media & Providers with source enablement and
@@ -111,6 +120,9 @@ feature or device. Version name/code remain 2.2.3/19.
   redesign A4 document, memo and quote layouts with typography scaled to the
   template while retaining chosen font families. Downsample oversized image
   sources and bound export dimensions.
+- Reduce share-card text sizes and show longer excerpts. Preserve partial Markdown
+  fences/table headers and complete rows, mark continuation, and keep Compact
+  prose distinct from quotations and code without splitting Unicode characters.
 - Add local FOSS fonts and licenses, live text/font previews and per-role typography
   preferences applied to reader, editor, code and Markdown layouts.
 - Add adaptive local review reminders, custom delivery time, Gemini usage/daily
@@ -121,9 +133,11 @@ feature or device. Version name/code remain 2.2.3/19.
   opt-in update checks; expand the open-source library directory.
 - Allow consecutive bug reports through Report Another/input reset (issue #23).
   Refresh reporter/version headers and share icons across feedback and survey.
-- Add the survey's frustration question and remove default reaction/favorite-feature
-  selections. Biometric/future-feature copy and default recommendation-score bias
-  still need the user's separate survey revision.
+- Redesign the experience survey as two short steps using existing icons and theme
+  colors. Leave every answer optional and unselected; use 1–10 reaction and
+  recommendation sliders with Clear actions. Open the existing feedback email
+  directly with plain-text answers, without requiring local saving or marking an
+  email-app launch as successful delivery. Include preview/copy fallback.
 - Fix missing storage experimental-API opt-in and replace deprecated bottom-sheet
   and Locale construction APIs.
 
@@ -135,6 +149,13 @@ feature or device. Version name/code remain 2.2.3/19.
 - Published v2.2.2 emulator testing reproduced stale reader state after Save,
   exercised exact 100k-character note recovery and saved/opened a 400k-character
   fixture. Performance readings are emulator snapshots, not hardware guarantees.
+- Verify a real signed v2.2.2 → current in-place upgrade with 500 mixed legacy
+  records. Startup migration and interruption/resume retained all records, 320
+  exact note bodies, 70 exact local media files, folders, archived items and the
+  configured TMDB key. Detailed evidence and limits are linked in the comparison.
+- Verify the subsequent survey/polish revision with 77 targeted tests, including
+  slider interaction and light/dark renders. Device checks and email-delivery
+  limits are recorded in `docs/app-polish-verification-2026-11-10.md`.
 - Complete app backup/restore, encrypted notes, biometric app lock, a note-editing
   web companion and per-note image galleries are not implemented by this changelog.
   Media/account/network features, large-file budgets and every supported Android
