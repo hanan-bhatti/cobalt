@@ -58,8 +58,12 @@ fun NoteUnlinkedFilesScreen(manager: NoteStorageManager, onBack: () -> Unit) {
     NoteSettingsPage("Unlinked files", "Retained files without a matching note record", onBack, itemSpacing = 8.dp,
         actions = { TextButton(onClick = { perform { refresh(); "Sizes updated" } }, enabled = !busy) { Text("Refresh") } }) {
         item {
-            StorageActionCard("Unlinked data", report?.let { formatNoteSize(context, it.unattached) } ?: "—",
-                "Files left by earlier deletions or interrupted saves. Recover or export anything you need before cleanup. New media, active drafts and unfinished work stay protected.")
+            StorageActionCard(
+                "Unlinked data",
+                report?.let { formatNoteSize(context, it.unattached) },
+                "Files left by earlier deletions or interrupted saves. Recover or export anything you need before cleanup. New media, active drafts and unfinished work stay protected.",
+                isLoading = report == null && busy
+            )
         }
         item {
             val amount = report?.unlinkedRemovable ?: 0
@@ -68,9 +72,13 @@ fun NoteUnlinkedFilesScreen(manager: NoteStorageManager, onBack: () -> Unit) {
                 Text(if (amount > 0) "Review cleanup · ${formatNoteSize(context, amount)}" else "No unlinked files ready to clean")
             }
         }
-        if (busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         notice?.let { text -> item { StorageMessage(text) } }
         item { SettingsSubsectionHeader("Retained files", description = "Up to 200 files are shown, largest first. Cleanup reviews all eligible files.") }
+        if (copies.isEmpty() && busy) {
+            items(3) { index ->
+                SkeletonStorageRow(shape = connectedPillShape(index, 3), hasBadge = true, badgeWidth = 46.dp)
+            }
+        }
         itemsIndexed(copies, key = { _, copy -> copy.key }) { index, copy ->
             var menu by remember(copy.key) { mutableStateOf(false) }
             Surface(shape = connectedPillShape(index, copies.size), color = MaterialTheme.colorScheme.surfaceContainer,

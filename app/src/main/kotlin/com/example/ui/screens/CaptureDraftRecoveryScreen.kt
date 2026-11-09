@@ -65,9 +65,14 @@ fun CaptureDraftRecoveryScreen(onBack: () -> Unit) {
                 "Working buffers and edit journals: ${formatNoteSize(context, report.liveEditBuffers)}. Other retained recovery data: ${formatNoteSize(context, report.stagedRecovery)}. These files protect edits after interruptions; they are not app cache and are not deleted by Clear cache.")
         } }
         item { StorageMessage("Recover creates a new note with the complete draft. You can also export a Markdown copy. Close its editor before recovering a draft.") }
-        if (busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         message?.let { text -> item { StorageMessage(text) } }
-        if (!busy && entries.isEmpty()) item { StorageActionCard("No drafts to recover", "", "Recoverable edits appear here after an interrupted session.") }
+        if (entries.isEmpty() && busy) {
+            items(2) { index ->
+                SkeletonStorageRow(shape = connectedPillShape(index, 2), hasBadge = true, badgeWidth = 44.dp)
+            }
+        } else if (!busy && entries.isEmpty()) {
+            item { StorageActionCard("No drafts to recover", "", "Recoverable edits appear here after an interrupted session.") }
+        }
         itemsIndexed(entries, key = { _, entry -> entry.id }) { index, entry ->
             var menu by remember(entry.id) { mutableStateOf(false) }
             Surface(shape = connectedPillShape(index, entries.size), color = MaterialTheme.colorScheme.surfaceContainer,

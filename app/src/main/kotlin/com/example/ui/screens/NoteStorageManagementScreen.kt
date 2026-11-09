@@ -29,6 +29,8 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
     var confirmation by remember { mutableStateOf<String?>(null) }
     var reviewed by remember { mutableLongStateOf(0) }
     var reviewedFiles by remember { mutableStateOf<List<NoteStorageFile>>(emptyList()) }
+    var disposableReview by remember { mutableStateOf<NoteStorageManager.DisposableReview?>(null) }
+    var advancedCleanup by remember { mutableStateOf(false) }
     fun perform(action: suspend () -> String) {
         if (busy) return
         busy = true
@@ -62,15 +64,24 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                             ExpressiveSettingsNavigationItem("Manage notes", onClick = { open("recovery") },
                                 subtitle = "Read, export or delete your notes", shape = connectedPillShape(0, 5))
                             ExpressiveSettingsNavigationItem("Draft recovery", onClick = { open("drafts") },
-                                subtitle = "Recover interrupted and unsaved edits", trailingBadge = report?.let { formatNoteSize(context, it.recovery) }, shape = connectedPillShape(1, 5))
+                                subtitle = "Recover interrupted and unsaved edits",
+                                trailingBadge = report?.let { formatNoteSize(context, it.recovery) },
+                                trailingContent = if (report == null && busy) { { SkeletonBadge(46.dp) } } else null,
+                                shape = connectedPillShape(1, 5))
                             ExpressiveSettingsNavigationItem("Trash", onClick = { open("trash") },
-                                subtitle = "Restore items or delete them forever", trailingBadge = report?.let { "${it.trashCount} · ${formatNoteSize(context, it.trash)}" },
+                                subtitle = "Restore items or delete them forever",
+                                trailingBadge = report?.let { "${it.trashCount} · ${formatNoteSize(context, it.trash)}" },
+                                trailingContent = if (report == null && busy) { { SkeletonBadge(40.dp) } } else null,
                                 shape = connectedPillShape(2, 5))
                             ExpressiveSettingsNavigationItem("Version history", onClick = { open("history") },
-                                subtitle = "Restore versions and review history cleanup", trailingBadge = report?.let { formatNoteSize(context, it.older) },
+                                subtitle = "Restore versions and review history cleanup",
+                                trailingBadge = report?.let { formatNoteSize(context, it.older) },
+                                trailingContent = if (report == null && busy) { { SkeletonBadge(50.dp) } } else null,
                                 shape = connectedPillShape(3, 5))
                             ExpressiveSettingsNavigationItem("Unlinked files", onClick = { open("unlinked") },
-                                subtitle = "Retained files without a matching note", trailingBadge = report?.let { formatNoteSize(context, it.unattached) },
+                                subtitle = "Retained files without a matching note",
+                                trailingBadge = report?.let { formatNoteSize(context, it.unattached) },
+                                trailingContent = if (report == null && busy) { { SkeletonBadge(44.dp) } } else null,
                                 shape = connectedPillShape(4, 5))
                         }
                     }
@@ -94,8 +105,12 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
             NoteStorageRoute(navigation, this) {
                 NoteSettingsPage("Version history", "Earlier versions, with current notes kept intact", { navigation.popBackStack() }) {
                     item {
-                        StorageActionCard("Saved history", report?.let { formatNoteSize(context, it.older) } ?: "—",
-                            "This is actual disk space used by previous versions. A delta stores changes and needs a retained full base. A version's complete note size can be much larger than its stored changes. Cleanup removes only the versions you review.")
+                        StorageActionCard(
+                            "Saved history",
+                            report?.let { formatNoteSize(context, it.older) },
+                            "Versions share unchanged text. History shows additional retained data, while a version's complete note size can be much larger. Older legacy versions may use full copies or deltas. Cleanup removes only the versions you review.",
+                            isLoading = report == null && busy
+                        )
                     }
                     item {
                         ExpressiveSettingsSelectorItem("Versions to keep",
@@ -115,7 +130,6 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                             Text(if (amount > 0) "Review cleanup · ${formatNoteSize(context, amount)}" else "No history ready to clean")
                         }
                     }
-                    if (busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
                     message?.let { text -> item { StorageMessage(text) } }
                 }
             }
@@ -125,8 +139,13 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                 NoteSettingsPage("Cache & database", "Temporary data and reusable database space", { navigation.popBackStack() },
                     actions = { TextButton(onClick = ::refresh, enabled = !busy) { Text("Refresh") } }) {
                     item {
-                        StorageActionCard("App cache", report?.let { formatNoteSize(context, it.cache) } ?: "—",
-                            "Includes rebuildable previews, workspace and temporary exports. ${report?.let { formatNoteSize(context, it.protectedCache) } ?: "—"} is protected or too recent to clear. Active edits, recordings and recent shares stay intact; temporary exports become eligible after 24 hours.")
+                        val protectedCacheText = report?.let { formatNoteSize(context, it.protectedCache) } ?: "Protected cache"
+                        StorageActionCard(
+                            "App cache",
+                            report?.let { formatNoteSize(context, it.cache) },
+                            "Includes rebuildable previews, workspace and temporary exports. $protectedCacheText is protected or too recent to clear. Active edits, recordings and recent shares stay intact; temporary exports become eligible after 24 hours.",
+                            isLoading = report == null && busy
+                        )
                     }
                     item {
                         val amount = report?.clearableCache ?: 0
@@ -136,8 +155,12 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                         }
                     }
                     item {
-                        StorageActionCard("Database", report?.let { formatNoteSize(context, it.database) } ?: "—",
-                            "Deleted records can leave reserved space. Optimize compacts the database without removing notes or preferences.")
+                        StorageActionCard(
+                            "Database",
+                            report?.let { formatNoteSize(context, it.database) },
+                            "Deleted records can leave reserved space. Optimize compacts the database without removing notes or preferences.",
+                            isLoading = report == null && busy
+                        )
                     }
                     item {
                         val amount = report?.freeDatabase ?: 0
@@ -146,7 +169,25 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                             Text(if (amount > 0) "Optimize · up to ${formatNoteSize(context, amount)}" else "Database is compact")
                         }
                     }
-                    if (busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+                    item {
+                        TextButton(onClick = { advancedCleanup = !advancedCleanup }, enabled = !busy) {
+                            Text(if (advancedCleanup) "Hide advanced cleanup" else "Advanced cleanup")
+                        }
+                    }
+                    if (advancedCleanup) item {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("Remove disposable versions and cache. Current notes, attachments, folders, settings, Trash and unsaved writing are kept.",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Button(onClick = { perform {
+                                disposableReview = manager.reviewDisposable()
+                                confirmation = "disposable"
+                                "Review cleanup before holding the button"
+                            } }, enabled = !busy, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
+                                Text("Clear disposable storage")
+                            }
+                        }
+                    }
                     message?.let { text -> item { StorageMessage(text) } }
                 }
             }
@@ -158,7 +199,18 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
             }
         }
     }
-    confirmation?.let { kind -> ExpressiveAlertDialog(onDismissRequest = { confirmation = null },
+    confirmation?.let { kind -> if (kind == "disposable") {
+        AlertDialog(onDismissRequest = { confirmation = null; disposableReview = null },
+            title = { Text("Clear disposable storage?") },
+            text = { Text("Remove up to ${formatNoteSize(context, disposableReview?.bytes ?: 0)} of reviewed version history and safe cache. Removed versions cannot be restored.\n\nYour saved notes, media, folders, settings and Trash stay intact. Unsaved drafts, active edits and files needed for recovery are protected. Some protected history may remain.\n\nPress and hold continuously for five seconds. Releasing or leaving the app cancels the hold.") },
+            confirmButton = { HoldToClearStorageButton(!busy && disposableReview != null) {
+                val review = disposableReview ?: return@HoldToClearStorageButton
+                confirmation = null; disposableReview = null
+                perform { val removed = manager.clearDisposable(review)
+                    "Cleared ${removed.files} disposable versions and safe cache. Saved data and unsaved writing are protected." }
+            } },
+            dismissButton = { TextButton(onClick = { confirmation = null; disposableReview = null }) { Text("Cancel") } })
+    } else ExpressiveAlertDialog(onDismissRequest = { confirmation = null },
         title = if (kind == "history") "Remove older versions?" else "Optimize the database?",
         text = { Text(if (kind == "history") "Remove up to ${formatNoteSize(context, reviewed)} of reviewed history and completed recovery logs? Your current notes and active drafts stay intact. Removed versions cannot be restored."
             else "Rebuild SQLite to reclaim empty pages. Keep Cobalt open while this runs. Temporary free space is required; your notes and settings are kept.") },
@@ -178,11 +230,23 @@ internal fun StorageMessage(text: String) {
 }
 
 @Composable
-internal fun StorageActionCard(title: String, amount: String, description: String) {
+internal fun StorageActionCard(
+    title: String,
+    amount: String?,
+    description: String,
+    isLoading: Boolean = false
+) {
     Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
         Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
-            Text(amount, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
+            if (isLoading || amount == null || amount == "—") {
+                SkeletonBox(
+                    modifier = Modifier.width(110.dp).height(32.dp),
+                    shape = RoundedCornerShape(8.dp)
+                )
+            } else {
+                Text(amount, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
+            }
             Text(description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

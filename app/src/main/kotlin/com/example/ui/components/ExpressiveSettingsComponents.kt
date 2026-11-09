@@ -369,6 +369,7 @@ fun ExpressiveSettingsNavigationItem(
     subtitle: String? = null,
     leadingIcon: (@Composable () -> Unit)? = null,
     trailingBadge: String? = null,
+    trailingContent: (@Composable () -> Unit)? = null,
     shape: Shape = RoundedCornerShape(24.dp),
     enabled: Boolean = true
 ) {
@@ -414,7 +415,9 @@ fun ExpressiveSettingsNavigationItem(
                 }
             }
 
-            if (trailingBadge != null) {
+            if (trailingContent != null) {
+                trailingContent()
+            } else if (trailingBadge != null) {
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     shape = CircleShape

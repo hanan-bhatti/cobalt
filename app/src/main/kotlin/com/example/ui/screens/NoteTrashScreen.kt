@@ -63,10 +63,15 @@ fun NoteTrashScreen(manager: TrashManager, onBack: () -> Unit) {
                     else "New deletions are permanent after a 30-second Undo window. Existing Trash keeps its deadline.",
                 onCheckedChange = { value -> if (!value) turnOff = true else perform { manager.setEnabled(true); "Trash enabled" } })
         }
-        if (busy || rows == null) item { LinearProgressIndicator(Modifier.fillMaxWidth().padding(vertical = 8.dp)) }
         notice?.let { text -> item { StorageMessage(text) } }
         item { SettingsSubsectionHeader("Deleted items", description = "Sizes include retained note versions and recovery files.") }
-        if (rows?.isEmpty() == true) item { StorageActionCard("Trash is empty", "0 items", "Deleted items will appear here while they can still be restored.") }
+        if (rows == null && busy) {
+            items(3) { index ->
+                SkeletonStorageRow(shape = connectedPillShape(index, 3), hasBadge = true, badgeWidth = 48.dp)
+            }
+        } else if (rows?.isEmpty() == true) {
+            item { StorageActionCard("Trash is empty", "0 items", "Deleted items will appear here while they can still be restored.") }
+        }
         itemsIndexed(rows.orEmpty(), key = { _, item -> item.id }) { index, item ->
             var menu by remember(item.id) { mutableStateOf(false) }
             val time = clock

@@ -56,9 +56,14 @@ fun NoteOlderCopiesScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        if (busy) item { LinearProgressIndicator(Modifier.fillMaxWidth().padding(vertical = 12.dp)) }
         message?.let { text -> item { Text(text, Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium) } }
-        if (copies.isEmpty() && !busy) item { Text("No older copies available", Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium) }
+        if (copies.isEmpty() && busy) {
+            items(3) {
+                SkeletonStorageRow(shape = RoundedCornerShape(16.dp), hasBadge = true, badgeWidth = 52.dp)
+            }
+        } else if (copies.isEmpty() && !busy) {
+            item { Text("No older copies available", Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium) }
+        }
         items(copies, key = { it.note.id + it.hash }) { copy ->
             var expanded by remember(copy.hash) { mutableStateOf(false) }
             Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer,
@@ -68,10 +73,10 @@ fun NoteOlderCopiesScreen(onBack: () -> Unit) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(copy.note.title.ifBlank { "Untitled note" }, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.titleSmall)
-                        Text("${formatNoteSize(context, copy.bytes)} note" + if (copy.delta) " · Delta version" else " · Full version",
+                        Text("${formatNoteSize(context, copy.bytes)} note" + if (copy.shared) " · Shared text" else if (copy.delta) " · Delta version" else " · Full version",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("${formatNoteSize(context, copy.storedBytes)} stored", style = MaterialTheme.typography.labelLarge,
+                            Text("${formatNoteSize(context, copy.storedBytes)} " + if (copy.shared) "additional storage" else "stored", style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary)
                             Text(DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(copy.created)),
                                 maxLines = 1, style = MaterialTheme.typography.bodySmall,
@@ -96,7 +101,7 @@ fun NoteOlderCopiesScreen(onBack: () -> Unit) {
     }
     restoring?.let { copy -> ExpressiveAlertDialog(onDismissRequest = { restoring = null },
         title = "Restore this copy?",
-        text = { Text("Replace the current note with this ${formatNoteSize(context, copy.bytes)} copy? The current full copy will remain available until you explicitly clean it up. Finish any recovery draft first.") },
+        text = { Text("Restore this ${formatNoteSize(context, copy.bytes)} version? Your current version remains in history until you explicitly clear it. Finish any recovery draft first.") },
         confirmButtonText = "Restore copy", onConfirm = {
             restoring = null; busy = true
             scope.launch {
