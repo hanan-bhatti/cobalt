@@ -299,8 +299,8 @@ private fun PolaroidStyleCard(
                             fontFamily = cobaltTypography.textFontFamily,
                             fontWeight = FontWeight.Medium,
                             fontStyle = FontStyle.Italic,
-                            fontSize = 15.5.sp,
-                            lineHeight = 21.sp
+                            fontSize = 13.5.sp,
+                            lineHeight = 18.sp
                         ),
                         color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Center,
@@ -435,8 +435,8 @@ private fun MinimalStyleCard(
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontFamily = cobaltTypography.textFontFamily,
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.5.sp,
-                            lineHeight = 20.sp
+                            fontSize = 12.5.sp,
+                            lineHeight = 17.sp
                         ),
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,

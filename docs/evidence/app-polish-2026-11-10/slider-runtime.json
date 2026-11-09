@@ -1,0 +1,14 @@
+{
+  "reactionRange": [
+    1,
+    10
+  ],
+  "recommendationRange": [
+    1,
+    10
+  ],
+  "defaultUnanswered": true,
+  "clearChecked": true,
+  "emailAppOpened": "Gmail",
+  "emailSent": false
+}

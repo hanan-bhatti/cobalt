@@ -56,9 +56,9 @@ class NoteShareExcerptTest {
         assertFalse(computeMinimalContent("", 8).hasContinuation)
     }
     @Test fun unicodeExcerptDoesNotCutASurrogatePair() {
-        val result = extractCompactNoteContent("😀".repeat(200))
+        val result = extractCompactNoteContent("😀".repeat(400))
         assertTrue(result.endsWith("…"))
-        assertEquals(180, result.codePointCount(0, result.length))
+        assertEquals(320, result.codePointCount(0, result.length))
         assertFalse(result.dropLast(1).last().isHighSurrogate())
     }
 }

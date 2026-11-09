@@ -256,8 +256,8 @@ private fun TheatricalStyleCard(
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontFamily = cobaltTypography.textFontFamily,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.5.sp,
-                        lineHeight = 21.sp
+                        fontSize = 14.5.sp,
+                        lineHeight = 18.5.sp
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
@@ -472,8 +472,8 @@ private fun BackdropStyleCard(
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontFamily = cobaltTypography.textFontFamily,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 17.5.sp,
-                        lineHeight = 22.sp
+                        fontSize = 15.5.sp,
+                        lineHeight = 19.5.sp
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,

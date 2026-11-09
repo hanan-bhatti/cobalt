@@ -21,9 +21,13 @@ package com.example.ui.components.share
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
@@ -184,4 +188,32 @@ class NoteShareCardScreenshotTest {
         }
         composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/note_share_compact_light.png")
     }
+    @Test
+    fun dense_document_marks_continuation_screenshot() {
+        val longNote = sampleShortNote.copy(title = "A longer note", content = "A paragraph with more saved details. ".repeat(100))
+        composeTestRule.setContent {
+            MyApplicationTheme(darkTheme = false, dynamicColor = false) {
+                NoteShareCard(longNote, longNote.content, NoteShareStyle.DOCUMENT,
+                    tagline = "Archived in Cobalt")
+            }
+        }
+        composeTestRule.onNodeWithText("...").assertExists()
+        composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/note_share_dense_document_light.png")
+    }
+
+    @Test
+    fun minimal_large_font_marks_layout_overflow_screenshot() {
+        val note = sampleShortNote.copy(content = "Readable text with several words in each sentence. ".repeat(12))
+        composeTestRule.setContent {
+            MyApplicationTheme(darkTheme = true, dynamicColor = false) {
+                val density = LocalDensity.current
+                CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 1.5f)) {
+                    NoteShareCard(note, note.content, NoteShareStyle.MINIMAL, tagline = "Archived in Cobalt")
+                }
+            }
+        }
+        composeTestRule.onNodeWithText("...").assertExists()
+        composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/note_share_minimal_large_font_dark.png")
+    }
+
 }

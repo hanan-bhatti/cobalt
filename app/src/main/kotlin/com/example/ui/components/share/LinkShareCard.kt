@@ -312,8 +312,8 @@ private fun CardStyleLayout(
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontFamily = cobaltTypography.textFontFamily,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 17.sp,
-                        lineHeight = 23.sp
+                        fontSize = 14.5.sp,
+                        lineHeight = 19.sp
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 3,
@@ -326,8 +326,8 @@ private fun CardStyleLayout(
                         text = description,
                         style = MaterialTheme.typography.bodySmall.copy(
                             fontFamily = cobaltTypography.textFontFamily,
-                            fontSize = 13.sp,
-                            lineHeight = 18.5.sp
+                            fontSize = 11.5.sp,
+                            lineHeight = 16.sp
                         ),
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.88f),
                         maxLines = 3,
@@ -464,8 +464,8 @@ private fun ListStyleLayout(
                     style = MaterialTheme.typography.titleSmall.copy(
                         fontFamily = cobaltTypography.textFontFamily,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 14.5.sp,
-                        lineHeight = 18.sp
+                        fontSize = 13.sp,
+                        lineHeight = 16.5.sp
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,

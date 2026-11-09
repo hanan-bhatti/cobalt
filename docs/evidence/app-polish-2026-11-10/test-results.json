@@ -1,0 +1,79 @@
+[
+  {
+    "name": "com.example.notes.NoteMigrationGateTest",
+    "tests": "6",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.example.notes.TrashManagerTest",
+    "tests": "10",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.example.notes.TrashPolicyTest",
+    "tests": "2",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.example.ui.components.SurveySheetContentTest",
+    "tests": "8",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.example.ui.components.share.ImageShareCardScreenshotTest",
+    "tests": "7",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.example.ui.components.share.LinkShareCardScreenshotTest",
+    "tests": "9",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.example.ui.components.share.MovieShareCardScreenshotTest",
+    "tests": "6",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.example.ui.components.share.NoteShareCardScreenshotTest",
+    "tests": "8",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.example.ui.components.share.NoteShareExcerptTest",
+    "tests": "8",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.example.ui.screens.MarkdownReadSessionTest",
+    "tests": "7",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  },
+  {
+    "name": "com.example.util.SurveyResponseTest",
+    "tests": "6",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "0"
+  }
+]

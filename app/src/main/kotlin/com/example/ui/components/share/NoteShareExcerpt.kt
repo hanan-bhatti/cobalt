@@ -66,14 +66,14 @@ internal fun compactNoteExcerpt(noteBody: String): CompactNoteExcerpt {
     val document = excerptParser.get()!!.parse(noteBody.trim())
     val blocks = generateSequence(document.firstChild) { it.next }.toList()
     val quote = blocks.filterIsInstance<BlockQuote>().firstOrNull { plainText(it).isNotBlank() }
-    if (quote != null) return CompactNoteExcerpt(shorten(plainText(quote), 180), true)
+    if (quote != null) return CompactNoteExcerpt(shorten(plainText(quote), 320), true)
     val prose = blocks.filterIsInstance<Paragraph>().firstOrNull { plainText(it).isNotBlank() }
-    if (prose != null) return CompactNoteExcerpt(shorten(plainText(prose), 180), false)
+    if (prose != null) return CompactNoteExcerpt(shorten(plainText(prose), 320), false)
     val fallback = blocks.firstOrNull { it !is FencedCodeBlock && it !is IndentedCodeBlock && plainText(it).isNotBlank() }
     val text = fallback?.let(::plainText) ?: blocks.firstOrNull()?.let {
         when (it) { is FencedCodeBlock -> it.literal; is IndentedCodeBlock -> it.literal; else -> "" }
     }.orEmpty()
-    return CompactNoteExcerpt(shorten(text.trim(), 180), false)
+    return CompactNoteExcerpt(shorten(text.trim(), 320), false)
 }
 
 internal fun extractCompactNoteContent(noteBody: String): String = compactNoteExcerpt(noteBody).text

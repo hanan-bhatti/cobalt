@@ -169,9 +169,9 @@ fun NoteShareCard(
     val currentTypography = LocalCobaltTypography.current
     val cardTypography = remember(currentTypography, style) {
         val targetBaseSize = when (style) {
-            NoteShareStyle.DOCUMENT -> 10.5f
-            NoteShareStyle.MINIMAL -> 11.5f
-            NoteShareStyle.COMPACT -> 13.5f
+            NoteShareStyle.DOCUMENT -> 9.0f
+            NoteShareStyle.MINIMAL -> 9.5f
+            NoteShareStyle.COMPACT -> 12.0f
         }
         currentTypography.scaleForCard(targetBaseSize)
     }
@@ -237,7 +237,6 @@ fun NoteShareCard(
                         EditorialNoteCard(
                             title = displayTitle,
                             noteBody = noteBody,
-                            
                             cobaltTypography = cardTypography
                         )
                     }
@@ -245,7 +244,6 @@ fun NoteShareCard(
                         MinimalNoteCard(
                             title = displayTitle,
                             noteBody = noteBody,
-                            
                             cobaltTypography = cardTypography
                         )
                     }
@@ -284,7 +282,7 @@ fun NoteShareCard(
 
                     Text(
                         text = tagline,
-                        fontSize = 11.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold,
                         letterSpacing = 0.2.sp,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -310,7 +308,7 @@ private fun EditorialNoteCard(
     cobaltTypography: CobaltTypography,
     modifier: Modifier = Modifier
 ) {
-    val truncation = remember(noteBody) { computeA4Content(noteBody, maxLines = 14) }
+    val truncation = remember(noteBody) { computeA4Content(noteBody, maxLines = 20) }
     val contentScroll = rememberScrollState()
     val pageDoc = remember(truncation.content) {
         parseSafeMarkdown(truncation.content)
@@ -337,8 +335,8 @@ private fun EditorialNoteCard(
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontFamily = cobaltTypography.textFontFamily,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        lineHeight = 21.sp
+                        fontSize = 13.sp,
+                        lineHeight = 17.5.sp
                     ),
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center,
@@ -394,7 +392,7 @@ private fun MinimalNoteCard(
     cobaltTypography: CobaltTypography,
     modifier: Modifier = Modifier
 ) {
-    val truncation = remember(noteBody) { computeMinimalContent(noteBody, maxLines = 8) }
+    val truncation = remember(noteBody) { computeMinimalContent(noteBody, maxLines = 12) }
     val contentScroll = rememberScrollState()
     val truncatedDoc = remember(truncation.truncatedMarkdown) {
         parseSafeMarkdown(truncation.truncatedMarkdown)
@@ -421,8 +419,8 @@ private fun MinimalNoteCard(
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontFamily = cobaltTypography.textFontFamily,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp,
-                        fontSize = 11.sp
+                        letterSpacing = 0.8.sp,
+                        fontSize = 10.sp
                     ),
                     color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Start,
@@ -506,15 +504,13 @@ private fun CompactNoteCard(
             }
             Text(
                 text = formattedQuote,
-                style = MaterialTheme.typography.bodyLarge.copy(
+                style = cobaltTypography.body.copy(
                     fontFamily = cobaltTypography.textFontFamily,
                     fontStyle = if (excerpt.isQuote) FontStyle.Italic else FontStyle.Normal,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 15.5.sp,
-                    lineHeight = 23.sp
+                    fontWeight = FontWeight.Medium
                 ),
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 4,
+                maxLines = 6,
                 overflow = TextOverflow.Ellipsis
             )
         }
