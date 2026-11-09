@@ -58,10 +58,10 @@ fun NoteMigrationScreen(startup: Boolean, onDone: () -> Unit, onBack: () -> Unit
         composable("migration") {
             NoteStorageRoute(navigation, this) {
                 NoteBackSurface(enabled = startup && !showPrompt, onBack = onBack) {
-                    NoteSettingsPage(title = "Data Migration", subtitle = "Markdown storage transition", onBack = onBack) {
+                    NoteSettingsPage(title = "Data Migration", subtitle = "Update and verify note storage", onBack = onBack) {
                         item {
                             SettingsSubsectionHeader(title = "Note storage",
-                                description = "A verified Markdown copy for every note.")
+                                description = "Check each note as it moves to the current storage format.")
                             Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
                                 Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -74,11 +74,11 @@ fun NoteMigrationScreen(startup: Boolean, onDone: () -> Unit, onBack: () -> Unit
                                                 Phase.INTERRUPTED -> "Ready to resume"
                                             }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                                             Text(when {
-                                                running && status.total > 0 -> "${(checked + 1).coerceAtMost(status.total)} of ${status.total} notes"
+                                                running && status.total > 0 -> "${status.verified} of ${status.total} notes verified"
                                                 running -> "Preparing your notes…"
-                                                complete -> "${status.verified} notes verified"
+                                                complete -> "${status.verified} of ${status.total} notes verified"
                                                 status.total > 0 -> "${status.total} notes · kept on this device"
-                                                else -> "Your originals stay safe"
+                                                else -> "Original content is retained until verification"
                                             }, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         }
                                         if (running && status.total > 0) Text("${(progress * 100).toInt()}%",
@@ -90,19 +90,16 @@ fun NoteMigrationScreen(startup: Boolean, onDone: () -> Unit, onBack: () -> Unit
                                             modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape))
                                     }
                                     Text(when {
-                                        running && status.bytes > 0 -> "${formatNoteSize(context, status.bytes)} copied · checking this note"
-                                        running -> "Originals are kept until each copy is verified."
+                                        running && status.bytes > 0 -> "${formatNoteSize(context, status.bytes)} processed this run · verifying content"
+                                        running -> "Original content is kept until the updated note is verified."
                                         complete -> "Everything is saved locally. You can continue using Cobalt."
                                         status.phase == Phase.ATTENTION -> "Unfinished notes and their originals are retained. Retry when ready."
                                         status.phase == Phase.INTERRUPTED -> "Continue from the last verified note."
-                                        else -> "Move notes to private Markdown files without losing their content."
+                                        else -> "Update Markdown note storage on this device, then verify the saved content."
                                     }, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    if (status.converted > 0 || status.failed > 0) {
-                                        Text(buildList {
-                                            if (status.converted > 0) add("${status.converted} moved to Markdown")
-                                            if (status.failed > 0) add("${status.failed} need attention")
-                                        }.joinToString(" · "), style = MaterialTheme.typography.labelLarge,
-                                            color = if (status.failed > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+                                    if (status.failed > 0) {
+                                        Text("${status.failed} notes need attention", style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.error)
                                     }
                                     if (status.lastRun > 0) Text("Last checked " + DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
                                         .format(Date(status.lastRun)), style = MaterialTheme.typography.bodySmall,
@@ -119,7 +116,7 @@ fun NoteMigrationScreen(startup: Boolean, onDone: () -> Unit, onBack: () -> Unit
                                     complete -> "Check notes again"
                                     status.phase == Phase.ATTENTION -> "Retry unfinished notes"
                                     status.phase == Phase.INTERRUPTED -> "Resume migration"
-                                    else -> "Move notes"
+                                    else -> "Update notes"
                                 }, fontWeight = FontWeight.SemiBold)
                             }
                         }
@@ -141,11 +138,11 @@ fun NoteMigrationScreen(startup: Boolean, onDone: () -> Unit, onBack: () -> Unit
         }
     }
     if (showPrompt) ExpressiveAlertDialog(
-        onDismissRequest = { showPrompt = false; onBack() }, title = "Move your notes?",
-        text = { Text("Cobalt will save a verified Markdown copy of each note on this device. Your originals are kept until the copy is ready.",
+        onDismissRequest = { showPrompt = false; onBack() }, title = "Update note storage?",
+        text = { Text("Cobalt will update note storage on this device and verify each note’s content. Original content is retained until verification. Closing for now returns to your home screen; reopen Cobalt to continue.",
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) },
-        confirmButtonText = "Move notes", onConfirm = { showPrompt = false; migrate() },
-        dismissButtonText = "Not now", onDismiss = { showPrompt = false; onBack() })
+        confirmButtonText = "Update notes", onConfirm = { showPrompt = false; migrate() },
+        dismissButtonText = "Close for now", onDismiss = { showPrompt = false; onBack() })
 }
 
 @Composable
