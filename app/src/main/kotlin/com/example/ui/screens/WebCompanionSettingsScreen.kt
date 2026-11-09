@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import com.example.R
 import com.example.ui.components.*
 import com.example.ui.viewmodel.CobaltViewModel
@@ -63,6 +64,7 @@ fun WebCompanionSettingsScreen(
 ) {
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
+    val coroutineScope = rememberCoroutineScope()
 
     val isRunning by WebCompanionManager.isRunning.collectAsState()
     val serverUrl by WebCompanionManager.serverUrl.collectAsState()
@@ -173,8 +175,10 @@ fun WebCompanionSettingsScreen(
                                 Surface(
                                     onClick = {
                                         serverUrl?.let { url ->
-                                            clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Cobalt Web Companion URL", url)))
-                                            Toast.makeText(context, "URL copied to clipboard", Toast.LENGTH_SHORT).show()
+                                            coroutineScope.launch {
+                                                clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Cobalt Web Companion URL", url)))
+                                                Toast.makeText(context, "URL copied to clipboard", Toast.LENGTH_SHORT).show()
+                                            }
                                         }
                                     },
                                     shape = RoundedCornerShape(14.dp),
@@ -187,7 +191,7 @@ fun WebCompanionSettingsScreen(
                                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
                                     ) {
                                         Text(
-                                            text = serverUrl!!,
+                                            text = serverUrl.orEmpty(),
                                             style = MaterialTheme.typography.bodyMedium,
                                             fontWeight = FontWeight.SemiBold,
                                             fontFamily = FontFamily.Monospace,

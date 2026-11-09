@@ -31,7 +31,7 @@ This document tracks every atomic change, file created/modified, and verificatio
 - **Fixes Applied**:
   1. `SurveyBottomSheet.kt`: Replaced `@DrawableRes val icon: Int` with explicit `@param:DrawableRes @get:DrawableRes val icon: Int` to eliminate Kotlin 2.x KT-73255 target ambiguity.
   2. `NoteShareExcerpt.kt`: Replaced `block != null` with `true` at truncation exit where smart cast proved `block` is always non-null.
-  3. `WebCompanionSettingsScreen.kt`: Replaced deprecated `LocalClipboardManager` with modern `LocalClipboard` and `ClipEntry(ClipData...)`, safely unwrapping nullable `serverUrl`.
+  3. `WebCompanionSettingsScreen.kt`: Replaced deprecated `LocalClipboardManager` with modern `LocalClipboard` and `ClipEntry(ClipData...)`, launching asynchronous clipboard copy inside `rememberCoroutineScope()`, and safely unwrapping nullable `serverUrl`.
   4. `WebCompanionManager.kt`: Replaced deprecated `WifiManager.connectionInfo.ipAddress` (API 31 deprecation) with modern `ConnectivityManager` link address resolution and multi-interface fallback supporting Wi-Fi, Hotspots, Ethernet, and USB tethering.
 
 ### Step 07: MVVM Encapsulation Refactor & Clean Architecture Restoration
