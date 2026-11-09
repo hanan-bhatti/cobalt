@@ -103,41 +103,6 @@ object FeedbackSubmissionManager {
         return@withContext true
     }
 
-    suspend fun submitSurvey(
-        context: Context,
-        reaction: String,
-        favoriteFeatures: List<String>,
-        desiredImprovements: List<String>,
-        npsScore: Int,
-        customFeedback: String,
-        almostQuitReason: String = "",
-        userEmail: String,
-        userId: String,
-        deviceModel: String,
-        osVersion: String,
-        appVersion: String,
-    ): Boolean = withContext(Dispatchers.IO) {
-        val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
-        val payload = mapOf(
-            "type" to "SURVEY",
-            "reaction" to reaction,
-            "favoriteFeatures" to favoriteFeatures,
-            "desiredImprovements" to desiredImprovements,
-            "npsScore" to npsScore,
-            "almostQuitReason" to almostQuitReason,
-            "customFeedback" to customFeedback,
-            "userEmail" to userEmail,
-            "userId" to userId,
-            "deviceModel" to deviceModel,
-            "osVersion" to osVersion,
-            "appVersion" to appVersion,
-            "timestamp" to timestamp
-        )
-
-        saveLocally(context, "surveys.json", payload)
-        return@withContext true
-    }
-
     private fun getFileSize(context: Context, uri: Uri): Long {
         var size = 0L
         try {
@@ -189,12 +154,15 @@ object FeedbackSubmissionManager {
         }
     }
 
-    fun copyToClipboard(context: Context, label: String, text: String) {
+    fun copyToClipboard(context: Context, label: String, text: String): Boolean {
         try {
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-            clipboard?.setPrimaryClip(ClipData.newPlainText(label, text))
+            if (clipboard == null) return false
+            clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
+            return true
         } catch (e: Exception) {
             Log.w("FeedbackSubmissionManager", "Failed to copy to clipboard: ${e.message}")
+            return false
         }
     }
 
@@ -279,62 +247,95 @@ object FeedbackSubmissionManager {
         """.trimIndent()
     }
 
+    /** Plain text for email clients: no Markdown headings, tables or emphasis markers. */
+    fun formatSurveyEmail(response: SurveyResponse, deviceModel: String, osVersion: String, appVersion: String): String = buildString {
+        fun answer(value: String?) = value?.takeIf { it.isNotBlank() } ?: "Not answered"
+        appendLine("Cobalt v$appVersion — experience survey")
+        appendLine()
+        appendLine("1. Overall experience")
+        appendLine(response.reactionScore?.let { "$it out of 10 — ${answer(response.overall)}" } ?: answer(response.overall))
+        appendLine()
+        appendLine("2. Parts used in this version")
+        appendLine(if (response.areasUsed.isEmpty()) "Not answered" else response.areasUsed.joinToString(", "))
+        appendLine()
+        appendLine("3. Update experience")
+        appendLine(answer(response.updateExperience))
+        appendLine()
+        appendLine("4. Existing area to improve first")
+        appendLine(answer(response.improvementArea))
+        appendLine()
+        appendLine("5. What happened, and what was expected")
+        appendLine(answer(response.details))
+        appendLine()
+        appendLine("6. Likelihood of recommending Cobalt")
+        appendLine(response.recommendation?.let { "$it out of 10" } ?: "Not answered")
+        appendLine()
+        appendLine("App version: $appVersion")
+        appendLine("Device: $deviceModel")
+        appendLine("Android: $osVersion")
+    }
+
+    const val FEEDBACK_EMAIL = "hannanbhatti2006@gmail.com"
+
+    /** Opens an email composer directly. This cannot establish whether the user sends it. */
+    fun launchSurveyEmail(context: Context, appVersion: String, body: String): Boolean {
+        val subject = "Cobalt v$appVersion experience survey"
+        val uri = Uri.parse("mailto:$FEEDBACK_EMAIL?subject=${Uri.encode(subject)}&body=${Uri.encode(body)}")
+        return try {
+            context.startActivity(Intent(Intent.ACTION_SENDTO, uri).apply {
+                putExtra(Intent.EXTRA_EMAIL, arrayOf(FEEDBACK_EMAIL))
+                putExtra(Intent.EXTRA_SUBJECT, subject)
+                putExtra(Intent.EXTRA_TEXT, body)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            })
+            true
+        } catch (error: Exception) {
+            Log.e("FeedbackSubmissionManager", "Could not open survey email composer", error)
+            false
+        }
+    }
+
     /**
      * Formats a survey into clean, highly readable GitHub / Email markdown.
      */
     fun formatSurveyMarkdown(
-        reaction: String,
-        favoriteFeatures: List<String>,
-        desiredImprovements: List<String>,
-        npsScore: Int,
-        customFeedback: String,
-        almostQuitReason: String = "",
-        userEmail: String,
+        response: SurveyResponse,
         deviceModel: String,
         osVersion: String,
         appVersion: String
-    ): String {
-        val favs = if (favoriteFeatures.isNotEmpty()) favoriteFeatures.map { "- $it" }.joinToString("\n") else "- _None specified_"
-        val frustration = if (almostQuitReason.isNotBlank()) almostQuitReason else "_No frustration reported_"
-        val imps = if (desiredImprovements.isNotEmpty()) desiredImprovements.map { "- $it" }.joinToString("\n") else "- _None specified_"
-        val comments = if (customFeedback.isNotBlank()) customFeedback else "_No additional feedback entered_"
-
-        return """
-            ## 🌟 Cobalt v2.x Experience Survey Response
-
-            ### 📊 Overall Sentiment & Recommendation
-            - **Sentiment Rating:** $reaction
-            - **Recommendation Score (NPS):** **$npsScore / 10**
-
-            ### ❤️ Favorite Features Used Most
-            $favs
-
-            ### ⚠️ What Almost Made You Quit / Biggest Frustration
-            > $frustration
-
-            ### 🛠️ Most Desired Improvements / Wishlist
-            $imps
-
-            ### 💬 User Feedback & Ideas
-            > $comments
-
-            ### 📱 Device & Version Telemetry
-            | Parameter | Value |
-            | :--- | :--- |
-            | **App Version** | v$appVersion |
-            | **Device Model** | $deviceModel |
-            | **Android OS** | $osVersion |
-            | **Respondent** | ${if (userEmail.isNotBlank()) userEmail else "Anonymous User"} |
-            | **Date** | ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())} |
-
-            ---
-            _Thank you for contributing to Cobalt Knowledge Archive!_
-        """.trimIndent()
+    ): String = buildString {
+        fun answer(value: String?) = value?.takeIf { it.isNotBlank() } ?: "_Not answered_"
+        appendLine("## Cobalt v$appVersion experience survey")
+        appendLine()
+        appendLine("### 1. How has this version worked for you?")
+        appendLine(answer(response.overall))
+        appendLine()
+        appendLine("### 2. Which parts have you used?")
+        if (response.areasUsed.isEmpty()) appendLine("_Not answered_")
+        else response.areasUsed.forEach { appendLine("- $it") }
+        appendLine()
+        appendLine("### 3. Did you notice problems after updating?")
+        appendLine(answer(response.updateExperience))
+        appendLine()
+        appendLine("### 4. Which existing area should we improve first?")
+        appendLine(answer(response.improvementArea))
+        appendLine()
+        appendLine("### 5. What happened, and what did you expect instead?")
+        appendLine(answer(response.details))
+        appendLine()
+        appendLine("### 6. How likely are you to recommend Cobalt?")
+        appendLine(response.recommendation?.let { "$it / 10" } ?: "_Not answered_")
+        appendLine()
+        appendLine("### Environment")
+        appendLine("- App: v$appVersion")
+        appendLine("- Device: $deviceModel")
+        appendLine("- OS: $osVersion")
+        appendLine("- Contact (optional): ${answer(response.contact)}")
     }
 
     /**
      * Launches the user's browser with a pre-filled GitHub issue URL.
-     * Also copies the report to the clipboard to guarantee zero data loss.
+     * Also offers a clipboard copy for manual sharing.
      */
     fun launchGitHubIssue(
         context: Context,
@@ -357,22 +358,24 @@ object FeedbackSubmissionManager {
 
     /**
      * Launches the user's browser with a pre-filled GitHub discussion URL.
-     * Also copies the report to the clipboard to guarantee zero data loss.
+     * Also offers a clipboard copy for manual sharing.
      */
     fun launchGitHubDiscussion(
         context: Context,
         title: String,
         body: String
-    ) {
+    ): Boolean {
         copyToClipboard(context, "Cobalt Survey", body)
         Toast.makeText(context, "Survey details copied to clipboard!", Toast.LENGTH_SHORT).show()
         try {
             val encodedTitle = java.net.URLEncoder.encode(title, "UTF-8")
             val encodedBody = java.net.URLEncoder.encode(body, "UTF-8")
             val url = "https://github.com/hanan-bhatti/cobalt/discussions/new?title=$encodedTitle&body=$encodedBody"
-            CobaltCustomTabsLauncher.launch(context, url)
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            return true
         } catch (e: Exception) {
             Log.e("FeedbackSubmissionManager", "Failed to launch GitHub discussion: ${e.message}", e)
+            return false
         }
     }
 
@@ -384,8 +387,8 @@ object FeedbackSubmissionManager {
         context: Context,
         subject: String,
         body: String,
-        recipient: String = "hannanbhatti2006@gmail.com"
-    ) {
+        recipient: String = FEEDBACK_EMAIL
+    ): Boolean {
         copyToClipboard(context, "Cobalt Feedback", body)
         try {
             val encodedSubject = Uri.encode(subject)
@@ -399,6 +402,7 @@ object FeedbackSubmissionManager {
             }
             context.startActivity(intent)
             Toast.makeText(context, "Feedback details copied to clipboard!", Toast.LENGTH_SHORT).show()
+            return true
         } catch (e: Exception) {
             try {
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -410,9 +414,11 @@ object FeedbackSubmissionManager {
                 }
                 context.startActivity(Intent.createChooser(shareIntent, "Send Feedback via Email"))
                 Toast.makeText(context, "Feedback details copied to clipboard!", Toast.LENGTH_SHORT).show()
+                return true
             } catch (e2: Exception) {
                 Log.e("FeedbackSubmissionManager", "Failed to launch email client: ${e2.message}", e2)
                 Toast.makeText(context, "Feedback copied to clipboard. Please email $recipient", Toast.LENGTH_LONG).show()
+                return false
             }
         }
     }
@@ -426,7 +432,7 @@ object FeedbackSubmissionManager {
         title: String,
         content: String,
         fileName: String = "cobalt_feedback.md"
-    ) {
+    ): Boolean {
         copyToClipboard(context, title, content)
         try {
             val exportDir = File(context.cacheDir, "feedback_export")
@@ -451,9 +457,11 @@ object FeedbackSubmissionManager {
             chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             context.startActivity(chooser)
             Toast.makeText(context, "Feedback copied to clipboard and ready to share!", Toast.LENGTH_SHORT).show()
+            return true
         } catch (e: Exception) {
             Log.e("FeedbackSubmissionManager", "Failed to share feedback file: ${e.message}", e)
             Toast.makeText(context, "Feedback copied to clipboard!", Toast.LENGTH_SHORT).show()
+            return false
         }
     }
 }

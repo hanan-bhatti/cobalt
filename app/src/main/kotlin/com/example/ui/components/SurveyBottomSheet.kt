@@ -1,114 +1,81 @@
 package com.example.ui.components
 
-import android.content.Context
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularWavyProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.SheetState
-import androidx.compose.material3.SheetValue
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.setProgress
+import androidx.compose.ui.semantics.testTag as sliderTestTag
+import com.example.util.surveyReactionLabel
+import com.example.util.surveyReactionEmoji
+import kotlin.math.roundToInt
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.ui.screens.collectEnvironmentReport
-import com.example.util.AppVersionManager
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.example.ui.viewmodel.CobaltViewModel
+import com.example.util.FeedbackSubmissionManager
+import com.example.util.SurveyResponse
+import org.json.JSONObject
 
-data class SurveyReaction(
-    val emoji: String,
-    val label: String,
-    val color: Color
+private data class SurveyChoice(val answer: String, val label: String, @DrawableRes val icon: Int)
+private val surveyAreas = listOf(
+    SurveyChoice("Notes / Markdown", "Notes", R.drawable.ic_custom_text),
+    SurveyChoice("Links", "Links", R.drawable.ic_custom_link),
+    SurveyChoice("Images / video / audio", "Images & media", R.drawable.ic_custom_image),
+    SurveyChoice("Folders / search", "Folders & search", R.drawable.ic_custom_folder),
+    SurveyChoice("Media tracking", "Movies & TV", R.drawable.ic_custom_movie),
+    SurveyChoice("Sharing", "Sharing", R.drawable.ic_custom_share),
+    SurveyChoice("Saved history / storage", "Saved history", R.drawable.ic_custom_history),
+    SurveyChoice("Dock / OCR", "Dock & OCR", R.drawable.ic_custom_sidedock),
+    SurveyChoice("Widgets", "Widgets", R.drawable.ic_settings_widgets),
+    SurveyChoice("Appearance / fonts", "Appearance", R.drawable.ic_custom_settings),
+    SurveyChoice("Reminders", "Reminders", R.drawable.ic_custom_reminder)
+)
+private val surveyImprovements = listOf(
+    SurveyChoice("Editing / saving", "Editing & saving", R.drawable.ic_custom_text),
+    SurveyChoice("Finding / organizing items", "Finding things", R.drawable.ic_custom_search),
+    SurveyChoice("Media tracking", "Movies & TV", R.drawable.ic_custom_movie),
+    SurveyChoice("Sharing", "Sharing", R.drawable.ic_custom_share),
+    SurveyChoice("Storage / migration", "Storage & updates", R.drawable.ic_custom_storage),
+    SurveyChoice("Appearance / readability", "Look & readability", R.drawable.ic_custom_settings),
+    SurveyChoice("Dock / OCR", "Dock & OCR", R.drawable.ic_custom_sidedock),
+    SurveyChoice("Speed / stability", "Speed & stability", R.drawable.ic_custom_sparkle)
+)
+private val surveyUpdateChoices = listOf(
+    SurveyChoice("No problems noticed", "No problems noticed", R.drawable.ic_custom_check),
+    SurveyChoice("Something missing or changed unexpectedly", "Something changed", R.drawable.ic_custom_feedback),
+    SurveyChoice("Update / migration trouble", "Migration trouble", R.drawable.ic_custom_sync),
+    SurveyChoice("Not sure", "Not sure", R.drawable.ic_custom_help),
+    SurveyChoice("I haven’t upgraded", "I haven’t upgraded", R.drawable.ic_custom_history)
 )
 
-data class QuickPromptItem(
-    val text: String,
-    val iconResId: Int? = null
-)
-
-/**
- * Ultra-Modern, Gamified In-App Survey Sheet for Cobalt.
- * Follows Hick's Law, Fitts's Law, and Goal-Gradient Effect for high completion rates.
- */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@Suppress("UNUSED_PARAMETER")
 fun SurveyBottomSheet(
-    viewModel: com.example.ui.viewmodel.CobaltViewModel,
+    viewModel: CobaltViewModel,
     onDismissRequest: () -> Unit,
     sheetState: SheetState = rememberBottomSheetState(
         initialValue = SheetValue.Hidden,
@@ -117,934 +84,272 @@ fun SurveyBottomSheet(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val haptic = LocalHapticFeedback.current
-    val coroutineScope = rememberCoroutineScope()
-    val userEmailState: String? = null
-    val envReport = remember(context, userEmailState) {
-        collectEnvironmentReport(context, userEmail = userEmailState)
+    val environment = remember(context) { collectEnvironmentReport(context) }
+    var responseJson by rememberSaveable { mutableStateOf(SurveyResponse().toJson().toString()) }
+    val response = remember(responseJson) { SurveyResponse.fromJson(JSONObject(responseJson)) }
+    var status by remember { mutableStateOf<String?>(null) }
+    var emailError by remember { mutableStateOf(false) }
+    val emailBody = remember(response, environment) {
+        FeedbackSubmissionManager.formatSurveyEmail(response, environment.deviceModel,
+            environment.osVersion, environment.appVersion)
     }
-
-    var currentStep by remember { mutableIntStateOf(1) } // 1 or 2
-    var selectedReaction by remember { mutableStateOf<SurveyReaction?>(null) }
-
-    // Non-biased lists: start with 0 selected so user actively chooses
-    val favoriteFeatures = remember { mutableStateListOf<String>() }
-    val desiredImprovements = remember { mutableStateListOf<String>() }
-
-    var almostQuitReason by remember { mutableStateOf("") }
-    var npsScore by remember { mutableIntStateOf(10) }
-    var customFeedback by remember { mutableStateOf("") }
-    var respondentContact by remember { mutableStateOf(userEmailState ?: "") }
-    var showMarkdownPreview by remember { mutableStateOf(false) }
-
-    val prefs = remember { context.getSharedPreferences("cobalt_prefs", android.content.Context.MODE_PRIVATE) }
-    var isSubmitting by remember { mutableStateOf(false) }
-    var submitSuccess by remember { mutableStateOf(prefs.getBoolean("survey_submitted", false)) }
-
-    val reactions = remember {
-        listOf(
-            SurveyReaction("😍", "Mindblown", Color(0xFF10B981)),
-            SurveyReaction("😊", "Loving It", Color(0xFF6366F1)),
-            SurveyReaction("😐", "It's Okay", Color(0xFFF59E0B)),
-            SurveyReaction("😕", "Needs Work", Color(0xFFEC4899)),
-            SurveyReaction("😤", "Frustrated", Color(0xFFEF4444))
-        )
-    }
-
-    val featureOptions = remember {
-        listOf(
-            "Markdown Editor & Checklists",
-            "Smart Link Archiving",
-            "AI Voice Memos & Transcription",
-            "Instant OCR Scan",
-            "Floating Side Dock & Reader",
-            "Custom Folders & Themed Icons",
-            "Media Hub & Video Player",
-            "Private Vault & Biometrics",
-            "Adaptive Review Reminders",
-            "Home Screen Widgets",
-            "Fluid Expressive Blur & Theme"
-        )
-    }
-
-    val improvementOptions = remember {
-        listOf(
-            "Trakt Movie & TV Sync",
-            "Fingerprint Lock & Encrypted Database",
-            "Obsidian / Markdown Vault Export",
-            "Web / Desktop Companion App",
-            "Delete button in edit mode",
-            "Batch Multi-Select Operations",
-            "Offline Vector / Semantic Search",
-            "Direct PDF / Doc Export",
-            "More Preset Folder Icons & Colors"
-        )
-    }
-
-    val quickCommentPrompts = remember {
-        listOf(
-            QuickPromptItem("Love the Markdown checklists!", iconResId = R.drawable.ic_custom_checklist),
-            QuickPromptItem("Floating Side Dock is a game changer!", iconResId = R.drawable.ic_custom_sidedock),
-            QuickPromptItem("Best offline-first knowledge archive!", iconResId = R.drawable.ic_custom_vault)
-        )
-    }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismissRequest,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surface,
+    ModalBottomSheet(onDismissRequest = onDismissRequest, sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        modifier = modifier
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 32.dp)
-                .verticalScroll(rememberScrollState())
-                .animateContentSize()
-        ) {
-            // Header with Progress & Close
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = CircleShape,
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_custom_survey),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
-                    Column {
-                        Text(
-                            text = "Cobalt Survey",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = if (submitSuccess) "COMPLETED • THANK YOU" else "STEP $currentStep OF 2 (~25 SEC)",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            letterSpacing = 1.sp
-                        )
-                    }
-                }
+        tonalElevation = 3.dp, modifier = modifier) {
+        SurveySheetContent(response, onResponseChange = {
+            responseJson = it.toJson().toString()
+            status = null
+        }, version = environment.appVersion, emailBody = emailBody,
+            onDismissRequest = onDismissRequest, status = status, emailError = emailError,
+            onSendEmail = {
+                val opened = FeedbackSubmissionManager.launchSurveyEmail(context, environment.appVersion, emailBody)
+                emailError = !opened
+                status = if (opened) "Your email app is ready. Tap Send there to finish."
+                    else "Couldn’t open an email app. Your answers are still here; you can copy the response below."
+            }, onCopy = { FeedbackSubmissionManager.copyToClipboard(context, "Cobalt survey", emailBody) })
+    }
+}
 
-                IconButton(onClick = onDismissRequest) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_custom_close),
-                        contentDescription = "Close",
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+/** The same content is rendered in UI tests; the email action is injected to avoid sending test feedback. */
+@Composable
+internal fun SurveySheetContent(
+    response: SurveyResponse,
+    onResponseChange: (SurveyResponse) -> Unit,
+    version: String,
+    emailBody: String,
+    onDismissRequest: () -> Unit,
+    onSendEmail: () -> Unit,
+    onCopy: () -> Boolean,
+    modifier: Modifier = Modifier,
+    initialStep: Int = 1,
+    status: String? = null,
+    emailError: Boolean = false
+) {
+    var step by rememberSaveable { mutableIntStateOf(initialStep) }
+    var preview by rememberSaveable { mutableStateOf(false) }
+    var copied by remember { mutableStateOf(false) }
+    val list = rememberLazyListState()
+    val height = LocalConfiguration.current.screenHeightDp.dp * 0.88f
+    LaunchedEffect(step) { list.scrollToItem(0) }
+    Column(modifier.fillMaxWidth().heightIn(max = height)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(Modifier.size(48.dp).background(Brush.linearGradient(listOf(
+                MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.tertiaryContainer)), RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center) {
+                Icon(painterResource(R.drawable.ic_custom_survey), null,
+                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Micro Progress Indicator
-            LinearProgressIndicator(
-                progress = { if (submitSuccess) 1.0f else if (currentStep == 1) 0.5f else 0.9f },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(CircleShape),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceContainer
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (submitSuccess) {
-                // Success Appreciation Card
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                    shape = RoundedCornerShape(24.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        MaterialTheme.colorScheme.primaryContainer,
-                                        MaterialTheme.colorScheme.tertiaryContainer
-                                    )
-                                ),
-                                shape = RoundedCornerShape(24.dp)
-                            )
-                            .padding(24.dp)
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(14.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.primary,
-                                shape = CircleShape,
-                                modifier = Modifier.size(64.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_custom_check),
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onPrimary,
-                                        modifier = Modifier.size(36.dp)
-                                    )
-                                }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Make Cobalt better", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("A few taps. Your honest take.", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            IconButton(onClick = onDismissRequest) {
+                Icon(painterResource(R.drawable.ic_custom_close), "Close survey", Modifier.size(20.dp))
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SurveyStepPill("1", "Your experience", active = step == 1, done = step > 1, modifier = Modifier.weight(1f))
+            SurveyStepPill("2", "Your ideas", active = step == 2, done = false, modifier = Modifier.weight(1f))
+        }
+        LazyColumn(Modifier.weight(1f).testTag("survey_questions"), state = list,
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (step == 1) {
+                item(key = "experience") {
+                    SurveyQuestionCard("How’s Cobalt been for you?", "Slide from 1 to 10, or leave it blank.", R.drawable.ic_custom_heart) {
+                        response.reactionScore?.let { score ->
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text(surveyReactionEmoji(score), style = MaterialTheme.typography.headlineMedium)
+                                Text(surveyReactionLabel(score), style = MaterialTheme.typography.titleSmall)
                             }
-
-                            Text(
-                                text = "Thank You! 💙",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-
-                            Text(
-                                text = "Your honest feedback directly shapes Cobalt's upcoming updates. We read every response to build a better, private second brain.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                textAlign = TextAlign.Center,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
-                            )
-
-                            val finalUserEmail = respondentContact.ifBlank { envReport.userEmail.ifBlank { "Anonymous User" } }
-                            val markdown = com.example.util.FeedbackSubmissionManager.formatSurveyMarkdown(
-                                reaction = selectedReaction?.label ?: "Loving It",
-                                favoriteFeatures = favoriteFeatures.toList(),
-                                desiredImprovements = desiredImprovements.toList(),
-                                npsScore = npsScore,
-                                customFeedback = customFeedback,
-                                almostQuitReason = almostQuitReason,
-                                userEmail = finalUserEmail,
-                                deviceModel = envReport.deviceModel,
-                                osVersion = envReport.osVersion,
-                                appVersion = envReport.appVersion
-                            )
-
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                OutlinedButton(
-                                    onClick = {
-                                        com.example.util.FeedbackSubmissionManager.copyToClipboard(context, "Cobalt Survey", markdown)
-                                        android.widget.Toast.makeText(context, "Survey Markdown copied to clipboard!", android.widget.Toast.LENGTH_SHORT).show()
-                                    },
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                                        contentColor = MaterialTheme.colorScheme.onSurface
-                                    ),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
-                                    modifier = Modifier.weight(1f).bounceClick()
-                                ) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_custom_copy),
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "Copy MD",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-
-                                    OutlinedButton(
-                                        onClick = {
-                                            com.example.util.FeedbackSubmissionManager.shareOrExportFeedback(
-                                                context = context,
-                                                title = "Cobalt Experience Survey",
-                                                content = markdown,
-                                                fileName = "cobalt_survey_response.md"
-                                            )
-                                        },
-                                        shape = RoundedCornerShape(14.dp),
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                                            contentColor = MaterialTheme.colorScheme.onSurface
-                                        ),
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
-                                        modifier = Modifier.weight(1f).bounceClick()
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.ic_custom_share),
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = "Share",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                    }
-
-                            }
-
-                            Button(
-                                onClick = onDismissRequest,
-                                shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary
-                                ),
-                                modifier = Modifier.fillMaxWidth().bounceClick()
-                            ) {
-                                Text(
-                                    text = "Done",
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
-                            }
+                        }
+                        OptionalSurveySlider(response.reactionScore, "Very poorly", "Very well", "survey_reaction_slider") { score ->
+                            onResponseChange(response.copy(reactionScore = score, overall = score?.let(::surveyReactionLabel)))
                         }
                     }
                 }
-            } else if (currentStep == 1) {
-                // STEP 1: Experience & Features
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    // Optional feedback contact
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(imageVector = Icons.Default.AccountCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                            Text(
-                                text = "Responding as ${envReport.userEmail} (${envReport.deviceModel})",
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                item(key = "used") {
+                    SurveyQuestionCard("What have you been using?", "Pick as many as you like.", R.drawable.ic_custom_checklist) {
+                        SurveyChoices(surveyAreas, selected = { it in response.areasUsed }) {
+                            onResponseChange(response.copy(areasUsed = if (it in response.areasUsed) response.areasUsed - it
+                                else response.areasUsed + it))
                         }
                     }
-
-                    // Q1: How is your experience? (Emoji Reaction Cards)
-                    Text(
-                        text = "1. How is your overall experience with Cobalt?",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        reactions.forEach { reaction ->
-                            val isSelected = selectedReaction?.label == reaction.label
-                            val scale by animateFloatAsState(
-                                targetValue = if (isSelected) 1.15f else 1.0f,
-                                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-                                label = "reaction_scale"
-                            )
-
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .scale(scale)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .clickable {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        selectedReaction = reaction
-                                    }
-                                    .background(if (isSelected) reaction.color.copy(alpha = 0.2f) else Color.Transparent)
-                                    .padding(vertical = 8.dp, horizontal = 2.dp)
-                            ) {
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier.height(36.dp)
-                                ) {
-                                    Text(reaction.emoji, fontSize = 26.sp)
-                                }
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = reaction.label,
-                                    fontSize = 9.5.sp,
-                                    maxLines = 1,
-                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) reaction.color else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
+                }
+                item(key = "update") {
+                    SurveyQuestionCard("How did the update go?", "New here? That’s an option too.", R.drawable.ic_custom_sync) {
+                        SurveyChoices(surveyUpdateChoices, selected = { response.updateExperience == it }) {
+                            onResponseChange(response.copy(updateExperience = it.takeUnless { it == response.updateExperience }))
                         }
-                    }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-
-                    // Q2: Favorite Features (Pre-selected Chips)
-                    Text(
-                        text = "2. What features do you use & love most?",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        featureOptions.forEach { feature ->
-                            val isSelected = favoriteFeatures.contains(feature)
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    if (isSelected) favoriteFeatures.remove(feature) else favoriteFeatures.add(feature)
-                                },
-                                leadingIcon = {
-                                    if (isSelected) {
-                                        Icon(painter = painterResource(id = R.drawable.ic_custom_check), contentDescription = null, modifier = Modifier.size(16.dp))
-                                    }
-                                },
-                                label = { Text(feature, fontSize = 12.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
-                                shape = RoundedCornerShape(14.dp),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                                )
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Step 1 Next Button
-                    Button(
-                        onClick = { currentStep = 2 },
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                        modifier = Modifier.fillMaxWidth().bounceClick().testTag("survey_next_step_button")
-                    ) {
-                        Text("Continue to Final Step", fontWeight = FontWeight.Bold)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Icon(painter = painterResource(id = R.drawable.ic_custom_chevron_right), contentDescription = null, modifier = Modifier.size(18.dp))
                     }
                 }
             } else {
-                // STEP 2: Friction, Improvements & NPS Recommendation
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    // Q3: Biggest Friction / Almost Quit Reason (Most Valuable Honest Feedback)
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = "3. What almost made you quit or frustrates you most?",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = "Be completely honest — this tells us what real pain points to fix first.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        OutlinedTextField(
-                            value = almostQuitReason,
-                            onValueChange = { almostQuitReason = it },
-                            placeholder = { Text("e.g. Syncing between devices, clunky folder view, slow OCR...", fontSize = 13.sp) },
-                            minLines = 2,
-                            shape = RoundedCornerShape(14.dp),
+                item(key = "improve") {
+                    SurveyQuestionCard("What should we polish next?", "Choose one existing area.", R.drawable.ic_custom_sparkle) {
+                        SurveyChoices(surveyImprovements, selected = { response.improvementArea == it }) {
+                            onResponseChange(response.copy(improvementArea = it.takeUnless { it == response.improvementArea }))
+                        }
+                    }
+                }
+                item(key = "details") {
+                    SurveyQuestionCard("Anything we should know?", "What happened, and what did you expect?", R.drawable.ic_custom_feedback) {
+                        OutlinedTextField(response.details, onValueChange = { onResponseChange(response.copy(details = it)) },
+                            placeholder = { Text("A small annoyance, a bug, or an idea…", style = MaterialTheme.typography.bodyMedium) },
+                            minLines = 3, maxLines = 5, shape = RoundedCornerShape(16.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                            ),
-                            modifier = Modifier.fillMaxWidth().testTag("survey_almost_quit_input")
-                        )
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)),
+                            modifier = Modifier.fillMaxWidth().testTag("survey_details_input"))
                     }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-
-                    // Q4: Desired Improvements (Chips)
-                    Text(
-                        text = "4. What features would you love to see next?",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        improvementOptions.forEach { improvement ->
-                            val isSelected = desiredImprovements.contains(improvement)
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    if (isSelected) desiredImprovements.remove(improvement) else desiredImprovements.add(improvement)
-                                },
-                                label = { Text(improvement, fontSize = 12.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
-                                shape = RoundedCornerShape(14.dp),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = MaterialTheme.colorScheme.tertiary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onTertiary
-                                )
-                            )
+                }
+                item(key = "recommendation") {
+                    SurveyQuestionCard("Would you recommend Cobalt?", "Optional · leave it blank if it’s too early.", R.drawable.ic_custom_star) {
+                        OptionalSurveySlider(response.recommendation, "Not likely", "Very likely", "survey_recommendation_slider") { score ->
+                            onResponseChange(response.copy(recommendation = score))
                         }
                     }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-
-                    // Q5: Recommendation Score (NPS 1-10 Rating Scale)
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "5. How likely are you to recommend Cobalt?",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Surface(
-                                color = Color(0xFFF59E0B).copy(alpha = 0.15f),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Icon(painter = painterResource(id = R.drawable.ic_custom_star), contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(13.dp))
-                                    Text(
-                                        text = "$npsScore/10 • ${if (npsScore >= 9) "Highly Recommended" else if (npsScore >= 7) "Passive" else "Needs Improvement"}",
-                                        fontSize = 11.sp,
-                                        color = Color(0xFFF59E0B),
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
+                }
+                item(key = "email") {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(painterResource(R.drawable.ic_custom_mail), null, tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp))
+                        TextButton(onClick = { preview = !preview }) { Text(if (preview) "Hide email preview" else "Preview email") }
+                        Spacer(Modifier.weight(1f))
+                        Text("v$version", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Text("Your email app handles sending. The response includes app, device and Android versions.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (preview || emailError) Surface(shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surface, modifier = Modifier.padding(top = 12.dp)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(emailBody, style = MaterialTheme.typography.bodySmall)
+                            TextButton(onClick = { copied = onCopy() }) {
+                                Icon(painterResource(R.drawable.ic_custom_copy), null, Modifier.size(16.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(if (copied) "Copied" else "Copy response")
                             }
                         }
                     }
-
-                    // 1-10 Pill Chips
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        (1..10).forEach { num ->
-                            val isSelected = npsScore == num
-                            Surface(
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer,
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clickable {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        npsScore = num
-                                    }
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = "$num",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-
-                    // Q6: Optional Note & Quick Suggestions
-                    Text(
-                        text = "6. Any other message or ideas for the dev team? (Optional)",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    // Quick Comment Suggestion Chips
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        quickCommentPrompts.forEach { prompt ->
-                            Surface(
-                                color = MaterialTheme.colorScheme.surface,
-                                shape = RoundedCornerShape(12.dp),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                                modifier = Modifier.clickable {
-                                    customFeedback = prompt.text
-                                }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    if (prompt.iconResId != null) {
-                                        Icon(
-                                            painter = painterResource(id = prompt.iconResId),
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                    }
-                                    Text(
-                                        text = prompt.text,
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    OutlinedTextField(
-                        value = customFeedback,
-                        onValueChange = { customFeedback = it },
-                        placeholder = { Text("Share any thoughts or feature ideas...", fontSize = 13.sp) },
-                        minLines = 2,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        ),
-                        modifier = Modifier.fillMaxWidth().testTag("survey_custom_comment_input")
-                    )
-
-                    // Optional Contact Field
-                    OutlinedTextField(
-                        value = respondentContact,
-                        onValueChange = { respondentContact = it },
-                        placeholder = { Text("Your Email or Name (Optional - for developer follow-up)", fontSize = 13.sp) },
-                        singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        ),
-                        modifier = Modifier.fillMaxWidth().testTag("survey_contact_input")
-                    )
-
-                    // Collapsible Markdown Preview
-                    val activeUserEmail = respondentContact.ifBlank { envReport.userEmail.ifBlank { "Anonymous User" } }
-                    val currentMarkdownPreview = remember(selectedReaction, favoriteFeatures.size, desiredImprovements.size, npsScore, customFeedback, almostQuitReason, activeUserEmail) {
-                        com.example.util.FeedbackSubmissionManager.formatSurveyMarkdown(
-                            reaction = selectedReaction?.label ?: "Loving It",
-                            favoriteFeatures = favoriteFeatures.toList(),
-                            desiredImprovements = desiredImprovements.toList(),
-                            npsScore = npsScore,
-                            customFeedback = customFeedback,
-                            almostQuitReason = almostQuitReason,
-                            userEmail = activeUserEmail,
-                            deviceModel = envReport.deviceModel,
-                            osVersion = envReport.osVersion,
-                            appVersion = envReport.appVersion
-                        )
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showMarkdownPreview = !showMarkdownPreview }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(painter = painterResource(id = R.drawable.ic_custom_code), contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                                Text(text = "Preview Formatted Response", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                            }
-                            Icon(
-                                painter = painterResource(id = if (showMarkdownPreview) R.drawable.ic_custom_chevron_up else R.drawable.ic_custom_chevron_down),
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    AnimatedVisibility(visible = showMarkdownPreview) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = currentMarkdownPreview,
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(12.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // Submit Action Area
-
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Button(
-                                onClick = {
-                                    isSubmitting = true
-                                    coroutineScope.launch {
-                                        try {
-                                            viewModel.submitSurvey(
-                                                context = context,
-                                                reaction = selectedReaction?.label ?: "Loving It",
-                                                favoriteFeatures = favoriteFeatures.toList(),
-                                                desiredImprovements = desiredImprovements.toList(),
-                                                npsScore = npsScore,
-                                                customFeedback = customFeedback,
-                                                almostQuitReason = almostQuitReason,
-                                                userEmail = activeUserEmail,
-                                                userId = envReport.userId,
-                                                deviceModel = envReport.deviceModel,
-                                                osVersion = envReport.osVersion,
-                                                appVersion = envReport.appVersion
-                                            )
-                                            com.example.util.FeedbackSubmissionManager.launchGitHubDiscussion(
-                                                context = context,
-                                                title = "App Experience Survey: ${selectedReaction?.label ?: "Feedback"}",
-                                                body = currentMarkdownPreview
-                                            )
-                                            submitSuccess = true
-                                            prefs.edit().putBoolean("survey_submitted", true).apply()
-                                            com.example.util.HapticManager.performSuccess(context)
-                                        } catch (e: Exception) {
-                                            com.example.util.SafeLogger.e("SurveyBottomSheet", "Survey error: ${e.message}", e)
-                                            submitSuccess = true
-                                        } finally {
-                                            isSubmitting = false
-                                        }
-                                    }
-                                },
-                                shape = RoundedCornerShape(16.dp),
-                                enabled = !isSubmitting,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary
-                                ),
-                                modifier = Modifier.fillMaxWidth().bounceClick().testTag("submit_survey_github_button")
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_github),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Submit via GitHub Discussions",
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
-                            }
-
-                            OutlinedButton(
-                                onClick = {
-                                    isSubmitting = true
-                                    coroutineScope.launch {
-                                        try {
-                                            viewModel.submitSurvey(
-                                                context = context,
-                                                reaction = selectedReaction?.label ?: "Loving It",
-                                                favoriteFeatures = favoriteFeatures.toList(),
-                                                desiredImprovements = desiredImprovements.toList(),
-                                                npsScore = npsScore,
-                                                customFeedback = customFeedback,
-                                                almostQuitReason = almostQuitReason,
-                                                userEmail = activeUserEmail,
-                                                userId = envReport.userId,
-                                                deviceModel = envReport.deviceModel,
-                                                osVersion = envReport.osVersion,
-                                                appVersion = envReport.appVersion
-                                            )
-                                            com.example.util.FeedbackSubmissionManager.launchEmailClient(
-                                                context = context,
-                                                subject = "[Cobalt Survey] Feedback from $activeUserEmail",
-                                                body = currentMarkdownPreview
-                                            )
-                                            submitSuccess = true
-                                            prefs.edit().putBoolean("survey_submitted", true).apply()
-                                            com.example.util.HapticManager.performSuccess(context)
-                                        } catch (e: Exception) {
-                                            com.example.util.SafeLogger.e("SurveyBottomSheet", "Survey error: ${e.message}", e)
-                                            submitSuccess = true
-                                        } finally {
-                                            isSubmitting = false
-                                        }
-                                    }
-                                },
-                                shape = RoundedCornerShape(16.dp),
-                                enabled = !isSubmitting,
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                    contentColor = MaterialTheme.colorScheme.onSurface
-                                ),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
-                                modifier = Modifier.fillMaxWidth().bounceClick().testTag("submit_survey_email_button")
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_mail),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Send Survey via Email",
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                OutlinedButton(
-                                    onClick = {
-                                        com.example.util.FeedbackSubmissionManager.copyToClipboard(context, "Cobalt Survey", currentMarkdownPreview)
-                                        android.widget.Toast.makeText(context, "Survey Markdown copied to clipboard!", android.widget.Toast.LENGTH_SHORT).show()
-                                        prefs.edit().putBoolean("survey_submitted", true).apply()
-                                        submitSuccess = true
-                                        com.example.util.HapticManager.performSuccess(context)
-                                    },
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                        contentColor = MaterialTheme.colorScheme.onSurface
-                                    ),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
-                                    modifier = Modifier.weight(1f).bounceClick()
-                                ) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_custom_copy),
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "Copy MD",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-
-                                OutlinedButton(
-                                    onClick = {
-                                        isSubmitting = true
-                                        coroutineScope.launch {
-                                            try {
-                                                viewModel.submitSurvey(
-                                                    context = context,
-                                                    reaction = selectedReaction?.label ?: "Loving It",
-                                                    favoriteFeatures = favoriteFeatures.toList(),
-                                                    desiredImprovements = desiredImprovements.toList(),
-                                                    npsScore = npsScore,
-                                                    customFeedback = customFeedback,
-                                                    almostQuitReason = almostQuitReason,
-                                                    userEmail = activeUserEmail,
-                                                    userId = envReport.userId,
-                                                    deviceModel = envReport.deviceModel,
-                                                    osVersion = envReport.osVersion,
-                                                    appVersion = envReport.appVersion
-                                                )
-                                                com.example.util.FeedbackSubmissionManager.shareOrExportFeedback(
-                                                    context = context,
-                                                    title = "Cobalt Experience Survey",
-                                                    content = currentMarkdownPreview,
-                                                    fileName = "cobalt_survey_response.md"
-                                                )
-                                                submitSuccess = true
-                                                prefs.edit().putBoolean("survey_submitted", true).apply()
-                                                com.example.util.HapticManager.performSuccess(context)
-                                            } catch (e: Exception) {
-                                                com.example.util.SafeLogger.e("SurveyBottomSheet", "Survey export error: ${e.message}", e)
-                                                submitSuccess = true
-                                            } finally {
-                                                isSubmitting = false
-                                            }
-                                        }
-                                    },
-                                    shape = RoundedCornerShape(14.dp),
-                                    enabled = !isSubmitting,
-                                    colors = ButtonDefaults.outlinedButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                        contentColor = MaterialTheme.colorScheme.onSurface
-                                    ),
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
-                                    modifier = Modifier.weight(1f).bounceClick().testTag("submit_survey_export_button")
-                                ) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_custom_share),
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "Share File",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                            }
-                        }
-
                 }
             }
         }
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 12.dp, bottom = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                status?.let { Text(it, style = MaterialTheme.typography.bodySmall,
+                    color = if (emailError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant) }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (step == 2) OutlinedIconButton(onClick = { step = 1 }, modifier = Modifier.size(52.dp)) {
+                        Icon(painterResource(R.drawable.ic_custom_back), "Previous step", Modifier.size(20.dp))
+                    }
+                    Button(onClick = { if (step == 1) step = 2 else onSendEmail() },
+                        shape = RoundedCornerShape(18.dp), contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp),
+                        modifier = Modifier.weight(1f).heightIn(min = 52.dp).bounceClick()
+                            .testTag(if (step == 1) "survey_next_step_button" else "survey_send_email_button")) {
+                        Icon(painterResource(if (step == 1) R.drawable.ic_custom_arrow_right else R.drawable.ic_custom_mail),
+                            null, Modifier.size(20.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text(if (step == 1) "Next · your ideas" else "Send via email", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+                if (step == 1) Text("All questions are optional. Nothing is selected for you.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SurveyStepPill(number: String, title: String, active: Boolean, done: Boolean, modifier: Modifier) {
+    Surface(modifier, shape = RoundedCornerShape(12.dp), color = if (active) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.surfaceContainer) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (done) Icon(painterResource(R.drawable.ic_custom_check), null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+            else Text(number, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Text(title, style = MaterialTheme.typography.labelMedium, fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal)
+        }
+    }
+}
+
+@Composable
+private fun SurveyQuestionCard(title: String, subtitle: String, @DrawableRes icon: Int, content: @Composable ColumnScope.() -> Unit) {
+    Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.22f)), modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)) {
+                    Icon(painterResource(icon), null, Modifier.padding(8.dp).size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            content()
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SurveyChoices(options: List<SurveyChoice>, selected: (String) -> Boolean, onSelect: (String) -> Unit) {
+    val haptic = LocalHapticFeedback.current
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        options.forEach { option ->
+            FilterChip(selected(option.answer), onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); onSelect(option.answer)
+            }, label = { Text(option.label, style = MaterialTheme.typography.labelLarge) },
+                leadingIcon = { Icon(painterResource(option.icon), null, Modifier.size(16.dp)) },
+                shape = RoundedCornerShape(12.dp),
+                colors = FilterChipDefaults.filterChipColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow))
+        }
+    }
+}
+
+@Composable
+private fun OptionalSurveySlider(
+    value: Int?, lowLabel: String, highLabel: String, tag: String, onChange: (Int?) -> Unit
+) {
+    val interaction = remember { MutableInteractionSource() }
+    // The hidden starting position is geometry only. It never becomes an answer until interaction.
+    var gestureValue by remember { mutableFloatStateOf(value?.toFloat() ?: 1f) }
+    LaunchedEffect(value) { gestureValue = value?.toFloat() ?: 1f }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(value?.let { "$it / 10" } ?: "Not answered", style = MaterialTheme.typography.titleSmall,
+            color = if (value == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f))
+        if (value != null) TextButton(onClick = { onChange(null) }, modifier = Modifier.testTag(tag + "_clear")) {
+            Icon(painterResource(R.drawable.ic_custom_close), null, Modifier.size(14.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Clear")
+        }
+    }
+    Slider(value = value?.toFloat() ?: 1f, onValueChange = {
+        gestureValue = it
+        onChange(it.roundToInt().coerceIn(1, 10))
+    }, valueRange = 1f..10f, steps = 8, interactionSource = interaction,
+        onValueChangeFinished = { onChange(gestureValue.roundToInt().coerceIn(1, 10)) },
+        modifier = Modifier.fillMaxWidth().clearAndSetSemantics {
+            sliderTestTag = tag
+            stateDescription = value?.let { "$it out of 10" } ?: "Not answered. Adjust to choose a rating."
+            progressBarRangeInfo = ProgressBarRangeInfo(value?.toFloat() ?: 1f, 1f..10f, 8)
+            setProgress { score -> onChange(score.roundToInt().coerceIn(1, 10)); true }
+        },
+        thumb = { SliderDefaults.Thumb(interactionSource = interaction,
+            modifier = Modifier.alpha(if (value == null) 0f else 1f)) },
+        track = { state ->
+            if (value == null) Box(Modifier.fillMaxWidth().height(12.dp)
+                .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f), RoundedCornerShape(50)))
+            else SliderDefaults.Track(sliderState = state)
+        })
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text("1 · $lowLabel", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("10 · $highLabel", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

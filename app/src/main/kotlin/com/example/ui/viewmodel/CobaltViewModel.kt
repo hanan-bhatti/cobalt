@@ -2540,15 +2540,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         )
     }
 
-    suspend fun submitSurvey(
-        context: android.content.Context, reaction: String, favoriteFeatures: List<String>, desiredImprovements: List<String>,
-        npsScore: Int, customFeedback: String, userEmail: String, userId: String, deviceModel: String, osVersion: String, appVersion: String,
-        almostQuitReason: String = ""
-    ): Boolean {
-        return com.example.util.FeedbackSubmissionManager.submitSurvey(
-            context, reaction, favoriteFeatures, desiredImprovements, npsScore, customFeedback, almostQuitReason, userEmail, userId, deviceModel, osVersion, appVersion,
-        )
-    }
+
 }
 
 data class ExtractedLinkReview(

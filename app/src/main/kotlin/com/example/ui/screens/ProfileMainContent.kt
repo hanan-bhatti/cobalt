@@ -107,8 +107,6 @@ fun ProfileMainContent(
     val profileArchiveStyle by viewModel.settingsRepository.profileArchiveStyle.collectAsState()
 
     val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("cobalt_prefs", Context.MODE_PRIVATE) }
-    val isContributor = remember(showSurveySheet) { prefs.getBoolean("survey_submitted", false) }
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -339,8 +337,8 @@ fun ProfileMainContent(
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
                     ClickableRow(
-                        title = if (isContributor) "App Experience Survey" else "Take App Experience Survey",
-                        subtitle = if (isContributor) "Completed • Contributor Badge Unlocked" else "Help shape future updates • Earn Contributor Badge",
+                        title = "App experience survey",
+                        subtitle = "A few taps to share your experience by email",
                         leadingIconRes = R.drawable.ic_custom_survey,
                         onClick = { showSurveySheet = true }
                     )
