@@ -26,7 +26,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
-import androidx.core.view.WindowCompat
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.ui.Alignment
 import com.example.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.CancellationException
@@ -67,17 +71,67 @@ fun NoteStorageTheme(content: @Composable () -> Unit) {
 }
 
 /** Shared settings geometry: the same collapsible header, margins and connected surfaces as Appearance. */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun NoteSettingsPage(title: String, subtitle: String, onBack: () -> Unit,
-    modifier: Modifier = Modifier, itemSpacing: Dp = 20.dp, listState: LazyListState = rememberLazyListState(), actions: @Composable RowScope.() -> Unit = {},
-    content: LazyListScope.() -> Unit) {
+fun NoteSettingsPage(
+    title: String,
+    subtitle: String,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    itemSpacing: Dp = 20.dp,
+    listState: LazyListState = rememberLazyListState(),
+    onRefresh: (() -> Unit)? = null,
+    isRefreshing: Boolean = false,
+    actions: @Composable RowScope.() -> Unit = {},
+    content: LazyListScope.() -> Unit
+) {
     val bar = rememberCollapsibleTopBarState(listState, maxHeight = 160.dp)
     val height = with(LocalDensity.current) { bar.heightPx.toDp() }
     Box(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).nestedScroll(bar.nestedScrollConnection)) {
-        LazyColumn(state = listState, modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = height + 12.dp,
-                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 32.dp),
-            verticalArrangement = Arrangement.spacedBy(itemSpacing), content = content)
+        if (onRefresh != null) {
+            val pullState = rememberPullToRefreshState()
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh,
+                state = pullState,
+                modifier = Modifier.fillMaxSize(),
+                indicator = {
+                    PullToRefreshDefaults.LoadingIndicator(
+                        state = pullState,
+                        isRefreshing = isRefreshing,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = height + 4.dp)
+                    )
+                }
+            ) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = height + 12.dp,
+                        bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 32.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(itemSpacing),
+                    content = content
+                )
+            }
+        } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = height + 12.dp,
+                    bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 32.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(itemSpacing),
+                content = content
+            )
+        }
         CollapsibleCommonTopBar(title, bar.collapseFraction, height, onBack, subtitle = subtitle, actions = actions)
     }
 }

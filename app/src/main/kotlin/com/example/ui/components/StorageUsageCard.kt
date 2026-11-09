@@ -21,21 +21,26 @@ import com.example.notes.NoteStorageManager
 
 private data class StorageSegment(val label: String, val bytes: Long, val color: Color)
 
-/** App-data composition, not a misleading phone-capacity meter. Labels also convey every category. */
+/**
+ * Clean app storage breakdown card showing high-level storage composition,
+ * segmented meter, and transparent breakdown.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun StorageUsageCard(report: NoteStorageManager.Report?, busy: Boolean) {
     val context = LocalContext.current
     val colors = MaterialTheme.colorScheme
+
+    val cacheAndSystem = (report?.cache ?: 0) + (report?.unattached ?: 0) +
+        (report?.recovery ?: 0) + (report?.database ?: 0) + (report?.other ?: 0)
+
     val segments = listOf(
         StorageSegment("Notes & media", (report?.current ?: 0) + (report?.media ?: 0), colors.primary),
         StorageSegment("History", report?.older ?: 0, colors.tertiary),
         StorageSegment("Trash", report?.trash ?: 0, colors.error),
-        StorageSegment("Unlinked", report?.unattached ?: 0, colors.secondary),
-        StorageSegment("Edit recovery", report?.recovery ?: 0, colors.tertiaryContainer),
-        StorageSegment("Cache", report?.cache ?: 0, colors.primaryContainer),
-        StorageSegment("Database & settings", (report?.database ?: 0) + (report?.other ?: 0), colors.outline)
+        StorageSegment("Cache & system", cacheAndSystem, colors.secondary)
     )
+
     Surface(shape = RoundedCornerShape(24.dp), color = colors.surfaceContainer) {
         Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -73,9 +78,9 @@ fun StorageUsageCard(report: NoteStorageManager.Report?, busy: Boolean) {
                         shape = RoundedCornerShape(9.dp)
                     )
 
-                    // Legend breakdown skeleton (7 items matching the categories)
+                    // Legend breakdown skeleton (4 items matching the high-level categories)
                     val skeletonLegendWidths = remember {
-                        listOf(115.dp, 80.dp, 60.dp, 75.dp, 105.dp, 70.dp, 125.dp)
+                        listOf(125.dp, 85.dp, 70.dp, 120.dp)
                     }
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -94,13 +99,12 @@ fun StorageUsageCard(report: NoteStorageManager.Report?, busy: Boolean) {
 
                     // Footnotes and descriptions skeleton placeholders
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SkeletonBox(Modifier.fillMaxWidth(0.68f).height(12.dp), shape = RoundedCornerShape(4.dp))
-                        SkeletonBox(Modifier.fillMaxWidth().height(12.dp), shape = RoundedCornerShape(4.dp))
-                        SkeletonBox(Modifier.fillMaxWidth(0.84f).height(12.dp), shape = RoundedCornerShape(4.dp))
+                        SkeletonBox(Modifier.fillMaxWidth(0.65f).height(12.dp), shape = RoundedCornerShape(4.dp))
+                        SkeletonBox(Modifier.fillMaxWidth(0.92f).height(12.dp), shape = RoundedCornerShape(4.dp))
                     }
                 } else {
                     Text(
-                        "Storage details unavailable. Try Refresh.",
+                        "Storage details unavailable. Pull down to refresh.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = colors.onSurfaceVariant
                     )
@@ -138,15 +142,15 @@ fun StorageUsageCard(report: NoteStorageManager.Report?, busy: Boolean) {
                     }
                 }
                 Text(
-                    "Media: images ${formatNoteSize(context, report.images)} · video ${formatNoteSize(context, report.video)} · audio ${formatNoteSize(context, report.audio)}" +
-                        if (report.otherMedia > 0) " · other ${formatNoteSize(context, report.otherMedia)}" else "",
+                    "Media: ${formatNoteSize(context, report.images)} images · ${formatNoteSize(context, report.video)} video · ${formatNoteSize(context, report.audio)} audio" +
+                        if (report.otherMedia > 0) " · ${formatNoteSize(context, report.otherMedia)} attachments" else "",
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.onSurfaceVariant
                 )
                 Text(
-                    "Edit recovery includes working buffers and interrupted edits, not just recoverable notes. Cache includes protected recent shares and active work.",
+                    "All notes and media are stored locally on this device. Cache and temporary space can be cleared safely anytime.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = colors.onSurfaceVariant
+                    color = colors.onSurfaceVariant.copy(alpha = 0.8f)
                 )
             }
         }

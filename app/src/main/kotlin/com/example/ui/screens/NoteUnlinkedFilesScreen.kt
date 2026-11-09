@@ -55,25 +55,34 @@ fun NoteUnlinkedFilesScreen(manager: NoteStorageManager, onBack: () -> Unit) {
         catch (_: Exception) { notice = "Unlinked files could not be listed. Nothing was removed." }
         finally { busy = false }
     }
-    NoteSettingsPage("Unlinked files", "Retained files without a matching note record", onBack, itemSpacing = 8.dp,
-        actions = { TextButton(onClick = { perform { refresh(); "Sizes updated" } }, enabled = !busy) { Text("Refresh") } }) {
+    NoteSettingsPage(
+        title = "Unlinked storage",
+        subtitle = "Media and files no longer attached to any note",
+        onBack = onBack,
+        itemSpacing = 8.dp,
+        onRefresh = { perform { refresh(); "Storage refreshed" } },
+        isRefreshing = busy
+    ) {
         item {
             StorageActionCard(
-                "Unlinked data",
+                "Orphaned files",
                 report?.let { formatNoteSize(context, it.unattached) },
-                "Files left by earlier deletions or interrupted saves. Recover or export anything you need before cleanup. New media, active drafts and unfinished work stay protected.",
+                "These files are orphaned remnants from previous deletions or imports. You can recover or export any file you want to keep, or clean them up to free space.",
                 isLoading = report == null && busy
             )
         }
         item {
             val amount = report?.unlinkedRemovable ?: 0
-            Button(onClick = { perform { reviewing = manager.reviewUnlinked(); "Review the retained files selected for removal" } },
-                enabled = !busy && amount > 0, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
-                Text(if (amount > 0) "Review cleanup · ${formatNoteSize(context, amount)}" else "No unlinked files ready to clean")
+            Button(
+                onClick = { perform { reviewing = manager.reviewUnlinked(); "Review the retained files selected for removal" } },
+                enabled = !busy && amount > 0,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)
+            ) {
+                Text(if (amount > 0) "Review & clean files · ${formatNoteSize(context, amount)}" else "No unlinked files to clean")
             }
         }
         notice?.let { text -> item { StorageMessage(text) } }
-        item { SettingsSubsectionHeader("Retained files", description = "Up to 200 files are shown, largest first. Cleanup reviews all eligible files.") }
+        item { SettingsSubsectionHeader("Retained files", description = "Showing up to 200 files. Clean up reviews all eligible files.") }
         if (copies.isEmpty() && busy) {
             items(3) { index ->
                 SkeletonStorageRow(shape = connectedPillShape(index, 3), hasBadge = true, badgeWidth = 46.dp)
@@ -81,17 +90,59 @@ fun NoteUnlinkedFilesScreen(manager: NoteStorageManager, onBack: () -> Unit) {
         }
         itemsIndexed(copies, key = { _, copy -> copy.key }) { index, copy ->
             var menu by remember(copy.key) { mutableStateOf(false) }
-            Surface(shape = connectedPillShape(index, copies.size), color = MaterialTheme.colorScheme.surfaceContainer,
-                modifier = Modifier.fillMaxWidth().combinedClickable(enabled = !busy,
-                    onClick = { menu = true }, onLongClick = { menu = true })) {
-                Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 14.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(copy.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
-                        Text("${formatNoteSize(context, copy.bytes)} stored · ${if (copy.compressed) "Compressed version" else if (copy.media != null) "Media file" else "Markdown"}",
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Surface(
+                shape = connectedPillShape(index, copies.size),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(
+                        enabled = !busy,
+                        onClick = { menu = true },
+                        onLongClick = { menu = true }
+                    )
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                painter = painterResource(id = if (copy.media != null) R.drawable.ic_nav_media_outline else R.drawable.ic_nav_notes_outline),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            copy.title,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "${formatNoteSize(context, copy.bytes)} · ${if (copy.compressed) "Compressed copy" else if (copy.media != null) "Media file" else "Markdown file"}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     Box {
-                        IconButton(onClick = { menu = true }, enabled = !busy) { Icon(painterResource(R.drawable.ic_custom_more_vert), "File actions") }
+                        IconButton(onClick = { menu = true }, enabled = !busy) {
+                            Icon(
+                                painterResource(R.drawable.ic_custom_more_vert),
+                                contentDescription = "File actions",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
                         NoteContextMenu(menu, { menu = false }) {
                             if (copy.recoverable) NoteContextAction(if (copy.media == null) "Recover as note" else "Recover item", R.drawable.ic_custom_undo) {
                                 menu = false; perform {

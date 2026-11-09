@@ -55,40 +55,70 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
     NoteStorageNavHost(navigation, "storage") {
         composable("storage") {
             NoteStorageRoute(navigation, this) {
-                NoteSettingsPage("Storage", "Notes, retained data and space on this device", onBack,
-                    actions = { TextButton(onClick = ::refresh, enabled = !busy) { Text("Refresh") } }) {
+                NoteSettingsPage(
+                    title = "Storage",
+                    subtitle = "Notes, retained data and space on this device",
+                    onBack = onBack,
+                    onRefresh = ::refresh,
+                    isRefreshing = busy
+                ) {
                     item { StorageUsageCard(report, busy) }
                     item {
-                        SettingsSubsectionHeader("Your data")
+                        SettingsSubsectionHeader("YOUR CONTENT")
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            ExpressiveSettingsNavigationItem("Manage notes", onClick = { open("recovery") },
-                                subtitle = "Read, export or delete your notes", shape = connectedPillShape(0, 5))
-                            ExpressiveSettingsNavigationItem("Draft recovery", onClick = { open("drafts") },
-                                subtitle = "Recover interrupted and unsaved edits",
+                            ExpressiveSettingsNavigationItem(
+                                title = "Manage notes",
+                                onClick = { open("recovery") },
+                                subtitle = "Browse and inspect your saved notes",
+                                shape = connectedPillShape(0, 3)
+                            )
+                            ExpressiveSettingsNavigationItem(
+                                title = "Draft recovery",
+                                onClick = { open("drafts") },
+                                subtitle = "Recover unsaved writing and interrupted edits",
                                 trailingBadge = report?.let { formatNoteSize(context, it.recovery) },
                                 trailingContent = if (report == null && busy) { { SkeletonBadge(46.dp) } } else null,
-                                shape = connectedPillShape(1, 5))
-                            ExpressiveSettingsNavigationItem("Trash", onClick = { open("trash") },
-                                subtitle = "Restore items or delete them forever",
+                                shape = connectedPillShape(1, 3)
+                            )
+                            ExpressiveSettingsNavigationItem(
+                                title = "Trash",
+                                onClick = { open("trash") },
+                                subtitle = "Restore items or empty deleted notes",
                                 trailingBadge = report?.let { "${it.trashCount} · ${formatNoteSize(context, it.trash)}" },
                                 trailingContent = if (report == null && busy) { { SkeletonBadge(40.dp) } } else null,
-                                shape = connectedPillShape(2, 5))
-                            ExpressiveSettingsNavigationItem("Version history", onClick = { open("history") },
-                                subtitle = "Restore versions and review history cleanup",
-                                trailingBadge = report?.let { formatNoteSize(context, it.older) },
-                                trailingContent = if (report == null && busy) { { SkeletonBadge(50.dp) } } else null,
-                                shape = connectedPillShape(3, 5))
-                            ExpressiveSettingsNavigationItem("Unlinked files", onClick = { open("unlinked") },
-                                subtitle = "Retained files without a matching note",
-                                trailingBadge = report?.let { formatNoteSize(context, it.unattached) },
-                                trailingContent = if (report == null && busy) { { SkeletonBadge(44.dp) } } else null,
-                                shape = connectedPillShape(4, 5))
+                                shape = connectedPillShape(2, 3)
+                            )
                         }
                     }
                     item {
-                        SettingsSubsectionHeader("Maintenance")
-                        ExpressiveSettingsNavigationItem("Cache & database", onClick = { open("maintenance") },
-                            subtitle = "Clear safe cache and reclaim empty database space")
+                        SettingsSubsectionHeader("HISTORY & COPIES")
+                        ExpressiveSettingsNavigationItem(
+                            title = "Version history",
+                            onClick = { open("history") },
+                            subtitle = "Inspect older note versions and edit history",
+                            trailingBadge = report?.let { formatNoteSize(context, it.older) },
+                            trailingContent = if (report == null && busy) { { SkeletonBadge(50.dp) } } else null,
+                            shape = connectedPillShape(0, 1)
+                        )
+                    }
+                    item {
+                        SettingsSubsectionHeader("CLEANUP & SYSTEM")
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            ExpressiveSettingsNavigationItem(
+                                title = "Cache & database",
+                                onClick = { open("maintenance") },
+                                subtitle = "Clear temporary preview cache and optimize space",
+                                shape = connectedPillShape(0, 2)
+                            )
+                            ExpressiveSettingsNavigationItem(
+                                title = "Unlinked storage",
+                                onClick = { open("unlinked") },
+                                subtitle = "Clean up orphaned media and interrupted imports",
+                                trailingBadge = report?.let { formatNoteSize(context, it.unattached) },
+                                trailingContent = if (report == null && busy) { { SkeletonBadge(44.dp) } } else null,
+                                shape = connectedPillShape(1, 2)
+                            )
+                        }
                     }
                     message?.let { text -> item { StorageMessage(text) } }
                 }
@@ -103,12 +133,18 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
         }
         composable("history") {
             NoteStorageRoute(navigation, this) {
-                NoteSettingsPage("Version history", "Earlier versions, with current notes kept intact", { navigation.popBackStack() }) {
+                NoteSettingsPage(
+                    title = "Version history",
+                    subtitle = "Earlier note versions and edit history",
+                    onBack = { navigation.popBackStack() },
+                    onRefresh = ::refresh,
+                    isRefreshing = busy
+                ) {
                     item {
                         StorageActionCard(
                             "Saved history",
                             report?.let { formatNoteSize(context, it.older) },
-                            "Versions share unchanged text. History shows additional retained data, while a version's complete note size can be much larger. Older legacy versions may use full copies or deltas. Cleanup removes only the versions you review.",
+                            "Cobalt retains earlier revisions of your notes so you can restore changes anytime. Cleaning older revisions frees storage while keeping your current notes completely intact.",
                             isLoading = report == null && busy
                         )
                     }
@@ -117,7 +153,7 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                             NoteStorageManager.RETENTIONS.associate { it.toString() to if (it < 0) "All versions" else if (it == 0) "No extra versions" else "$it extra versions" },
                             report?.copiesToKeep?.toString() ?: "5", onSelectionChanged = { key ->
                                 if (!busy) perform { manager.setRetention(key.toInt()); "History preference updated" }
-                            }, description = "Applied when you review cleanup. Versions still needed by recovery or Undo remain protected.")
+                            }, description = "Applied when you clean up history. Versions needed by active Undo remain protected.")
                     }
                     item { ExpressiveSettingsNavigationItem("Browse versions", onClick = { open("copies") }, subtitle = "Restore or export an earlier version") }
                     item {
@@ -127,7 +163,7 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                             confirmation = "history"; "Review the versions selected for removal"
                         } }, enabled = !busy && amount > 0,
                             shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
-                            Text(if (amount > 0) "Review cleanup · ${formatNoteSize(context, amount)}" else "No history ready to clean")
+                            Text(if (amount > 0) "Review & clean history · ${formatNoteSize(context, amount)}" else "History is clean")
                         }
                     }
                     message?.let { text -> item { StorageMessage(text) } }
@@ -136,14 +172,18 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
         }
         composable("maintenance") {
             NoteStorageRoute(navigation, this) {
-                NoteSettingsPage("Cache & database", "Temporary data and reusable database space", { navigation.popBackStack() },
-                    actions = { TextButton(onClick = ::refresh, enabled = !busy) { Text("Refresh") } }) {
+                NoteSettingsPage(
+                    title = "Cache & database",
+                    subtitle = "Temporary preview data and database optimization",
+                    onBack = { navigation.popBackStack() },
+                    onRefresh = ::refresh,
+                    isRefreshing = busy
+                ) {
                     item {
-                        val protectedCacheText = report?.let { formatNoteSize(context, it.protectedCache) } ?: "Protected cache"
                         StorageActionCard(
                             "App cache",
                             report?.let { formatNoteSize(context, it.cache) },
-                            "Includes rebuildable previews, workspace and temporary exports. $protectedCacheText is protected or too recent to clear. Active edits, recordings and recent shares stay intact; temporary exports become eligible after 24 hours.",
+                            "Rebuildable preview thumbnails and temporary exports. Clearing cache is completely safe and frees up space immediately without affecting your notes.",
                             isLoading = report == null && busy
                         )
                     }
@@ -158,7 +198,7 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                         StorageActionCard(
                             "Database",
                             report?.let { formatNoteSize(context, it.database) },
-                            "Deleted records can leave reserved space. Optimize compacts the database without removing notes or preferences.",
+                            "Compacting optimizes SQLite indexing and reclaims unused database space without removing any notes or preferences.",
                             isLoading = report == null && busy
                         )
                     }
@@ -166,7 +206,7 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                         val amount = report?.freeDatabase ?: 0
                         OutlinedButton(onClick = { reviewed = amount; confirmation = "database" }, enabled = !busy && amount > 0,
                             shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
-                            Text(if (amount > 0) "Optimize · up to ${formatNoteSize(context, amount)}" else "Database is compact")
+                            Text(if (amount > 0) "Optimize database · up to ${formatNoteSize(context, amount)}" else "Database is optimized")
                         }
                     }
                     item {
@@ -176,7 +216,7 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                     }
                     if (advancedCleanup) item {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("Remove disposable versions and cache. Current notes, attachments, folders, settings, Trash and unsaved writing are kept.",
+                            Text("Remove disposable older versions and preview cache. All saved notes, media, folders, settings, and unsaved drafts are kept.",
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Button(onClick = { perform {
                                 disposableReview = manager.reviewDisposable()

@@ -50,9 +50,24 @@ fun NoteOlderCopiesScreen(onBack: () -> Unit) {
         catch (_: Exception) { message = "Older copies could not be listed. Your notes are retained." }
         finally { busy = false }
     }
-    NoteSettingsPage("Saved versions", "Restore or export an earlier version", onBack, itemSpacing = 4.dp) {
+    NoteSettingsPage(
+        title = "Saved versions",
+        subtitle = "Restore or export an earlier version",
+        onBack = onBack,
+        itemSpacing = 4.dp,
+        onRefresh = {
+            scope.launch {
+                busy = true
+                try { copies = manager.olderCopies() }
+                catch (cancel: CancellationException) { throw cancel }
+                catch (_: Exception) { message = "Could not refresh versions." }
+                finally { busy = false }
+            }
+        },
+        isRefreshing = busy
+    ) {
         item {
-            Text("Up to 200 recent copies are shown. These may include recovered drafts as well as saved versions.",
+            Text("Showing recent version snapshots. You can restore earlier writing or export copies.",
                 modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -69,23 +84,57 @@ fun NoteOlderCopiesScreen(onBack: () -> Unit) {
             Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer,
                 modifier = Modifier.fillMaxWidth().combinedClickable(enabled = !busy,
                     onClick = { expanded = true }, onLongClick = { expanded = true })) {
-                Row(Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(copy.note.title.ifBlank { "Untitled note" }, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.titleSmall)
-                        Text("${formatNoteSize(context, copy.bytes)} note" + if (copy.shared) " · Shared text" else if (copy.delta) " · Delta version" else " · Full version",
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("${formatNoteSize(context, copy.storedBytes)} " + if (copy.shared) "additional storage" else "stored", style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary)
-                            Text(DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(copy.created)),
-                                maxLines = 1, style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f),
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_undo),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            copy.note.title.ifBlank { "Untitled note" },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                formatNoteSize(context, copy.bytes),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text("·", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(copy.created)),
+                                maxLines = 1,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                     Box {
                         IconButton(onClick = { expanded = true }, enabled = !busy) {
-                            Icon(painterResource(R.drawable.ic_custom_more_vert), contentDescription = "Copy actions")
+                            Icon(
+                                painterResource(R.drawable.ic_custom_more_vert),
+                                contentDescription = "Copy actions",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
                         }
                         NoteContextMenu(expanded, { expanded = false }) {
                             NoteContextAction("Export Markdown", R.drawable.ic_custom_export) {

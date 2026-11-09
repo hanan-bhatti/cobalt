@@ -138,47 +138,83 @@ fun NoteRecoveryScreen(onExitSafeMode: () -> Unit, safeMode: Boolean = StartupCr
                             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(displayed.title.ifBlank { "Untitled note" }, style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
-                                RecoveryNoteSize(displayed.byteLength)
+                                Text(formatNoteSize(context, displayed.byteLength), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
                             }
                         }
                         exportStatus()
                         message?.let { NoteStorageNotice("Recovery", it) }
                     }
                 })
-            CollapsibleCommonTopBar("Plain text", bar.collapseFraction, height, ::back,
-                subtitle = "Read without Markdown formatting", actions = {
+            CollapsibleCommonTopBar("Note Viewer", bar.collapseFraction, height, ::back,
+                subtitle = "Raw note content (${formatNoteSize(context, displayed.byteLength)})", actions = {
                     RecoveryNoteMenu(displayed, busy, onExport = { export(displayed) }, onDelete = { deleteId = displayed.id })
                 })
         }
     }
     val listBody: @Composable () -> Unit = {
-        NoteSettingsPage("Note Recovery", "Read, export or recover your notes", ::back, itemSpacing = 2.dp, listState = recoveryListState) {
+        val titleText = if (safeMode) "Safe Mode" else "Manage notes"
+        val subtitleText = if (safeMode) "Recover or export your notes before restarting" else "Read, export or delete your notes"
+        NoteSettingsPage(titleText, subtitleText, ::back, itemSpacing = 2.dp, listState = recoveryListState) {
             item {
-                Column(Modifier.padding(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (safeMode) NoteStorageNotice("Safe mode is on", "Background activity is paused while you recover your notes.")
-                    val allLabel = "All (${notes.size})"
-                    val largeLabel = "Large (${largeNotes.size})"
-                    ExpressiveSegmentedChoiceItem(title = "Show notes", options = listOf(allLabel, largeLabel),
-                        selectedOption = if (largeOnly) largeLabel else allLabel,
-                        subtitle = "Large notes are ${formatNoteSize(context, NoteSizePolicy.TIER_A_MAX_BYTES)} or more.",
-                        onOptionSelected = { option ->
-                            val next = option == largeLabel
-                            if (next != largeOnly) {
-                                largeOnly = next
-                                scope.launch { recoveryListState.animateScrollToItem(0) }
+                Column(Modifier.padding(bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    if (safeMode) {
+                        NoteStorageNotice("Safe mode is active", "Background activity is paused while you recover your notes.")
+                    }
+                    // Clean single-row filter pills
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val options = listOf(
+                            false to "All (${notes.size})",
+                            true to "Large (${largeNotes.size})"
+                        )
+                        for ((isLarge, label) in options) {
+                            val isSelected = largeOnly == isLarge
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                border = androidx.compose.foundation.BorderStroke(
+                                    width = 1.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                ),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .clickable {
+                                        if (largeOnly != isLarge) {
+                                            largeOnly = isLarge
+                                            scope.launch { recoveryListState.animateScrollToItem(0) }
+                                        }
+                                    }
+                            ) {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
                             }
-                        })
+                        }
+                    }
                     exportStatus()
                     message?.let { NoteStorageNotice("Recovery", it) }
-                    SettingsSubsectionHeader(title = if (largeOnly) "Large notes" else "All notes",
-                        description = if (largeOnly) "Showing ${filtered.size} of ${notes.size} notes · ${formatNoteSize(context, NoteSizePolicy.TIER_A_MAX_BYTES)} or larger"
-                            else "${notes.size} notes · tap to read, hold for actions")
+                    SettingsSubsectionHeader(
+                        title = if (largeOnly) "Large notes" else "All notes",
+                        description = if (largeOnly) "Showing ${filtered.size} notes larger than ${formatNoteSize(context, NoteSizePolicy.TIER_A_MAX_BYTES)}"
+                            else "${notes.size} saved notes · tap to view"
+                    )
                 }
             }
-            if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) }
+            if (loading) {
+                items(4) { index ->
+                    SkeletonStorageRow(shape = connectedPillShape(index, 4), hasBadge = true, badgeWidth = 48.dp)
+                }
+            }
             if (!loading && filtered.isEmpty()) item {
-                NoteStorageNotice(if (largeOnly) "No large notes" else "No notes to recover",
-                    if (largeOnly) "Choose All to see your other notes." else "Your note list will appear here when it is available.")
+                NoteStorageNotice(if (largeOnly) "No large notes" else "No notes to manage",
+                    if (largeOnly) "Select All to see all your saved notes." else "Your saved note list will appear here.")
             }
             itemsIndexed(filtered, key = { _, note -> note.id }) { index, note ->
                 RecoveryNoteCard(note, index, filtered.size, busy,
@@ -232,23 +268,81 @@ private fun RecoveryNoteMenu(note: RecoveryNote, busy: Boolean, onExport: () -> 
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun RecoveryNoteCard(note: RecoveryNote, index: Int, total: Int, busy: Boolean,
-    onRead: () -> Unit, onExport: () -> Unit, onDelete: () -> Unit) {
+private fun RecoveryNoteCard(
+    note: RecoveryNote,
+    index: Int,
+    total: Int,
+    busy: Boolean,
+    onRead: () -> Unit,
+    onExport: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val context = LocalContext.current
     var menu by remember(note.id) { mutableStateOf(false) }
-    Surface(shape = connectedPillShape(index, total), color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth().clip(connectedPillShape(index, total)).combinedClickable(enabled = !busy, onClick = onRead,
-            onLongClick = { menu = true }, onLongClickLabel = "Note actions")) {
-        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 14.dp, bottom = 14.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(note.title.ifBlank { "Untitled note" }, style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
-                RecoveryNoteSize(note.byteLength)
+    Surface(
+        shape = connectedPillShape(index, total),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(connectedPillShape(index, total))
+            .combinedClickable(
+                enabled = !busy,
+                onClick = onRead,
+                onLongClick = { menu = true },
+                onLongClickLabel = "Note actions"
+            )
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(38.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_nav_notes_outline),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = note.title.ifBlank { "Untitled note" },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = formatNoteSize(context, note.byteLength),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             Box {
-                IconButton(onClick = { menu = true }, enabled = !busy) { Icon(painterResource(R.drawable.ic_custom_more_vert), "Options for ${note.title}") }
+                IconButton(onClick = { menu = true }, enabled = !busy) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_custom_more_vert),
+                        contentDescription = "Options for ${note.title}",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
                 NoteContextMenu(menu, onDismiss = { menu = false }) {
-                    NoteContextAction("Read plain text", R.drawable.ic_custom_text) { menu = false; onRead() }
+                    NoteContextAction("Read content", R.drawable.ic_custom_text) { menu = false; onRead() }
                     NoteContextAction("Export Markdown", R.drawable.ic_custom_export) { menu = false; onExport() }
                     NoteContextAction("Delete note", R.drawable.ic_custom_delete, destructive = true) { menu = false; onDelete() }
                 }

@@ -54,17 +54,36 @@ fun NoteTrashScreen(manager: TrashManager, onBack: () -> Unit) {
     val clock by produceState(System.currentTimeMillis(), hasUndoWindow) {
         while (isActive) { value = System.currentTimeMillis(); delay(if (hasUndoWindow) 1000 else 60_000) }
     }
-    NoteSettingsPage("Trash", "Deleted items stay recoverable for 30 days", onBack, itemSpacing = 8.dp,
-        actions = { TextButton(onClick = { emptying = rows.orEmpty().associate { it.id to it.deletedAt } },
-            enabled = !busy && !rows.isNullOrEmpty()) { Text("Empty") } }) {
+    NoteSettingsPage(
+        title = "Trash",
+        subtitle = "Deleted items stay recoverable for 30 days",
+        onBack = onBack,
+        itemSpacing = 8.dp,
+        onRefresh = { perform { manager.expire(); "Trash updated" } },
+        isRefreshing = busy,
+        actions = {
+            if (!rows.isNullOrEmpty()) {
+                TextButton(
+                    onClick = { emptying = rows.orEmpty().associate { it.id to it.deletedAt } },
+                    enabled = !busy
+                ) {
+                    Text("Empty", color = MaterialTheme.colorScheme.error)
+                }
+            }
+        }
+    ) {
         item {
-            ExpressiveSettingsSwitchItem("Use Trash", checked = enabled, enabled = !busy && rows != null,
-                subtitle = if (enabled) "Keep deleted items for 30 days, including their history."
-                    else "New deletions are permanent after a 30-second Undo window. Existing Trash keeps its deadline.",
-                onCheckedChange = { value -> if (!value) turnOff = true else perform { manager.setEnabled(true); "Trash enabled" } })
+            ExpressiveSettingsSwitchItem(
+                title = "Use Trash",
+                checked = enabled,
+                enabled = !busy && rows != null,
+                subtitle = if (enabled) "Deleted items stay in Trash for 30 days before permanent deletion."
+                    else "Items are permanently deleted immediately upon deletion.",
+                onCheckedChange = { value -> if (!value) turnOff = true else perform { manager.setEnabled(true); "Trash enabled" } }
+            )
         }
         notice?.let { text -> item { StorageMessage(text) } }
-        item { SettingsSubsectionHeader("Deleted items", description = "Sizes include retained note versions and recovery files.") }
+        item { SettingsSubsectionHeader("Deleted items", description = "Restore items back to your notes or delete them permanently.") }
         if (rows == null && busy) {
             items(3) { index ->
                 SkeletonStorageRow(shape = connectedPillShape(index, 3), hasBadge = true, badgeWidth = 48.dp)
@@ -77,25 +96,63 @@ fun NoteTrashScreen(manager: TrashManager, onBack: () -> Unit) {
             val time = clock
             val days = TrashPolicy.daysRemaining(time, item.expiresAt)
             val status = when {
-                item.purgeStarted -> "Finishing permanent deletion"
-                item.undoOnly -> "Pending permanent deletion"
+                item.purgeStarted || item.undoOnly -> "Deleting…"
                 days == 0 -> "Due for removal"
                 days == 1 -> "1 day remaining"
                 else -> "$days days remaining"
             }
-            Surface(shape = connectedPillShape(index, rows.orEmpty().size), color = MaterialTheme.colorScheme.surfaceContainer,
-                modifier = Modifier.fillMaxWidth().combinedClickable(enabled = !busy,
-                    onClick = { menu = true }, onLongClick = { menu = true })) {
-                Row(Modifier.padding(start = 16.dp, top = 14.dp, bottom = 14.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(item.title.ifBlank { "Untitled item" }, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.titleSmall)
-                        Text("${formatNoteSize(context, sizes[item.id] ?: item.byteLength)} · $status",
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Surface(
+                shape = connectedPillShape(index, rows.orEmpty().size),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(
+                        enabled = !busy,
+                        onClick = { menu = true },
+                        onLongClick = { menu = true }
+                    )
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f),
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_custom_delete),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            item.title.ifBlank { "Untitled item" },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "${formatNoteSize(context, sizes[item.id] ?: item.byteLength)} · $status",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     Box {
                         IconButton(onClick = { menu = true }, enabled = !busy) {
-                            Icon(painterResource(R.drawable.ic_custom_more_vert), "Trash actions")
+                            Icon(
+                                painterResource(R.drawable.ic_custom_more_vert),
+                                contentDescription = "Trash actions",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
                         }
                         NoteContextMenu(menu, { menu = false }) {
                             if (!item.purgeStarted && (!item.undoOnly || time < item.expiresAt)) {

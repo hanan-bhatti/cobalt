@@ -58,34 +58,85 @@ fun CaptureDraftRecoveryScreen(onBack: () -> Unit) {
         catch (_: Exception) { message = "Drafts could not be listed. No recovery files were removed." }
         finally { busy = false }
     }
-    NoteSettingsPage("Draft recovery", "Interrupted edits and notes not saved to the archive", onBack, itemSpacing = 8.dp,
-        actions = { TextButton(onClick = { perform { refresh(); "Drafts refreshed" } }, enabled = !busy) { Text("Refresh") } }) {
+    NoteSettingsPage(
+        title = "Draft recovery",
+        subtitle = "Interrupted edits and unsaved drafts",
+        onBack = onBack,
+        itemSpacing = 8.dp,
+        onRefresh = { perform { refresh(); "Drafts refreshed" } },
+        isRefreshing = busy
+    ) {
         storage?.let { report -> item {
-            StorageActionCard("Edit recovery on disk", formatNoteSize(context, report.recovery),
-                "Working buffers and edit journals: ${formatNoteSize(context, report.liveEditBuffers)}. Other retained recovery data: ${formatNoteSize(context, report.stagedRecovery)}. These files protect edits after interruptions; they are not app cache and are not deleted by Clear cache.")
+            StorageActionCard(
+                "Autosaved drafts",
+                formatNoteSize(context, report.recovery),
+                "Unsaved writing and interrupted edits saved automatically so your work is never lost. You can recover any draft as a new note or export it as Markdown."
+            )
         } }
-        item { StorageMessage("Recover creates a new note with the complete draft. You can also export a Markdown copy. Close its editor before recovering a draft.") }
+        item { StorageMessage("Recovering creates a new note with the complete draft. You can also export a Markdown copy.") }
         message?.let { text -> item { StorageMessage(text) } }
         if (entries.isEmpty() && busy) {
             items(2) { index ->
                 SkeletonStorageRow(shape = connectedPillShape(index, 2), hasBadge = true, badgeWidth = 44.dp)
             }
         } else if (!busy && entries.isEmpty()) {
-            item { StorageActionCard("No drafts to recover", "", "Recoverable edits appear here after an interrupted session.") }
+            item { StorageActionCard("No drafts to recover", "0 drafts", "Recoverable drafts appear here if an editing session was interrupted.") }
         }
         itemsIndexed(entries, key = { _, entry -> entry.id }) { index, entry ->
             var menu by remember(entry.id) { mutableStateOf(false) }
-            Surface(shape = connectedPillShape(index, entries.size), color = MaterialTheme.colorScheme.surfaceContainer,
-                modifier = Modifier.fillMaxWidth().combinedClickable(enabled = !busy && !entry.problem,
-                    onClick = { menu = true }, onLongClick = { menu = true })) {
-                Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 14.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(entry.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
-                        Text(if (entry.problem) "Draft metadata needs attention" else "${formatNoteSize(context, entry.bytes)} note",
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Surface(
+                shape = connectedPillShape(index, entries.size),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(
+                        enabled = !busy && !entry.problem,
+                        onClick = { menu = true },
+                        onLongClick = { menu = true }
+                    )
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_nav_notes_outline),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            entry.title,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            if (entry.problem) "Draft needs attention" else "${formatNoteSize(context, entry.bytes)} note draft",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     if (!entry.problem) Box {
-                        IconButton(onClick = { menu = true }, enabled = !busy) { Icon(painterResource(R.drawable.ic_custom_more_vert), "Draft actions") }
+                        IconButton(onClick = { menu = true }, enabled = !busy) {
+                            Icon(
+                                painterResource(R.drawable.ic_custom_more_vert),
+                                contentDescription = "Draft actions",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            )
+                        }
                         NoteContextMenu(menu, { menu = false }) {
                             NoteContextAction("Recover copy", R.drawable.ic_custom_undo) {
                                 menu = false; perform { recovery.recover(entry); "Draft recovered as a new note" }
