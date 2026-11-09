@@ -40,7 +40,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
-import com.example.data.local.AppDatabase
 import com.example.ui.components.*
 import com.example.ui.viewmodel.CobaltViewModel
 import com.example.web.WebCompanionManager
@@ -62,7 +61,6 @@ fun WebCompanionSettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val clipboardManager = LocalClipboardManager.current
 
     val isRunning by WebCompanionManager.isRunning.collectAsState()
@@ -276,18 +274,12 @@ fun WebCompanionSettingsScreen(
                         onCheckedChange = { enable ->
                             if (enable) {
                                 val port = selectedPort.toIntOrNull() ?: 8080
-                                val started = WebCompanionManager.start(
-                                    context = context,
-                                    scope = scope,
-                                    db = AppDatabase.getDatabase(context),
-                                    repo = viewModel.repository,
-                                    port = port
-                                )
+                                val started = viewModel.startWebCompanion(port)
                                 if (!started) {
                                     Toast.makeText(context, "Could not start server. Ensure Wi-Fi is connected.", Toast.LENGTH_LONG).show()
                                 }
                             } else {
-                                WebCompanionManager.stop(context)
+                                viewModel.stopWebCompanion()
                             }
                         },
                         shape = connectedPillShape(0, 2)
@@ -308,14 +300,9 @@ fun WebCompanionSettingsScreen(
                         onSelectionChanged = { newPort ->
                             selectedPort = newPort
                             if (isRunning) {
-                                WebCompanionManager.stop(context)
-                                WebCompanionManager.start(
-                                    context = context,
-                                    scope = scope,
-                                    db = AppDatabase.getDatabase(context),
-                                    repo = viewModel.repository,
-                                    port = newPort.toIntOrNull() ?: 8080
-                                )
+                                val port = newPort.toIntOrNull() ?: 8080
+                                viewModel.stopWebCompanion()
+                                viewModel.startWebCompanion(port)
                             }
                         },
                         shape = connectedPillShape(1, 2)
@@ -347,7 +334,7 @@ fun WebCompanionSettingsScreen(
                         },
                         onClick = {
                             if (isRunning) {
-                                WebCompanionManager.rotatePin(context)
+                                viewModel.rotateWebCompanionPin()
                                 Toast.makeText(context, "PIN rotated", Toast.LENGTH_SHORT).show()
                             }
                         },

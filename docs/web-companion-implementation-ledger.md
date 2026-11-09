@@ -14,10 +14,23 @@ This document tracks every atomic change, file created/modified, and verificatio
 | **04** | **Notes API Endpoints** | ✅ Complete | Paginated note listing, detail retrieval, PIN auth login/logout, media streaming. |
 | **05** | **Web Client Assets** | ✅ Complete | Clean, responsive SPA (HTML/CSS/JS) mirroring phone's theme and dynamic wallpaper colors. |
 | **06** | **Android UI & Service** | ✅ Complete | Web Companion settings category (`ic_custom_globe`), CollapsibleCommonTopBar, Hero card, port selector. |
+| **07** | **Architecture Refactoring** | ✅ Complete | Restored MVVM encapsulation: `repository` returned to `private` in `CobaltViewModel`, exposing clean lifecycle methods. |
 
 ---
 
 ## Atomic Step Details
+
+### Step 07: MVVM Encapsulation Refactor & Clean Architecture Restoration
+- **Package**: `com.example.ui.viewmodel`, `com.example.ui.screens`
+- **Source**:
+  - `app/src/main/kotlin/com/example/ui/viewmodel/CobaltViewModel.kt`
+  - `app/src/main/kotlin/com/example/ui/screens/WebCompanionSettingsScreen.kt`
+- **Architectural Rationale**:
+  - Exposing `repository` directly from the `CobaltViewModel` breaks encapsulation and couples UI composables to data layer internals.
+  - Reverted `repository` to `private val repository = CobaltRepository(context)`.
+  - Added encapsulated ViewModel operations: `startWebCompanion(port)`, `stopWebCompanion()`, and `rotateWebCompanionPin()`.
+  - Hooked `stopWebCompanion()` into `CobaltViewModel.onCleared()` to guarantee automatic server shutdown and notification release on lifecycle destruction.
+  - Removed data-layer imports (`AppDatabase`) and local coroutine scope creation from `WebCompanionSettingsScreen.kt`.
 
 ### Step 06: Android UI & Service Integration (`WebCompanionSettingsScreen`)
 - **Package**: `com.example.ui.screens`, `com.example.web`

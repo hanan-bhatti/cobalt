@@ -48,7 +48,7 @@ import java.util.UUID
 class CobaltViewModel(application: Application) : AndroidViewModel(application) {
 
     private val context = application.applicationContext
-    val repository = CobaltRepository(context)
+    private val repository = CobaltRepository(context)
     private val fileEditor = com.example.notes.FileEditorSession(context, viewModelScope)
     val fileEditorState = fileEditor.state
     fun enableContinuousEditor() = fileEditor.enableContinuous()
@@ -2549,8 +2549,28 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         )
     }
 
+    fun startWebCompanion(port: Int = 8080): Boolean {
+        val app = getApplication<Application>()
+        return com.example.web.WebCompanionManager.start(
+            context = app,
+            scope = viewModelScope,
+            db = com.example.data.local.AppDatabase.getDatabase(app),
+            repo = repository,
+            port = port
+        )
+    }
+
+    fun stopWebCompanion() {
+        com.example.web.WebCompanionManager.stop(getApplication())
+    }
+
+    fun rotateWebCompanionPin(): String {
+        return com.example.web.WebCompanionManager.rotatePin(getApplication())
+    }
+
     override fun onCleared() {
         super.onCleared()
+        stopWebCompanion()
         com.example.web.session.EditorSessionRegistry.releaseMobileLock()
     }
 }
