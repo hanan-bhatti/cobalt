@@ -11,7 +11,7 @@ This document tracks every atomic change, file created/modified, and verificatio
 | **01** | **PIN Creator & Security Manager** | ✅ Complete | 4-digit rotating PIN, progressive lockout, global tripwire, session tokens, and rate limiter. |
 | **02** | **Editor Session Registry** | ✅ Complete | Active note lock registry preventing writes to notes open in mobile editor; hooked into `CobaltViewModel`. |
 | **03** | **Embedded Server Engine** | ✅ Complete | Lightweight coroutine-based HTTP/1.1 server for LAN endpoints, zero external dependencies. |
-| **04** | **Notes API Endpoints** | ⏳ Pending | Paginated note listing, detail retrieval, media streaming. |
+| **04** | **Notes API Endpoints** | ✅ Complete | Paginated note listing, detail retrieval, PIN auth login/logout, media streaming. |
 | **05** | **Web Client Assets** | ⏳ Pending | Clean, minimal single-page web app (HTML/CSS/JS) with PIN auth and markdown reader. |
 | **06** | **Android UI & Service** | ⏳ Pending | Web Companion settings card, start/stop toggle, active PIN & IP display. |
 
@@ -19,7 +19,23 @@ This document tracks every atomic change, file created/modified, and verificatio
 
 ## Atomic Step Details
 
-### Step 03: Embedded Server Engine (`CobaltEmbeddedServer`)
+### Step 04: Notes API Endpoints & Request Routing (`WebCompanionRouter`)
+- **Package**: `com.example.web.server`
+- **Source**: `app/src/main/kotlin/com/example/web/server/WebCompanionRouter.kt`
+- **Key Capabilities**:
+  - `POST /api/auth/login`: PIN verification, issues 256-bit token + `Set-Cookie: cobalt_session` (HttpOnly, SameSite=Strict).
+  - `POST /api/auth/logout`: Revokes session token and clears session cookie.
+  - `GET /api/auth/status`: Lightweight session validity check.
+  - `GET /api/status`: System telemetry and note count.
+  - `GET /api/notes`: Paginated card streaming (`page`, `limit` bounded to 1-100, `q` search query, `folder`, `type`).
+    - Excludes deleted notes.
+    - Annotates items with `isLockedByMobile: true/false`.
+    - Never dumps full note bodies.
+  - `GET /api/notes/{id}`: On-demand full markdown body and metadata with mobile lock warning.
+  - `GET /api/media/{id}`: Local media attachment streaming.
+  - Static asset streaming with MIME type resolution and bootstrap HTML fallback.
+- **Unit Tests**: `app/src/test/java/com/example/web/server/WebCompanionRouterTest.kt`
+
 - **Package**: `com.example.web.server`
 - **Source**:
   - `app/src/main/kotlin/com/example/web/server/HttpModels.kt`
