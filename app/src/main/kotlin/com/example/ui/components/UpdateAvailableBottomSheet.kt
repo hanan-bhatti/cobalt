@@ -1,54 +1,55 @@
+/*
+ * Cobalt - A universal capture and personal knowledge archive
+ * Copyright (C) 2026 Hanan Bhatti
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package com.example.ui.components
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.SystemUpdate
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SheetState
-import androidx.compose.material3.SheetValue
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberBottomSheetState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
+import com.example.ui.screens.ExpressiveMarkdown
 import com.example.util.AppVersionManager
 import com.example.util.ReleaseNote
+import com.example.util.formatFileSize
 
 /**
- * Modern M3 Expressive Sheet notifying user when a new app version is available.
+ * Modern, clean Material 3 Bottom Sheet notifying user when a new app version is available.
+ * Renders complete Markdown changelog notes without raw text truncation.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UpdateAvailableBottomSheet(
-    latestRelease: ReleaseNote = AppVersionManager.getLatestRelease(),
+    versionName: String,
+    releaseName: String = "",
+    releaseDate: String = "",
+    releaseNotesMarkdown: String = "",
+    downloadUrl: String = "",
+    apkSizeBytes: Long? = null,
     onDismissRequest: () -> Unit,
     onUpdateClick: () -> Unit = {},
     onViewChangelogClick: () -> Unit = {},
@@ -65,47 +66,41 @@ fun UpdateAvailableBottomSheet(
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Header Graphic & Banner
+            // Header Graphic & Information
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Surface(
                     color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = CircleShape,
-                    modifier = Modifier.size(56.dp)
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.size(46.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = Icons.Default.SystemUpdate,
+                            painter = painterResource(id = R.drawable.ic_custom_download),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(30.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
                 Column {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "New Update Available",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        AppVersionBadge(
-                            tag = latestRelease.tag,
-                            fontSize = 10.sp,
-                            horizontalPadding = 6.dp,
-                            verticalPadding = 2.dp
-                        )
-                    }
                     Text(
-                        text = "v${latestRelease.versionName} • Released ${latestRelease.releaseDate}",
+                        text = "New Update Available",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    val metadata = listOfNotNull(
+                        "v$versionName",
+                        releaseDate.ifBlank { null },
+                        formatFileSize(apkSizeBytes)
+                    ).joinToString(" • ")
+                    Text(
+                        text = metadata,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -114,51 +109,25 @@ fun UpdateAvailableBottomSheet(
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-            // Highlights
-            if (latestRelease.highlights.isNotEmpty()) {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    ),
-                    shape = RoundedCornerShape(18.dp),
-                    modifier = Modifier.fillMaxWidth()
+            // Rich Markdown Changelog Container
+            if (releaseNotesMarkdown.isNotBlank()) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 280.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Text(
-                                text = "What's New in this Update:",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
-                        latestRelease.highlights.forEach { item ->
-                            Row(
-                                modifier = Modifier.padding(start = 24.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                Text("•", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                                Text(
-                                    text = item,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
+                        ExpressiveMarkdown(
+                            markdown = releaseNotesMarkdown,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }
@@ -176,14 +145,18 @@ fun UpdateAvailableBottomSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("update_now_button"),
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                    Icon(imageVector = Icons.Default.Download, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_custom_download),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Update Now", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("Download Update", fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
 
                 Row(
@@ -210,4 +183,33 @@ fun UpdateAvailableBottomSheet(
             }
         }
     }
+}
+
+/**
+ * Backward compatibility overload for existing ReleaseNote callers.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun UpdateAvailableBottomSheet(
+    latestRelease: ReleaseNote = AppVersionManager.getLatestRelease(),
+    onDismissRequest: () -> Unit,
+    onUpdateClick: () -> Unit = {},
+    onViewChangelogClick: () -> Unit = {},
+    sheetState: SheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden)
+) {
+    val markdown = latestRelease.markdownContent.ifBlank {
+        latestRelease.highlights.joinToString("\n") { "- $it" }
+    }
+    UpdateAvailableBottomSheet(
+        versionName = latestRelease.versionName,
+        releaseName = "Cobalt v${latestRelease.versionName}",
+        releaseDate = latestRelease.releaseDate,
+        releaseNotesMarkdown = markdown,
+        downloadUrl = latestRelease.downloadUrl ?: "",
+        apkSizeBytes = latestRelease.downloadSizeBytes,
+        onDismissRequest = onDismissRequest,
+        onUpdateClick = onUpdateClick,
+        onViewChangelogClick = onViewChangelogClick,
+        sheetState = sheetState
+    )
 }

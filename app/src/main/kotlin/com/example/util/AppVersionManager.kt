@@ -1,6 +1,24 @@
+/*
+ * Cobalt - A universal capture and personal knowledge archive
+ * Copyright (C) 2026 Hanan Bhatti
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package com.example.util
 
-import androidx.compose.material3.MaterialTheme
+import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.Dispatchers
@@ -16,11 +34,18 @@ import java.util.concurrent.TimeUnit
 sealed class UpdateCheckResult {
     data class UpdateAvailable(
         val latestVersionName: String,
-        val releaseUrl: String,
-        val releaseNotes: String
-    ) : UpdateCheckResult()
+        val releaseName: String = "",
+        val releaseDate: String = "",
+        val releaseUrl: String = "",
+        val releaseNotes: String = "",
+        val apkDownloadUrl: String? = null,
+        val apkSizeBytes: Long? = null
+    ) : UpdateCheckResult() {
+        val formattedSize: String?
+            get() = formatFileSize(apkSizeBytes)
+    }
 
-    object UpToDate : UpdateCheckResult()
+    data class UpToDate(val latestVersionName: String = "") : UpdateCheckResult()
     data class Error(val message: String) : UpdateCheckResult()
 }
 
@@ -41,12 +66,12 @@ enum class AppVersionTag(
     @Composable
     fun containerColor(): Color {
         return when (this) {
-            ALPHA -> Color(0xFFFCE4EC) // Light Magenta/Pink
-            BETA -> Color(0xFFFFF3E0) // Warm Amber/Orange
-            NIGHTLY -> Color(0xFFEDE7F6) // Deep Lavender/Indigo
-            RC -> Color(0xFFE0F7FA) // Cyan/Teal
-            STABLE -> Color(0xFFE8F5E9) // Mint Green
-            DEV -> Color(0xFFFFF8E1) // Soft Gold
+            ALPHA -> Color(0xFFFCE4EC)
+            BETA -> Color(0xFFFFF3E0)
+            NIGHTLY -> Color(0xFFEDE7F6)
+            RC -> Color(0xFFE0F7FA)
+            STABLE -> Color(0xFFE8F5E9)
+            DEV -> Color(0xFFFFF8E1)
         }
     }
 
@@ -68,20 +93,23 @@ enum class AppVersionTag(
  */
 data class ReleaseNote(
     val versionName: String,
-    val versionCode: Int,
-    val releaseDate: String,
-    val tag: AppVersionTag,
+    val versionCode: Int = 0,
+    val releaseDate: String = "",
+    val tag: AppVersionTag = AppVersionTag.STABLE,
     val isCurrent: Boolean = false,
     val isLatest: Boolean = false,
     val highlights: List<String> = emptyList(),
     val features: List<String> = emptyList(),
     val improvements: List<String> = emptyList(),
-    val bugFixes: List<String> = emptyList()
+    val bugFixes: List<String> = emptyList(),
+    val markdownContent: String = "",
+    val downloadUrl: String? = null,
+    val downloadSizeBytes: Long? = null
 )
 
 /**
- * Central manager for App Version information, release history, and update checks.
- * Synchronized directly with root CHANGELOG.md.
+ * Central manager for App Version information and update checks.
+ * Integrates directly with dynamic GitHub releases and CHANGELOG.md.
  */
 object AppVersionManager {
 
@@ -92,9 +120,6 @@ object AppVersionManager {
             .build()
     }
 
-    /**
-     * Parses the current version name from BuildConfig to extract the dynamic release tag.
-     */
     fun parseVersionTag(versionName: String = com.example.BuildConfig.VERSION_NAME): AppVersionTag {
         val lower = versionName.lowercase()
         return when {
@@ -103,7 +128,7 @@ object AppVersionManager {
             lower.contains("nightly") -> AppVersionTag.NIGHTLY
             lower.contains("rc") -> AppVersionTag.RC
             lower.contains("dev") -> AppVersionTag.DEV
-            else -> AppVersionTag.STABLE // Default to STABLE for official production releases
+            else -> AppVersionTag.STABLE
         }
     }
 
@@ -116,15 +141,12 @@ object AppVersionManager {
     val currentVersionCode: Int
         get() = com.example.BuildConfig.VERSION_CODE
 
-    /**
-     * Authentic release history of Cobalt synchronized with CHANGELOG.md and BuildConfig.
-     */
     val releaseHistory: List<ReleaseNote> = listOf(
         ReleaseNote(
-            versionName = "2.2.3",
-            versionCode = 19,
+            versionName = currentVersionName,
+            versionCode = currentVersionCode,
             releaseDate = "October 30, 2026",
-            tag = AppVersionTag.STABLE,
+            tag = currentTag,
             isCurrent = true,
             isLatest = true,
             highlights = listOf(
@@ -132,513 +154,18 @@ object AppVersionManager {
                 "Elastic Fuzzy Search Engine",
                 "Gemini AI Usage Tracker & Interactive Chart",
                 "Media Activity Line Graph & UI Polish"
-            ),
-            features = listOf(
-                "Lightweight on-device FolderRankingEngine — scores folders by recency, frequency, content-type affinity, and keyword match",
-                "Suggested folders shown with a subtle accent border glow instead of the old ✦ badge",
-                "ElasticFuzzySearchEngine with multi-strategy scoring: exact → prefix → Levenshtein → token overlap",
-                "Archive & Organization settings screen with Smart Ranking toggle and Profile archive style selector",
-                "GitHub-Style 52-week Activity Heatmap switchable from settings",
-                "Gemini AI Usage Screen with per-day token history, task breakdown, and interactive 7-day bar chart",
-                "GeminiUsageTracker auto-recovery: backfills missing daily buckets from stored totals",
-                "Redesigned Move-to-Folder dialog with correct colors, icons, usage counts, and ranked ordering",
-                "Zero-lag share sheet save via QuickShareActivity — closes instantly, enrichment runs in background",
-                "Media & TMDb Activity line graph (24H / 7D / 30D) with touch-to-scrub replaces verbose spec badges"
-            ),
-            improvements = listOf(
-                "Side Dock now reacts to wallpaper/theme changes without toggle or app restart",
-                "Side Dock handle now uses app dynamic primary colour instead of hardcoded blue",
-                "Gemini Usage Screen redesigned: combined metric cards, simplified task rows, quiet reset button",
-                "Model name shown in human-friendly form (e.g. Gemini Flash Lite)",
-                "Profile Settings reorganised with dedicated Archive & Organization category and ai_brain icon",
-                "Folders empty-state uses closed folder icon"
-            ),
-            bugFixes = listOf(
-                "Fixed crash on Android 12+ (API 32): CobaltSideDockService foregroundServiceType mismatch (0x00000001 vs 0x40000000)",
-                "Fixed yesterday token count showing 0 — GeminiUsageTracker now indexes daily map by yyyy-MM-dd key matching stored data",
-                "Removed stale ✦ indicator reference from Archive & Organization settings description"
-            )
-        ),
-        ReleaseNote(
-            versionName = "2.2.2",
-            versionCode = 18,
-            releaseDate = "October 27, 2026",
-            tag = AppVersionTag.STABLE,
-            isCurrent = false,
-            isLatest = false,
-            highlights = listOf(
-                "Capture Screen & Audio Redesign",
-                "Dedicated Delete in Edit Mode",
-                "Theme-Aware Half-Height Undo Toast",
-                "UX Polish & Reliability Fixes"
-            ),
-            features = listOf(
-                "Refined note capture experience with dedicated delete and universal markdown toolbar",
-                "Added delete confirmation in detail screen with instant home return"
-            ),
-            improvements = listOf(
-                "Sleek 42dp half-height undo deletion capsule with theme-aware styling",
-                "Streamlined TMDb search retry toasts above sheet scrims"
-            ),
-            bugFixes = listOf(
-                "Resolved TMDb search timeout sheet dismissal conflict",
-                "Fixed inverted surface colors on undo deletion toast across themes",
-                "General performance improvements and UI polish"
-            )
-        ),
-        ReleaseNote(
-            versionName = "2.2.1",
-            versionCode = 17,
-            releaseDate = "October 26, 2026",
-            tag = AppVersionTag.STABLE,
-            isCurrent = false,
-            isLatest = false,
-            highlights = listOf(
-                "Video Playback & YouTube URLs",
-                "Gemini Audio Transcription Fix",
-                "Enhanced Page Transitions",
-                "Bug Fixes & Performance"
-            ),
-            features = listOf(
-                "Added direct YouTube video URL playback support in the built-in video player"
-            ),
-            improvements = listOf(
-                "Enhanced page transitions and card morph animations for a smoother experience",
-                "Updated Gemini transcription API integration and response schema parsing"
-            ),
-            bugFixes = listOf(
-                "Resolved YouTube trailer playback configuration error",
-                "Fixed audio transcription parsing on speech completion",
-                "General bug fixes and performance improvements"
-            )
-        ),
-        ReleaseNote(
-            versionName = "2.2.0",
-            versionCode = 16,
-            releaseDate = "October 24, 2026",
-            tag = AppVersionTag.STABLE,
-            isCurrent = false,
-            isLatest = false,
-            highlights = listOf(
-                "Material 3 Expressive Settings Hub",
-                "Side Dock Physics Studio & In-Dock Details",
-                "Vision vs Audio AI Segregation & Custom Prompts",
-                "Bi-Directional Mixed Markdown & Motion Engine"
-            ),
-            features = listOf(
-                "Categorized Settings hub (Appearance, AI Intelligence, Dock, Widgets, Help & Support) with connected pill shapes and collapsible headers",
-                "Fluid elastic side dock morph curves with dynamic physics sliders (stiffness & damping) and live Canvas preview studio",
-                "Direct in-dock detail view permitting reading, copying, and scrolling notes without leaving external apps",
-                "Segregated Gemini Vision and Audio transcription model selectors with Gemini 2.5/2.0/1.5 support",
-                "Customizable OCR system prompt and human-friendly error mapper (GoogleApiErrorMapper)",
-                "Humorous rotating loading messages during image OCR analysis (OcrLoadingMessages)",
-                "Inline folder creation with integrated icon picker across Capture, OCR, and Home card management (InlineNewFolderCreator)",
-                "Dual bold/outline navigation icons with state persistence and directional AOSP Shared Axis transitions",
-                "Full text selection in DetailScreen via SelectionContainer",
-                "Cobalt Contributor profile badge awarded to survey respondents"
-            ),
-            improvements = listOf(
-                "Removed simulated diagnostics in favor of an honest, verified Help Center & FAQ knowledge base",
-                "Folder screen cards now display clean titles, descriptions, and media thumbnails without raw file URIs",
-                "Unified item sharing across Folder screen context menus with FileProvider progress feedback",
-                "Upgraded MarkdownRenderer with per-node RTL detection (Urdu, Arabic, Hebrew) and Compose LinkAnnotation links",
-                "Switched clipboard APIs across the codebase from deprecated LocalClipboardManager to Compose LocalClipboard",
-                "Dock blur confined strictly to the dock panel, keeping background display sharp with a subtle scrim",
-                "Real-time clipboard URL detection chip on Capture Screen for instant single-tap pasting"
-            ),
-            bugFixes = listOf(
-                "Added ProGuard keep rules preserving Firebase Auth reflection methods in Play builds",
-                "Fixed white blank card blink during detail screen dismissal via cached displayedItem",
-                "Fixed landscape handle overflow by dynamically constraining handle height to screen height"
-            )
-        ),
-        ReleaseNote(
-            versionName = "2.1.2",
-            versionCode = 15,
-            releaseDate = "October 13, 2026",
-            tag = AppVersionTag.STABLE,
-            isCurrent = false,
-            isLatest = false,
-            highlights = listOf(
-                "F-Droid Tester Feedback Fixes",
-                "Decoupled Home & Search Feeds",
-                "Radial FAB Tap & Gesture Improvements"
-            ),
-            features = listOf(
-                "Added opt-in toggle in Settings -> Release & Updates for GitHub update checks (default OFF in FOSS)",
-                "Full plain-tap support for GlobalExpandingFab radial menu in addition to drag gesture"
-            ),
-            improvements = listOf(
-                "Decoupled Home tab items from Search tab query, automatically clearing search query on back navigation",
-                "Added custom User-Agent and enhanced guidance for Jikan anime search",
-                "Completely removed sync/upload/download background services and notification permissions from FOSS build"
-            ),
-            bugFixes = listOf(
-                "Eliminated persistent 'Backup Notifications' dialog on saving captures",
-                "Fixed Home screen showing filtered search results with an empty search bar"
-            )
-        ),
-        ReleaseNote(
-            versionName = "2.1.0-beta",
-            versionCode = 13,
-            releaseDate = "October 8, 2026",
-            tag = AppVersionTag.BETA,
-            isCurrent = false,
-            isLatest = false,
-            highlights = listOf(
-                "UI & Gestures Overhaul",
-                "TMDb Rich Media Expansion",
-                "True Native Archiving"
-            ),
-            features = listOf(
-                "GlobalExpandingFab rewritten with a smooth Radial Menu, Floating Canvas overlays for quick notes, and a new tactile Folder bottom sheet",
-                "Massively upgraded media hub pulling Runtime, Taglines, Budgets, Revenue, and Production Companies from TMDb",
-                "Native 'isArchived' system wide filtering, replacing old string-based folder hacks",
-                "Dynamic flavor titles (Cobalt FOSS) with adaptive frameless version tags",
-                "Added proper FileProvider to enable secure sharing"
-            ),
-            improvements = listOf(
-                "Replaced manual swiping with proper HorizontalPager on Capture Screen for fluid gestures",
-                "Replaced Detail Screen inline image zooming with a dedicated full-screen overlay to fix scroll blocking",
-                "Removed legacy ImageMarkingCanvas that disrupted vertical scrolling",
-                "Upgraded database to Version 6 to support extended media metadata",
-                "Added authentic SVG brand logos for Apple, Crunchyroll, Disney, HBO, Hulu, Netflix, Prime, and YouTube"
-            ),
-            bugFixes = listOf(
-                "Squashed recursive cloud sync bug in DataDownloadService by utilizing saveItemLocallyOnly()",
-                "Fixed Video thumbnail absolute paths correctly binding to item content",
-                "Fixed home screen archive cards improperly rendering content URIs instead of extracted text for images",
-                "Hid FOSS cloud sync icons for non-signed-in users",
-                "Filtered duplicate streaming providers on Detail Screen"
-            )
-        ),
-        ReleaseNote(
-            versionName = "2.0.0",
-            versionCode = 12,
-            releaseDate = "October 7, 2026",
-            tag = AppVersionTag.STABLE,
-            isCurrent = false,
-            isLatest = false,
-            highlights = listOf(
-                "Major Rebranding to Cobalt (v2.0.0)",
-                "Mathematical Vector App Icon",
-                "FOSS Minimalist Badge",
-                "Firebase Migration & Alignment"
-            ),
-            features = listOf(
-                "Completely rebranded the application from Second Brain to Cobalt",
-                "Hand-crafted pure mathematical geometric vector icon for the new Cobalt branding",
-                "Added a sleek, minimalist FOSS badge to the UI for the open-source flavor",
-                "Migrated backend cloud storage and database connectivity to the new cobalt package name"
-            ),
-            improvements = listOf(
-                "Bumped version to v2.0.0 Stable (Build #12)",
-                "Refactored deep links to cobalt://"
-            ),
-            bugFixes = listOf(
-                "Updated all diagnostic tools, crash reporters, and underlying services to reflect the new identity"
-            )
-        ),
-
-        ReleaseNote(
-            versionName = "1.1.0-beta01",
-            versionCode = 11,
-            releaseDate = "October 6, 2026",
-            tag = AppVersionTag.BETA,
-            isCurrent = false,
-            isLatest = false,
-            highlights = listOf(
-                "Beta Release (v1.1.0-beta01)",
-                "Tab Swiping & Auto-Scroll in Capture Screen",
-                "Save Progress Shimmer Animation",
-                "Swipe-to-Dismiss Feedback Banners"
-            ),
-            features = listOf(
-                "Horizontal swipe gesture in Capture Screen to fluidly switch between item types",
-                "Auto-scrolling to the active tab in the SavedItemType row",
-                "Sleek shimmering progress animation on the Save button matching rounded corners",
-                "Redesigned AppFeedbackBanner with slimmer height and swipe-to-dismiss"
-            ),
-            improvements = listOf(
-                "Bumped version to v1.1.0-beta01 (Build #11)"
-            ),
-            bugFixes = listOf(
-                "Fixed massive empty layout gap in the Edge Panel overlay",
-                "Properly anchored the Quick thought bar to the bottom edge during high-anchor interactions",
-                "Fixed OCR link previews being killed immediately after Activity closure using app-level scope",
-                "Relaxed Gemini API key validation to support enterprise and regional keys without 'AIza' prefix",
-                "Prevented silent media search timeouts by blocking empty queries on Capture screen load"
-            )
-        ),
-
-        ReleaseNote(
-            versionName = "1.0.0",
-            versionCode = 10,
-            releaseDate = "August 5, 2026",
-            tag = AppVersionTag.STABLE,
-            isCurrent = false,
-            isLatest = false,
-            highlights = listOf(
-                "Official Stable Release (v1.0.0)",
-                "Dynamic Thumb-Reachable Edge Panel Layout & Landscape Scaling",
-                "FOSS Offline Crash Handler & Email Reporting Dialog",
-                "Unified Local & Cloud Feedback, Feature Request & Survey Storage",
-                "Guaranteed Zero Data Loss Across FOSS & Play Builds",
-                "Real-Time GitHub Update Checking & Auto-Notification Engine"
-            ),
-            features = listOf(
-                "Dynamic Fitts's Law thumb reachability in Edge Panel (moves actions to bottom when handle Y is high)",
-                "Adaptive landscape mode layout scaling (300dp × 280dp) and recents scroll optimization",
-                "FOSS uncaught exception handler with next-launch Material 3 crash email report dialog",
-                "Unified local JSON and cloud Firestore persistence for bug reports, feature requests, and surveys",
-                "Real-time GitHub online update checking with direct download and release notes bottom sheet"
-            ),
-            improvements = listOf(
-                "Bumped version to v1.0.0 Stable (Build #10)",
-                "Guaranteed zero data-loss architecture for FOSS, Play, and Guest user submissions",
-                "F-Droid recipe and Fastlane metadata synchronization"
-            ),
-            bugFixes = listOf(
-                "Fixed CobaltOcrOverlayService Y-position coercion crash on landscape/small screen heights",
-                "Fixed feedback and survey submissions saving to nowhere",
-                "Fixed input field container fill colors and title placeholder line wrapping"
-            )
-        ),
-        ReleaseNote(
-            versionName = "1.0.0-rc02",
-            versionCode = 9,
-            releaseDate = "August 4, 2026",
-            tag = AppVersionTag.RC,
-            isCurrent = false,
-            isLatest = false,
-            highlights = listOf(
-                "Second Release Candidate (1.0.0-rc02)",
-                "Real GitHub API Update Checking Engine",
-                "F-Droid Build Recipe & Fastlane Metadata Auto-Sync Engine",
-                "Consolidated AppFeedbackBanner Feedback System"
-            ),
-            features = listOf(
-                "Real-time GitHub Releases update checking with direct download link",
-                "F-Droid metadata formatting and script auto-synchronization",
-                "App-wide network timeout bounds and error notification banners"
-            ),
-            improvements = listOf(
-                "Updated BuildConfig version to 1.0.0-rc02 (Build #9)",
-                "Dynamically bound release notes history to active build version"
-            ),
-            bugFixes = listOf(
-                "Fixed static release notes history mismatch with BuildConfig",
-                "Replaced simulated update check delay with authentic GitHub API queries"
-            )
-        ),
-        ReleaseNote(
-            versionName = "1.0.0-nightly01",
-            versionCode = 8,
-            releaseDate = "July 23, 2026",
-            tag = AppVersionTag.NIGHTLY,
-            isCurrent = false,
-            isLatest = false,
-            highlights = listOf(
-                "Bleeding-Edge Nightly Build (1.0.0-nightly01)",
-                "Android 12+ Tuned Haptic Engine Manager (Disabled by default)",
-                "App-wide User-Friendly Error Banners & Network Timeout Protection",
-                "Search Panel Movie Icon & Gamified In-App Experience Survey Sheet"
-            ),
-            features = listOf(
-                "Bleeding-edge Nightly testing channel build",
-                "Tuned Haptic Feedback Engine for presses, long presses, and success actions",
-                "Tactile feedback toggle in Profile ➔ Settings ➔ Display & Interface",
-                "AppFeedbackBanner with non-infinite network call timeouts",
-                "Gamified 2-step In-App Experience Survey Sheet with Firestore sync",
-                "Profile sections reorganization & deep Account Deletion flow"
-            ),
-            improvements = listOf(
-                "Movie search results in Search panel now correctly render movie icons & poster art",
-                "Network calls bounded to maximum 15s timeouts to prevent hanging",
-                "Full RTL text direction in Markdown renderers and Rich Text editor"
-            ),
-            bugFixes = listOf(
-                "Fixed movie item type icon in SearchScreen panel",
-                "Fixed Send icon and Clipboard deprecation warnings with modern APIs"
-            )
-        ),
-        ReleaseNote(
-            versionName = "1.0.0-rc01",
-            versionCode = 7,
-            releaseDate = "July 23, 2026",
-            tag = AppVersionTag.RC,
-            isCurrent = false,
-            isLatest = false,
-            highlights = listOf(
-                "First Official Release Candidate (1.0.0-rc01)",
-                "App-wide RTL support for Urdu, Arabic, & Hebrew text",
-                "Dynamic Version Channel Badges & Expressive Release Notes Hub",
-                "Unified Material 3 Expressive Dialogs & Wavy Progress Indicators"
-            ),
-            features = listOf(
-                "Release Candidate build status with dynamic channel colors",
-                "New 'App Updates & Release Notes' hub in Settings",
-                "Interactive update checker with real-time feedback",
-                "Voice Memo AI Transcription and recording waveform"
-            ),
-            improvements = listOf(
-                "Full RTL text direction in Markdown renderers and Rich Text editor",
-                "Seamless model list refresh upon API key update",
-                "Unified dialog corner radii to 28.dp surface container high"
-            ),
-            bugFixes = listOf(
-                "Fixed 404 error on initial Gemini model request",
-                "Fixed text direction mismatch for right-to-left scripts"
-            )
-        ),
-        ReleaseNote(
-            versionName = "0.9.3-beta01",
-            versionCode = 6,
-            releaseDate = "July 22, 2026",
-            tag = AppVersionTag.BETA,
-            isCurrent = false,
-            isLatest = false,
-            highlights = listOf(
-                "Global Dynamic Light/Dark Theme Color Adaptation",
-                "Header Top Inset Spacing Cleanups"
-            ),
-            features = listOf(
-                "Implemented HSL-based color transformation (Color.toThemeColor(isDark)) across all folders, categories, widgets, OCR overlay, and settings"
-            ),
-            improvements = listOf(
-                "Consolidated top bar header spacing immediately below system status bar across all main screens"
-            )
-        ),
-        ReleaseNote(
-            versionName = "0.9.2-beta01",
-            versionCode = 5,
-            releaseDate = "July 22, 2026",
-            tag = AppVersionTag.BETA,
-            isCurrent = false,
-            isLatest = false,
-            highlights = listOf(
-                "Media Hub Screen & TMDb Movie/TV/Anime Enrichment",
-                "Auto-Complete Media Search & OCR Integration"
-            ),
-            features = listOf(
-                "Built dedicated Media Hub featuring watch status filter chips, category tabs, poster cards, and pull-to-refresh",
-                "Interactive bottom sheet search for real-time movie, TV show, and anime queries",
-                "Automated fetching of TMDb streaming watch providers, genres, release years, vote ratings, and trailers",
-                "East Asian anime auto-detection algorithms and genre filter chips",
-                "OCR Overlay direct media searching and single-tap saving"
-            ),
-            improvements = listOf(
-                "Embedded section headers and filter chips directly into home screen staggered grid",
-                "Relocated TMDb API key configuration to a dedicated subscreen inside Settings",
-                "Updated capture and recent item widgets to support media category items"
-            ),
-            bugFixes = listOf(
-                "Separated OCR tab save button logic to allow independent link and note saving",
-                "Enabled instant DB saves for extracted links prior to background metadata fetching",
-                "Resolved Firestore folder document path slashes and early exit bugs in syncUnsyncedItems"
-            )
-        ),
-        ReleaseNote(
-            versionName = "0.9.1-beta02",
-            versionCode = 4,
-            releaseDate = "July 21, 2026",
-            tag = AppVersionTag.BETA,
-            isCurrent = false,
-            isLatest = false,
-            highlights = listOf(
-                "Edge Panel Animation Studio",
-                "Dynamic Category Tinting & Real-Time Widget Sync"
-            ),
-            features = listOf(
-                "Subpage featuring 5 animation presets, custom duration/scale/easing controls, and live hot-reloading",
-                "QuickCapture action button background tinting using category accent colors",
-                "Real-Time Widget Sync mirroring app theme with WidgetUpdater"
-            ),
-            improvements = listOf(
-                "Synchronous Preference Persistence with commit() for immediate writes",
-                "Added bottom padding across subpages and horizontal scrolling for filter chips"
-            ),
-            bugFixes = listOf(
-                "Clamped color, alpha, radii, and layout fraction bounds in expandPanel/collapsePanel to eliminate color extrapolation artifacts",
-                "Replaced deprecated TabRow with SecondaryTabRow in WidgetSettingsScreen"
-            )
-        ),
-        ReleaseNote(
-            versionName = "0.9.1-beta01",
-            versionCode = 3,
-            releaseDate = "July 21, 2026",
-            tag = AppVersionTag.BETA,
-            isCurrent = false,
-            isLatest = false,
-            highlights = listOf(
-                "Widget Customizer Engine",
-                "Settings UI Redesign"
-            ),
-            features = listOf(
-                "Production-grade WidgetSettingsScreen with live interactive previews, user archive rendering, category filtering, and opacity controls"
-            ),
-            improvements = listOf(
-                "Redesigned main Settings screen into clean, logical section groups with clear visual badges",
-                "Corrected collapse corner radii math and morph curve interpolation for edge panel"
-            ),
-            bugFixes = listOf(
-                "Replaced reflection-based Moshi JSON parsing in Glance widgets with org.json for ROM stability",
-                "Restored FLAG_NOT_FOCUSABLE window flag upon overlay collapse to fix Android back-swipe gesture blocking"
-            )
-        ),
-        ReleaseNote(
-            versionName = "0.9.0-beta02",
-            versionCode = 2,
-            releaseDate = "July 20, 2026",
-            tag = AppVersionTag.BETA,
-            isCurrent = false,
-            isLatest = false,
-            highlights = listOf(
-                "Glance Widgets & Background Data Downloader",
-                "Fuzzy Levenshtein Search & Code Highlighting"
-            ),
-            features = listOf(
-                "Glance Widgets: RecentItemsWidget and QuickCaptureWidget components",
-                "DataDownloadService for asynchronous background media retrieval",
-                "Fuzzy and synonym-aware search ranking utilizing Levenshtein distance scoring",
-                "Custom CodeHighlighter utility for real-time Markdown code block styling"
-            ),
-            improvements = listOf(
-                "Cloud quota logic treats text/link items as free against 512MB limit",
-                "Performance-gated dynamic background blur (Haze) with OS capability detection"
-            )
-        ),
-        ReleaseNote(
-            versionName = "0.9.0-beta01",
-            versionCode = 1,
-            releaseDate = "July 18, 2026",
-            tag = AppVersionTag.BETA,
-            isCurrent = false,
-            isLatest = false,
-            highlights = listOf(
-                "Initial Beta Release of Cobalt",
-                "Floating OCR & System Share Sheet Capture"
-            ),
-            features = listOf(
-                "System share sheet support for text, images, videos, and links",
-                "Swipeable floating edge-handle panel over any application for OCR scanning",
-                "Automated Gemini image text extraction and speech-to-text voice memos",
-                "Offline-first Room database storage with Firebase cloud sync"
             )
         )
     )
 
-    fun getLatestRelease(): ReleaseNote = releaseHistory.firstOrNull { it.isLatest } ?: releaseHistory.first()
+    fun getLatestRelease(): ReleaseNote = releaseHistory.first()
 
-    fun isUpdateAvailable(): Boolean {
-        val latest = getLatestRelease()
-        return latest.versionCode > currentVersionCode || isVersionNewer(latest.versionName, currentVersionName)
-    }
+    fun isUpdateAvailable(): Boolean = false
 
     /**
      * Performs a real HTTP network query against GitHub Releases API to check for updates.
      */
-    suspend fun checkOnlineUpdates(): UpdateCheckResult = withContext(Dispatchers.IO) {
+    suspend fun checkOnlineUpdates(context: Context? = null): UpdateCheckResult = withContext(Dispatchers.IO) {
         try {
             val request = Request.Builder()
                 .url("https://api.github.com/repos/hanan-bhatti/cobalt/releases/latest")
@@ -649,7 +176,7 @@ object AppVersionManager {
             okHttpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {
                     if (response.code == 404) {
-                        return@withContext UpdateCheckResult.UpToDate
+                        return@withContext UpdateCheckResult.UpToDate(currentVersionName)
                     }
                     return@withContext UpdateCheckResult.Error("HTTP ${response.code}: ${response.message}")
                 }
@@ -659,20 +186,87 @@ object AppVersionManager {
 
                 val tagName = json.optString("tag_name", "").removePrefix("v").trim()
                 val htmlUrl = json.optString("html_url", "https://github.com/hanan-bhatti/cobalt/releases")
-                val bodyText = json.optString("body", "")
+                val releaseName = json.optString("name", "Cobalt v$tagName")
+                val publishedAt = json.optString("published_at", "")
+                var bodyText = json.optString("body", "").trim()
+
+                // Extract APK asset if available
+                var apkUrl: String? = null
+                var apkSize: Long? = null
+                val assets = json.optJSONArray("assets")
+                if (assets != null) {
+                    for (i in 0 until assets.length()) {
+                        val asset = assets.optJSONObject(i) ?: continue
+                        val name = asset.optString("name", "")
+                        if (name.endsWith(".apk", ignoreCase = true)) {
+                            apkUrl = asset.optString("browser_download_url", "")
+                            apkSize = asset.optLong("size", 0L)
+                            break
+                        }
+                    }
+                }
+
+                // If release body is short or just comparison link, attempt enriching from dynamic changelog
+                if (context != null && (bodyText.isBlank() || (bodyText.contains("Full Changelog") && bodyText.length < 150))) {
+                    try {
+                        val releases = ChangelogManager.getReleases(context, forceRefresh = false)
+                        val matching = releases.firstOrNull { it.versionName.equals(tagName, ignoreCase = true) }
+                        if (matching != null && matching.markdownContent.isNotBlank()) {
+                            bodyText = matching.markdownContent
+                        }
+                    } catch (_: Exception) {}
+                }
+
+                val formattedDate = formatIsoDate(publishedAt)
 
                 if (tagName.isNotBlank() && isVersionNewer(tagName, currentVersionName)) {
                     UpdateCheckResult.UpdateAvailable(
                         latestVersionName = tagName,
+                        releaseName = releaseName,
+                        releaseDate = formattedDate,
                         releaseUrl = htmlUrl,
-                        releaseNotes = bodyText
+                        releaseNotes = bodyText,
+                        apkDownloadUrl = apkUrl,
+                        apkSizeBytes = if (apkSize != null && apkSize > 0) apkSize else null
                     )
                 } else {
-                    UpdateCheckResult.UpToDate
+                    UpdateCheckResult.UpToDate(tagName.ifBlank { currentVersionName })
                 }
             }
         } catch (e: Exception) {
             UpdateCheckResult.Error(e.localizedMessage ?: "Failed to connect to update server")
+        }
+    }
+
+    private fun formatIsoDate(isoString: String): String {
+        if (isoString.isBlank()) return ""
+        return try {
+            val datePart = isoString.substringBefore("T")
+            val parts = datePart.split("-")
+            if (parts.size == 3) {
+                val year = parts[0]
+                val month = when (parts[1].toIntOrNull()) {
+                    1 -> "Jan"
+                    2 -> "Feb"
+                    3 -> "Mar"
+                    4 -> "Apr"
+                    5 -> "May"
+                    6 -> "Jun"
+                    7 -> "Jul"
+                    8 -> "Aug"
+                    9 -> "Sep"
+                    10 -> "Oct"
+                    11 -> "Nov"
+                    12 -> "Dec"
+                    else -> parts[1]
+                }
+                val day = parts[2].toIntOrNull()?.toString() ?: parts[2]
+                "$month $day, $year"
+            } else {
+                datePart
+            }
+        } catch (_: Exception) {
+            isoString
         }
     }
 
@@ -697,4 +291,3 @@ object AppVersionManager {
         return false
     }
 }
-

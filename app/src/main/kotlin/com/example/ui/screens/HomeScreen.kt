@@ -1141,7 +1141,11 @@ fun HomeScreen(
 
     if (showReleaseNotesSheet) {
         com.example.ui.components.ReleaseNotesBottomSheet(
-            onDismissRequest = { showReleaseNotesSheet = false }
+            onDismissRequest = { showReleaseNotesSheet = false },
+            onNavigateToFullUpdates = {
+                showReleaseNotesSheet = false
+                onNavigateToProfile()
+            }
         )
     }
 

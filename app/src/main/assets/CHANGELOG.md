@@ -1,0 +1,554 @@
+## Unreleased — single application cleanup
+
+### Fixes
+
+- Add inline half-star ratings with swipe selection, four local watch statuses,
+  a bookmark toggle and paged season/episode sheets with locally cached details.
+- Share one media-save path across Capture and Side Dock, retain TMDB/Trakt
+  identities, and batch durable Trakt changes without reimporting the catalogue
+  for each edit. Retain unmatched IDs for retry and protect local deletes.
+- Consolidate Trakt, TMDB and Jikan configuration under Media & Providers;
+  support source priority, private Jikan v4 servers and cached manga facts.
+- Play YouTube trailers inside the app using the existing play/pause icons;
+  pause offscreen and in the background, and offer retry for failed playback.
+- Redesign Media & Providers hierarchy, match the Jikan input to app styling,
+  keep focused fields above the keyboard, and give pending changes their own page.
+- Upload pre-login movie/TV choices, recover legacy Capture provider IDs,
+  apply remote removals, and retain queued changes when Trakt reaches capacity.
+- Use reading labels for manga and keep Jikan catalogue entries out of Trakt writes.
+- Simplify watch-provider chips to supplied logos, names and available prices.
+
+- Support selecting and copying parts of rendered notes with a shared rounded
+  selection toolbar, existing icons and long-press action labels. Editor tools
+  use a single row with a More menu; Read aloud is excluded.
+- Add Markdown table creation with row/column counts, row and column editing,
+  alignment and next-cell navigation. Table changes use existing editor history
+  and bounded background parsing; fenced code is protected.
+
+- Keep Edit as plain Markdown source and Preview as rendered content; continue lists
+  and checklists on Enter, exit empty items, and preserve literal escaped markers.
+- Apply table alignment in Preview, round inline-code backgrounds, and keep
+  next-cell navigation out of undo history when it changes only the cursor.
+- Skip the startup migration screen on fresh installations and fully migrated
+  libraries while retaining interrupted migrations and legacy drafts.
+- Keep Capture folder controls above the keyboard and remove duplicated footer space.
+
+- Render bounded Side Dock text-note previews as Markdown, retaining monospace
+  code notes, and replace the full-width action bar with a floating three-icon pill.
+
+- Simplify Side Dock paste input with a clipboard-preview placeholder, frameless
+  paste control and Send shown only with text; pasting waits for explicit Send.
+- Let compact Dock input grow from one to three lines, use a light close glyph,
+  and show a bounded note-file prefix instead of the two-line list snippet.
+- Queue saved-link metadata independently of Capture/Dock lifetimes, preserving
+  manual descriptions on automatic retries while retaining explicit Refresh replacement.
+- Review Android shares before saving and retain document-import results/errors in
+  a bottom sheet instead of immediately dismissing them.
+
+- Update checklist markers in place without reopening the note, resetting its scroll
+  position, or showing a save progress bar; retain recoverable drafts on save failure.
+- Reduce Home card recomposition and scrollbar drag work; keep drag targets stable
+  as differently sized cards enter the viewport and remove delayed thumb tracking.
+
+- Keep accepted editor operations when closing under queue backpressure; retain
+  unpublished paste and Undo changes when retrying a failed journal write.
+- Handle selection, emoji deletion and hardware cursor movement across the internal
+  editing viewport without adding visible editing blocks or controls.
+- Reclaim cancelled paste buffers, stop oversized input streams early, and serialize
+  permanent deletion with editor-history cleanup.
+- Preserve code indentation when long fenced blocks continue inside lists or quotes.
+
+- **Prevent internal cache paths and URIs as user-facing titles and descriptions (Issue #21):**
+  - Read original file display names (`OpenableColumns.DISPLAY_NAME`) at pick time across gallery, camera, and share intents before copying into app cache.
+  - Added pure `ItemTitleResolver` that sanitizes file names, strips extensions, bounds string lengths without splitting surrogate pairs, and provides localized fallbacks ("Untitled image", "Untitled video", "Untitled audio", etc.) for untitled captures.
+  - Reject internal cache paths (`/cache/`, `/data/user/`), URIs (`file:`, `content:`), and generated temporary cache names (`media_<uuid>`) across all capture pathways.
+  - Enforced single defense-in-depth sanitization choke point in `CobaltRepository` (`saveItem`, `saveItemLocallyOnly`, `saveNewMediaItem`).
+  - Added display-time guards and eliminated path leaks across card subtitles, search rows, detail headers/descriptions, folder pickers, home micro-cards, widgets, Side Dock peek rows, notifications, and share sheets.
+  - Added one-time, idempotent, crash-safe background cleanup (`LegacyPathTitleCleanup`) guarded by SharedPreferences to rename existing path-titled items and recover metadata without altering Room DB schema or note bodies.
+
+- Compact eligible older note versions into verified compressed copy/insert deltas,
+  retain complete history anchors, and reconstruct/export/restore without whole-body
+  Strings. Keep the current note as Markdown and retain originals on conversion failure.
+- Prioritize visible Markdown over speculative prefetch; reduce heading-jump preparation.
+- Preserve original line endings when toggling Markdown checkboxes, including quoted
+  and ordered tasks; exclude code using CommonMark parsing.
+
+### Storage and Trash
+
+- Replace the storage size rows with a themed segmented usage bar and compact
+  category breakdown, plus focused history, Trash, unlinked files and maintenance pages.
+- Keep deleted items and their versions recoverable for 30 days. Add Restore,
+  reviewed Empty Trash and resumable permanent deletion; disabling Trash retains
+  a short Undo window for new deletions.
+- Expose retained unlinked bodies/media for recovery, export or explicit cleanup.
+  Protect current notes, active recovery work, shared media and required delta anchors.
+- Add safe cache cleanup and explicit database compaction. Reuse existing delete,
+  undo, export and menu icons, and use the supplied Storage icon.
+- Move ordinary note recovery access to Storage and remove its duplicate migration link.
+
+### Note recovery and storage management
+
+- Native editor autosave records checksummed operations instead of repeatedly retaining full idle checkpoints.
+- Recover journals with a disk piece table before opening the resident editor model.
+- Add Settings → Storage: human-readable sizes, explicit copy retention/cleanup, and older-copy export/restore.
+- Protect current notes, drafts, active readers and undo references during cleanup.
+- Offer direct export of unsaved editor text after a storage/save failure; retain closing models until native views release them.
+- No new dependency or network connection. The disk-backed editor has host regression coverage;
+  device, release and performance acceptance remain pending. See the editor validation report.
+
+
+- Honor Markdown mode for large notes instead of silently forcing files of 5 MB
+  and above into plain text. Text notes default to bounded lazy Markdown rendering;
+  code notes keep their plain-text default. Carry Markdown context across long
+  fences/tables and keep formatting after the link-decoration cap is reached.
+- Batch reader prefetch through a persistent handle with an estimated 8 MiB cache,
+  group small paragraphs and remove per-row fast-scroll skeletons. Cold misses
+  may still reserve space; device latency and frame-rate budgets are unmeasured.
+
+- Replace capture's separate editable ranges with a continuous native editor for
+  file notes, retaining the frameless body and keyboard-only Markdown toolbar.
+  Add global selection/IME editing, undo/redo, cancellable paste, literal find and
+  replace, heading navigation and bounded source styling. Keep complete notes
+  accessible through plain-text/export fallback when the resident model exceeds
+  the device memory estimate. Full 55 MB editing budgets remain unmet/unverified.
+- Stream file-backed piece-table ranges through one open handle per piece. Save
+  verified editor checkpoints without writing the complete body a second time.
+  Preserve legacy window drafts and saved originals during transition.
+
+- Prepare note content from a small prefix instead of parsing the full document
+  before display. Add bounded parsed-block/page caches, nearby-content prefetch
+  and static skeleton loading. Timing and memory budgets remain unmeasured.
+- Reuse existing note-action icons and the standard settings navigation engine
+  for recovery, including predictive back, depth and shared-axis transitions.
+
+- Align migration, recovery and storage-error pages with Appearance settings,
+  including saved themes, shared headers and back motion. Simplify migration
+  actions, use counted All/Large filters, single-line note titles and size badges,
+  and match folder-card context menus with action icons. Debug compilation passes;
+  device visual/back-gesture verification remains pending.
+
+- Integrate large-note reading into the original detail screen; place advanced
+  note actions in its overflow menu instead of a separate large-note interface.
+- Restore frameless capture editing and keyboard-only formatting controls.
+  Large-note editing scrolls through lazily loaded text with no section buttons;
+  native selection currently remains within the focused text range.
+- Move document import from Capture to the global Add menu. Receive/open Markdown,
+  MDX, TXT and other supported text documents from content providers, including
+  sequential multi-file shares; strictly decode UTF-8/BOM-labelled UTF-16.
+- Journal capture edits privately and commit the saved note only on Save.
+
+- Add bounded lazy Markdown blocks with plain-text fallback, section recovery,
+  saved-generation undo/redo and lifecycle journal flushing.
+- Restrict FileProvider to explicit export caches; protect integration credentials
+  with Android Keystore and add an optional Recents/screenshot privacy control.
+- Redact interpolated application logs; add recovery/write-fault/UI test sources
+  and a pull-request debug build/unit-test/lint workflow.
+
+- Consolidate Android sources and build configuration into one Cobalt application.
+- Remove discontinued cloud distribution, backend deployment sources, analytics
+  wrappers and cloud account/storage screens. Retain local email crash reporting.
+- Document outbound connections and historical credential findings.
+- Remove account state, storage-management helpers and pull-to-refresh controls.
+- Disable automatic Android backup and device transfer; retain existing note data.
+- Release verification remains in progress; this entry is not a release certification.
+- In development: private Markdown body files for every text/code note, verified
+  resumable conversion, a one-time migration prompt and a Data Migration results/retry page.
+- In development: body-free list queries, startup crash recovery and bounded
+  lazy reading and frameless range editing for large notes. Device validation is pending.
+- Preserve quick-note drafts when saving fails and stream complete Markdown when sharing notes.
+
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.2.3] - 2026-10-30
+
+### Added
+- **Adaptive Smart Folder Ranking Engine (`FolderRankingEngine.kt`):**
+  - Lightweight on-device scoring algorithm that ranks folders by recency of use, assignment frequency, content-type affinity, and keyword matching against capture title/content.
+  - Supports both cold-start (alphabetical) and warm-start (ranked) modes, enabled via a new user setting.
+  - Suggested folders are indicated by a subtle **accent border glow** (1.5dp primary-tinted border + soft background tint) — replaces the old `✦` badge entirely.
+- **Elastic Fuzzy Search Engine (`ElasticFuzzySearchEngine.kt`):**
+  - Full-content search across titles, descriptions, notes, extracted text, links, folder names, and media metadata.
+  - Multi-strategy ranking: exact match → prefix match → fuzzy (Levenshtein) → token overlap, with score-weighted results.
+  - Handles typos gracefully; filters by content type and folder.
+- **Archive & Organization Settings Screen (`ArchiveOrganizationSettingsScreen.kt`):**
+  - New standalone settings page under Settings → Archive & Organization.
+  - Toggle for Smart Folder Ranking (adaptive suggestions & sorting).
+  - Toggle between Classic Category Piles Grid and GitHub-Style Activity Heatmap on the Profile page.
+  - Privacy notice: all ranking and heatmap data is computed locally with zero cloud tracking.
+- **GitHub-Style Activity Heatmap (`KnowledgeHeatmap.kt`):**
+  - 52-week scrollable contribution grid showing daily capture intensity with streaks and active day counts.
+  - Switchable from Profile page via Archive & Organization settings.
+- **Gemini AI Usage Screen (`GeminiUsageScreen.kt`):**
+  - Dedicated sub-screen under Settings showing token usage, API call counts, OCR vs Voice task breakdown, token distribution bar (prompt vs response), and 7-day interactive activity chart.
+  - Interactive vertical bar chart: tap any day to inspect token count; yesterday auto-selected when non-zero.
+  - Auto-recovery logic in `GeminiUsageTracker` backfills daily buckets from stored totals for data already captured before the tracker tracked per-day keys.
+- **Gemini Usage Tracker (`GeminiUsageTracker.kt`):**
+  - SharedPreferences-backed per-day token tracking keyed by `day_yyyy-MM-dd`.
+  - Scans all stored `day_*` keys on load for full historical coverage; recovers missing daily data from `lastUsedTimestamp` automatically.
+- **Move-to-Folder Dialog Redesign (`MoveToFolderDialog.kt`):**
+  - Sleek bottom-sheet dialog with correct folder colors, folder icons, usage counts, and ranking-aware ordering.
+  - Supports multi-select and single-select modes.
+- **Zero-Lag Share Sheet Save (`QuickShareActivity.kt`):**
+  - Instant save-and-close on share-sheet trigger; background enrichment (link metadata, OCR) continues after sheet dismissal.
+- **Custom Vector Icons:**
+  - Added `ic_custom_ai_brain.xml`, `ic_custom_api_chip.xml`, `ic_custom_organization.xml`.
+- **Media & TMDb Activity Line Graph (`MovieApiKeyScreen.kt`):**
+  - Replaced verbose "Library Distribution" bar and technical spec badges with a clean, interactive Canvas line graph.
+  - 24H / 7D / 30D range selector; smooth cubic Bézier curve with gradient fill; touch-to-scrub for per-point detail.
+
+### Changed & Improved
+- **Folder Screen Empty State:** Uses `ic_custom_folder` (closed folder) instead of `ic_custom_folder_open` for the custom-folders empty-state illustration.
+- **Profile Settings Reorganisation:**
+  - Moved "Archive & Organization" into its own top-level settings category with a dedicated `ic_custom_organization` icon.
+  - Updated Intelligence category icon to `ic_custom_ai_brain`.
+- **Gemini Usage Screen UI Polish:**
+  - Metric cards now display `in / out` token split in the subtitle line, removing a separate "Token Breakdown" section.
+  - Task rows simplified: subtitle stripped, icons tightened.
+  - Reset button demoted to a quiet `TextButton` at the bottom.
+  - Model name displayed in human-friendly form (e.g. "Gemini Flash Lite" instead of raw API slug).
+- **Side Dock Wallpaper-Aware Theme:**
+  - Side Dock now reacts to system wallpaper/theme changes without requiring a toggle or app restart.
+- **Foreground Service Type Fix (Android 12+):**
+  - `CobaltSideDockService` manifest entry now correctly declares `foregroundServiceType="specialUse"` matching the runtime `startForeground(FOREGROUND_SERVICE_TYPE_SPECIAL_USE)` call, resolving the `IllegalArgumentException: foregroundServiceType 0x00000001 is not a subset` crash on API 32+ devices.
+- **Side Dock Handle Color:**
+  - Handle now uses the app dynamic primary colour instead of a hardcoded blue.
+
+### Fixed
+- **Yesterday showing 0 tokens:** `GeminiUsageTracker.loadFromPrefs()` now indexes daily map by raw `yyyy-MM-dd` key (matching what `recordUsage` writes) in addition to the display label, so existing stored values surface correctly.
+- **Archive & Organization description text:** Removed stale `✦ indicator` reference; now reads "accent border glow".
+
+## [2.2.2] - 2026-10-27
+
+### Added
+- **GFM Markdown Tables & Strikethrough:**
+  - Added `commonmark-ext-gfm-tables` and `commonmark-ext-gfm-strikethrough` dependencies.
+  - Horizontally scrollable Markdown tables with distinct headers, alternating row colors, and border strokes in `MarkdownRenderer.kt`.
+  - Full support for strikethrough formatting (`~~text~~`).
+- **Interactive Markdown Task Lists:**
+  - Tasks formatted with `- [ ]` and `- [x]` now render as interactive checkboxes.
+  - Tapping a checkbox toggles the task live and persists the updated Markdown string directly to the database.
+- **Universal Markdown Accessory Toolbar (`MarkdownAccessoryToolbar`):**
+  - Quick-format toolbar with actions for H1, H2, Bold, Italic, Strikethrough, Checklist, Quote, Bullet list, Numbered list, Inline code, Code block, and Links.
+  - Pinned Edit / Preview toggle to switch between typing and rendered Markdown on the fly.
+  - Pinned above the software keyboard in `CaptureScreen.kt` and inside `GlobalExpandingFab.kt`.
+- **Smart Clipboard URL Detection & Quick Paste Chip:**
+  - Added `ClipboardUrlHelper.kt` to validate URLs, prepend `https://` if missing, and parse clean domain names.
+  - One-tap `ClipboardPasteChip` in both Capture Screen and Side Dock, reading clipboard once per mount to eliminate Android 12+ clipboard toast spam.
+- **Dedicated Delete Button in Edit Mode:**
+  - Added a minimal 44dp circular delete control in `CaptureScreen.kt` bottom bar (isolated on the left) with `ExpressiveConfirmationDialog` to prevent accidental deletion.
+- **Detail Screen Top Bar Deletion:**
+  - Streamlined delete icon button directly in `DetailScreen.kt` top bar with confirmation dialog and automatic navigation back to Home.
+- **Curated 20-Icon Folder Palette & Unified Styling:**
+  - Expanded `FoldersScreen.kt` with a curated 20-icon set (bookmark, idea, checklist, vault, globe, movie, image, archive, lock, tools, etc.) with alias resolution in `getFolderIconRes(...)`.
+  - Consistent folder icons and hex theme colors across Home chips, Detail view, Floating Side Dock, and OCR capture.
+- **Dynamic Issue Template Version Synchronization:**
+  - Added `scripts/sync_issue_versions.py` and Gradle task `syncIssueVersions` wired to `preBuild`, automatically keeping GitHub issue templates and security policy in sync with the current app version.
+- **Direct FOSS Markdown Export & Fixed Email Flow:**
+  - Added direct `.md` file export via `FileProvider` (`shareOrExportFeedback`) for bug reports and survey responses on FOSS flavor.
+  - Updated developer contact email to `hannanbhatti2006@gmail.com` with URL-encoded mailto fallback.
+- **Gradient Fading Edge Modifier (`Modifier.horizontalFadingEdges`):**
+  - Added `FadingEdges.kt` providing subtle horizontal gradient fade masks for scrollable rows.
+- **Custom Vector Drawables:**
+  - Added `ic_custom_bookmark`, `ic_custom_checklist`, `ic_custom_idea`, `ic_custom_paste`, `ic_custom_select_all_bold`, `ic_custom_sidedock`, `ic_custom_vault`.
+
+### Changed & Improved
+- **Modular Capture Screen Architecture:**
+  - Decomposed into dedicated sub-screens: `TextCapturePage`, `AudioCapturePage`, and `LinkCapturePage`.
+  - Borderless title input with category-accented cursor.
+  - Keyboard Inset Awareness: Hides heavy bottom elements when typing for maximum vertical space.
+  - Settled-state pager synchronization (`snapshotFlow { pagerState.settledPage }`) preventing swipe jank.
+  - Frosted bottom action bar with blurred Haze effect, cancel on left, and save on right.
+- **Audio Recorder & Player Overhaul:**
+  - Frosted container with subtle accent border and rounded corners.
+  - Real-time waveform visualizer with normalized amplitudes and pulsating recording dot indicator.
+  - Monospace font for clear elapsed/total time readout (`00:00 / 00:00`).
+  - Action row with Retry Transcript (with live spinner) and Re-record.
+  - Added audio safety checks requiring minimum file size (1 KB) and duration.
+- **Sleek Half-Height (42dp) Undo Deletion Toast:**
+  - Redesigned item deletion toast to a sleek 42dp capsule with 4-second auto-dismiss and horizontal swipe-to-dismiss.
+  - Corrected surface container and on-surface colors to naturally adapt to both Light and Dark themes.
+- **Multi-Selection Mode (`HomeScreen.kt`):**
+  - "Select all" button now functions as a toggle (Select All / Deselect All) with dynamic icon switching.
+- **Cloud Undo Preservation:**
+  - Soft-deleting items preserves Cloud Storage media so tapping UNDO fully restores cloud-synced items.
+
+### Fixed
+- **TMDb Search Retry Above Scrim:**
+  - Rendered network timeout feedback banner inside `MediaSearchBottomSheet`, ensuring Retry clicks are directly handled without dismiss scrim interference.
+- **Shared Element Transition Glitches:**
+  - Introduced `TransitionCoordinator` in `SharedElementHelper.kt` to selectively enable shared bounds only for items in viewport, eliminating layout jumps between Home and Media Hub.
+- **Auto-Title Fallback for Untitled Items:**
+  - Automatically extracts up to 60 characters from the first non-blank line of content (stripping `#` headers) when title is left empty.
+- **Detail Screen Folder Tag Overflow:**
+  - Made folder tags horizontally scrollable to prevent UI clipping.
+- **Side Dock Header Icon & Detail View Styling:**
+  - Replaced generic tool icon with dedicated `ic_custom_sidedock` and unified folder colors.
+
+## [2.2.1] - 2026-10-26
+
+### Fixed & Improved
+- **Video Playback:** Resolved YouTube trailer playback configuration errors and added support for playing direct YouTube video URLs in the video player.
+- **AI Audio Transcription:** Updated Gemini transcribe API endpoint handling and response schema parsing for seamless voice memos.
+- **Page Transitions & Motion:** Enhanced page transitions, card morph animations, and choreographed detail entry for a smoother UI experience.
+- **Stability & Fixes:** Minor bug fixes and performance improvements.
+
+## [2.2.0] - 2026-10-24
+
+### Added
+- **Material 3 Expressive Settings Hub:** Redesigned Settings into 5 dedicated group categories (Appearance, Intelligence, Floating Dock, Widgets, Help & Support) featuring connected pill shapes, searchable model selectors, and smooth collapsible headers (`CollapsibleCommonTopBar`).
+- **Side Dock Physics Studio & In-Dock Reader:** Introduced fluid elastic side dock morph curves with custom stiffness/damping physics controls and a real-time Canvas preview studio. Users can now view, read, and copy item details directly within the floating dock without opening the main application.
+- **AI Model Segregation & Custom OCR Prompts:** Independent selection for Gemini Vision vs Audio transcription models with support for Gemini 2.5/2.0/1.5, accompanied by a customizable OCR system prompt and human-friendly error mapping (`GoogleApiErrorMapper`).
+- **Humorous OCR Loading States:** Added playful, rotating loading messages (`OcrLoadingMessages`) that entertain users during image text extraction.
+- **Dual Bold/Outline Navigation & Motion:** Redesigned bottom navigation bar with custom paired bold/outline vector icons, tab state persistence, and directional AOSP Shared Axis horizontal slide transitions.
+- **Inline Folder Creator (`InlineNewFolderCreator`):** Lightweight inline component with built-in preset icon picker for instant folder creation inside Capture, OCR, and Home screen folder assignment dialogs.
+- **Full Text Selection in Detail View:** Wrapped Detail Screen content in `SelectionContainer` enabling seamless text highlighting and copying.
+- **Bi-Directional Mixed Script Markdown:** Upgraded Markdown renderer with per-paragraph RTL auto-detection (Urdu, Arabic, Hebrew) and modern Compose `LinkAnnotation` clickable links.
+- **Cobalt Contributor Recognition:** Awarded a verified "Cobalt Contributor" profile badge upon submitting in-app surveys or bug reports.
+
+### Changed
+- Replaced raw file URIs on Folder screen cards with clean titles, descriptions, and media preview thumbnails matching Home cards.
+- Unified Folder screen item sharing with `FileProvider` and visual download progress feedback.
+- Migrated clipboard operations across the app from deprecated `LocalClipboardManager` to modern Compose `LocalClipboard`.
+- Restricted screen blur strictly to the floating dock panel, keeping background screens sharp with a subtle dismiss scrim.
+- Replaced duration-based edge panel animation with authentic spring stiffness and damping physics.
+
+### Removed
+- Removed simulated in-app diagnostics radar and fake latency benchmarks, replacing them with a fully honest Help Center & FAQ knowledge base.
+
+### Fixed
+- **ProGuard R8 Reflection Rules:** Added missing `-keep` rules for Firebase Auth methods used during environment diagnostics in Play builds.
+- **Detail Screen Dismiss Flicker:** Cached `displayedItem` during back-press pop animations to prevent blank card flashes on exit.
+- **Landscape Dock Bounds:** Coerced handle height dynamically on landscape screens to prevent off-screen overflow.
+
+## [2.1.2] - 2026-10-13
+
+### Added
+- **Opt-In Update Checks (FOSS):** Added an opt-in toggle in Settings -> Release & Updates ("Auto-Check for Updates", default OFF) so F-Droid releases do not check GitHub without explicit consent.
+- **Radial FAB Tap Support:** Enhanced `GlobalExpandingFab` so a single tap opens and holds the radial menu open, allowing direct item selection alongside the existing swipe/drag gesture.
+
+### Changed
+- **Decoupled Home & Search Feeds:** The Home feed now strictly tracks folder selections, while the Search tab manages its query independently and resets on back navigation.
+- **FOSS Clean Architecture:** Completely removed cloud sync/upload/download background services and foreground notification requirements from the FOSS build.
+- **Jikan Anime API Guidance:** Added a custom `User-Agent` (`Cobalt-AndroidApp/2.1.2`) and updated the empty search state to provide clear guidance if third-party anime servers time out.
+
+### Fixed
+- **Persistent Permission Nag:** Removed repetitive "Backup Notifications" dialog prompts when saving captures.
+
+## [2.1.0-beta] - 2026-10-08
+
+### Added
+- **Radial Menu FAB:** Completely rewrote `GlobalExpandingFab` with a highly tactile radial menu and floating canvas overlays for Quick Notes and Folder creation.
+- **TMDb Rich Media Expansion:** Massively upgraded media hub pulling Runtime, Taglines, Budgets, Revenue, and Production Companies from TMDb.
+- **True Native Archiving:** Migrated system-wide archiving to a native `isArchived` boolean field, replacing old string-based folder hacks.
+- **FOSS Enhancements:** Dynamic flavor titles ("Cobalt FOSS") with adaptive frameless version tags.
+- **File Sharing:** Added a proper Android `FileProvider` to enable secure external media sharing.
+
+### Changed
+- Replaced manual swiping on the Capture Screen with a native, fluid `HorizontalPager`.
+- Replaced Detail Screen inline image zooming with a dedicated full-screen overlay to fix scroll blocking.
+- Upgraded the Room database to Version 6 to support extended media metadata.
+- Upgraded brand icons to authentic SVGs for Apple, Crunchyroll, Disney, HBO, Hulu, Netflix, Prime, and YouTube.
+
+### Fixed
+- Squashed recursive cloud sync bug in `DataDownloadService` by utilizing `saveItemLocallyOnly()`.
+- Fixed home screen archive cards improperly rendering content URIs instead of extracted text for images.
+- Removed legacy `ImageMarkingCanvas` that disrupted vertical scrolling gestures.
+- Hid FOSS cloud sync icons for non-signed-in users and filtered duplicate streaming providers.
+
+## [2.0.0] - 2026-10-07
+
+### Added
+- **Major Rebranding:** Completely rebranded the application from "Second Brain" to "Cobalt" across the entire codebase.
+- **Mathematical Vector Icon:** Hand-crafted a pure mathematical geometric vector icon for the new Cobalt branding.
+- **FOSS Badge:** Added a sleek, minimalist FOSS badge to the UI for the open-source flavor.
+- **Firebase Alignment:** Migrated backend cloud storage and database connectivity to the new `com.hanan_bhatti.cobalt` package name and updated `google-services.json`.
+
+### Changed
+- Refactored deep links to `cobalt://`.
+- Updated all diagnostic tools, crash reporters, and underlying services (e.g., `CobaltOcrOverlayService`) to reflect the new identity.
+
+## [1.1.0-beta01] - 2026-10-06
+
+### Added
+- **Beta Release (v1.1.0-beta01):** Promoted Cobalt to 1.1.0-beta01!
+- **Tab Swiping & Auto-Scroll:** Added horizontal swipe gesture in Capture Screen to fluidly switch between item types (OCR, Note, Shows, Link), and added auto-scrolling to the active tab.
+- **Save Progress Shimmer:** Added a sleek shimmering progress animation to the Save button on the Capture Screen, perfectly matching the rounded corner styling.
+- **Swipe-to-Dismiss Banners:** Redesigned `AppFeedbackBanner` to have a slimmer height and added swipe-to-dismiss gesture for quick clearing.
+
+### Fixed
+- **Floating Panel Ergonomic Layout Gap:** Fixed a massive empty gap in the Edge Panel overlay and ensured the "Quick thought..." bar is properly anchored at the bottom edge during high-anchor interactions.
+- **OCR Background Link Previews:** Fixed a lifecycle issue where saving a link via the OCR overlay immediately killed the metadata extraction process. Moved preview scraping to an app-level scope to guarantee extraction completes in the background.
+- **Gemini Key Validation:** Relaxed the hardcoded "AIza" prefix validation check for Gemini API keys to properly support valid enterprise and specific regional keys.
+- **Blank Media Search Timeout:** Fixed a bug causing silent timeout hangs when editing existing items by preventing empty media search queries on screen load.
+
+## [1.0.0] - 2026-08-05
+
+### Added
+- **Official Stable Release (v1.0.0):** Promoted Cobalt to official 1.0.0 Stable production release!
+- **Dynamic Ergonomic Edge Panel & Landscape Mode:** Built dynamic Fitts's law thumb reachability engine for the Edge Panel. High handle positions (< 50% height) dynamically move Quick Actions (`OCR`, `Note`, `Shows`, `Link`, `Open`) and Quick Note to the bottom of the card directly under the thumb. Added landscape mode dimension scaling (`300dp × 280dp`).
+- **FOSS Offline Crash Handler & Email Reporting System (`FossCrashReporter`):** Implemented native uncaught crash interceptor saving device info and full stacktraces to local storage, with an automatic Material 3 `ExpressiveCrashReportDialog` on next launch supporting direct email reports to `hannanbhatti2006@gmail.com`.
+- **Unified Local & Cloud Feedback Persistence (`FeedbackSubmissionManager`):** Built unified data persistence manager for bug reports, feature requests, and in-app surveys that writes locally to `context.filesDir/feedback/` and syncs with Firestore when online.
+- **Guaranteed Zero Data Loss Architecture:** Guaranteed data preservation across FOSS and Play builds for both Guest and Signed-in users.
+- **Real-time Online GitHub Update Checking Engine:** Integrated `AppVersionManager.checkOnlineUpdates()` against GitHub Releases API with automatic startup update notifications and direct download links.
+- **Harmonized Material 3 Expressive UI & Theme Consistency:** Cleaned up input field container fill colors, title placeholder single-line bounds, and bottom sheet surface theme colors.
+
+### Fixed
+- **`CobaltOcrOverlayService` Range Coercion Crash:** Resolved `IllegalArgumentException: Cannot coerce value to an empty range` when calculating Y positions in landscape or small screen heights by enforcing `maxCenterY.coerceAtLeast(minCenterY)`.
+- **Dummy Feedback Submission Fix:** Replaced dummy delay simulations in `FeedbackScreen` and `SurveyBottomSheet` with authentic persistent storage.
+- **Title Placeholder Line Wrapping:** Enforced single-line constraints (`maxLines = 1`, `TextOverflow.Ellipsis`) on title text fields.
+
+## [1.0.0-rc02] - 2026-08-04
+
+### Added
+- **Second Release Candidate (1.0.0-rc02):** Promoted build to official RC02 channel.
+- **F-Droid Build Recipe & Fastlane Synchronization:** Formatted `.yml` metadata file, added commit SHA tracking, and aligned Fastlane changelog files.
+
+## [1.0.0-nightly01] - 2026-07-23
+
+### Added
+- **Bleeding-Edge Nightly Build Channel (1.0.0-nightly01):** Promoted build to official Nightly testing channel for unverified experimental feature testing.
+- **Android 12+ Tuned Haptic Engine Manager (`HapticManager`):** Implemented high-precision vibration composition primitives for presses, long presses, swipe ticks, and success actions (disabled by default with user toggle).
+- **App-wide User-Friendly Error Banners & Network Resilience (`AppFeedbackBanner`):** Built animated top feedback banner with non-infinite network call timeouts (15s hard ceiling) and human-friendly error messages.
+- **Gamified In-App Experience Survey Sheet (`SurveyBottomSheet`):** Built 2-step micro-wizard with reaction emojis, feature chips, 1-10 NPS rating scale, and Firestore persistence.
+- **Profile Sections Reorganization & Account Deletion Flow:** Restructured Profile settings into 4 distinct containers and added a deep Account Deletion button with confirmation checkbox.
+
+### Fixed
+- **Search Panel Movie Icon:** Fixed item icon mapping so movies, TV shows, and anime in the Search panel display movie icons and poster thumbnails instead of document/text icons.
+- **Deprecation Warnings Cleanup:** Replaced deprecated `Icons.Default.Send` with `Icons.AutoMirrored.Filled.Send` and replaced deprecated Compose `LocalClipboardManager` with native Android `ClipboardManager`.
+
+## [1.0.0-rc01] - 2026-07-23
+
+### Added
+- **First Release Candidate (1.0.0-rc01):** Promoted build to official Release Candidate status ahead of 1.0 STABLE.
+- **Dynamic Build Channels & Version Badging:** Added dynamic channel detection (ALPHA, BETA, NIGHTLY, RC, STABLE, DEV) with custom Material 3 Expressive tag colors (`AppVersionBadge`).
+- **Release Notes & Updates Hub:** Built `ReleaseNotesBottomSheet` and dedicated Settings subscreen (`ReleaseUpdatesScreen`) with real-time update checking and `CircularWavyProgressIndicator` loading animation.
+- **Update Notification Sheet:** Created `UpdateAvailableBottomSheet` to notify users of new version availability with highlights and direct update options.
+- **App-wide RTL Text Support:** Implemented automatic Right-to-Left (RTL) text direction detection (`RtlUtils.isRtl()`) for Urdu, Arabic, and Hebrew in Markdown renderers, Rich Text editor, and memory item screens.
+- **Unified Material 3 Expressive Dialogs:** Converted generic dialogs to standard `ExpressiveAlertDialog` and `ExpressiveConfirmationDialog` with `28.dp` corner radius and `surfaceContainerHigh` containers.
+- **Unified Loading Indicators:** Replaced plain progress bars across `HomeScreen`, `AuthScreen`, `CaptureScreen`, and `GlobalExpandingFab` with `CircularWavyProgressIndicator`.
+
+### Fixed
+- **API Key Gemini Model 404 Error:** Automatically re-fetched Gemini model list and validated `selectedModel` upon API key save to prevent 404 errors on initial AI requests.
+- **RTL Alignment Mismatch:** Fixed text layout direction for right-to-left scripts in detail views and note editing.
+
+### Added
+- **Global Dynamic Light/Dark Theme Color Adaptation:** Implemented HSL-based color transformation (`Color.toThemeColor(isDark)`) across all folders, categories, widgets, OCR overlay, and settings screens to adapt colors for dark mode without losing brand presets.
+- **Header Top Inset Cleanups:** Consolidated top bar header spacing immediately below the system status bar across all main screens.
+
+## [0.9.2-beta01] - 2026-07-22
+
+### Added
+- **Media Hub Screen:** Built dedicated Media Hub featuring watch status filter chips, category tabs, poster cards, and pull-to-refresh.
+- **Auto-Complete Media Search:** Interactive bottom sheet search for real-time movie, TV show, and anime queries.
+- **TMDb Media Enrichment:** Automated fetching of streaming watch providers, genres, release years, vote ratings, and trailers for movies, TV, and anime.
+- **Anime Auto-Detection:** Built East Asian anime auto-detection algorithms and added genre filter chips to the Hub.
+- **OCR Overlay Media Integration:** Direct media searching and single-tap saving directly from inside the OCR overlay panel.
+- **Global FAB & Navigation:** Added Media tab to bottom navigation, top bar media action icon, system folder category entry, and a Movies & Anime action to the Global Expanding FAB.
+- **Streaming Provider Branding:** Embedded vector icons and theme colors for streaming providers.
+- **Data Domain & Storage Extensions:** Updated Room entities, domain models, and repository mappings to store `releaseYear`, `rating`, and media metadata.
+
+### Changed
+- **Staggered Grid Layout:** Embedded section headers and filter chips directly into the home screen staggered grid layout.
+- **TMDb Settings Organization:** Relocated TMDb API key configuration to a dedicated subscreen inside the App settings section.
+- **Widget Category Support:** Updated capture and recent item widgets to support media category items.
+
+### Fixed
+- **OCR Tab Save Separation:** Separated save button logic per tab to allow independent saving for links and note items.
+- **Instant Local Saving:** Enabled instant DB saves for extracted links prior to background metadata fetching.
+- **Widget Sync on Edge Notes:** Triggered instant widget recomposition when saving quick edge notes from the overlay.
+- **Firestore Sync Path Formatting:** Resolved Firestore folder document path slashes and fixed early exit bugs in `syncUnsyncedItems`.
+-
+### Fixed
+- **Active State Update Syncing:** Updated `updateSavedItem` to instantly update state metrics inside the active detail view when modifying properties.
+- **Dynamic System Category Coloring:** Fixed the edge panel and capture widgets' coloring logic to support dynamic/system theme color schemes.
+
+## [0.9.1-beta02] - 2026-07-21
+
+### Added
+- **Edge Panel Animation Studio:** Subpage featuring 5 animation presets, custom duration/scale/easing controls, and live hot-reloading.
+- **Dynamic Category Tinting:** QuickCapture action button background tinting using category accent colors with `onUpdate` callbacks.
+- **Real-Time Widget Sync:** Updated `WidgetTheme` to mirror app theme and improved real-time `WidgetUpdater` recomposition.
+
+### Changed
+- **Synchronous Preference Persistence:** Updated widget preference saving to use `commit()` for immediate synchronous writes.
+- **Widget Settings Polish:** Removed redundant theme selector and added a "no-widget" fallback card in profile settings.
+- **Subpage UI Layouts:** Added bottom padding across subpages, horizontal scrolling for filter chips, and single-line action buttons.
+
+### Fixed
+- **Animation Color Flashing:** Clamped color, alpha, radii, and layout fraction bounds in `expandPanel` and `collapsePanel` to eliminate pink/green extrapolation artifacts.
+- **Composable Modernization:** Replaced deprecated `TabRow` with `SecondaryTabRow` in `WidgetSettingsScreen`.
+- **Widget Preview Clipping:** Made 2x4 widget previews scrollable within the customizer view.
+
+## [0.9.1-beta01] - 2026-07-21
+
+### Added
+- **Widget Customizer Engine:** Production-grade `WidgetSettingsScreen` with live interactive previews, real user archive data rendering, category filtering, opacity controls, and active widget detection.
+
+### Changed
+- **Settings UI:** Redesigned the main Settings screen into clean, logical section groups with clear visual badges.
+- **Window Animation Geometry:** Corrected collapse corner radii math and tuned morph curve interpolation for the edge panel.
+- **Media Availability Logic:** Scoped `isUnavailable` state evaluation strictly to media items (images, videos, audio) to prevent text file false-positives.
+
+### Fixed
+- **Oppo/ColorOS Crash:** Replaced reflection-based Moshi JSON parsing in Glance widgets with `org.json` to resolve stuck loading states on custom Android ROMs.
+- **Back Gesture Navigation:** Restored the `FLAG_NOT_FOCUSABLE` window flag upon overlay collapse to fix Android system back-swipe gesture blocking.
+- **OCR Workflow:** Prevented tab switches during image saves, defaulted to styled Markdown previews, and enabled instant task exit.
+- **Metadata Extraction:** Resolved relative `og:image` preview URLs using absolute URL resolution (`absUrl`) and added graceful HTTP error handling.
+
+## [0.9.0-beta02] - 2026-07-20
+
+### Added
+- **Glance Widgets:** Dedicated `RecentItemsWidget` and `QuickCaptureWidget` components featuring dynamic color support.
+- **Background Data Downloader:** `DataDownloadService` and `DataDownloadManager` for asynchronous background media retrieval.
+- **Search Capabilities:** Fuzzy and synonym-aware search ranking utilizing Levenshtein distance scoring.
+- **Device Session Management:** Remote session tracking, device type detection, and profile session management.
+- **Code Syntax Highlighting:** Custom `CodeHighlighter` utility for real-time Markdown code block styling.
+- **Media Processing:** `Coil-Video` support for inline video thumbnail rendering and preservation of audio transcripts during cloud sync.
+- **UI Blur Effects:** Performance-gated dynamic background blur (`Haze`) with automatic RAM/OS capability detection.
+- **Theming:** Dynamic Material You color extraction on Android 12+ across UI screens and widgets.
+- **Telemetry:** Firebase Crashlytics, Firebase Performance monitoring, and privacy-first Analytics with query masking.
+- **Battery Management:** `BatteryOptimizationHelper` to request background execution permissions.
+- **Repository Standards:** AGPLv3 license headers, issue/PR templates, and updated contributor documentation.
+
+### Changed
+- **Quota Calculations:** Updated cloud quota logic to treat text/link items as free, counting only media files against the 512MB limit.
+- **Unavailable Media Handling:** Added an `isUnavailable` flag and custom visual placeholders for items deleted from cloud storage.
+- **Edge Panel Animation:** Implemented per-frame window layout bounds morphing during edge panel expansion and collapse to prevent visual snapping.
+
+## [0.9.0-beta01] - 2026-07-18
+
+### Added
+
+#### Capture
+- Added system share sheet support to instantly capture text, images, videos, and links shared from other applications.
+- Added quick capture actions through an expanding floating button to manually type notes, bookmarks, or code snippets.
+- Added Android app launcher shortcuts for initiating smart selection scanning and quick note drafts directly from the home screen.
+- Added home screen widgets for fast capture access and previewing recently archived items.
+
+#### Floating OCR
+- Added a swipeable floating edge-handle panel to invoke capture tools over any running application.
+- Added region-marking selection capability to crop specific screen segments for content ingestion.
+- Added automated image text extraction using Google Gemini to convert screenshots into digital notes.
+- Added fuzzy link extraction to detect shared URLs in captured screenshots and review them before saving.
+
+#### Voice Memos
+- Added a voice recording interface with live audio waveform feedback.
+- Added automated Gemini audio transcription to convert spoken notes into text.
+- Added smart speech-formatting to clean up voice transcriptions and generate titles in markdown format.
+
+#### Organization
+- Added custom color-coded folders using design system stickers to group relevant notes.
+- Added drag-and-drop gestures to reorder folder positions and rearrange archive lists.
+- Added automated media categorization to organize elements by note type.
+- Added folder archiving to remove items from the active dashboard without permanent deletion.
+
+#### Privacy & Sync
+- Added offline-first storage using a local database to ensure instant app launch and accessibility without network connection.
+- Added cloud backup sync to secure database updates and media files on Firebase.
+- Added secure, passwordless authentication using Google Sign-In and email login links.
+- Added storage diagnostics to compress cached media and export or import database backups.
+-

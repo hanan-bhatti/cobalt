@@ -1,65 +1,62 @@
+/*
+ * Cobalt - A universal capture and personal knowledge archive
+ * Copyright (C) 2026 Hanan Bhatti
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package com.example.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularWavyProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.R
 import androidx.compose.ui.unit.sp
-import com.example.ui.components.AppVersionBadge
-import com.example.ui.components.ReleaseNoteItemCard
-import com.example.ui.components.bounceClick
+import com.example.R
+import com.example.data.repository.SettingsRepository
 import com.example.util.AppVersionManager
+import com.example.util.ChangelogManager
+import com.example.util.ChangelogRelease
+import com.example.util.CobaltCustomTabsLauncher
 import com.example.util.UpdateCheckResult
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
- * Custom Expressive App Updates & Release Notes Screen in Settings.
+ * Clean, modern Material 3 Updates & Changelog Screen.
+ * Displays dynamic live release history fetched from GitHub with resilient offline caching.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,46 +66,51 @@ fun ReleaseUpdatesScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val settingsRepo = remember { SettingsRepository(context) }
+    val isAutoUpdateEnabled by settingsRepo.isAutoUpdateCheckEnabled.collectAsState()
+
     var isCheckingUpdates by remember { mutableStateOf(false) }
-    var updateCheckResult by remember { mutableStateOf<String?>(null) }
-    var latestReleaseUrl by remember { mutableStateOf<String?>(null) }
-    var expandedRelease by remember { mutableStateOf<String?>(AppVersionManager.currentVersionName) }
+    var isRefreshingChangelog by remember { mutableStateOf(false) }
+    var updateResult by remember { mutableStateOf<UpdateCheckResult?>(null) }
+    var lastCheckedTimeText by remember { mutableStateOf<String?>(null) }
+    var releases by remember { mutableStateOf<List<ChangelogRelease>>(emptyList()) }
+    var expandedVersion by remember { mutableStateOf<String?>(AppVersionManager.currentVersionName) }
+
+    // Load releases on first entry
+    LaunchedEffect(Unit) {
+        releases = ChangelogManager.getReleases(context, forceRefresh = false)
+    }
+
+    fun checkForUpdates() {
+        if (isCheckingUpdates) return
+        isCheckingUpdates = true
+        coroutineScope.launch {
+            val result = AppVersionManager.checkOnlineUpdates(context)
+            isCheckingUpdates = false
+            updateResult = result
+            val timeFmt = SimpleDateFormat("h:mm a", Locale.getDefault())
+            lastCheckedTimeText = "Checked today at ${timeFmt.format(Date())}"
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_custom_sync),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Updates & Release Notes",
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
-                            Text(
-                                text = "CHANGELOG & VERSION HISTORY",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.primary,
-                                letterSpacing = 1.sp
-                            )
-                        }
+                    Column {
+                        Text(
+                            text = "Updates & Changelog",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = "VERSION HISTORY & RELEASES",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            letterSpacing = 1.sp
+                        )
                     }
                 },
                 navigationIcon = {
@@ -135,173 +137,189 @@ fun ReleaseUpdatesScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(top = 12.dp, bottom = 32.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            contentPadding = PaddingValues(top = 10.dp, bottom = 32.dp)
         ) {
-            // Glowing Expressive Installed Version Banner Card
+            // Hero Status & Installed Version Card
             item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                    shape = RoundedCornerShape(24.dp),
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        MaterialTheme.colorScheme.primaryContainer,
-                                        MaterialTheme.colorScheme.surfaceContainerHigh
-                                    )
-                                ),
-                                shape = RoundedCornerShape(24.dp)
-                            )
-                            .padding(20.dp)
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
+                                    Text(
+                                        text = "Cobalt",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
                                     Surface(
-                                        color = MaterialTheme.colorScheme.primary,
-                                        shape = CircleShape,
-                                        modifier = Modifier.size(50.dp)
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
                                     ) {
-                                        Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = "v${AppVersionManager.currentVersionName} (${AppVersionManager.currentVersionCode})",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                when (val res = updateResult) {
+                                    is UpdateCheckResult.UpdateAvailable -> {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
                                             Icon(
-                                                painter = painterResource(id = R.drawable.ic_custom_sync),
+                                                painter = painterResource(id = R.drawable.ic_custom_download),
                                                 contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.onPrimary,
-                                                modifier = Modifier.size(26.dp)
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Text(
+                                                text = "Update v${res.latestVersionName} available!",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                        val details = listOfNotNull(
+                                            res.releaseDate.ifBlank { null },
+                                            res.formattedSize
+                                        ).joinToString(" • ")
+                                        if (details.isNotBlank()) {
+                                            Text(
+                                                text = details,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
-                                    Column {
+                                    is UpdateCheckResult.Error -> {
+                                        Text(
+                                            text = res.message,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                    else -> {
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                                         ) {
+                                            Icon(
+                                                painter = painterResource(id = R.drawable.ic_custom_check),
+                                                contentDescription = null,
+                                                tint = Color(0xFF10B981),
+                                                modifier = Modifier.size(16.dp)
+                                            )
                                             Text(
-                                                text = "Cobalt",
-                                                style = MaterialTheme.typography.titleLarge,
-                                                fontWeight = FontWeight.Bold,
+                                                text = "You're on the latest version",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.SemiBold,
                                                 color = MaterialTheme.colorScheme.onSurface
                                             )
-                                            AppVersionBadge(
-                                                tag = AppVersionManager.currentTag,
-                                                fontSize = 10.sp,
-                                                horizontalPadding = 8.dp,
-                                                verticalPadding = 3.dp
+                                        }
+                                        if (lastCheckedTimeText != null) {
+                                            Text(
+                                                text = lastCheckedTimeText!!,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                             )
                                         }
-                                        Text(
-                                            text = "Version ${AppVersionManager.currentVersionName} (Build #${AppVersionManager.currentVersionCode})",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
                                     }
                                 }
                             }
+                        }
 
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-                            // Status & Check for Updates Button
+                        // Actions
+                        val activeUpdate = updateResult as? UpdateCheckResult.UpdateAvailable
+                        if (activeUpdate != null) {
+                            val downloadTarget = activeUpdate.apkDownloadUrl ?: activeUpdate.releaseUrl
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.weight(1f)
+                                Button(
+                                    onClick = {
+                                        CobaltCustomTabsLauncher.launch(
+                                            context = context,
+                                            url = downloadTarget
+                                        )
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary
+                                    )
                                 ) {
                                     Icon(
-                                        painter = painterResource(id = if (latestReleaseUrl != null || AppVersionManager.isUpdateAvailable()) R.drawable.ic_custom_download else R.drawable.ic_custom_check),
+                                        painter = painterResource(id = R.drawable.ic_custom_download),
                                         contentDescription = null,
-                                        tint = if (latestReleaseUrl != null || AppVersionManager.isUpdateAvailable()) MaterialTheme.colorScheme.primary else Color(0xFF10B981),
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(16.dp)
                                     )
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = updateCheckResult ?: if (AppVersionManager.isUpdateAvailable()) "Update v${AppVersionManager.getLatestRelease().versionName} available" else "You are on the latest version",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        text = "Download v${activeUpdate.latestVersionName}",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp
                                     )
                                 }
 
+                                OutlinedButton(
+                                    onClick = { checkForUpdates() },
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text("Check Again", fontSize = 13.sp)
+                                }
+                            }
+                        } else {
+                            Button(
+                                onClick = { checkForUpdates() },
+                                enabled = !isCheckingUpdates,
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("check_updates_screen_button")
+                            ) {
                                 if (isCheckingUpdates) {
-                                    CircularWavyProgressIndicator(
-                                        modifier = Modifier.size(24.dp),
-                                        color = MaterialTheme.colorScheme.primary
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onPrimary
                                     )
-                                } else if (latestReleaseUrl != null) {
-                                    val releaseUrl = latestReleaseUrl
-                                    Button(
-                                        onClick = {
-                                            if (releaseUrl != null) {
-                                                com.example.util.CobaltCustomTabsLauncher.launch(
-                                                    context = context,
-                                                    url = releaseUrl
-                                                )
-                                            }
-                                        },
-                                        shape = RoundedCornerShape(14.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.primary
-                                        ),
-                                        modifier = Modifier.bounceClick()
-                                    ) {
-                                        Icon(painter = painterResource(id = R.drawable.ic_custom_download), contentDescription = null, modifier = Modifier.size(16.dp))
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Download", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Checking GitHub...", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                                 } else {
-                                    Button(
-                                        onClick = {
-                                            isCheckingUpdates = true
-                                            updateCheckResult = null
-                                            coroutineScope.launch {
-                                                when (val result = AppVersionManager.checkOnlineUpdates()) {
-                                                    is UpdateCheckResult.UpdateAvailable -> {
-                                                        isCheckingUpdates = false
-                                                        updateCheckResult = "Update v${result.latestVersionName} available!"
-                                                        latestReleaseUrl = result.releaseUrl
-                                                    }
-                                                    is UpdateCheckResult.UpToDate -> {
-                                                        isCheckingUpdates = false
-                                                        updateCheckResult = "Latest version installed!"
-                                                        latestReleaseUrl = null
-                                                    }
-                                                    is UpdateCheckResult.Error -> {
-                                                        isCheckingUpdates = false
-                                                        updateCheckResult = result.message
-                                                        latestReleaseUrl = null
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        shape = RoundedCornerShape(14.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.primary
-                                        ),
-                                        modifier = Modifier.bounceClick().testTag("check_updates_screen_button")
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(id = R.drawable.ic_custom_sync),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Check Now", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                    }
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_custom_sync),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Check for Updates", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
@@ -309,33 +327,31 @@ fun ReleaseUpdatesScreen(
                 }
             }
 
-            // Opt-in Auto Update Check Settings Card (Default OFF for F-Droid compliance)
+            // Auto-check Preference Switch Card
             item {
-                val settingsRepo = remember { com.example.data.repository.SettingsRepository(context) }
-                val isAutoUpdateEnabled by settingsRepo.isAutoUpdateCheckEnabled.collectAsState()
-
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-                    shape = RoundedCornerShape(20.dp),
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(18.dp),
+                            .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Auto-Check for Updates",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
+                                text = "Auto-check on startup",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Automatically query GitHub releases on startup when online. Disabled by default.",
+                                text = "Queries GitHub releases on launch. Disabled by default for F-Droid compliance.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -349,25 +365,206 @@ fun ReleaseUpdatesScreen(
                 }
             }
 
+            // Changelog Section Header with Dynamic Refresh Action
             item {
-                Text(
-                    text = "RELEASE HISTORY & CHANGELOGS",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary,
-                    letterSpacing = 1.sp,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "VERSION HISTORY",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = 1.sp
+                    )
+
+                    TextButton(
+                        onClick = {
+                            if (!isRefreshingChangelog) {
+                                isRefreshingChangelog = true
+                                coroutineScope.launch {
+                                    releases = ChangelogManager.getReleases(context, forceRefresh = true)
+                                    isRefreshingChangelog = false
+                                }
+                            }
+                        },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        if (isRefreshingChangelog) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(12.dp),
+                                strokeWidth = 1.8.dp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                        }
+                        Text("Refresh", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
             }
 
-            items(AppVersionManager.releaseHistory) { note ->
-                ReleaseNoteItemCard(
-                    note = note,
-                    isExpanded = expandedRelease == note.versionName,
-                    onToggleExpand = {
-                        expandedRelease = if (expandedRelease == note.versionName) null else note.versionName
+            // Dynamic Changelog Release Cards
+            items(releases) { release ->
+                val isExpanded = expandedVersion == release.versionName
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = if (release.isCurrent) {
+                        MaterialTheme.colorScheme.surfaceContainerHigh
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainer
+                    },
+                    border = BorderStroke(
+                        1.dp,
+                        if (release.isCurrent) {
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+                        } else {
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                        }
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .clickable {
+                            expandedVersion = if (isExpanded) null else release.versionName
+                        }
+                        .animateContentSize()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = if (release.versionName.equals("Unreleased", ignoreCase = true)) "Upcoming" else "v${release.versionName}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                if (release.isCurrent) {
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer
+                                    ) {
+                                        Text(
+                                            text = "Current",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                } else if (release.isNewer) {
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = MaterialTheme.colorScheme.secondaryContainer
+                                    ) {
+                                        Text(
+                                            text = "New",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                if (release.releaseDate.isNotBlank()) {
+                                    Text(
+                                        text = release.releaseDate,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Icon(
+                                    painter = painterResource(
+                                        id = if (isExpanded) R.drawable.ic_custom_chevron_up else R.drawable.ic_custom_chevron_down
+                                    ),
+                                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        AnimatedVisibility(
+                            visible = isExpanded,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            Column(modifier = Modifier.padding(top = 10.dp)) {
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                                    modifier = Modifier.padding(bottom = 10.dp)
+                                )
+
+                                if (release.markdownContent.isNotBlank()) {
+                                    ExpressiveMarkdown(
+                                        markdown = release.markdownContent,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+
+                                if (release.downloadUrl != null || release.htmlUrl != null) {
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        if (release.downloadUrl != null) {
+                                            OutlinedButton(
+                                                onClick = {
+                                                    CobaltCustomTabsLauncher.launch(
+                                                        context = context,
+                                                        url = release.downloadUrl
+                                                    )
+                                                },
+                                                shape = RoundedCornerShape(10.dp),
+                                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(id = R.drawable.ic_custom_download),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                val label = if (release.formattedSize != null) "APK (${release.formattedSize})" else "Download APK"
+                                                Text(label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                            }
+                                        }
+
+                                        if (release.htmlUrl != null) {
+                                            TextButton(
+                                                onClick = {
+                                                    CobaltCustomTabsLauncher.launch(
+                                                        context = context,
+                                                        url = release.htmlUrl
+                                                    )
+                                                },
+                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                            ) {
+                                                Text("GitHub Release ↗", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
-                )
+                }
             }
         }
     }

@@ -326,24 +326,25 @@ class MainActivity : ComponentActivity() {
                 }
 
                 if (availableUpdate != null) {
+                    val update = availableUpdate!!
+                    val downloadTarget = update.apkDownloadUrl ?: update.releaseUrl
                     com.example.ui.components.UpdateAvailableBottomSheet(
-                        latestRelease = com.example.util.ReleaseNote(
-                            versionName = availableUpdate!!.latestVersionName,
-                            versionCode = 999,
-                            releaseDate = "Latest Release",
-                            tag = com.example.util.AppVersionTag.RC,
-                            highlights = listOf(availableUpdate!!.releaseNotes.take(300).ifBlank { "New update v${availableUpdate!!.latestVersionName} is ready to download." })
-                        ),
+                        versionName = update.latestVersionName,
+                        releaseName = update.releaseName,
+                        releaseDate = update.releaseDate,
+                        releaseNotesMarkdown = update.releaseNotes,
+                        downloadUrl = downloadTarget,
+                        apkSizeBytes = update.apkSizeBytes,
                         onDismissRequest = { viewModel.dismissUpdateBanner() },
                         onUpdateClick = {
                             com.example.util.CobaltCustomTabsLauncher.launch(
                                 context = this@MainActivity,
-                                url = availableUpdate!!.releaseUrl
+                                url = downloadTarget
                             )
                         },
                         onViewChangelogClick = {
                             viewModel.dismissUpdateBanner()
-                            navController.navigate("profile")
+                            navController.navigate("release_updates")
                         }
                     )
                 }
