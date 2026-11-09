@@ -22,6 +22,7 @@ import androidx.room.Entity
 import androidx.room.ColumnInfo
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.example.data.model.calculateSizeBytes
 
 @Entity(
     tableName = "saved_items",
@@ -125,7 +126,7 @@ data class SavedItemEntity(
         val isMedia = itemType == com.example.data.model.SavedItemType.IMAGE ||
                 itemType == com.example.data.model.SavedItemType.VIDEO ||
                 itemType == com.example.data.model.SavedItemType.AUDIO
-        return com.example.data.model.SavedItem(
+        val baseItem = com.example.data.model.SavedItem(
             id = id,
             type = itemType,
             title = title,
@@ -179,10 +180,17 @@ data class SavedItemEntity(
             formatVersion = formatVersion, preview = preview, bodyMissing = bodyMissing,
             bodyLoaded = bodyLoaded || itemType !in listOf(com.example.data.model.SavedItemType.TEXT, com.example.data.model.SavedItemType.CODE)
         )
+        val reliableSize = baseItem.calculateSizeBytes()
+        return if (reliableSize > 0L && reliableSize != baseItem.sizeBytes) {
+            baseItem.copy(sizeBytes = reliableSize)
+        } else {
+            baseItem
+        }
     }
 
     companion object {
         fun fromDomainModel(item: com.example.data.model.SavedItem): SavedItemEntity {
+            val itemSize = if (item.sizeBytes > 0L) item.sizeBytes else item.calculateSizeBytes()
             return SavedItemEntity(
                 id = item.id,
                 type = item.type.name,
@@ -198,7 +206,7 @@ data class SavedItemEntity(
                 linkDescription = item.linkDescription,
                 linkImage = item.linkImage,
                 isBackedUp = item.isBackedUp,
-                sizeBytes = item.sizeBytes,
+                sizeBytes = itemSize,
                 isPendingBackup = item.isPendingBackup,
                 isUnavailable = item.isUnavailable,
                 mediaType = item.mediaType,

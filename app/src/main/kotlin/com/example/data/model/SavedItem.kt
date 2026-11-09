@@ -124,3 +124,58 @@ fun SavedItem.getBestImagePath(): String? {
     
     return null
 }
+
+private fun safeFileLength(path: String?): Long {
+    if (path.isNullOrBlank() || !path.startsWith("/")) return 0L
+    return try {
+        val file = java.io.File(path)
+        if (file.exists() && file.isFile) file.length() else 0L
+    } catch (_: Exception) {
+        0L
+    }
+}
+
+fun SavedItem.calculateSizeBytes(): Long {
+    return when (type) {
+        SavedItemType.VIDEO -> {
+            val videoLen = safeFileLength(content)
+            if (videoLen > 0L) return videoLen
+            val thumbLen = safeFileLength(thumbnailPath)
+            if (thumbLen > 0L && !thumbnailPath.orEmpty().substringAfterLast('/').startsWith("thumb_")) {
+                return thumbLen
+            }
+            if (sizeBytes > 0L) sizeBytes else 0L
+        }
+        SavedItemType.AUDIO -> {
+            val audioLen = safeFileLength(thumbnailPath)
+            if (audioLen > 0L) return audioLen
+            val contentLen = safeFileLength(content)
+            if (contentLen > 0L) return contentLen
+            if (sizeBytes > 0L) sizeBytes else 0L
+        }
+        SavedItemType.IMAGE -> {
+            val imageLen = safeFileLength(content)
+            if (imageLen > 0L) return imageLen
+            val thumbLen = safeFileLength(thumbnailPath)
+            if (thumbLen > 0L) return thumbLen
+            if (sizeBytes > 0L) sizeBytes else 0L
+        }
+        SavedItemType.TEXT, SavedItemType.CODE -> {
+            if (byteLength > 0L) byteLength
+            else if (sizeBytes > 0L) sizeBytes
+            else content.toByteArray(Charsets.UTF_8).size.toLong()
+        }
+        SavedItemType.LINK -> {
+            if (sizeBytes > 0L) sizeBytes
+            else content.toByteArray(Charsets.UTF_8).size.toLong()
+        }
+        SavedItemType.MEDIA -> {
+            if (sizeBytes > 0L) sizeBytes
+            else {
+                val contentBytes = content.toByteArray(Charsets.UTF_8).size.toLong()
+                val textBytes = extractedText?.toByteArray(Charsets.UTF_8)?.size?.toLong() ?: 0L
+                contentBytes + textBytes
+            }
+        }
+    }
+}

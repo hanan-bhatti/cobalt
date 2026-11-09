@@ -29,6 +29,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.media.toSavedMedia
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
+import com.example.data.model.calculateSizeBytes
 import com.example.data.repository.CobaltRepository
 import com.example.data.remote.MediaSearchResultItem
 import com.example.util.ItemTitleResolver
@@ -82,7 +83,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             if (!settingsRepository.isAutoUpdateCheckEnabled.value) return@launch
             if (!isNetworkAvailable()) return@launch
-            when (val result = com.example.util.AppVersionManager.checkOnlineUpdates()) {
+            when (val result = com.example.util.AppVersionManager.checkOnlineUpdates(getApplication())) {
                 is com.example.util.UpdateCheckResult.UpdateAvailable -> {
                     _availableUpdate.value = result
                 }
@@ -270,7 +271,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         when (sortOrder) {
             "Oldest" -> filtered.sortedBy { it.timestamp }
             "Title A-Z" -> filtered.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title.ifBlank { it.content } })
-            "Size" -> filtered.sortedByDescending { it.sizeBytes }
+            "Size" -> filtered.sortedWith(compareByDescending<SavedItem> { it.calculateSizeBytes() }.thenByDescending { it.timestamp })
             else -> filtered.sortedByDescending { it.timestamp } // "Newest"
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
@@ -1025,7 +1026,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 )
                 _activeCaptureItem.value = _activeCaptureItem.value?.copy(
                     thumbnailPath = localPath,
-                    title = readableMemoTitle
+                    title = readableMemoTitle,
+                    sizeBytes = bytes.size.toLong()
                 )
                 _activeCaptureItem.value?.let { captureDrafts[SavedItemType.AUDIO] = it }
 
@@ -1544,12 +1546,13 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     }
 
                     pendingMediaBytes = null
+                    val fileSize = if (cacheFile.exists()) cacheFile.length() else 0L
                     val finalPath = if (cacheFile.exists() && cacheFile.length() > 0) cacheFile.absolutePath else uri.toString()
                     updateActiveCaptureItem { cur ->
                         val newTitle = if (cur.title.isBlank() || ItemTitleResolver.isInternalPathOrGeneratedName(cur.title)) {
                             ItemTitleResolver.resolveItemTitle(userTitle = null, displayName = originalDisplayName, type = type, fallbacks = fallbacks)
                         } else cur.title
-                        cur.copy(content = finalPath, thumbnailPath = thumbPath, type = type, title = newTitle)
+                        cur.copy(content = finalPath, thumbnailPath = thumbPath, type = type, title = newTitle, sizeBytes = fileSize)
                     }
                 } else {
                     val bytes = readUriBytes(uri)
@@ -1563,7 +1566,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                             val newTitle = if (cur.title.isBlank() || ItemTitleResolver.isInternalPathOrGeneratedName(cur.title)) {
                                 ItemTitleResolver.resolveItemTitle(userTitle = null, displayName = originalDisplayName, type = type, fallbacks = fallbacks)
                             } else cur.title
-                            cur.copy(content = localPath, thumbnailPath = localPath, type = type, title = newTitle)
+                            cur.copy(content = localPath, thumbnailPath = localPath, type = type, title = newTitle, sizeBytes = bytes.size.toLong())
                         }
                     } else {
                         updateActiveCaptureItem { cur ->
@@ -1741,6 +1744,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     private var quickTitleJob: kotlinx.coroutines.Job? = null
     private var quickDraftPendingText: String? = null
     private var quickDraftSaving = false
+    private var quickDraftRevision = 0L
 
     fun loadQuickDraft() {
         if (_quickDraft.value.ready || quickDraftJob?.isActive == true) return
@@ -1760,10 +1764,12 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             return
         }
         _quickDraft.update { it.copy(title = title, error = null) }
-        quickTitleJob?.cancel()
+        val previous = quickTitleJob
+        previous?.cancel()
         quickTitleJob = viewModelScope.launch {
             try {
                 kotlinx.coroutines.delay(300)
+                previous?.join()
                 withContext(Dispatchers.IO) { com.example.notes.QuickNoteDraftStore(context).writeTitle(title) }
             }
             catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
@@ -1773,27 +1779,27 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
     fun updateQuickDraft(text: String) {
         if (!_quickDraft.value.ready || _quickDraft.value.busy || quickDraftSaving) return
-        quickDraftJob?.cancel()
-        if (text.isEmpty()) {
-            quickDraftPendingText = null
-            _quickDraft.update { it.copy(text = "", pending = false, snapshot = null, busy = false, error = null) }
-            viewModelScope.launch {
-                try { com.example.notes.QuickNoteDraftStore(context).clear() } catch (_: Exception) {}
-            }
-            return
-        }
+        val previous = quickDraftJob
+        previous?.cancel()
+        val revision = ++quickDraftRevision
         quickDraftPendingText = text
         val large = com.example.notes.NoteEditorWindows.requiresWindow(text)
         _quickDraft.update { it.copy(text = if (large) it.text else text, busy = large, error = null, pending = true) }
         quickDraftJob = viewModelScope.launch {
             try {
-                if (!large) kotlinx.coroutines.delay(400)
-                val snapshot = withContext(Dispatchers.IO) { com.example.notes.QuickNoteDraftStore(context).write(text) }
+                if (!large) kotlinx.coroutines.delay(150)
+                previous?.join()
+                val snapshot = withContext(Dispatchers.IO) {
+                    val drafts = com.example.notes.QuickNoteDraftStore(context)
+                    if (text.isEmpty()) { drafts.clear(); null } else drafts.write(text)
+                }
+                if (revision != quickDraftRevision) return@launch
                 quickDraftPendingText = null
-                _quickDraft.value = QuickDraftState(ready = true, text = if (large) "" else text, snapshot = snapshot, title = _quickDraft.value.title)
+                // IO completion acknowledges durability only. It must never replace newer input.
+                _quickDraft.update { it.copy(text = if (large) "" else it.text, snapshot = snapshot, pending = false, busy = false) }
             } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel }
             catch (_: Exception) {
-                _quickDraft.update { it.copy(busy = false, error = "Draft could not be stored. Retry before closing. New notes are limited to 55 MB; split larger pastes.") }
+                if (revision == quickDraftRevision) _quickDraft.update { it.copy(busy = false, error = "Draft could not be stored. Retry before closing. New notes are limited to 55 MB; split larger pastes.") }
             }
         }
     }
@@ -1834,7 +1840,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     private val _pendingSections = MutableStateFlow<Map<String, PendingSection>>(emptyMap())
     val pendingSections = _pendingSections.asStateFlow()
     private val generationHistories = mutableMapOf<String, com.example.notes.NoteGenerationHistory>()
-    fun noteGenerationHistory(id: String) = generationHistories.getOrPut(id) { com.example.notes.NoteGenerationHistory() }
+    fun noteGenerationHistory(id: String) = generationHistories.getOrPut(id) { com.example.notes.NoteGenerationHistory.forNote(id) }
 
     fun journalSectionOnBackground(id: String, hash: String, start: Long, end: Long, replacement: String) {
         viewModelScope.launch {
@@ -2056,11 +2062,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 }
 
                 val persisted = if (fileEditorState.value.id == finalItem.id) {
-                    val original = finalItem
                     val saved = fileEditor.save(finalItem)
-                    if (original.contentHash != null) noteGenerationHistory(original.id).record(
-                        com.example.notes.NoteGeneration(original.contentHash, original.byteLength, original.preview),
-                        com.example.notes.NoteGeneration(saved.contentHash!!, saved.byteLength, saved.preview))
+
                     saved
                 } else if (finalItem.type == SavedItemType.MEDIA && (editOriginalId == null || editOriginalId != finalItem.id)) {
                     repository.saveNewMediaItem(finalItem)
