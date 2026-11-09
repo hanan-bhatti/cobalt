@@ -26,6 +26,10 @@ This document tracks every atomic change, file created/modified, and verificatio
   - `app/src/main/kotlin/com/example/ui/screens/WebCompanionSettingsScreen.kt`
   - `app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt`
   - `app/src/main/res/values/strings.xml`
+- **Compiler Fixes Applied**:
+  - `ProfileSettings.kt`: Added `SettingsCategory.WEB_COMPANION` to exhaustive `when (category)` branch.
+  - `CobaltViewModel.kt`: Exposed `val repository = CobaltRepository(context)` for `WebCompanionSettingsScreen`.
+  - `WebCompanionRouter.kt`: Made `handleStatus` suspend fun to properly invoke suspend `getAllItems()`.
 - **Key Capabilities**:
   - **PixelPlayer M3 Expressive Architecture**:
     - Added `SettingsCategory.WEB_COMPANION` using existing icon `R.drawable.ic_custom_globe`.

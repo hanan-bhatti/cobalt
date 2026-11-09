@@ -48,7 +48,7 @@ import java.util.UUID
 class CobaltViewModel(application: Application) : AndroidViewModel(application) {
 
     private val context = application.applicationContext
-    private val repository = CobaltRepository(context)
+    val repository = CobaltRepository(context)
     private val fileEditor = com.example.notes.FileEditorSession(context, viewModelScope)
     val fileEditorState = fileEditor.state
     fun enableContinuousEditor() = fileEditor.enableContinuous()

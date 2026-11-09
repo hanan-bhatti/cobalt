@@ -521,7 +521,7 @@ fun SettingsCategoryDetailScreen(
             modifier = Modifier.fillMaxSize()
         ) {
             when (category) {
-                SettingsCategory.DATA_MIGRATION, SettingsCategory.STORAGE_RECOVERY -> Unit
+                SettingsCategory.DATA_MIGRATION, SettingsCategory.STORAGE_RECOVERY, SettingsCategory.WEB_COMPANION -> Unit
                 // ==========================================
                 // SUBPAGE: APPEARANCE & DISPLAY
                 // ==========================================

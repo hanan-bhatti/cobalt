@@ -162,9 +162,13 @@ class WebCompanionRouter(
         )
     }
 
-    private fun handleStatus(request: HttpRequest): HttpResponse {
+    private suspend fun handleStatus(request: HttpRequest): HttpResponse {
         val db = databaseProvider()
-        val totalCount = runCatching { db?.savedItemDao()?.getAllItems()?.size ?: 0 }.getOrDefault(0)
+        val totalCount = try {
+            db?.savedItemDao()?.getAllItems()?.size ?: 0
+        } catch (_: Exception) {
+            0
+        }
 
         return HttpResponse.json(
             statusCode = 200,
