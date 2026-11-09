@@ -23,9 +23,8 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.net.wifi.WifiManager
+import android.net.ConnectivityManager
 import android.os.Build
-import android.text.format.Formatter
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
 import com.example.R
@@ -148,33 +147,45 @@ object WebCompanionManager {
     }
 
     /**
-     * Resolves the device's local IPv4 Wi-Fi address.
+     * Resolves the device's local IPv4 network address (Wi-Fi, hotspot, Ethernet).
      */
     fun getLocalIpAddress(context: Context): String {
+        // 1. Query active network from ConnectivityManager (standard for Wi-Fi / Ethernet on modern Android)
         try {
-            val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
-            val ipInt = wifiManager?.connectionInfo?.ipAddress ?: 0
-            if (ipInt != 0) {
-                @Suppress("DEPRECATION")
-                val formatted = Formatter.formatIpAddress(ipInt)
-                if (!formatted.isNullOrBlank() && formatted != "0.0.0.0") {
-                    return formatted
-                }
+            val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            val activeNetwork = cm?.activeNetwork
+            val linkProperties = cm?.getLinkProperties(activeNetwork)
+            val activeIp = linkProperties?.linkAddresses
+                ?.map { it.address }
+                ?.filterIsInstance<Inet4Address>()
+                ?.firstOrNull { !it.isLoopbackAddress }
+                ?.hostAddress
+
+            if (!activeIp.isNullOrBlank() && activeIp != "0.0.0.0") {
+                return activeIp
             }
         } catch (_: Exception) {}
 
-        // Fallback: enumerate network interfaces
+        // 2. Fallback / Hotspot / Tethering: enumerate active network interfaces
         try {
             val interfaces = NetworkInterface.getNetworkInterfaces() ?: return "127.0.0.1"
+            val candidates = mutableListOf<String>()
             for (intf in interfaces) {
-                if (intf.isLoopback || !intf.isUp) continue
+                if (!intf.isUp || intf.isLoopback) continue
                 for (addr in intf.inetAddresses) {
                     if (!addr.isLoopbackAddress && addr is Inet4Address) {
-                        val host = addr.hostAddress
-                        if (!host.isNullOrBlank()) return host
+                        val host = addr.hostAddress ?: continue
+                        if (host == "0.0.0.0") continue
+                        // Prioritize local Wi-Fi, Hotspot, Ethernet, or USB tether interfaces
+                        val name = intf.name.lowercase()
+                        if (name.startsWith("wlan") || name.startsWith("ap") || name.startsWith("eth") || name.startsWith("rndis")) {
+                            return host
+                        }
+                        candidates.add(host)
                     }
                 }
             }
+            candidates.firstOrNull()?.let { return it }
         } catch (_: Exception) {}
 
         return "127.0.0.1"

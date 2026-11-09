@@ -39,7 +39,11 @@ import com.example.util.FeedbackSubmissionManager
 import com.example.util.SurveyResponse
 import org.json.JSONObject
 
-private data class SurveyChoice(val answer: String, val label: String, @DrawableRes val icon: Int)
+private data class SurveyChoice(
+    val answer: String,
+    val label: String,
+    @param:DrawableRes @get:DrawableRes val icon: Int
+)
 private val surveyAreas = listOf(
     SurveyChoice("Notes / Markdown", "Notes", R.drawable.ic_custom_text),
     SurveyChoice("Links", "Links", R.drawable.ic_custom_link),

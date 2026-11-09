@@ -15,10 +15,24 @@ This document tracks every atomic change, file created/modified, and verificatio
 | **05** | **Web Client Assets** | ✅ Complete | Clean, responsive SPA (HTML/CSS/JS) mirroring phone's theme and dynamic wallpaper colors. |
 | **06** | **Android UI & Service** | ✅ Complete | Web Companion settings category (`ic_custom_globe`), CollapsibleCommonTopBar, Hero card, port selector. |
 | **07** | **Architecture Refactoring** | ✅ Complete | Restored MVVM encapsulation: `repository` returned to `private` in `CobaltViewModel`, exposing clean lifecycle methods. |
+| **08** | **Compiler Warnings & Quality Hardening** | ✅ Complete | Fixed KT-73255, redundant condition in excerpt budget, modernized clipboard to `LocalClipboard`, and replaced deprecated `WifiManager` with `ConnectivityManager`. |
 
 ---
 
 ## Atomic Step Details
+
+### Step 08: Compiler Warnings & Quality Hardening
+- **Packages**: `com.example.ui.components`, `com.example.ui.components.share`, `com.example.ui.screens`, `com.example.web`
+- **Files Modified**:
+  - `app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt`
+  - `app/src/main/kotlin/com/example/ui/components/share/NoteShareExcerpt.kt`
+  - `app/src/main/kotlin/com/example/ui/screens/WebCompanionSettingsScreen.kt`
+  - `app/src/main/kotlin/com/example/web/WebCompanionManager.kt`
+- **Fixes Applied**:
+  1. `SurveyBottomSheet.kt`: Replaced `@DrawableRes val icon: Int` with explicit `@param:DrawableRes @get:DrawableRes val icon: Int` to eliminate Kotlin 2.x KT-73255 target ambiguity.
+  2. `NoteShareExcerpt.kt`: Replaced `block != null` with `true` at truncation exit where smart cast proved `block` is always non-null.
+  3. `WebCompanionSettingsScreen.kt`: Replaced deprecated `LocalClipboardManager` with modern `LocalClipboard` and `ClipEntry(ClipData...)`, safely unwrapping nullable `serverUrl`.
+  4. `WebCompanionManager.kt`: Replaced deprecated `WifiManager.connectionInfo.ipAddress` (API 31 deprecation) with modern `ConnectivityManager` link address resolution and multi-interface fallback supporting Wi-Fi, Hotspots, Ethernet, and USB tethering.
 
 ### Step 07: MVVM Encapsulation Refactor & Clean Architecture Restoration
 - **Package**: `com.example.ui.viewmodel`, `com.example.ui.screens`

@@ -27,14 +27,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import android.content.ClipData
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -61,7 +62,7 @@ fun WebCompanionSettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
 
     val isRunning by WebCompanionManager.isRunning.collectAsState()
     val serverUrl by WebCompanionManager.serverUrl.collectAsState()
@@ -171,8 +172,10 @@ fun WebCompanionSettingsScreen(
 
                                 Surface(
                                     onClick = {
-                                        clipboardManager.setText(AnnotatedString(serverUrl!!))
-                                        Toast.makeText(context, "URL copied to clipboard", Toast.LENGTH_SHORT).show()
+                                        serverUrl?.let { url ->
+                                            clipboard.setClipEntry(ClipEntry(ClipData.newPlainText("Cobalt Web Companion URL", url)))
+                                            Toast.makeText(context, "URL copied to clipboard", Toast.LENGTH_SHORT).show()
+                                        }
                                     },
                                     shape = RoundedCornerShape(14.dp),
                                     color = MaterialTheme.colorScheme.surfaceContainerHigh,

@@ -51,7 +51,7 @@ internal fun computeA4Content(noteBody: String, maxLines: Int = 18): DocumentTru
             }
             return DocumentTruncation(parts.joinToString("\n\n"), true)
         }
-        if (remaining <= 0) return DocumentTruncation(parts.joinToString("\n\n"), block != null)
+        if (remaining <= 0) return DocumentTruncation(parts.joinToString("\n\n"), true)
     }
     return DocumentTruncation(clean, false)
 }
