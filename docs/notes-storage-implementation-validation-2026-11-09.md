@@ -1,6 +1,6 @@
 # Shared note storage implementation and validation
 
-Implementation and device/release validation completed on November 9, 2026; final snapshot restoration is being verified.
+Implementation, storage tests and release validation completed on November 9, 2026. The original library was restored and the current workspace release reinstalled.
 
 This implements the [researched architecture](notes-storage-architecture-research-2026-11-09.md) after the [original audit](notes-storage-validation-2026-11-09.md). The research prototype measurements are not Android application measurements.
 
@@ -79,11 +79,13 @@ The post-cleanup release library remained **67 items / 44 text**, including the 
 
 The Android crash buffer contained no Cobalt process-crash events, and the last-ANR report did not mention Cobalt. These checks are scoped observations of available buffers, not an absence-of-crashes guarantee across all devices.
 
-The complete pre-test snapshot is being restored before final delivery so reviewed cleanup does not permanently remove the original library's historical versions or drafts. Final library/artifact verification is recorded below.
+The newer snapshot restore failed: although the console had reported Save OK, its companion RAM/texture files were absent. The complete original snapshot `cobalt-before-shared-storage-20261109` restored successfully; the release schema upgrade was reapplied in place. Final verification confirmed **66 original items / 43 text**, with original **50 MB legacy history and 1.5 kB recovery** restored. Cleanup was not left applied to the original library.
+
+Concurrent workspace builds replaced the shared APK output during restoration. The fully validated storage release (`02cc…`) was preserved separately. The newest installed workspace build was also captured separately (`a1c2…`) and reinstalled after restoration; installed bytes matched that captured APK. That newer build received an additional release hold/cleanup UI probe, showing history reduced to 1.7 kB with 1.5 kB recovery and media intact before the final snapshot restore. Later UI changes did not receive the complete earlier editor/reader regression sweep. The original host/device/release measurements remain attached to their actual builds.
 
 ## Artifacts and preservation
 
-The emulator is `emulator-5554`, API 37/x86_64, with a production image that does not permit root. Before upgrading, a complete AVD snapshot was saved as `cobalt-before-shared-storage-20261109`. A second snapshot, `cobalt-shared-release-before-tests-20261109`, preserves the upgraded release and the original 66-item library before new synthetic release notes or cleanup. Stable was updated in place with the matching signing certificate; no uninstall or Clear Data was used.
+The emulator is `emulator-5554`, API 37/x86_64, with a production image that does not permit root. Before upgrading, a complete AVD snapshot was saved as `cobalt-before-shared-storage-20261109`. A second snapshot Save reported OK, but its restore later failed; it is not a usable backup. The complete original snapshot supplied successful rollback, followed by a fresh in-place release upgrade. Stable was updated in place with the matching signing certificate; no uninstall or Clear Data was used.
 
 Private debug backups, original APK, release copy, logs, screenshots and measurement JSON are retained under ignored `build/notes-shared-validation-20261109/`. They are local evidence, not publishable fixture data.
 
@@ -99,8 +101,13 @@ Private debug backups, original APK, release copy, logs, screenshots and measure
 - [Release typing and saved navigation](../build/notes-shared-validation-20261109/release-typing.json)
 - [Final release cleanup results](../build/notes-shared-validation-20261109/release-cleanup.json)
 - [Final release build including vital lint](../build/notes-shared-release-final-retry.log)
-- [Installed release artifact metadata](../build/notes-shared-validation-20261109/release-artifact.json)
+- [Successful original-library restoration](../build/notes-shared-validation-20261109/release-restoration.json)
+- [Validated storage APK](../build/notes-shared-validation-20261109/Cobalt-notes-storage-release-validated-02cc.apk)
+- [Current installed workspace APK](../build/notes-shared-validation-20261109/Cobalt-current-workspace-release.apk)
+- [Validated release artifact metadata](../build/notes-shared-validation-20261109/release-artifact.json)
 
 No claim of hardware power-loss certification is made. Reliability depends on acknowledged synced writes, validation, recovery and independent backups; shared version history is deliberately not presented as an independent corruption backup.
 
-Final APK SHA-256: `02cc3a1f7cb616c1167ee50e626e90b85fa50ea2c63f0bd9c1b15def3399c002`. The earlier release used for typing and large editor probes is retained separately; the final APK adds preservation of primary SQLite write failures. The 50 MB/100-edit debug measurement ran before that error-path-only fix; final debug verified SQLite-full recovery/retry and both actual process-kill phases afterward. The final release verified cleanup and retained large-body reading after restart. No benchmark from the separate research prototype is substituted for application measurements.
+Validated storage APK SHA-256: `02cc3a1f7cb616c1167ee50e626e90b85fa50ea2c63f0bd9c1b15def3399c002`. The earlier release used for typing and large editor probes is retained separately; the final APK adds preservation of primary SQLite write failures. The 50 MB/100-edit debug measurement ran before that error-path-only fix; final debug verified SQLite-full recovery/retry and both actual process-kill phases afterward. The final release verified cleanup and retained large-body reading after restart. No benchmark from the separate research prototype is substituted for application measurements.
+
+Current installed workspace APK SHA-256: `a1c2e248f66480ebe7577761be1bc5c90463fef5cdeda580bf4d7c99124ee525`. This file is preserved independently of the shared Gradle output.
