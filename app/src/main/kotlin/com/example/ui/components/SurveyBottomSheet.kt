@@ -388,7 +388,7 @@ fun SurveyBottomSheet(
                                         modifier = Modifier.weight(1f).bounceClick()
                                     ) {
                                         Icon(
-                                            painter = painterResource(id = R.drawable.ic_custom_archive),
+                                            painter = painterResource(id = R.drawable.ic_custom_share),
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.onSurface,
                                             modifier = Modifier.size(16.dp)
@@ -1027,7 +1027,7 @@ fun SurveyBottomSheet(
                                     modifier = Modifier.weight(1f).bounceClick().testTag("submit_survey_export_button")
                                 ) {
                                     Icon(
-                                        painter = painterResource(id = R.drawable.ic_custom_archive),
+                                        painter = painterResource(id = R.drawable.ic_custom_share),
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.onSurface,
                                         modifier = Modifier.size(16.dp)

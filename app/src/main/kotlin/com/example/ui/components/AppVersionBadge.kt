@@ -51,9 +51,6 @@ fun AppVersionBadge(
 
     val displayText = buildString {
         append(if (versionName != null) "${tag.label} $versionName" else tag.label)
-        if (!isFrameless && true) {
-            append(" • FOSS")
-        }
     }
 
     Surface(
