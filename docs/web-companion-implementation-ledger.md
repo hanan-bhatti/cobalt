@@ -1,143 +1,62 @@
-# Cobalt Local Web Companion: Implementation Ledger
+# Local web companion implementation and review
 
-This document tracks every atomic change, file created/modified, and verification status for the **Cobalt Local Web Companion** on branch `feature/local-web-companion`.
+Branch: `feature/local-web-companion`. App version remains **2.2.3 / code 19**. This branch does not create or publish a 2.3.0 release.
 
----
+## Gemini changes reviewed
 
-## Progress Overview
+The review covers the complete diff from `d488547` through `070b609`: 12 commits, 21 files, including the server, authentication, session registry, Android settings/lifecycle integration, web assets, tests, and this ledger. The later `b88bb69` commit contains the screenshot campaign rather than web-server behavior.
 
-| Step | Component | Status | Description |
-| :--- | :--- | :---: | :--- |
-| **01** | **PIN Creator & Security Manager** | ✅ Complete | 4-digit rotating PIN, progressive lockout, global tripwire, session tokens, and rate limiter. |
-| **02** | **Editor Session Registry** | ✅ Complete | Active note lock registry preventing writes to notes open in mobile editor; hooked into `CobaltViewModel`. |
-| **03** | **Embedded Server Engine** | ✅ Complete | Lightweight coroutine-based HTTP/1.1 server for LAN endpoints, zero external dependencies. |
-| **04** | **Notes API Endpoints** | ✅ Complete | Paginated note listing, detail retrieval, PIN auth login/logout, media streaming. |
-| **05** | **Web Client Assets** | ✅ Complete | Clean, responsive SPA (HTML/CSS/JS) mirroring phone's theme and dynamic wallpaper colors. |
-| **06** | **Android UI & Service** | ✅ Complete | Web Companion settings category (`ic_custom_globe`), CollapsibleCommonTopBar, Hero card, port selector. |
-| **07** | **Architecture Refactoring** | ✅ Complete | Restored MVVM encapsulation: `repository` returned to `private` in `CobaltViewModel`, exposing clean lifecycle methods. |
-| **08** | **Compiler Warnings & Quality Hardening** | ✅ Complete | Fixed KT-73255, redundant condition in excerpt budget, modernized clipboard to `LocalClipboard`, and replaced deprecated `WifiManager` with `ConnectivityManager`. |
+| Commit | Change |
+| --- | --- |
+| `c0be260` | Rotating PIN, sessions, lockout and request rate limiting. |
+| `e6871b5` | Mobile/web editor session registry and ViewModel lock hook. |
+| `f052272` | Release mobile edit lock on ViewModel teardown. |
+| `48eaa6c` | Document back/cancel/save lock-release paths. |
+| `aebc722` | Embedded Kotlin/Java socket HTTP server and models. |
+| `2854d7e` | Auth, item listing/detail, media and static routes. |
+| `fe41801` | HTML/CSS/JavaScript reader, search and theme export. |
+| `c830662` | Android Web Companion settings and notification. |
+| `5ab741c` | Exhaustive settings branch, repository visibility and suspend fixes. |
+| `22ad05f` | Restore private repository and expose ViewModel lifecycle operations. |
+| `906064a` | Annotation/clipboard/IP-resolution fixes; survey/share warning fixes. |
+| `070b609` | Launch asynchronous clipboard operation in a coroutine. |
 
----
+## Defects found in the original implementation
 
-## Atomic Step Details
+- There was no edit UI, save route, or route using the web edit-lock registry. Editing/saving was not implemented.
+- `getItemForOpen()` intentionally loads bodies only below 200 KB. The web detail route treated the bounded metadata result as a complete body, returning empty or partial text instead of a complete larger note.
+- Search passed raw text to SQLite FTS and swallowed failures as empty results. Folder filtering used substring matching.
+- Status hardcoded version `2.3.0` although the build was `2.2.3`.
+- Markdown inserted raw note HTML into `innerHTML`, and accepted unsafe link/image URLs.
+- The client expected a different lockout JSON field and re-enabled its login button during lockout. It did not reliably report failed detail/list requests.
+- OPTIONS bypassed Host checks; wildcard CORS was unnecessarily enabled. HTTP parsing accepted invalid/oversize/duplicate content lengths and truncated headers. Client sockets were unbounded.
+- Logout/PIN changes did not release web locks; expired locks could be renewed. Automatic PIN rotation did not update the displayed PIN.
+- Media read an arbitrary stored path, loaded the whole file without a bound, and advertised byte ranges without implementing them.
+- The notification is an ordinary ongoing notification, **not an Android foreground service**. The previous statements about guaranteed background operation, exact zero CPU/battery use, full Markdown support, and F-Droid approval were unsupported.
 
-### Step 08: Compiler Warnings & Quality Hardening
-- **Packages**: `com.example.ui.components`, `com.example.ui.components.share`, `com.example.ui.screens`, `com.example.web`
-- **Files Modified**:
-  - `app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt`
-  - `app/src/main/kotlin/com/example/ui/components/share/NoteShareExcerpt.kt`
-  - `app/src/main/kotlin/com/example/ui/screens/WebCompanionSettingsScreen.kt`
-  - `app/src/main/kotlin/com/example/web/WebCompanionManager.kt`
-- **Fixes Applied**:
-  1. `SurveyBottomSheet.kt`: Replaced `@DrawableRes val icon: Int` with explicit `@param:DrawableRes @get:DrawableRes val icon: Int` to eliminate Kotlin 2.x KT-73255 target ambiguity.
-  2. `NoteShareExcerpt.kt`: Replaced `block != null` with `true` at truncation exit where smart cast proved `block` is always non-null.
-  3. `WebCompanionSettingsScreen.kt`: Replaced deprecated `LocalClipboardManager` with modern `LocalClipboard` and `ClipEntry(ClipData...)`, launching asynchronous clipboard copy inside `rememberCoroutineScope()`, and safely unwrapping nullable `serverUrl`.
-  4. `WebCompanionManager.kt`: Replaced deprecated `WifiManager.connectionInfo.ipAddress` (API 31 deprecation) with modern `ConnectivityManager` link address resolution and multi-interface fallback supporting Wi-Fi, Hotspots, Ethernet, and USB tethering.
+## Corrections
 
-### Step 07: MVVM Encapsulation Refactor & Clean Architecture Restoration
-- **Package**: `com.example.ui.viewmodel`, `com.example.ui.screens`
-- **Source**:
-  - `app/src/main/kotlin/com/example/ui/viewmodel/CobaltViewModel.kt`
-  - `app/src/main/kotlin/com/example/ui/screens/WebCompanionSettingsScreen.kt`
-- **Architectural Rationale**:
-  - Exposing `repository` directly from the `CobaltViewModel` breaks encapsulation and couples UI composables to data layer internals.
-  - Reverted `repository` to `private val repository = CobaltRepository(context)`.
-  - Added encapsulated ViewModel operations: `startWebCompanion(port)`, `stopWebCompanion()`, and `rotateWebCompanionPin()`.
-  - Hooked `stopWebCompanion()` into `CobaltViewModel.onCleared()` to guarantee automatic server shutdown and notification release on lifecycle destruction.
-  - Removed data-layer imports (`AppDatabase`) and local coroutine scope creation from `WebCompanionSettingsScreen.kt`.
+- Repository-backed full note reads and durable TEXT/CODE edits, using native note generations, history, metadata and search indexing. Both timestamp and content hash identify the base revision. Save rechecks the active session and edit lock before persistence and before committing metadata.
+- Edit/cancel/save controls, 20-second lock heartbeat, explicit save errors and unsaved-draft discard confirmation. Draft text remains visible after a failed write.
+- Native search sanitization, exact folder membership, attachment filtering and actual build-version reporting.
+- Escaped Markdown with allowed links/local images, fenced code and basic tables. Code and notes above 200,000 characters use a plain-text reader rather than building a large Markdown DOM.
+- Same-origin requests, Host/Origin checks on OPTIONS, bounded HTTP parsing, eight concurrent client sockets, security response headers and socket cleanup on shutdown.
+- Correct lockout countdown, locale-independent numeric PINs, reactive PIN state, bounded session/client tracking and web-lock cleanup without clearing mobile locks.
+- Attachment type/deletion/private-root checks and bounded reads. Unsupported range claims removed. Missing static assets return 404.
+- Android settings describe the actual server lifetime and HTTP connection rather than making unmeasured guarantees.
 
-### Step 06: Android UI & Service Integration (`WebCompanionSettingsScreen`)
-- **Package**: `com.example.ui.screens`, `com.example.web`
-- **Source**:
-  - `app/src/main/kotlin/com/example/web/WebCompanionManager.kt`
-  - `app/src/main/kotlin/com/example/ui/screens/WebCompanionSettingsScreen.kt`
-  - `app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt`
-  - `app/src/main/res/values/strings.xml`
-- **Compiler Fixes Applied**:
-  - `ProfileSettings.kt`: Added `SettingsCategory.WEB_COMPANION` to exhaustive `when (category)` branch.
-  - `CobaltViewModel.kt`: Exposed `val repository = CobaltRepository(context)` for `WebCompanionSettingsScreen`.
-  - `WebCompanionRouter.kt`: Made `handleStatus` suspend fun to properly invoke suspend `getAllItems()`.
-- **Key Capabilities**:
-  - **PixelPlayer M3 Expressive Architecture**:
-    - Added `SettingsCategory.WEB_COMPANION` using existing icon `R.drawable.ic_custom_globe`.
-    - Harmonized dual-tone avatar badge: Deep Sky Blue (`#162D3B` to `#38BDF8` dark, `#E0F2FE` to `#0284C7` light).
-    - Smooth scroll-driven `CollapsibleCommonTopBar(maxHeight = 160.dp)`.
-  - **Hero Status & Connection Card**:
-    - Live running indicator with pulsing state dot.
-    - One-tap copyable local URL (`http://<ip>:<port>`).
-    - Prominent 4-digit authentication PIN in bold monospace layout with live "Rotate PIN" action.
-  - **Connected Controls**:
-    - `ExpressiveSettingsSwitchItem` starting/stopping server and foreground notification.
-    - `ExpressiveSettingsSelectorItem` using standard `ModalBottomSheet` to select port (`8080`, `8888`, `9090`, `53317`).
-    - Security overview tiles showing active brute-force protection and mobile editor conflict lock.
+## Supported scope and limits
 
-- **Package / Assets**: `app/src/main/assets/web/`
-- **Files**:
-  - `app/src/main/kotlin/com/example/web/server/WebThemeExporter.kt`
-  - `app/src/main/assets/web/index.html`
-  - `app/src/main/assets/web/style.css`
-  - `app/src/main/assets/web/app.js`
-- **Key Capabilities**:
-  - **Dynamic Theme Synchronization**: `GET /api/theme` exports the active Android theme (Dark, Light, or Android 12+ Material You Dynamic wallpaper colors) as CSS custom properties (`--primary-color`, `--bg-color`, `--surface-color`, etc.). The web app immediately adopts your phone's exact palette.
-  - **PIN Auth Modal**: 4-digit PIN authentication overlay with lockout countdown timers and auto-focus.
-  - **Fast Card Grid**: Paginated 25-note chunks with search debounce (300ms) and type filters (Notes, Code, Links, Media).
-  - **On-Demand Reader**: Loads full markdown body only when note is clicked.
-  - **Mobile Lock Alert**: Displays warning badge on cards and banner in reader if note is actively being edited on the phone.
-  - **Self-Contained Markdown Engine**: Formats headers, code fences, blockquotes, lists, tables, and images without external libraries.
+- Existing text/code notes can be read and edited. Links, images, audio/video and media-library entries can be browsed; only supported local attachments can be opened here. Creating/deleting items, editing movie metadata, backup/restore, sync, encryption and biometric locking are not part of these changes.
+- Web note bodies are limited to **5,000,000 UTF-8 bytes**; attachments to **10 MiB**. Larger items stay intact and should be opened in the phone app. This is not a reduction in native note capacity.
+- Search uses the native bounded FTS index (a 32 KiB body prefix, at most 200 body matches), plus item title/preview matching. It does not claim exhaustive full-body search across huge notes.
+- The server is opt-in and tied to the app/ViewModel process. Android can terminate it in the background. There is no foreground service or wake lock.
+- Traffic uses HTTP on the local network. No TLS or network encryption is implemented.
+- Emulator NAT addresses are not directly reachable from the laptop. For this emulator use `adb -s emulator-5554 forward tcp:18080 tcp:8080`, then open `http://127.0.0.1:18080` and enter the PIN shown in Cobalt. On a physical phone, use its displayed local address from the same reachable network.
+- Drafts are held in the browser page, not silently saved to a server or browser database. Closing/reloading a dirty editor requires confirmation; copying the draft is available when a save fails.
 
-- **Package**: `com.example.web.server`
-- **Source**: `app/src/main/kotlin/com/example/web/server/WebCompanionRouter.kt`
-- **Key Capabilities**:
-  - `POST /api/auth/login`: PIN verification, issues 256-bit token + `Set-Cookie: cobalt_session` (HttpOnly, SameSite=Strict).
-  - `POST /api/auth/logout`: Revokes session token and clears session cookie.
-  - `GET /api/auth/status`: Lightweight session validity check.
-  - `GET /api/status`: System telemetry and note count.
-  - `GET /api/notes`: Paginated card streaming (`page`, `limit` bounded to 1-100, `q` search query, `folder`, `type`).
-    - Excludes deleted notes.
-    - Annotates items with `isLockedByMobile: true/false`.
-    - Never dumps full note bodies.
-  - `GET /api/notes/{id}`: On-demand full markdown body and metadata with mobile lock warning.
-  - `GET /api/media/{id}`: Local media attachment streaming.
-  - Static asset streaming with MIME type resolution and bootstrap HTML fallback.
-- **Unit Tests**: `app/src/test/java/com/example/web/server/WebCompanionRouterTest.kt`
+## Verification
 
-- **Package**: `com.example.web.server`
-- **Source**:
-  - `app/src/main/kotlin/com/example/web/server/HttpModels.kt`
-  - `app/src/main/kotlin/com/example/web/server/CobaltEmbeddedServer.kt`
-- **Key Capabilities**:
-  - Pure Kotlin/Java socket server running on `Dispatchers.IO` (0% CPU at idle, zero external dependencies, 100% safe for F-Droid).
-  - Path traversal defense (`HttpRequest.sanitizePath` filters `..` and relative jumps).
-  - 15-second socket read timeouts against slowloris attacks.
-  - Automatic DNS-rebinding verification against allowed local network hosts.
-  - Per-IP rate limiting before request dispatch.
-  - Automatic CORS `OPTIONS` preflight resolution.
-  - Safe request bounding (16KB headers, 10MB body max).
-- **Unit Tests**: `app/src/test/java/com/example/web/server/CobaltEmbeddedServerTest.kt`
+The baseline installed debug app accepted PIN login and returned all 500 existing items using emulator forwarding. Browser editing was absent in the reviewed baseline source.
 
-- **Package**: `com.example.web.session`
-- **Source**: `app/src/main/kotlin/com/example/web/session/EditorSessionRegistry.kt`
-- **Integration**: `app/src/main/kotlin/com/example/ui/viewmodel/CobaltViewModel.kt`
-- **Key Capabilities**:
-  - `mobileActiveNoteId`: StateFlow tracking the note ID open on the phone.
-  - Multi-client exclusive web lock with heartbeat tracking (60s stale timeout).
-  - Preempts web write attempts with `LockAcquisitionResult.ConflictMobile`.
-  - **Edge-Case Hardening**:
-    - **Back Button / BackHandler**: Both `CaptureScreen.kt:1634` and `MainActivity.kt:296` call `viewModel.cancelCapture()` on Android back button/gesture, setting `editOriginalId = null` and releasing the mobile lock.
-    - **Close / Cancel Icon**: Top-bar close button invokes `cancelCapture()`, releasing the lock.
-    - **Save Completion**: Successful save automatically releases the lock.
-    - **ViewModel Teardown**: `CobaltViewModel.onCleared()` guarantees lock release on activity/viewmodel destruction.
-- **Unit Tests**: `app/src/test/java/com/example/web/session/EditorSessionRegistryTest.kt`
-
-- **Package**: `com.example.web.auth`
-- **Source**: `app/src/main/kotlin/com/example/web/auth/WebCompanionSecurityManager.kt`
-- **Key Capabilities**:
-  - `SecureRandom` 4-digit numeric PIN (`0000`–`9999`).
-  - Ephemeral PIN rotation on server start, manual trigger, or security tripwire.
-  - Progressive IP lockout (5 failed attempts = 10-minute lockout).
-  - Global tripwire: auto-rotates PIN if cumulative failed attempts across IPs exceed 12.
-  - 256-bit cryptographically secure session token issuance.
-  - Session expiration after 2 hours of inactivity.
-  - Per-IP API rate limiting (token bucket: 60 req/min, burst 20).
-  - Host-header verification to thwart DNS rebinding attacks.
-- **Unit Tests**: `app/src/test/java/com/example/web/auth/WebCompanionSecurityManagerTest.kt`
+Verification is complete for the documented scope: 48 focused JVM tests, 9 client regressions, 2 Android instrumentation methods, and the real-server Chromium workflow passed. The original 500 rows were retained exactly; the installed APK matches the Gradle artifact. See [the runtime review](web-companion-runtime-review-2026-11-10.md) for evidence and limitations. These results do not replace broader release qualification or physical-device testing.
