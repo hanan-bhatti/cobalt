@@ -173,61 +173,164 @@ object LegalDocs {
     """.trimIndent()
 
     val openSourceLicenses = """
-        **Open Source Licenses & Third-Party Assets**
+        # Open Source Licenses & Third-Party Assets
 
         Cobalt is free and open-source software licensed under AGPL-3.0-or-later. It incorporates third-party open-source components and font software under their respective permissive and copyleft licenses.
 
         ---
 
-        ### Bundled Local Fonts (SIL Open Font License 1.1)
+        ## Bundled Local Fonts (SIL Open Font License 1.1)
 
-        The following font software is bundled locally inside Cobalt. All font files are licensed under the SIL Open Font License, Version 1.1 (OFL-1.1).
+        The following font software is bundled locally inside Cobalt (`res/font/`). All font files are licensed under the **SIL Open Font License, Version 1.1 (OFL-1.1)**. Full license notices are packaged in `assets/licenses/`.
 
-        **1. Inter**
-        - Copyright 2020 The Inter Project Authors (https://github.com/rsms/inter)
-        - License: SIL Open Font License 1.1
+        - **Inter** (`commit 2fe1e8c`)
+          Copyright 2020 The Inter Project Authors ([https://github.com/rsms/inter](https://github.com/rsms/inter))
+          License: SIL Open Font License 1.1
 
-        **2. Literata**
-        - Copyright 2017 The Literata Project Authors (https://github.com/googlefonts/literata)
-        - License: SIL Open Font License 1.1
+        - **Literata** (`commit 2fe1e8c`)
+          Copyright 2017 The Literata Project Authors ([https://github.com/googlefonts/literata](https://github.com/googlefonts/literata))
+          License: SIL Open Font License 1.1
 
-        **3. Source Serif 4**
-        - Copyright 2014 The Source Serif 4 Project Authors (https://github.com/adobe-fonts/source-serif)
-        - License: SIL Open Font License 1.1
+        - **Source Serif 4** (`commit 2fe1e8c`)
+          Copyright 2014 The Source Serif 4 Project Authors ([https://github.com/adobe-fonts/source-serif](https://github.com/adobe-fonts/source-serif))
+          License: SIL Open Font License 1.1
 
-        **4. Atkinson Hyperlegible**
-        - Copyright 2020 Braille Institute of America, Inc.
-        - License: SIL Open Font License 1.1
+        - **Atkinson Hyperlegible** (`commit 2fe1e8c`)
+          Copyright 2020 Braille Institute of America, Inc. ([https://github.com/googlefonts/atkinson-hyperlegible](https://github.com/googlefonts/atkinson-hyperlegible))
+          License: SIL Open Font License 1.1
 
-        **5. Lexend**
-        - Copyright 2018 The Lexend Project Authors (https://github.com/googlefonts/lexend), with Reserved Font Name "RevReading Lexend"
-        - License: SIL Open Font License 1.1
+        - **Lexend** (`commit 2fe1e8c`)
+          Copyright 2018 The Lexend Project Authors ([https://github.com/googlefonts/lexend](https://github.com/googlefonts/lexend))
+          License: SIL Open Font License 1.1 (Reserved Font Name "RevReading Lexend")
 
-        **6. JetBrains Mono**
-        - Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono)
-        - License: SIL Open Font License 1.1
+        - **JetBrains Mono** (`commit 2fe1e8c`)
+          Copyright 2020 The JetBrains Mono Project Authors ([https://github.com/JetBrains/JetBrainsMono](https://github.com/JetBrains/JetBrainsMono))
+          License: SIL Open Font License 1.1
 
         ---
 
-        ### SIL OPEN FONT LICENSE (Version 1.1 - 26 February 2007)
+        ## Third-Party Libraries
 
-        **PREAMBLE**
+        The following open-source software libraries are integrated into Cobalt:
+
+        - **Sora Editor** (`0.24.6`)
+          Coordinates: `io.github.rosemoe:editor`
+          License: LGPL-2.1-or-later
+          Repository: [https://github.com/Rosemoe/sora-editor](https://github.com/Rosemoe/sora-editor)
+
+        - **Haze** (`1.7.2`)
+          Coordinates: `dev.chrisbanes.haze:haze`
+          License: Apache License 2.0
+          Repository: [https://github.com/chrisbanes/haze](https://github.com/chrisbanes/haze)
+
+        - **Jsoup** (`1.17.2`)
+          Coordinates: `org.jsoup:jsoup`
+          License: MIT License
+          Website: [https://jsoup.org](https://jsoup.org)
+
+        - **CommonMark Java** (`0.21.0`)
+          Coordinates: `org.commonmark:commonmark`, `strikethrough`, `tables`
+          License: BSD 2-Clause License
+          Repository: [https://github.com/commonmark/commonmark-java](https://github.com/commonmark/commonmark-java)
+
+        - **Coil & Coil Video** (`2.7.0`)
+          Coordinates: `io.coil-kt:coil-compose`, `io.coil-kt:coil-video`
+          License: Apache License 2.0
+          Repository: [https://github.com/coil-kt/coil](https://github.com/coil-kt/coil)
+
+        - **OkHttp & Logging Interceptor** (`4.10.0`)
+          Coordinates: `com.squareup.okhttp3:okhttp`, `logging-interceptor`
+          License: Apache License 2.0
+          Website: [https://square.github.io/okhttp/](https://square.github.io/okhttp/)
+
+        - **Retrofit & Moshi Converter** (`2.12.0`)
+          Coordinates: `com.squareup.retrofit2:retrofit`, `converter-moshi`
+          License: Apache License 2.0
+          Website: [https://square.github.io/retrofit/](https://square.github.io/retrofit/)
+
+        - **Moshi Kotlin & Codegen** (`1.15.2`)
+          Coordinates: `com.squareup.moshi:moshi-kotlin`, `moshi-kotlin-codegen`
+          License: Apache License 2.0
+          Repository: [https://github.com/square/moshi](https://github.com/square/moshi)
+
+        - **AndroidX Media3 (ExoPlayer)** (`1.5.0`)
+          Coordinates: `androidx.media3:media3-exoplayer`, `media3-ui`
+          License: Apache License 2.0
+          Website: [https://developer.android.com/media/media3](https://developer.android.com/media/media3)
+
+        - **AndroidX Glance** (`1.1.0`)
+          Coordinates: `androidx.glance:glance-appwidget`, `glance-material3`
+          License: Apache License 2.0
+          Website: [https://developer.android.com/jetpack/androidx/releases/glance](https://developer.android.com/jetpack/androidx/releases/glance)
+
+        - **AndroidX Room** (`2.7.0`)
+          Coordinates: `androidx.room:room-runtime`, `room-ktx`, `room-compiler`
+          License: Apache License 2.0
+          Website: [https://developer.android.com/jetpack/androidx/releases/room](https://developer.android.com/jetpack/androidx/releases/room)
+
+        - **AndroidX WorkManager** (`2.9.1`)
+          Coordinates: `androidx.work:work-runtime-ktx`
+          License: Apache License 2.0
+          Website: [https://developer.android.com/jetpack/androidx/releases/work](https://developer.android.com/jetpack/androidx/releases/work)
+
+        - **AndroidX Navigation Compose** (`2.8.9`)
+          Coordinates: `androidx.navigation:navigation-compose`
+          License: Apache License 2.0
+          Website: [https://developer.android.com/jetpack/androidx/releases/navigation](https://developer.android.com/jetpack/androidx/releases/navigation)
+
+        - **AndroidX Lifecycle** (`2.8.7`)
+          Coordinates: `androidx.lifecycle:lifecycle-runtime-ktx`, `lifecycle-viewmodel-compose`, `lifecycle-runtime-compose`
+          License: Apache License 2.0
+          Website: [https://developer.android.com/jetpack/androidx/releases/lifecycle](https://developer.android.com/jetpack/androidx/releases/lifecycle)
+
+        - **AndroidX Activity Compose** (`1.10.1`)
+          Coordinates: `androidx.activity:activity-compose`
+          License: Apache License 2.0
+          Website: [https://developer.android.com/jetpack/androidx/releases/activity](https://developer.android.com/jetpack/androidx/releases/activity)
+
+        - **AndroidX Browser** (`1.8.0`)
+          Coordinates: `androidx.browser:browser`
+          License: Apache License 2.0
+          Website: [https://developer.android.com/jetpack/androidx/releases/browser](https://developer.android.com/jetpack/androidx/releases/browser)
+
+        - **AndroidX Core KTX** (`1.18.0`)
+          Coordinates: `androidx.core:core-ktx`
+          License: Apache License 2.0
+          Website: [https://developer.android.com/jetpack/androidx/releases/core](https://developer.android.com/jetpack/androidx/releases/core)
+
+        - **Jetpack Compose UI** (`BOM 2024.09.00`)
+          Coordinates: `androidx.compose.ui:ui`, `ui-graphics`, `ui-tooling-preview`
+          License: Apache License 2.0
+          Website: [https://developer.android.com/jetpack/compose](https://developer.android.com/jetpack/compose)
+
+        - **Jetpack Compose Material 3** (`1.5.0-alpha24`)
+          Coordinates: `androidx.compose.material3:material3`
+          License: Apache License 2.0
+          Website: [https://developer.android.com/jetpack/androidx/releases/compose-material3](https://developer.android.com/jetpack/androidx/releases/compose-material3)
+
+        - **Compose Material Icons** (`BOM 2024.09.00`)
+          Coordinates: `androidx.compose.material:material-icons-core`, `material-icons-extended`
+          License: Apache License 2.0
+          Website: [https://developer.android.com/jetpack/compose](https://developer.android.com/jetpack/compose)
+
+        - **Kotlin Standard Library** (`2.2.10`)
+          Coordinates: `org.jetbrains.kotlin:kotlin-stdlib`
+          License: Apache License 2.0
+          Website: [https://github.com/JetBrains/kotlin](https://github.com/JetBrains/kotlin)
+
+        - **KotlinX Coroutines** (`1.10.2`)
+          Coordinates: `org.jetbrains.kotlinx:kotlinx-coroutines-core`, `kotlinx-coroutines-android`
+          License: Apache License 2.0
+          Repository: [https://github.com/Kotlin/kotlinx.coroutines](https://github.com/Kotlin/kotlinx.coroutines)
+
+        ---
+
+        ## SIL Open Font License (Version 1.1 - 26 February 2007)
+
+        ### PREAMBLE
         The goals of the Open Font License (OFL) are to stimulate worldwide development of collaborative font projects, to support the font creation efforts of academic and linguistic communities, and to provide a free and open framework in which fonts may be shared and improved in partnership with others.
 
-        **PERMISSION & CONDITIONS**
-        Permission is hereby granted, free of charge, to any person obtaining a copy of the Font Software, to use, study, copy, merge, embed, modify, redistribute, and sell modified and unmodified copies of the Font Software, subject to the conditions stated in the full license text.
-
-        ---
-
-        ### Third-Party Libraries
-
-        - **Sora Editor**: LGPL-2.1 (https://github.com/Rosemoe/sora-editor)
-        - **AndroidX & Jetpack Compose**: Apache License 2.0
-        - **Kotlin & Coroutines**: Apache License 2.0
-        - **CommonMark**: BSD-2-Clause
-        - **Coil**: Apache License 2.0
-        - **OkHttp**: Apache License 2.0
-        - **Retrofit & Moshi**: Apache License 2.0
-        - **Jsoup**: MIT License
+        ### PERMISSION & CONDITIONS
+        Permission is hereby granted, free of charge, to any person obtaining a copy of the Font Software, to use, study, copy, merge, embed, modify, redistribute, and sell modified and unmodified copies of the Font Software, subject to the conditions stated in the full license text. Full license texts are packaged inside the application at `assets/licenses/` and available online at [https://scripts.sil.org/OFL](https://scripts.sil.org/OFL).
     """.trimIndent()
 }
