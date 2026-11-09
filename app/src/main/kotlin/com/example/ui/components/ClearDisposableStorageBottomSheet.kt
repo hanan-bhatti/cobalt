@@ -118,7 +118,7 @@ fun ClearDisposableStorageBottomSheet(
                             modifier = Modifier.size(18.dp).padding(top = 2.dp)
                         )
                         Text(
-                            text = "Your saved notes, media, folders, and settings remain 100% safe and intact.",
+                            text = "Cleanup excludes current notes, saved media, folders, settings and recovery drafts. Older versions selected for removal cannot be restored afterward.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface
                         )

@@ -220,12 +220,12 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                             iconRes = R.drawable.ic_custom_sparkle,
                             title = "App cache",
                             amount = report?.let { formatNoteSize(context, it.cache) },
-                            description = "Rebuildable preview thumbnails and temporary exports. Clearing cache is completely safe and frees up space immediately without affecting your notes.",
-                            actionButtonText = if (clearable > 0) "Clear safe cache · ${formatNoteSize(context, clearable)}" else "Cache is clean",
+                            description = "Removes eligible preview thumbnails and temporary exports. Saved note content and referenced media are excluded; previews are rebuilt when needed.",
+                            actionButtonText = if (clearable > 0) "Clear preview cache · ${formatNoteSize(context, clearable)}" else "Cache is clean",
                             onActionClick = {
                                 perform {
                                     manager.clearCache()
-                                    "Safe cache cleared. Previews rebuild as you browse."
+                                    "Eligible preview cache cleared. Previews rebuild as you browse."
                                 }
                             },
                             actionEnabled = !busy && clearable > 0,
@@ -255,7 +255,7 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                     item {
                         SettingsSubsectionHeader(
                             "DEEP CLEANUP",
-                            description = "Remove disposable older versions and safe preview cache."
+                            description = "Review eligible older versions and preview cache before removing them."
                         )
                         StorageMaintenanceCard(
                             iconRes = R.drawable.ic_custom_delete,
@@ -264,7 +264,7 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                                 val totalDisposable = it.clearableCache + it.removable
                                 formatNoteSize(context, totalDisposable)
                             },
-                            description = "Removes older version snapshots and rebuildable preview cache. All your saved notes, media, folders, settings, and unsaved drafts are 100% kept intact.",
+                            description = "Removes the reviewed older versions and eligible preview cache, and resets saved Undo / Redo history. Current notes, saved media, folders, settings and recovery drafts are excluded. Removed versions cannot be restored.",
                             actionButtonText = "Review & clear disposable storage",
                             onActionClick = {
                                 perform {

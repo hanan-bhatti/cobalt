@@ -72,7 +72,7 @@ fun CaptureDraftRecoveryScreen(onBack: () -> Unit) {
             StorageActionCard(
                 "Autosaved drafts",
                 formatNoteSize(context, report.recovery),
-                "Unsaved writing and interrupted edits saved automatically so your work is never lost. You can recover any draft as a new note or export it as Markdown."
+                "Available recovery drafts from unsaved writing and interrupted edits. Only writing captured in a saved draft can be recovered. Restore a draft as a new note or export it as Markdown."
             )
         } }
         item { StorageMessage("Recovering creates a new note with the complete draft. You can also export a Markdown copy.") }

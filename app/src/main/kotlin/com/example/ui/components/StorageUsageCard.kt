@@ -148,7 +148,7 @@ fun StorageUsageCard(report: NoteStorageManager.Report?, busy: Boolean) {
                     color = colors.onSurfaceVariant
                 )
                 Text(
-                    "All notes and media are stored locally on this device. Cache and temporary space can be cleared safely anytime.",
+                    "This shows storage used by Cobalt on this device. Review eligible cache and older versions in Cache & database before clearing space.",
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.onSurfaceVariant.copy(alpha = 0.8f)
                 )
