@@ -31,6 +31,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.ui.Alignment
+import androidx.core.view.WindowCompat
 import com.example.ui.theme.MyApplicationTheme
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.CancellationException

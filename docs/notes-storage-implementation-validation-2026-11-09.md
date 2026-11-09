@@ -1,6 +1,6 @@
 # Shared note storage implementation and validation
 
-Implementation completed; final device validation is in progress on November 9, 2026. The remaining checks are identified below.
+Implementation and device/release validation completed on November 9, 2026; final snapshot restoration is being verified.
 
 This implements the [researched architecture](notes-storage-architecture-research-2026-11-09.md) after the [original audit](notes-storage-validation-2026-11-09.md). The research prototype measurements are not Android application measurements.
 
@@ -71,7 +71,15 @@ This run took 2,226 seconds, including independent expected-file updates, full r
 
 Runtime: SQLite **3.50.6**, journal `truncate`, synchronous **3 (EXTRA)**, page size 4,096 B. The older framework SQLite version reinforces the documented choice of rollback journaling over concurrent WAL.
 
-Remaining release check: full cleanup followed by complete snapshot restoration.
+### Final release cleanup
+
+The final minified, non-debuggable APK was installed in place and its installed bytes matched the built artifact. A short tap left the review dialog open and did not clean anything. A continuous 5,300 ms pointer hold ran cleanup once and removed **7 disposable versions** plus safe cache.
+
+The post-cleanup release library remained **67 items / 44 text**, including the one new synthetic Quick Note. Recovery remained **3.1 kB**, current notes/media remained rounded **1.1 GB**, and media amounts remained unchanged. History fell from **50 MB to 1.7 kB**; the remaining protected history stayed retained for recovery. Cache showed 6.2 MB immediately in maintenance, then 5.5 MB on the later storage scan as ordinary cache work settled. Database/settings fell from rounded 2.4 MB to 2.0 MB. The 50 MB saved body remained readable with its exact test marker after cleanup and process restart.
+
+The Android crash buffer contained no Cobalt process-crash events, and the last-ANR report did not mention Cobalt. These checks are scoped observations of available buffers, not an absence-of-crashes guarantee across all devices.
+
+The complete pre-test snapshot is being restored before final delivery so reviewed cleanup does not permanently remove the original library's historical versions or drafts. Final library/artifact verification is recorded below.
 
 ## Artifacts and preservation
 
@@ -86,9 +94,13 @@ Private debug backups, original APK, release copy, logs, screenshots and measure
 - [Final disk-full recovery/retry](../build/notes-shared-validation-20261109/device-sqlite-full-fixed.log)
 - [50 MB/100-edit measurements](../build/notes-shared-validation-20261109/device-50mb-100-edits.json)
 - [50 MB/100-edit Android log](../build/notes-shared-validation-20261109/device-50mb-100-edits.log)
-- [Actual process-kill evidence](../build/notes-shared-validation-20261109/process-death/)
+- [Actual process-kill evidence after the final fix](../build/notes-shared-validation-20261109/process-death-final/)
 - [Release large-note recovery/save/navigation](../build/notes-shared-validation-20261109/release-large-ui.json)
 - [Release typing and saved navigation](../build/notes-shared-validation-20261109/release-typing.json)
+- [Final release cleanup results](../build/notes-shared-validation-20261109/release-cleanup.json)
+- [Final release build including vital lint](../build/notes-shared-release-final-retry.log)
 - [Installed release artifact metadata](../build/notes-shared-validation-20261109/release-artifact.json)
 
 No claim of hardware power-loss certification is made. Reliability depends on acknowledged synced writes, validation, recovery and independent backups; shared version history is deliberately not presented as an independent corruption backup.
+
+Final APK SHA-256: `02cc3a1f7cb616c1167ee50e626e90b85fa50ea2c63f0bd9c1b15def3399c002`. The earlier release used for typing and large editor probes is retained separately; the final APK adds preservation of primary SQLite write failures. The 50 MB/100-edit debug measurement ran before that error-path-only fix; final debug verified SQLite-full recovery/retry and both actual process-kill phases afterward. The final release verified cleanup and retained large-body reading after restart. No benchmark from the separate research prototype is substituted for application measurements.
