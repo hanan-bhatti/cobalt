@@ -28,6 +28,7 @@ import com.example.data.local.CustomFolderEntity
 import com.example.data.local.SavedItemEntity
 import com.example.data.model.SavedItem
 import com.example.data.model.SavedItemType
+import com.example.data.model.calculateSizeBytes
 import com.example.data.remote.Content
 import com.example.data.remote.GenerateContentRequest
 import com.example.data.remote.InlineData
@@ -483,7 +484,8 @@ class CobaltRepository(
         val guarded = sanitizeItemTitle(item)
         fun prepare(): SavedItem {
             val itemToSave = persistLocalMedia(guarded)
-            val updatedItem = itemToSave.copy(timestamp = System.currentTimeMillis())
+            val itemSize = itemToSave.calculateSizeBytes()
+            val updatedItem = itemToSave.copy(sizeBytes = itemSize, timestamp = System.currentTimeMillis())
             return updatedItem
         }
         if (com.example.notes.NotePersistence.isNote(guarded)) notePersistence.save(prepare()) else {
@@ -583,14 +585,11 @@ class CobaltRepository(
             val itemToSave = persistLocalMedia(guarded)
             val itemSize = when {
                 mediaBytes != null -> mediaBytes.size.toLong()
-                (itemToSave.thumbnailPath ?: itemToSave.content).startsWith("/") -> java.io.File(itemToSave.thumbnailPath ?: itemToSave.content).length()
-                itemToSave.type == SavedItemType.IMAGE || itemToSave.type == SavedItemType.VIDEO || itemToSave.type == SavedItemType.AUDIO -> itemToSave.sizeBytes
-                com.example.notes.NotePersistence.isNote(itemToSave) -> itemToSave.byteLength
-                else -> itemToSave.content.toByteArray().size.toLong()
+                else -> itemToSave.calculateSizeBytes()
             }
             val finalItem = itemToSave.copy(sizeBytes = itemSize, timestamp = if (itemToSave.timestamp == 0L) System.currentTimeMillis() else itemToSave.timestamp, updatedAt = System.currentTimeMillis())
             if (finalItem.type != SavedItemType.LINK) return if (com.example.notes.NotePersistence.isNote(finalItem))
-                notePersistence.save(finalItem) else notePersistence.saveNonNoteLocked(finalItem)
+                notePersistence.save(finalItem, expectedUpdatedAt = itemToSave.updatedAt) else notePersistence.saveNonNoteLocked(finalItem)
             return db.withTransaction {
                 val old = if (finalItem.type == SavedItemType.LINK) savedItemDao.getItemById(finalItem.id) else null
                 val saved = if (com.example.notes.NotePersistence.isNote(finalItem)) notePersistence.save(finalItem) else notePersistence.saveNonNoteLocked(finalItem)

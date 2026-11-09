@@ -18,7 +18,7 @@ import org.robolectric.annotation.Config
 class NoteHistoryCompactorTest {
     @Test fun latestSaveCompactsIntermediateCheckpointsAndKeepsCurrentMarkdown() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
+        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations, sharedStorage = false)
         val id = UUID.randomUUID().toString()
         try {
             val bytes = Random(83).nextBytes(200_000)
@@ -45,7 +45,7 @@ class NoteHistoryCompactorTest {
     }
     @Test fun supersededSaveDoesNotPublishHistoryConversions() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
+        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations, sharedStorage = false)
         val id = UUID.randomUUID().toString()
         val checked = CountDownLatch(1)
         try {

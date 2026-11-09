@@ -34,12 +34,12 @@ class MarkdownStorageTest {
         context = ApplicationProvider.getApplicationContext()
         check(context.packageName.endsWith(".debug"))
         database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
-        store = PrivateMarkdownStore(context)
+        store = PrivateMarkdownStore(context, database = database)
         persistence = NotePersistence(context, database, store)
     }
     @After fun tearDown() {
-        database.close()
         ids.forEach { store.deleteAll(it) }
+        database.close()
     }
     private fun id() = UUID.randomUUID().toString().also { ids.add(it) }
     private fun note(text: String, id: String = id()) = SavedItem(id = id, type = SavedItemType.TEXT, title = "Storage test", content = text)
@@ -109,7 +109,7 @@ class MarkdownStorageTest {
         withContext(Dispatchers.IO) {
             for (stage in PrivateMarkdownStore.WriteStage.entries) {
                 val saved = persistence.save(note("Original $stage"))
-                val faulty = PrivateMarkdownStore(context) { current -> if (current == stage) throw IOException("Injected write failure") }
+                val faulty = PrivateMarkdownStore(context, database = database, checkpoint = { current -> if (current == stage) throw IOException("Injected write failure") })
                 assertTrue(runCatching {
                     NotePersistence(context, database, faulty).save(saved.copy(content = "Replacement $stage", bodyLoaded = true))
                 }.isFailure)

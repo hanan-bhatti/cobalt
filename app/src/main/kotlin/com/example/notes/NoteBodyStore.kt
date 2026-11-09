@@ -21,6 +21,10 @@ interface NoteBodyStore {
         }
     }
     fun writeAtomic(id: String, input: InputStream, allowOversize: Boolean = false, progress: (Long) -> Unit = {}): NoteBodyRef
+    fun writeReplacement(id: String, baseHash: String, input: InputStream, allowOversize: Boolean = false,
+        progress: (Long) -> Unit = {}): NoteBodyRef = writeAtomic(id, input, allowOversize, progress)
+    fun writePieces(id: String, input: InputStream, pieces: List<SharedNotePiece>?, allowOversize: Boolean = false,
+        progress: (Long) -> Unit = {}): NoteBodyRef = writeAtomic(id, input, allowOversize, progress)
     fun verify(id: String, hash: String, bytes: Long): Boolean
     fun delete(id: String, hash: String)
     fun size(id: String, hash: String): Long?
@@ -38,6 +42,8 @@ interface NoteBodyStore {
     fun retireLiveEditor(id: String, token: String) {}
     fun liveEditors(): List<LiveEditorDescriptor> = emptyList()
     fun maintenanceFiles(): List<NoteStorageFile> = emptyList()
+    fun accountingFiles(current: Set<Pair<String, String>>): List<NoteStorageFile> = maintenanceFiles()
+    fun collectSharedStorage() {}
     fun removeMaintenanceFile(entry: NoteStorageFile): Boolean = false
     fun prepareArchivePrevious(id: String, previousHash: String, currentHash: String,
         checkCancelled: () -> Unit = {}): NoteHistoryWrite? = null
@@ -74,12 +80,16 @@ internal object AndroidNoteFileOperations : NoteFileOperations {
 
 class PrivateMarkdownStore(context: Context,
     private val fileOperations: NoteFileOperations = AndroidNoteFileOperations,
-    private val checkpoint: (WriteStage) -> Unit = {}) : NoteBodyStore {
+    private val checkpoint: (WriteStage) -> Unit = {},
+    private val sharedStorage: Boolean = true,
+    private val database: com.example.data.local.AppDatabase? = null) : NoteBodyStore {
     enum class WriteStage { JOURNAL_SYNCED, CHUNK_WRITTEN, DATA_SYNCED, RENAMED, VERIFIED }
     private val appContext = context.applicationContext
     private val fence by lazy { NoteDeletionFence(appContext) }
     private val root = File(context.applicationContext.filesDir, "notes")
     private val work = File(context.applicationContext.cacheDir, "note-body-work")
+    private val shared by lazy { SharedNoteTree(database ?: com.example.data.local.AppDatabase.getDatabase(appContext)) }
+    private fun sharedRoot(id: String, hash: String) = if (sharedStorage) shared.root(key(id), hash) else null
     private fun key(id: String) = sha256(id.toByteArray(Charsets.UTF_8))
     private fun directory(id: String) = File(root, key(id))
     private fun file(id: String, hash: String): File {
@@ -89,6 +99,7 @@ class PrivateMarkdownStore(context: Context,
     private fun delta(id: String, hash: String) = File(file(id, hash).parentFile, "$hash.delta")
 
     override fun materialize(id: String, hash: String) {
+        if (sharedRoot(id, hash) != null) return
         if (file(id, hash).isFile) return
         val restored = open(id, hash).use { writeAtomic(id, it, allowOversize = true) }
         check(restored.hash == hash) { "History restoration mismatch; versions retained" }
@@ -112,21 +123,29 @@ class PrivateMarkdownStore(context: Context,
         require(entry.directoryKey.matches(Regex("[0-9a-f]{64}")) && entry.hash != null)
         val dir = File(root, entry.directoryKey)
         val source = File(dir, entry.name)
-        check(source.isFile && source.length() == entry.bytes && source.lastModified() == entry.modified) { "File changed; refresh Storage" }
         val hash = entry.hash!!
+        if (entry.name.endsWith(".tree")) {
+            val ref = requireNotNull(shared.root(entry.directoryKey, hash)) { "Shared version unavailable" }
+            check(ref.created == entry.modified) { "Version changed; refresh Storage" }
+            return@guarded leased(entry.directoryKey, hash, shared.open(ref))
+        }
+        check(source.isFile && source.length() == entry.bytes && source.lastModified() == entry.modified) { "File changed; refresh Storage" }
         val input = if (entry.name.endsWith(".md")) source.inputStream() else {
             NoteVersionDelta.open(source.inputStream(), hash) { header ->
                 val base = File(dir, "${header.baseHash}.md")
-                check(base.isFile && base.length() == header.baseBytes) { "History anchor missing" }
-                val reader = RandomAccessFile(base, "r")
+                val sharedBase = if (sharedStorage) shared.root(entry.directoryKey, header.baseHash) else null
+                check(sharedBase?.bytes == header.baseBytes || base.isFile && base.length() == header.baseBytes) { "History anchor missing" }
+                val reader = if (sharedBase != null) shared.reader(sharedBase) else null
+                val fileReader = if (reader == null) RandomAccessFile(base, "r") else null
                 NoteBodyLeases.acquire(entry.directoryKey, header.baseHash)
                 object : NoteRangeReader {
                     override fun read(offset: Long, count: Int): ByteArray {
                         require(offset >= 0 && count in 0..NoteSizePolicy.IO_CHUNK_BYTES)
-                        reader.seek(offset)
-                        return ByteArray(minOf(count.toLong(), (reader.length() - offset).coerceAtLeast(0)).toInt()).also(reader::readFully)
+                        if (reader != null) return reader.read(offset, count)
+                        fileReader!!.seek(offset)
+                        return ByteArray(minOf(count.toLong(), (fileReader.length() - offset).coerceAtLeast(0)).toInt()).also(fileReader::readFully)
                     }
-                    override fun close() { try { reader.close() } finally { NoteBodyLeases.release(entry.directoryKey, header.baseHash) } }
+                    override fun close() { try { reader?.close(); fileReader?.close() } finally { NoteBodyLeases.release(entry.directoryKey, header.baseHash) } }
                 }
             }
         }
@@ -144,6 +163,7 @@ class PrivateMarkdownStore(context: Context,
     /** Older versions use one-level deltas. The current body and every anchor stay ordinary .md. */
     override fun prepareArchivePrevious(id: String, previousHash: String, currentHash: String,
         checkCancelled: () -> Unit): NoteHistoryWrite? {
+        if (sharedRoot(id, previousHash) != null || sharedRoot(id, currentHash) != null) return null
         if (previousHash == currentHash) return null
         val runtime = Runtime.getRuntime()
         if (runtime.maxMemory() - (runtime.totalMemory() - runtime.freeMemory()) < 32L * 1024 * 1024) return null
@@ -281,17 +301,26 @@ class PrivateMarkdownStore(context: Context,
         if (dir.isDirectory) syncDirectory(dir)
     }
 
-    override fun maintenanceFiles(): List<NoteStorageFile> = root.listFiles().orEmpty()
+    private fun filesystemFiles(): List<NoteStorageFile> = root.listFiles().orEmpty()
         .filter { it.isDirectory && it.name.matches(Regex("[0-9a-f]{64}")) }
         .flatMap { dir -> dir.listFiles().orEmpty().filter { it.isFile }.map {
             NoteStorageFile(dir.name, it.name, it.length(), it.lastModified())
         } }
+
+    override fun maintenanceFiles(): List<NoteStorageFile> = filesystemFiles() + if (sharedStorage) shared.accounting(emptySet()) else emptyList()
+    override fun accountingFiles(current: Set<Pair<String, String>>) = filesystemFiles() + if (sharedStorage) shared.accounting(current) else emptyList()
+    override fun collectSharedStorage() { if (sharedStorage) shared.collect() }
 
     override fun removeMaintenanceFile(entry: NoteStorageFile): Boolean {
         require(entry.directoryKey.matches(Regex("[0-9a-f]{64}")))
         require(entry.hash != null || (entry.isRetiredJournal && entry.name.matches(Regex("[0-9a-f-]{36}\\.edits\\.retired"))))
         val dir = File(root, entry.directoryKey)
         val target = File(dir, entry.name)
+        if (entry.name.endsWith(".tree")) return NoteBodyLeases.guarded {
+            if (entry.directoryKey to entry.hash!! in historyAnchors() ||
+                NoteBodyLeases.active(entry.directoryKey, entry.hash) || entry.hash in NoteGenerationHistory.protectedHashes()) return@guarded false
+            shared.remove(entry.directoryKey, entry.hash, entry.modified)
+        }
         // A reviewed cleanup plan cannot remove a file that changed after the scan.
         val removed = NoteBodyLeases.guarded {
             if (entry.hash != null && entry.directoryKey to entry.hash!! in historyAnchors()) return@guarded false
@@ -307,24 +336,28 @@ class PrivateMarkdownStore(context: Context,
         return true
     }
 
-    override fun size(id: String, hash: String): Long? = file(id, hash).takeIf { it.isFile }?.length()
+    override fun size(id: String, hash: String): Long? = sharedRoot(id, hash)?.bytes ?: file(id, hash).takeIf { it.isFile }?.length()
         ?: delta(id, hash).takeIf { it.isFile }?.inputStream()?.use { input ->
             NoteVersionDelta.inspect(input).also { check(it.targetHash == hash) }.targetBytes
         }
 
     override fun open(id: String, hash: String): InputStream = NoteBodyLeases.guarded {
+        sharedRoot(id, hash)?.let { return@guarded leased(key(id), hash, shared.open(it)) }
         val body = file(id, hash)
         val input = if (body.isFile) FileInputStream(body) else {
             NoteVersionDelta.open(FileInputStream(delta(id, hash)), hash) { header ->
-                check(file(id, header.baseHash).isFile && file(id, header.baseHash).length() == header.baseBytes) {
+                check(size(id, header.baseHash) == header.baseBytes) {
                     "History anchor missing; version retained"
                 }
                 openRangeReader(id, header.baseHash)
             }
         }
-        val identity = key(id)
+        leased(key(id), hash, input)
+    }
+
+    private fun leased(identity: String, hash: String, input: InputStream): InputStream {
         NoteBodyLeases.acquire(identity, hash)
-        object : FilterInputStream(input) {
+        return object : FilterInputStream(input) {
             private var closed = false
             override fun close() {
                 if (closed) return
@@ -335,6 +368,19 @@ class PrivateMarkdownStore(context: Context,
     }
 
     override fun openRangeReader(id: String, hash: String): NoteRangeReader {
+        sharedRoot(id, hash)?.let { ref ->
+            return NoteBodyLeases.guarded {
+                val reader = shared.reader(ref)
+                NoteBodyLeases.acquire(key(id), hash)
+                object : NoteRangeReader {
+                    private var closed = false
+                    override fun read(offset: Long, count: Int) = reader.read(offset, count)
+                    override fun close() {
+                        if (!closed) { closed = true; try { reader.close() } finally { NoteBodyLeases.release(key(id), hash) } }
+                    }
+                }
+            }
+        }
         if (!file(id, hash).isFile) {
             // History browsing is infrequent; bounded streaming avoids a resident reconstructed String.
             // The current body is always materialized before Room switches to it.
@@ -382,6 +428,7 @@ class PrivateMarkdownStore(context: Context,
 
     override fun readRange(id: String, hash: String, offset: Long, count: Int): ByteArray {
         require(offset >= 0 && count in 0..NoteSizePolicy.IO_CHUNK_BYTES)
+        if (sharedRoot(id, hash) != null) return openRangeReader(id, hash).use { it.read(offset, count) }
         if (!file(id, hash).isFile) return openRangeReader(id, hash).use { it.read(offset, count) }
         return RandomAccessFile(file(id, hash), "r").use { input ->
             input.seek(offset)
@@ -392,6 +439,7 @@ class PrivateMarkdownStore(context: Context,
     }
 
     override fun writeAtomic(id: String, input: InputStream, allowOversize: Boolean, progress: (Long) -> Unit): NoteBodyRef {
+        if (sharedStorage) return writePieces(id, input, null, allowOversize, progress)
         fence.requireAlive(id)
         val dir = directory(id)
         val token = UUID.randomUUID().toString()
@@ -447,9 +495,9 @@ class PrivateMarkdownStore(context: Context,
             FileOutputStream(journal).use { it.write("VERIFIED\n$hash\n$bytes\n".toByteArray()); it.fd.sync() }
             syncDirectory(dir)
             checkpoint(WriteStage.VERIFIED)
-            val preview = prefix.toByteArray().toString(Charsets.UTF_8)
+            val preview = NoteTextMetadata.preview(prefix.toByteArray().toString(Charsets.UTF_8)
                 .replace(Regex("[\\r\\n\\t]+"), " ").replace("\u0000", "")
-                .replace(Regex("^\\s*[#>*-]+\\s*"), "").take(NoteSizePolicy.PREVIEW_CHARACTERS)
+                .replace(Regex("^\\s*[#>*-]+\\s*"), ""))
             return NoteBodyRef(hash, bytes, preview)
         } catch (error: Throwable) {
             temp.delete() // Never delete any pre-existing body generation on failure.
@@ -461,6 +509,39 @@ class PrivateMarkdownStore(context: Context,
         }
     }
 
+    override fun writePieces(id: String, input: InputStream, pieces: List<SharedNotePiece>?, allowOversize: Boolean,
+        progress: (Long) -> Unit): NoteBodyRef {
+        if (!sharedStorage) return writeAtomic(id, input, allowOversize, progress)
+        fence.requireAlive(id)
+        val dir = directory(id)
+        NoteBodyLeases.guarded {
+            check(dir.isDirectory || dir.mkdirs()) { "Private note directory unavailable" }
+            syncDirectory(root.parentFile!!); syncDirectory(root); syncDirectory(dir)
+        }
+        val bases = pieces.orEmpty().mapNotNull { it.hash }.toSet()
+        NoteBodyLeases.guarded { bases.forEach { NoteBodyLeases.acquire(key(id), it) } }
+        try {
+            for (hash in bases) if (sharedRoot(id, hash) == null) open(id, hash).use { original ->
+                    val saved = shared.write(key(id), original, true, { progress(0) })
+                    check(saved.hash == hash) { "Legacy migration checksum mismatch" }
+                    shared.committed(key(id), hash)
+                    // Deltas can read a shared anchor through the range interface. Existing .md handles survive unlink.
+                    NoteBodyLeases.guarded {
+                        val source = file(id, hash)
+                        if (source.isFile) { check(source.delete()) { "Verified legacy duplicate could not be removed" }; syncDirectory(dir) }
+                    }
+            }
+            return shared.write(key(id), input, allowOversize, { bytes -> fence.requireAlive(id); progress(bytes) }, pieces,
+                ensureBase = { hash -> requireNotNull(sharedRoot(id, hash)) { "Shared editor base unavailable" } }, checkpoint = checkpoint)
+        } finally { NoteBodyLeases.guarded { bases.forEach { NoteBodyLeases.release(key(id), it) } } }
+    }
+
+    override fun writeReplacement(id: String, baseHash: String, input: InputStream, allowOversize: Boolean,
+        progress: (Long) -> Unit): NoteBodyRef {
+        if (!sharedStorage) return writeAtomic(id, input, allowOversize, progress)
+        return NoteReplacementStorage.write(this, work, id, baseHash, input, allowOversize, progress)
+    }
+
     override fun verify(id: String, hash: String, bytes: Long): Boolean {
         if (size(id, hash) != bytes) return false
         return open(id, hash).use { digest(it) } == hash
@@ -468,7 +549,13 @@ class PrivateMarkdownStore(context: Context,
 
     /** Called after the DB commit; journals never authorize changing a DB reference. */
     override fun committed(id: String, hash: String) {
+        if (sharedRoot(id, hash) != null) shared.committed(key(id), hash)
         var changed = false
+        if (sharedRoot(id, hash) != null) {
+            for (copy in listOf(file(id, hash), delta(id, hash))) if (copy.isFile) {
+                check(copy.delete()) { "Verified shared body retained; legacy duplicate cleanup needs retry" }; changed = true
+            }
+        }
         // A restored version has become a complete current Markdown body again.
         if (file(id, hash).isFile && delta(id, hash).isFile && delta(id, hash).delete()) changed = true
         directory(id).listFiles()?.filter { it.extension == "journal" }?.forEach { journal ->
@@ -481,6 +568,10 @@ class PrivateMarkdownStore(context: Context,
     override fun delete(id: String, hash: String) {
         check(key(id) to hash !in historyAnchors()) { "History anchor is still referenced" }
         val body = file(id, hash)
+        if (sharedRoot(id, hash) != null) NoteBodyLeases.guarded {
+            check(!NoteBodyLeases.active(key(id), hash)) { "Note generation still in use" }
+            shared.remove(key(id), hash)
+        }
         if (body.exists() && !body.delete()) throw IOException("Cannot remove superseded body")
         val history = delta(id, hash)
         if (history.exists() && !history.delete()) throw IOException("Cannot remove superseded history")
@@ -488,6 +579,10 @@ class PrivateMarkdownStore(context: Context,
     }
 
     override fun deleteAll(id: String) = NoteBodyLeases.guarded {
+        if (sharedStorage) {
+            check(!NoteBodyLeases.activeDirectory(key(id))) { "Note generation still in use" }
+            shared.removeAll(key(id))
+        }
         val dir = directory(id)
         if (!dir.exists()) return@guarded
         dir.listFiles()?.forEach { if (!it.delete()) throw IOException("Could not remove a private body generation") }

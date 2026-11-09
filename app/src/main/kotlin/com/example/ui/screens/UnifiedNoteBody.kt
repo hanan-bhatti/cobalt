@@ -46,8 +46,6 @@ fun UnifiedNoteBody(item: SavedItem, viewModel: CobaltViewModel, plain: Boolean,
                             val entry = drafts.save(item.id, hash, start, end, updated)
                             val saved = drafts.apply(item.id, entry)
                             adopt(saved.contentHash!!)
-                            viewModel.noteGenerationHistory(item.id).record(NoteGeneration(hash, item.byteLength, item.preview),
-                                NoteGeneration(saved.contentHash!!, saved.byteLength, saved.preview))
                             viewModel.acceptDetailTaskSave(saved, hash)
                             failure = null
                         } catch (cancel: CancellationException) { throw cancel }
@@ -90,6 +88,9 @@ fun NoteDetailActions(
     var failureMessage by remember { mutableStateOf<String?>(null) }
     var work by remember { mutableStateOf<Job?>(null) }
     val history = viewModel.noteGenerationHistory(item.id)
+    val historyRevision by history.changes.collectAsState()
+    val undoChange = remember(history, historyRevision) { history.undoChange }
+    val redoChange = remember(history, historyRevision) { history.redoChange }
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/markdown")) { uri ->
         if (uri != null) {
             busy = true
@@ -112,8 +113,7 @@ fun NoteDetailActions(
         work = scope.launch {
             try {
                 val saved = persistence.restoreGeneration(item.id, if (undo) change.after.hash else change.before.hash,
-                    if (undo) change.before else change.after)
-                if (undo) history.didUndo(change) else history.didRedo(change)
+                    if (undo) change.before else change.after, historyDirection = if (undo) -1 else 1)
                 viewModel.showDetailItem(saved)
             } catch (cancel: CancellationException) { throw cancel }
             catch (_: Exception) { failureMessage = "Could not restore this saved version. Current note retained." }
@@ -138,8 +138,8 @@ fun NoteDetailActions(
             item = item,
             plain = plain,
             onPlainChange = onPlainChange,
-            canUndo = history.undoChange != null && !busy,
-            canRedo = history.redoChange != null && !busy,
+            canUndo = undoChange != null && !busy,
+            canRedo = redoChange != null && !busy,
             onUndo = { restore(true) },
             onRedo = { restore(false) },
             onFindInNote = { onStartSearch() },

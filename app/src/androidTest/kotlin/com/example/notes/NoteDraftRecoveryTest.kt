@@ -47,7 +47,7 @@ class NoteDraftRecoveryTest {
             }
         }
         database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
-        persistence = NotePersistence(context, database, PrivateMarkdownStore(context))
+        persistence = NotePersistence(context, database, PrivateMarkdownStore(context, database = database))
     }
     @After fun tearDown() {
         database.close()

@@ -22,7 +22,7 @@ class TrashManagerTest {
     private class Fixture : AutoCloseable {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        val files = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
+        val files = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations, sharedStorage = false)
         var failAuxiliaryDelete = false
         val store = object : NoteBodyStore by files {
             override fun deleteAll(id: String) {

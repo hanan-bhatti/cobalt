@@ -13,7 +13,7 @@ import java.io.File
 @android.annotation.SuppressLint("UseKtx")
 class TrashManager(context: Context,
     private val database: AppDatabase = AppDatabase.getDatabase(context.applicationContext),
-    private val store: NoteBodyStore = PrivateMarkdownStore(context.applicationContext),
+    private val store: NoteBodyStore = PrivateMarkdownStore(context.applicationContext, database = database),
     private val now: () -> Long = System::currentTimeMillis,
     private val scheduleWork: Boolean = true,
     private val fileOperations: NoteFileOperations = AndroidNoteFileOperations) {
@@ -200,12 +200,14 @@ class TrashManager(context: Context,
             }
         }
         database.withTransaction {
+            database.openHelper.writableDatabase.execSQL("DELETE FROM note_history_state WHERE noteId=?", arrayOf(id))
             dao.deleteNoteSearch(id)
             database.traktEpisodeDao().deleteItem(id)
             database.traktOutboxDao().deleteItem(id)
             dao.deleteById(id)
             trash.remove(id)
         }
+        NoteGenerationHistory.clearNote(id)
     }
     private fun promoteCacheMedia(item: com.example.data.local.SavedItemEntity): Map<String, File> {
         val root = context.cacheDir.canonicalPath + File.separator

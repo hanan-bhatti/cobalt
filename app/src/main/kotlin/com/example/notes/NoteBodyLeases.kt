@@ -10,4 +10,5 @@ internal object NoteBodyLeases {
     }
     @Synchronized fun <T> guarded(action: () -> T): T = action()
     @Synchronized fun active(key: String, hash: String) = (readers[key to hash] ?: 0) > 0
+    @Synchronized fun activeDirectory(key: String) = readers.keys.any { it.first == key }
 }

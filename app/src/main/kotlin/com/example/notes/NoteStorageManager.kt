@@ -15,7 +15,7 @@ import coil.imageLoader
 @OptIn(coil.annotation.ExperimentalCoilApi::class)
 class NoteStorageManager(context: Context,
     private val database: AppDatabase = AppDatabase.getDatabase(context.applicationContext),
-    private val store: NoteBodyStore = PrivateMarkdownStore(context.applicationContext)) {
+    private val store: NoteBodyStore = PrivateMarkdownStore(context.applicationContext, database = database)) {
     private val context = context.applicationContext
     private val prefs = this.context.getSharedPreferences("note_storage_management", Context.MODE_PRIVATE)
     data class Report(val current: Long, val older: Long, val recovery: Long, val database: Long,
@@ -29,8 +29,50 @@ class NoteStorageManager(context: Context,
         val protectedCache: Long get() = (cache - clearableCache).coerceAtLeast(0)
     }
     data class CleanupResult(val bytes: Long, val files: Int)
+    data class DisposableReview(val entries: List<NoteStorageFile>, val cacheBytes: Long, val protectedRecovery: Long, val heads: List<NoteBodyMetadata>) {
+        val bytes get() = entries.sumOf { it.bytes } + cacheBytes
+    }
+    suspend fun reviewDisposable(): DisposableReview = withContext(Dispatchers.IO) {
+        NoteWriteLock.mutex.withLock {
+            val p = plan(verifyCurrent = true, keepOverride = 0, ignoreSavedUndo = true)
+            DisposableReview(p.candidates, p.report.clearableCache, p.report.recovery, database.savedItemDao().allNoteBodyMetadata().sortedBy { it.id })
+        }
+    }
+    /** User-confirmed cleanup. No guessed directories, draft discard, Trash purge or app reset. */
+    suspend fun clearDisposable(review: DisposableReview): CleanupResult = withContext(Dispatchers.IO) {
+        NoteWriteLock.mutex.withLock {
+            val dao = database.savedItemDao()
+            check(dao.allNoteBodyMetadata().sortedBy { it.id } == review.heads) { "Notes changed during confirmation; review cleanup again" }
+            // Fail closed before any destructive work when a saved head cannot be verified.
+            for (note in dao.allNoteBodyMetadata().filter { it.bodyLocation == "FILE" && it.contentHash != null }) {
+                currentCoroutineContext().ensureActive()
+                check(store.verify(note.id, note.contentHash!!, note.byteLength)) { "A saved note needs recovery; cleanup stopped" }
+            }
+            val p = plan(verifyCurrent = true, keepOverride = 0, ignoreSavedUndo = true)
+            val selected = p.candidates.filter { it in review.entries }
+            check(selected.sumOf { it.bytes } <= review.entries.sumOf { it.bytes }) { "Storage changed; review cleanup again" }
+            val connection = database.openHelper.writableDatabase
+            connection.beginTransaction()
+            try { connection.execSQL("DELETE FROM note_history_state"); connection.setTransactionSuccessful() }
+            finally { connection.endTransaction() }
+            NoteGenerationHistory.clearSavedNavigation()
+            var bytes = 0L; var count = 0
+            for (entry in selected.sortedBy { if (it.name.endsWith(".delta")) 0 else 1 }) {
+                currentCoroutineContext().ensureActive()
+                if (store.removeMaintenanceFile(entry)) { bytes += entry.bytes; count++ }
+            }
+            store.collectSharedStorage()
+            clearCache()
+            connection.query("PRAGMA wal_checkpoint(TRUNCATE)").use { c -> check(c.moveToFirst() && c.getInt(0) == 0) { "Cleanup completed; database checkpoint needs retry" } }
+            val main = context.getDatabasePath("cobalt_db")
+            // Shrink when capacity permits; otherwise SQLite safely reuses freed pages.
+            if (context.filesDir.usableSpace >= main.length() * 2) connection.execSQL("VACUUM")
+            connection.query("PRAGMA wal_checkpoint(TRUNCATE)").use { it.moveToFirst() }
+            CleanupResult(bytes, count)
+        }
+    }
     data class OlderCopy(val note: com.example.data.model.SavedItem, val hash: String, val bytes: Long, val created: Long,
-        val storedBytes: Long = bytes, val delta: Boolean = false)
+        val storedBytes: Long = bytes, val delta: Boolean = false, val shared: Boolean = false)
     data class RetainedMedia(val relativePath: String, val bytes: Long, val modified: Long)
     data class UnlinkedReview(val notes: List<NoteStorageFile>, val media: List<RetainedMedia>) {
         val bytes get() = notes.sumOf { it.bytes } + media.sumOf { it.bytes }
@@ -50,7 +92,7 @@ class NoteStorageManager(context: Context,
             val metadata = database.savedItemDao().allNoteBodyMetadata()
                 .filter { it.id !in deleted && it.bodyLocation == "FILE" && it.contentHash != null }
                 .associateBy { PrivateMarkdownStore.storageKey(it.id) }
-            val eligible = store.maintenanceFiles().filter { entry ->
+            val eligible = store.accountingFiles(metadata.values.map { PrivateMarkdownStore.storageKey(it.id) to it.contentHash!! }.toSet()).filter { entry ->
                 val note = metadata[entry.directoryKey]
                 note != null && entry.hash != null && entry.hash != note.contentHash
             }.groupBy { it.directoryKey to it.hash }
@@ -63,15 +105,15 @@ class NoteStorageManager(context: Context,
                 note?.takeUnless { it.isDeleted }?.let {
                     OlderCopy(it, entry.hash!!, store.size(id, entry.hash) ?: return@mapNotNull null,
                         entries.maxOf { file -> file.modified }, entries.sumOf { file -> file.bytes },
-                        entries.all { file -> file.name.endsWith(".delta") })
+                        entries.all { file -> file.name.endsWith(".delta") }, entries.any { file -> file.name.endsWith(".tree") })
                 }
             }
         }
     }
 
     suspend fun restore(copy: OlderCopy) = withContext(Dispatchers.IO) {
-        val preview = store.readRange(copy.note.id, copy.hash, 0, 4096).toString(Charsets.UTF_8)
-            .replace(Regex("[\\r\\n\\t]+"), " ").take(NoteSizePolicy.PREVIEW_CHARACTERS)
+        val preview = NoteTextMetadata.preview(store.readRange(copy.note.id, copy.hash, 0, 4096).toString(Charsets.UTF_8)
+            .replace(Regex("[\\r\\n\\t]+"), " "))
         NotePersistence(context, database, store).restoreGeneration(copy.note.id,
             copy.note.contentHash ?: error("The current body is unavailable"),
             NoteGeneration(copy.hash, copy.bytes, preview), requireNoDraft = true)
@@ -198,7 +240,8 @@ class NoteStorageManager(context: Context,
         val protected = ownedCachePaths()
         val cache = context.imageLoader.diskCache
         val previewRoot = cache?.directory?.toString()?.let { File(it).canonicalPath + File.separator }
-        if (previewRoot == null || protected.none { it.startsWith(previewRoot) }) cache?.clear()
+        val cacheRoot = context.cacheDir.canonicalPath + File.separator
+        if (previewRoot != null && previewRoot.startsWith(cacheRoot) && protected.none { it.startsWith(previewRoot) }) cache?.clear()
         context.imageLoader.memoryCache?.clear()
         val work = File(context.cacheDir, "note-body-work")
         if (protected.none { it.startsWith(work.canonicalPath + File.separator) }) NoteCacheWork.clear(work)
@@ -255,7 +298,7 @@ class NoteStorageManager(context: Context,
         }
     }
 
-    private suspend fun plan(verifyCurrent: Boolean = false): Plan {
+    private suspend fun plan(verifyCurrent: Boolean = false, keepOverride: Int? = null, ignoreSavedUndo: Boolean = false): Plan {
         val cancellation = currentCoroutineContext()
         val dao = database.savedItemDao()
         val deletedIds = (dao.deletedIds() + database.trashDao().ids()).toSet()
@@ -276,12 +319,12 @@ class NoteStorageManager(context: Context,
             context.getSharedPreferences("draft_prefs", Context.MODE_PRIVATE).contains("quick_note")) {
             protectedDirectories.add(PrivateMarkdownStore.storageKey("quick-note-draft"))
         }
-        val files = store.maintenanceFiles()
-        files.filter { it.name.endsWith(".edits") || it.name.endsWith(".journal") || it.name.endsWith(".tmp") }
+        val files = store.accountingFiles(notes.map { PrivateMarkdownStore.storageKey(it.id) to it.contentHash!! }.toSet())
+        files.filter { it.name.endsWith(".edits") || it.name.endsWith(".journal") || it.name.endsWith(".tmp") || it.name.endsWith(".stage") }
             .forEach { protectedDirectories.add(it.directoryKey) }
-        val pinned = NoteGenerationHistory.protectedHashes()
+        val pinned = if (ignoreSavedUndo) emptySet() else NoteGenerationHistory.protectedHashes() + NoteHistoryPersistence.protectedHashes(database)
         val links = store.historyLinks()
-        val keep = retention()
+        val keep = keepOverride ?: retention()
         val candidates = ArrayList<NoteStorageFile>()
         val unlinked = ArrayList<NoteStorageFile>()
         var current = 0L; var older = 0L; var recovery = 0L; var trashed = 0L; var unattached = 0L; var unattachedCount = 0
@@ -299,11 +342,13 @@ class NoteStorageManager(context: Context,
             liveEditBuffers += entries.filter { it.name.endsWith(".live.buffer") || it.name.endsWith(".live.state") || it.name.endsWith(".edits") }.sumOf { it.bytes }
             val note = byDirectory[key]
             val bodies = entries.filter { it.hash != null }
-            val preferredCurrent = bodies.firstOrNull { it.name == "${note?.contentHash}.md" }
-                ?: bodies.firstOrNull { it.hash == note?.contentHash }
-            val previous = bodies.filter { it != preferredCurrent }
+            // All representations of the saved hash are authoritative candidates.
+            // Never classify a shared current root as history merely because a
+            // leftover legacy .md with the same name exists (possibly corrupt).
+            val currentBodies = bodies.filter { it.hash == note?.contentHash }
+            val previous = bodies.filter { it.hash != note?.contentHash }
             if (note != null) {
-                current += preferredCurrent?.bytes ?: 0
+                current += currentBodies.sumOf { it.bytes }
                 older += previous.sumOf { it.bytes }
                 recovery += entries.filter { it.hash == null }.sumOf { it.bytes }
                 if (keep < 0 || key in protectedDirectories) continue
@@ -364,7 +409,11 @@ class NoteStorageManager(context: Context,
             }
         }
         fun size(root: File): Long = if (!root.exists()) 0 else root.walkTopDown().filter { it.isFile }.sumOf { cancellation.ensureActive(); it.length() }
-        val dbBytes = size(File(context.applicationInfo.dataDir, "databases"))
+        val mainDatabase = context.getDatabasePath("cobalt_db").canonicalFile
+        val databaseFiles = File(context.applicationInfo.dataDir, "databases").listFiles().orEmpty().filter { it.isFile }.toSet() +
+            listOf(mainDatabase, File(mainDatabase.path + "-wal"), File(mainDatabase.path + "-shm"), File(mainDatabase.path + "-journal"))
+        val physicalDatabaseBytes = databaseFiles.map { it.canonicalFile }.distinct().filter { it.isFile }.sumOf { it.length() }
+        val dbBytes = (physicalDatabaseBytes - files.filter { it.name.endsWith(".tree") }.sumOf { it.bytes }).coerceAtLeast(0)
         val other = context.filesDir.listFiles().orEmpty().filter { it.name != "notes" && it.name != "media" }.sumOf(::size) +
             size(File(context.applicationInfo.dataDir, "shared_prefs"))
         val databaseConnection = database.openHelper.writableDatabase
@@ -373,7 +422,7 @@ class NoteStorageManager(context: Context,
         val ownedCache = ownedCachePaths()
         val diskCache = context.imageLoader.diskCache
         val previewRoot = diskCache?.directory?.toString()?.let { File(it).canonicalPath + File.separator }
-        val previewCache = if (previewRoot != null && ownedCache.any { it.startsWith(previewRoot) }) 0 else diskCache?.size ?: 0
+        val previewCache = if (previewRoot == null || !previewRoot.startsWith(context.cacheDir.canonicalPath + File.separator) || ownedCache.any { it.startsWith(previewRoot) }) 0 else diskCache?.size ?: 0
         // Saved originals can still be in legacy cache paths. They are user media,
         // not rebuildable cache, and must be counted once and protected from Clear.
         var ownedCacheBytes = 0L

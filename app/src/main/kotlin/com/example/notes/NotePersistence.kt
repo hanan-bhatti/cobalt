@@ -52,11 +52,18 @@ class LegacyBodyInputStream(private val dao: SavedItemDao, private val id: Strin
 class NotePersistence(
     context: Context,
     private val database: AppDatabase = AppDatabase.getDatabase(context.applicationContext),
-    val store: NoteBodyStore = PrivateMarkdownStore(context.applicationContext)
+    val store: NoteBodyStore = PrivateMarkdownStore(context.applicationContext, database = database)
 ) {
     private val appContext = context.applicationContext
     private val dao = database.savedItemDao()
     private val deletionFence by lazy { NoteDeletionFence(appContext) }
+    private fun editTime(item: SavedItem, previous: NoteBodyMetadata?) = maxOf(System.currentTimeMillis(), item.updatedAt,
+        previous?.updatedAt?.let { Math.addExact(it, 1) } ?: 0L)
+    private suspend fun unchanged(id: String, previous: NoteBodyMetadata?) {
+        check(dao.getNoteBodyMetadata(id) == previous && dao.isItemDeleted(id) != true) {
+            "Note metadata changed while saving; draft and original retained. Reopen before retrying."
+        }
+    }
 
     internal suspend fun saveNonNoteLocked(item: SavedItem): SavedItem {
         require(!isNote(item) && !item.isDeleted)
@@ -79,17 +86,22 @@ class NotePersistence(
             deletionFence.requireAlive(item.id)
             check(dao.isItemDeleted(item.id) != true) { "This note is in Trash." }
             val previous = dao.getNoteBodyMetadata(item.id)
+            check(previous == null || previous.bodyLocation == "FILE") { "Original note needs migration before committing a draft" }
+            check(previous == null || previous.updatedAt == item.updatedAt) { "Note metadata changed; draft retained" }
             check(previous?.contentHash == item.contentHash) { "Note changed or was deleted; draft retained" }
             check(NoteSizePolicy.acceptsEdit(ref.bytes, previous?.byteLength ?: 0)) { "Note exceeds the permitted edit size; draft retained" }
             check(store.verify(item.id, ref.hash, ref.bytes)) { "Draft verification failed; original retained" }
             currentCoroutineContext().ensureActive()
             val saved = item.copy(content = "", bodyLoaded = false, bodyLocation = "FILE", contentHash = ref.hash,
-                byteLength = ref.bytes, sizeBytes = ref.bytes, preview = ref.preview, formatVersion = 1, bodyMissing = false)
+                byteLength = ref.bytes, sizeBytes = ref.bytes, preview = ref.preview, formatVersion = 1, bodyMissing = false, updatedAt = editTime(item, previous))
             NoteGenerationHistory.protectReplacement(previous?.contentHash)
             database.withTransaction {
+                unchanged(item.id, previous)
                 dao.insertItem(SavedItemEntity.fromDomainModel(saved))
                 index(item.id, ref.hash)
+                NoteHistoryPersistence.change(database, item.id, previous?.contentHash?.let { NoteGeneration(it, previous.byteLength, previous.preview) }, NoteGeneration(ref.hash, ref.bytes, ref.preview))
             }
+            NoteHistoryPersistence.publish(database, item.id)
             runCatching { store.committed(item.id, ref.hash) }
             compactPrevious(item.id, previous?.contentHash, ref.hash)
             saved
@@ -106,8 +118,14 @@ class NotePersistence(
         val previous = dao.getNoteBodyMetadata(item.id)
         if (replaceExisting) {
             check(previous?.contentHash == item.contentHash) { "Note changed or was deleted; original retained" }
+            check(previous == null || previous.updatedAt == item.updatedAt) { "Note metadata changed; reopen before saving" }
         }
-        val ref = store.writeAtomic(item.id, input, allowOversize ||
+        val writer: (InputStream, Boolean, (Long) -> Unit) -> NoteBodyRef = { source, oversized, callback ->
+            if (replaceExisting && previous?.contentHash != null)
+                store.writeReplacement(item.id, previous.contentHash, source, oversized, callback)
+            else store.writeAtomic(item.id, source, oversized, callback)
+        }
+        val ref = writer(input, allowOversize ||
             (replaceExisting && (previous?.byteLength ?: 0) > NoteSizePolicy.IMPORT_MAX_BYTES)) {
             cancellation.ensureActive(); progress(it)
         }
@@ -122,13 +140,16 @@ class NotePersistence(
         }
         cancellation.ensureActive()
         val saved = item.copy(content = "", bodyLoaded = false, bodyLocation = "FILE", contentHash = ref.hash,
-            byteLength = ref.bytes, sizeBytes = ref.bytes, preview = ref.preview, formatVersion = 1, bodyMissing = false)
+            byteLength = ref.bytes, sizeBytes = ref.bytes, preview = ref.preview, formatVersion = 1, bodyMissing = false, updatedAt = editTime(item, previous))
         NoteGenerationHistory.protectReplacement(previous?.contentHash)
         database.withTransaction {
+            unchanged(item.id, previous)
             dao.insertItem(SavedItemEntity.fromDomainModel(saved))
             index(item.id, ref.hash)
+            NoteHistoryPersistence.change(database, item.id, previous?.contentHash?.let { NoteGeneration(it, previous.byteLength, previous.preview) }, NoteGeneration(ref.hash, ref.bytes, ref.preview))
         }
-        runCatching { store.committed(item.id, ref.hash) }
+        NoteHistoryPersistence.publish(database, item.id)
+            runCatching { store.committed(item.id, ref.hash) }
         compactPrevious(item.id, previous?.contentHash, ref.hash)
         // Retain generations for undo and interrupted-edit recovery; reconciliation never guesses which to delete.
         return saved
@@ -146,7 +167,7 @@ class NotePersistence(
         fun isNote(item: SavedItem) = item.type == SavedItemType.TEXT || item.type == SavedItemType.CODE
     }
 
-    suspend fun restoreGeneration(id: String, expectedHash: String, target: NoteGeneration, requireNoDraft: Boolean = false): SavedItem = withContext(Dispatchers.IO) {
+    suspend fun restoreGeneration(id: String, expectedHash: String, target: NoteGeneration, requireNoDraft: Boolean = false, historyDirection: Int = 0): SavedItem = withContext(Dispatchers.IO) {
         NoteWriteLock.mutex.withLock {
             if (requireNoDraft) {
                 check(!appContext.getSharedPreferences("capture_file_sessions", Context.MODE_PRIVATE).contains(id) &&
@@ -165,7 +186,9 @@ class NotePersistence(
                 check(dao.commitFileBody(id, target.hash, target.bytes, target.preview, metadata.updatedAt,
                     maxOf(System.currentTimeMillis(), metadata.updatedAt + 1)) == 1)
                 index(id, target.hash)
+                NoteHistoryPersistence.change(database, id, NoteGeneration(expectedHash, metadata.byteLength, metadata.preview), target, historyDirection)
             }
+            NoteHistoryPersistence.publish(database, id)
             runCatching { store.committed(id, target.hash) }
             dao.getItemById(id)!!.toDomainModel()
         }
@@ -222,7 +245,7 @@ class NotePersistence(
         return result
     }
 
-    suspend fun save(item: SavedItem, progress: (Long) -> Unit = {}): SavedItem = withContext(Dispatchers.IO) {
+    suspend fun save(item: SavedItem, expectedUpdatedAt: Long = item.updatedAt, progress: (Long) -> Unit = {}): SavedItem = withContext(Dispatchers.IO) {
         if (!isNote(item)) {
             return@withContext NoteWriteLock.mutex.withLock { saveNonNoteLocked(item) }
         }
@@ -230,18 +253,23 @@ class NotePersistence(
             deletionFence.requireAlive(item.id)
             check(!item.isDeleted && dao.isItemDeleted(item.id) != true) { "This note is in Trash. Restore it before editing." }
             var old = dao.getNoteBodyMetadata(item.id)
+            check(old == null || old.updatedAt == expectedUpdatedAt) { "Note metadata changed; reopen before saving. Original retained." }
+            if (item.bodyLoaded && old != null && item.contentHash == null) {
+                check(old.bodyLocation != "FILE") { "Note changed; reopen before saving. Original retained." }
+            }
             if (old != null && old.bodyLocation != "FILE") old = migrateOneLocked(item.id)
             if (!item.bodyLoaded) {
                 val current = old ?: if (item.contentHash != null && store.verify(item.id, item.contentHash, item.byteLength)) {
                     // Restoring a deleted metadata row must relink its intact generation, not its preview.
                     NoteBodyMetadata(item.id, "FILE", item.contentHash, item.byteLength, item.preview, 1, item.updatedAt)
                 } else throw IOException("Cannot save a preview as a note body")
-                val entity = SavedItemEntity.fromDomainModel(item).copy(
+                val entity = SavedItemEntity.fromDomainModel(item.copy(updatedAt = editTime(item, old))).copy(
                     content = "", bodyLocation = "FILE", contentHash = current.contentHash,
                     byteLength = current.byteLength, sizeBytes = current.byteLength,
                     preview = current.preview, formatVersion = 1
                 )
                 database.withTransaction {
+                    unchanged(item.id, old)
                     dao.insertItem(entity)
                     if (old == null) index(item.id, current.contentHash!!)
                     else dao.updateNoteSearchTitle(item.id, entity.title)
@@ -256,18 +284,24 @@ class NotePersistence(
                 "Note exceeds 55 MB. Existing oversized notes may be edited without increasing their size."
             }
             val ref = TextUtf8InputStream(item.content).use { input ->
-                store.writeAtomic(item.id, input, allowOversize = (old?.byteLength ?: 0) > NoteSizePolicy.IMPORT_MAX_BYTES) {
+                val callback: (Long) -> Unit = { cancellation.ensureActive(); progress(it) }
+                if (old?.contentHash != null) store.writeReplacement(item.id, old.contentHash!!, input,
+                    (old.byteLength > NoteSizePolicy.IMPORT_MAX_BYTES), callback)
+                else store.writeAtomic(item.id, input, allowOversize = (old?.byteLength ?: 0) > NoteSizePolicy.IMPORT_MAX_BYTES) {
                     cancellation.ensureActive(); progress(it)
                 }
             }
             cancellation.ensureActive()
             val saved = item.copy(bodyLocation = "FILE", contentHash = ref.hash, byteLength = ref.bytes,
-                sizeBytes = ref.bytes, preview = ref.preview, formatVersion = 1, bodyMissing = false)
+                sizeBytes = ref.bytes, preview = ref.preview, formatVersion = 1, bodyMissing = false, updatedAt = editTime(item, old))
             NoteGenerationHistory.protectReplacement(old?.contentHash)
             database.withTransaction {
+                unchanged(item.id, old)
                 dao.insertItem(SavedItemEntity.fromDomainModel(saved))
                 index(item.id, ref.hash)
+                NoteHistoryPersistence.change(database, item.id, old?.contentHash?.let { NoteGeneration(it, old.byteLength, old.preview) }, NoteGeneration(ref.hash, ref.bytes, ref.preview))
             }
+            NoteHistoryPersistence.publish(database, item.id)
             runCatching { store.committed(item.id, ref.hash) }
             compactPrevious(item.id, old?.contentHash, ref.hash)
 
@@ -291,6 +325,7 @@ class NotePersistence(
                 dao.markBodyMissing(id, true)
                 return@withLock metadata.toDomainModel().copy(bodyMissing = true)
             }
+            NoteHistoryPersistence.publish(database, id)
             val summary = dao.getItemById(id)!!.toDomainModel()
             if (!includeSmallBody || ref.byteLength >= NoteSizePolicy.TIER_A_MAX_BYTES) return@withLock summary
             val text = store.open(id, ref.contentHash!!).use { input ->
@@ -334,7 +369,7 @@ class NotePersistence(
                 }
                 val cancellation = currentCoroutineContext()
                 val ref = table.openStream().use { input ->
-                    store.writeAtomic(id, input, current.byteLength > NoteSizePolicy.IMPORT_MAX_BYTES) {
+                    store.writePieces(id, input, table.sharedUtf8Pieces(id), current.byteLength > NoteSizePolicy.IMPORT_MAX_BYTES) {
                         cancellation.ensureActive()
                     }
                 }
@@ -344,7 +379,9 @@ class NotePersistence(
                     check(dao.commitFileBody(id, ref.hash, ref.bytes, ref.preview, current.updatedAt,
                         maxOf(System.currentTimeMillis(), current.updatedAt + 1)) == 1)
                     index(id, ref.hash)
+                    NoteHistoryPersistence.change(database, id, NoteGeneration(hash, current.byteLength, current.preview), NoteGeneration(ref.hash, ref.bytes, ref.preview))
                 }
+                NoteHistoryPersistence.publish(database, id)
                 runCatching { store.committed(id, ref.hash) }
                 compactPrevious(id, hash, ref.hash)
                 // Previous verified generation remains available for undo.

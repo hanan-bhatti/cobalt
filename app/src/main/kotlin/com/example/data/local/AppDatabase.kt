@@ -25,7 +25,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [SavedItemEntity::class, CustomFolderEntity::class, NoteSearchEntity::class, TrashEntryEntity::class, LinkPreviewEntity::class, TraktOutboxEntity::class, TraktEpisodeEntity::class, MediaTombstoneEntity::class], version = 14, exportSchema = false)
+@Database(entities = [SavedItemEntity::class, CustomFolderEntity::class, NoteSearchEntity::class, TrashEntryEntity::class, LinkPreviewEntity::class, TraktOutboxEntity::class, TraktEpisodeEntity::class, MediaTombstoneEntity::class, NoteChunkEntity::class, NoteNodeEntity::class, NoteRootEntity::class, NoteHistoryStateEntity::class], version = 15, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun mediaTombstoneDao(): MediaTombstoneDao
     abstract fun traktEpisodeDao(): TraktEpisodeDao
@@ -110,6 +110,17 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) = ensureMediaMetadata(db)
         }
 
+        val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS note_chunks (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, digest BLOB NOT NULL, data BLOB NOT NULL)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_note_chunks_digest ON note_chunks(digest)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS note_nodes (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `left` INTEGER NOT NULL, `right` INTEGER NOT NULL, chunk INTEGER NOT NULL, `offset` INTEGER NOT NULL, length INTEGER NOT NULL, bytes INTEGER NOT NULL, height INTEGER NOT NULL, digest BLOB NOT NULL)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_note_nodes_digest ON note_nodes(digest)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS note_roots (owner TEXT NOT NULL, hash TEXT NOT NULL, root INTEGER NOT NULL, bytes INTEGER NOT NULL, preview TEXT NOT NULL, created INTEGER NOT NULL, staged INTEGER NOT NULL, PRIMARY KEY(owner,hash))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS note_history_state (noteId TEXT NOT NULL PRIMARY KEY, state TEXT NOT NULL)")
+            }
+        }
+
         private fun ensureMediaMetadata(db: SupportSQLiteDatabase) {
             fun addIfMissing(table: String, column: String) {
                 val exists = db.query("PRAGMA table_info(`$table`)").use { cursor ->
@@ -141,7 +152,16 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "cobalt_db"
                 )
-                .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
+                .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
+                // API 24+ includes vendor SQLite engines predating the WAL-reset fix.
+                // Use one framework-managed rollback writer until a patched bundled
+                // engine can replace every openHelper caller together.
+                .setJournalMode(JournalMode.TRUNCATE)
+                .addCallback(object : Callback() {
+                    override fun onOpen(db: SupportSQLiteDatabase) {
+                        db.execSQL("PRAGMA synchronous=EXTRA")
+                    }
+                })
                 .build()
                 INSTANCE = instance
                 instance

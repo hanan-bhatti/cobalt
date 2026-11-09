@@ -27,9 +27,11 @@ class FileEditorSessionJournalTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val context = ApplicationProvider.getApplicationContext<Context>()
         val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        val files = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
+        val files = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations, sharedStorage = false)
         var writes = 0
         val counting = object : NoteBodyStore by files {
+            override fun writePieces(id: String, input: java.io.InputStream, pieces: List<SharedNotePiece>?, allowOversize: Boolean, progress: (Long) -> Unit) = writeAtomic(id, input, allowOversize, progress)
+            override fun writeReplacement(id: String, baseHash: String, input: java.io.InputStream, allowOversize: Boolean, progress: (Long) -> Unit) = writeAtomic(id, input, allowOversize, progress)
             override fun writeAtomic(id: String, input: java.io.InputStream, allowOversize: Boolean, progress: (Long) -> Unit): NoteBodyRef {
                 writes++
                 return files.writeAtomic(id, input, allowOversize, progress)
@@ -74,9 +76,11 @@ class FileEditorSessionJournalTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val context = ApplicationProvider.getApplicationContext<Context>()
         val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        val files = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
+        val files = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations, sharedStorage = false)
         var refuseFullCopy = false
         val failing = object : NoteBodyStore by files {
+            override fun writePieces(id: String, input: java.io.InputStream, pieces: List<SharedNotePiece>?, allowOversize: Boolean, progress: (Long) -> Unit) = writeAtomic(id, input, allowOversize, progress)
+            override fun writeReplacement(id: String, baseHash: String, input: java.io.InputStream, allowOversize: Boolean, progress: (Long) -> Unit) = writeAtomic(id, input, allowOversize, progress)
             override fun writeAtomic(id: String, input: java.io.InputStream, allowOversize: Boolean, progress: (Long) -> Unit): NoteBodyRef {
                 if (refuseFullCopy) throw IOException("Simulated storage full")
                 return files.writeAtomic(id, input, allowOversize, progress)

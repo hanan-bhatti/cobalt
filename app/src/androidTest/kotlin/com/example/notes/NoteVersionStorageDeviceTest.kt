@@ -15,7 +15,7 @@ class NoteVersionStorageDeviceTest {
     @Test fun verifiedHistoryRestoresWithoutChangingTheCurrentBody() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         check(context.packageName.endsWith(".debug"))
-        val store = PrivateMarkdownStore(context)
+        val store = PrivateMarkdownStore(context, sharedStorage = false)
         val id = "delta-device-${UUID.randomUUID()}"
         try {
             val bytes = Random(73).nextBytes(1_000_000)
@@ -41,7 +41,7 @@ class NoteVersionStorageDeviceTest {
     @Test fun discardedPreparedConversionRetainsTheCompleteOldVersion() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         check(context.packageName.endsWith(".debug"))
-        val store = PrivateMarkdownStore(context)
+        val store = PrivateMarkdownStore(context, sharedStorage = false)
         val id = "delta-device-${UUID.randomUUID()}"
         try {
             val base = Random(74).nextBytes(100_000)

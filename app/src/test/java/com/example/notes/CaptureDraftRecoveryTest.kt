@@ -23,7 +23,7 @@ class CaptureDraftRecoveryTest {
     @Test fun orphanLiveStateRecoversANeverSavedNoteWithoutLosingUndoText() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
+        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations, sharedStorage = false)
         val id = UUID.randomUUID().toString()
         var recovered: String? = null
         try {
@@ -47,7 +47,7 @@ class CaptureDraftRecoveryTest {
     @Test fun recoveryRejectsAnActiveEditorThenKeepsTheOriginalAndUsesCurrentDraftSize() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
+        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations, sharedStorage = false)
         val prefs = context.getSharedPreferences("capture_file_sessions", Context.MODE_PRIVATE)
         val item = SavedItem(title = "Existing", type = SavedItemType.TEXT, content = "")
         var recovered: String? = null

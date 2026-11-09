@@ -234,7 +234,11 @@ fun LazyMarkdownNote(id: String, hash: String, bytes: Long, jumpByte: Long, modi
             catch (_: Exception) { failure = true }
             finally { jumping = false }
         }
-        LazyColumn(Modifier.fillMaxSize(), state = state, contentPadding = contentPadding) {
+        if (session.blocks.isEmpty() && !session.finished && !failure) {
+            // An initially visible keyed footer must not follow itself to the end as
+            // scanner batches insert real blocks before it. Start the list with content.
+            Column(Modifier.fillMaxSize().padding(contentPadding)) { header?.invoke(); NoteBodySkeleton() }
+        } else LazyColumn(Modifier.fillMaxSize(), state = state, contentPadding = contentPadding) {
             if (header != null) item(key = "note_header") { header(); Spacer(Modifier.height(28.dp)) }
             items(session.blocks.size, key = { session.blocks[it].start }, contentType = { "note_block" }) { index ->
                 val block = session.blocks[index]

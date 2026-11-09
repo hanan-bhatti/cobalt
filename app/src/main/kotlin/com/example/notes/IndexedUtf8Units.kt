@@ -15,6 +15,25 @@ internal class IndexedUtf8Units private constructor(
         val found = units.binarySearch(character)
         return if (found >= 0) found else (-found - 2).coerceAtLeast(0)
     }
+    /** Null means an IME boundary currently divides a supplementary scalar. */
+    internal fun utf8Offset(character: Long): Long? {
+        require(character in 0..characters.toLong())
+        if (character == characters.toLong()) return source.size
+        val mark = bookmark(character)
+        var units = units[mark]; var offset = bytes[mark]
+        source.openRange(offset, source.size - offset).use { raw ->
+            val input = BufferedInputStream(raw, 8192)
+            while (units < character) {
+                val first = input.read(); check(first >= 0) { "UTF-8 boundary unavailable" }
+                val length = when { first < 0x80 -> 1; first < 0xE0 -> 2; first < 0xF0 -> 3; else -> 4 }
+                val count = if (length == 4) 2 else 1
+                if (units + count > character) return null
+                repeat(length - 1) { check(input.read() in 0x80..0xBF) { "Invalid UTF-8 boundary" } }
+                units += count; offset += length
+            }
+        }
+        return offset
+    }
     override fun read(offset: Long, count: Int): ByteArray {
         require(offset in 0..size && count >= 0)
         return openRange(offset, minOf(count.toLong(), size - offset)).use { it.readBytes() }

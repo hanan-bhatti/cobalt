@@ -20,7 +20,7 @@ class NoteStorageManagerTest {
     private class Fixture : AutoCloseable {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
+        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations, sharedStorage = false)
         val item = SavedItem(type = SavedItemType.TEXT, title = "Storage safety", content = "")
         val old = TextUtf8InputStream("older complete body").use { store.writeAtomic(item.id, it) }
         val current = TextUtf8InputStream("current complete body😀").use { store.writeAtomic(item.id, it) }

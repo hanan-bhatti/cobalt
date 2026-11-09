@@ -240,11 +240,17 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
                 if (revision == document.savedRevision && current.generation != null) return@withLock current.generation to revision
                 val ref = withContext(Dispatchers.IO) {
                     val cancellation = currentCoroutineContext()
-                    disk.openUtf8().use { input -> store.writeAtomic(current.id!!, input,
-                        document.permittedBytes > NoteSizePolicy.IMPORT_MAX_BYTES) { cancellation.ensureActive() } }
+                    val pieces = disk.execute { it.sharedPieces() }
+                    disk.openUtf8().use { input ->
+                        if (pieces == null && current.generation != null) store.writeReplacement(current.id!!,
+                            current.generation.hash, input, document.permittedBytes > NoteSizePolicy.IMPORT_MAX_BYTES) { cancellation.ensureActive() }
+                        else store.writePieces(current.id!!, input, pieces,
+                            document.permittedBytes > NoteSizePolicy.IMPORT_MAX_BYTES) { cancellation.ensureActive() }
+                    }
                 }
                 val next = current.copy(generation = ref, dirty = false, diskToken = document.diskToken, checkpointRevision = revision)
                 withContext(Dispatchers.IO) { snapshot(next); store.committed(current.id!!, ref.hash) }
+                disk.execute { it.acceptCheckpoint(ref) }
                 document.savedRevision = revision; document.byteLength = ref.bytes
                 if (mutable.value.document === document) mutable.value = next
                 return@withLock ref to revision
@@ -267,7 +273,10 @@ class FileEditorSession(context: Context, private val scope: CoroutineScope,
                 val cancellation = currentCoroutineContext()
                 try {
                     ContinuousNoteDocument.stream(frozenContent).use { input ->
-                        store.writeAtomic(current.id!!, input,
+                        val baseHash = current.generation?.hash
+                        if (baseHash != null) store.writeReplacement(current.id!!, baseHash, input,
+                            document.permittedBytes > NoteSizePolicy.IMPORT_MAX_BYTES) { cancellation.ensureActive() }
+                        else store.writeAtomic(current.id!!, input,
                             document.permittedBytes > NoteSizePolicy.IMPORT_MAX_BYTES) { cancellation.ensureActive() }
                     }
                 } finally { frozenContent.release() }

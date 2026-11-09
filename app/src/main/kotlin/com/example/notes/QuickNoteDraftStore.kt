@@ -15,7 +15,7 @@ import kotlinx.coroutines.withContext
 class QuickNoteDraftStore(context: Context, private val persistenceFactory: (Context) -> NotePersistence = { NotePersistence(it) }) {
     private val context = context.applicationContext
     private val prefs = this.context.getSharedPreferences("quick_note_reference", Context.MODE_PRIVATE)
-    private val store = PrivateMarkdownStore(this.context)
+    private val store by lazy { persistenceFactory(this.context).store }
     data class Snapshot(val hash: String, val bytes: Long, val preview: String, val noteId: String, val title: String)
     data class Loaded(val snapshot: Snapshot?, val text: String, val title: String = "")
 
@@ -45,7 +45,8 @@ class QuickNoteDraftStore(context: Context, private val persistenceFactory: (Con
     private fun writeLocked(text: String, allowOversize: Boolean = false, checkCancelled: () -> Unit = {}): Snapshot? {
         val previous = reference()
         val ref = TextUtf8InputStream(text).use { input ->
-            store.writeAtomic(DRAFT_ID, input, allowOversize) { checkCancelled() }
+            if (previous != null) store.writeReplacement(DRAFT_ID, previous.hash, input, allowOversize) { checkCancelled() }
+            else store.writeAtomic(DRAFT_ID, input, allowOversize) { checkCancelled() }
         }
         checkCancelled()
         val snapshot = Snapshot(ref.hash, ref.bytes, ref.preview,
@@ -101,7 +102,9 @@ class QuickNoteDraftStore(context: Context, private val persistenceFactory: (Con
 
     suspend fun clear() = withContext(Dispatchers.IO) {
         NoteWriteLock.mutex.withLock {
-            prefs.edit().clear().commit()
+            check(prefs.edit().remove("hash").remove("bytes").remove("preview").remove("note_id").commit()) {
+                "Could not clear the draft body; recovery retained"
+            }
         }
     }
 

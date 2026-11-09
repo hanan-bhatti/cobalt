@@ -17,7 +17,7 @@ import org.robolectric.annotation.Config
 class NoteVersionArchiveTest {
     @Test fun tenSmallSavedEditsKeepExactHistoryWithoutTenFullCopies() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
+        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations, sharedStorage = false)
         val id = UUID.randomUUID().toString()
         try {
             var body = Random(48).nextBytes(1_000_000)
@@ -54,7 +54,7 @@ class NoteVersionArchiveTest {
                 HostTestNoteFileOperations.syncDirectory(directory)
             }
         }
-        val store = PrivateMarkdownStore(context, fileOperations = operations)
+        val store = PrivateMarkdownStore(context, fileOperations = operations, sharedStorage = false)
         try {
             val base = Random(5).nextBytes(100_000)
             val anchor = base.inputStream().use { store.writeAtomic(id, it) }
@@ -75,7 +75,7 @@ class NoteVersionArchiveTest {
     }
     @Test fun compactedHistoryRestoresExactBytesAndProtectsItsAnchor() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
+        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations, sharedStorage = false)
         val id = UUID.randomUUID().toString()
         try {
             val bytes = Random(17).nextBytes(1_000_000)
@@ -107,7 +107,7 @@ class NoteVersionArchiveTest {
     }
     @Test fun cancelledCompactionRetainsTheCompleteVersion() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
+        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations, sharedStorage = false)
         val id = UUID.randomUUID().toString()
         try {
             val anchor = "a".repeat(100_000).byteInputStream().use { store.writeAtomic(id, it) }

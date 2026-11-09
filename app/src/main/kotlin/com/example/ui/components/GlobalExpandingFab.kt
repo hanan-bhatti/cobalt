@@ -250,7 +250,7 @@ fun GlobalExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
             viewModel.updateQuickDraft(it)
         },
         isSaving = isSaving || !quickDraft.ready || quickDraft.busy,
-        savedDraftPreview = if (userHasEditedInSession) null else quickDraft.snapshot?.takeIf { captureContent.isEmpty() && it.bytes > 0 }?.preview,
+        savedDraftPreview = quickDraft.snapshot?.takeIf { captureContent.isEmpty() && it.bytes > 0 }?.preview,
         draftError = quickDraft.error,
         onRetryDraft = viewModel::loadQuickDraft,
         hasPendingDraft = quickDraft.pending || quickDraft.snapshot != null,
@@ -643,7 +643,7 @@ fun ClassicExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
             viewModel.updateQuickDraft(it)
         },
         isSaving = isSaving || !quickDraft.ready || quickDraft.busy,
-        savedDraftPreview = if (userHasEditedInSession) null else quickDraft.snapshot?.takeIf { captureContent.isEmpty() && it.bytes > 0 }?.preview,
+        savedDraftPreview = quickDraft.snapshot?.takeIf { captureContent.isEmpty() && it.bytes > 0 }?.preview,
         draftError = quickDraft.error,
         onRetryDraft = viewModel::loadQuickDraft,
         hasPendingDraft = quickDraft.pending || quickDraft.snapshot != null,
@@ -683,14 +683,17 @@ fun QuickNoteBottomSheet(
     val focusManager = LocalFocusManager.current
     val titleFocusRequester = remember { FocusRequester() }
 
-    var contentValue by remember {
+    var contentValue by remember(isVisible) {
         mutableStateOf(TextFieldValue(text = captureContent, selection = TextRange(captureContent.length)))
     }
-    LaunchedEffect(captureContent) {
-        if (contentValue.text != captureContent) {
-            contentValue = contentValue.copy(text = captureContent, selection = TextRange(captureContent.length))
+    var locallyEdited by remember(isVisible) { mutableStateOf(false) }
+    LaunchedEffect(captureContent, isSaving) {
+        // Hydrate a loading draft once. Persistence echoes never own live input.
+        if (!locallyEdited && contentValue.text != captureContent) {
+            contentValue = TextFieldValue(captureContent, selection = TextRange(captureContent.length))
         }
     }
+    fun submitContent(text: String) { locallyEdited = true; onContentChange(text) }
     var isPreviewMode by remember { mutableStateOf(false) }
 
     val transitionState = remember { MutableTransitionState(isVisible) }
@@ -870,6 +873,7 @@ fun QuickNoteBottomSheet(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .focusRequester(titleFocusRequester)
+                                        .testTag("quick_note_title")
                                 )
 
                                 Spacer(modifier = Modifier.height(8.dp))
@@ -895,7 +899,7 @@ fun QuickNoteBottomSheet(
                                 } else if (!isPreviewMode) {
                                     CobaltSelectionFormattingScope(contentValue, { updated ->
                                         if (!com.example.notes.NoteEditorWindows.requiresWindow(updated.text)) contentValue = updated
-                                        onContentChange(updated.text)
+                                        submitContent(updated.text)
                                     }) {
                                     BasicTextField(
                                         value = contentValue,
@@ -903,7 +907,7 @@ fun QuickNoteBottomSheet(
                                         onValueChange = { incoming ->
                                             val updated = com.example.notes.MarkdownListEditing.adapt(contentValue, incoming)
                                             if (!com.example.notes.NoteEditorWindows.requiresWindow(updated.text)) contentValue = updated
-                                            onContentChange(updated.text)
+                                            submitContent(updated.text)
                                         },
                                         textStyle = MaterialTheme.typography.bodyLarge.copy(
                                             color = MaterialTheme.colorScheme.onSurface,
@@ -929,6 +933,7 @@ fun QuickNoteBottomSheet(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .defaultMinSize(minHeight = 70.dp)
+                                            .testTag("quick_note_body")
                                     )
                                     }
                                 } else {
@@ -950,7 +955,7 @@ fun QuickNoteBottomSheet(
                                                 color = MaterialTheme.colorScheme.onSurface,
                                                 onMarkdownChange = { updated ->
                                                     contentValue = TextFieldValue(text = updated, selection = TextRange(updated.length))
-                                                    onContentChange(updated)
+                                                    submitContent(updated)
                                                 }
                                             )
                                         }
@@ -975,7 +980,7 @@ fun QuickNoteBottomSheet(
                                             textFieldValue = contentValue,
                                             onApplyFormat = { updated ->
                                                 if (!com.example.notes.NoteEditorWindows.requiresWindow(updated.text)) contentValue = updated
-                                                onContentChange(updated.text)
+                                                submitContent(updated.text)
                                             },
                                             isPreviewMode = isPreviewMode,
                                             onTogglePreview = { isPreviewMode = !isPreviewMode },

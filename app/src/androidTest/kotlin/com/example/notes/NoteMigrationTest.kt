@@ -32,7 +32,7 @@ class NoteMigrationTest {
             check(context.packageName.endsWith(".debug"))
             val name = "note-migration-test-${UUID.randomUUID()}.db"
             val ids = bodies.map { UUID.randomUUID().toString() }
-            val store = PrivateMarkdownStore(context)
+            var store: PrivateMarkdownStore? = null
             val path = context.getDatabasePath(name)
             path.parentFile!!.mkdirs()
             var room: AppDatabase? = null
@@ -60,24 +60,29 @@ class NoteMigrationTest {
                     legacy.version = 8
                 }
                 val database = Room.databaseBuilder(context, AppDatabase::class.java, name)
-                    .addMigrations(AppDatabase.MIGRATION_8_9, AppDatabase.MIGRATION_9_10, AppDatabase.MIGRATION_10_11, AppDatabase.MIGRATION_11_12, AppDatabase.MIGRATION_12_13, AppDatabase.MIGRATION_13_14).build().also { room = it }
+                    .setJournalMode(androidx.room.RoomDatabase.JournalMode.TRUNCATE)
+                    .addCallback(object : androidx.room.RoomDatabase.Callback() {
+                        override fun onOpen(db: androidx.sqlite.db.SupportSQLiteDatabase) { db.execSQL("PRAGMA synchronous=EXTRA") }
+                    })
+                    .addMigrations(AppDatabase.MIGRATION_8_9, AppDatabase.MIGRATION_9_10, AppDatabase.MIGRATION_10_11, AppDatabase.MIGRATION_11_12, AppDatabase.MIGRATION_12_13, AppDatabase.MIGRATION_13_14, AppDatabase.MIGRATION_14_15).build().also { room = it }
+                val bodyStore = PrivateMarkdownStore(context, database = database).also { store = it }
                 database.openHelper.writableDatabase // Runs Android Room's generated migration validator.
                 val dao = database.savedItemDao()
                 assertEquals(bodies.size, dao.getAllItems().size)
-                val persistence = NotePersistence(context, database, store)
+                val persistence = NotePersistence(context, database, bodyStore)
                 bodies.forEachIndexed { index, expected ->
                     val id = ids[index]
                     assertEquals(expected, LegacyBodyInputStream(dao, id).bufferedReader().use { it.readText() })
                     val ref = NoteWriteLock.mutex.withLock { persistence.migrateOneLocked(id) }
                     assertEquals("FILE", ref.bodyLocation)
-                    assertTrue(store.verify(id, ref.contentHash!!, expected.toByteArray(Charsets.UTF_8).size.toLong()))
-                    assertEquals(expected, store.open(id, ref.contentHash).bufferedReader().use { it.readText() })
+                    assertTrue(bodyStore.verify(id, ref.contentHash!!, expected.toByteArray(Charsets.UTF_8).size.toLong()))
+                    assertEquals(expected, bodyStore.open(id, ref.contentHash).bufferedReader().use { it.readText() })
                     assertTrue(dao.readRecoveryBytes(id, 1, 16_384)!!.isEmpty())
                 }
             } finally {
+                ids.forEach { store?.deleteAll(it) }
                 room?.close()
                 context.deleteDatabase(name)
-                ids.forEach { store.deleteAll(it) }
             }
         }
     }

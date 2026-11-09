@@ -20,7 +20,7 @@ class StorageUnlinkedTest {
     @Test fun orphanMediaCanBeRecoveredAndThenPermanentlyDeletedWithItsItem() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
+        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations, sharedStorage = false)
         val root = java.io.File(context.filesDir, "media/audio").also { it.mkdirs() }
         val file = java.io.File(root, "orphan-${UUID.randomUUID()}.mp4").also {
             it.writeText("Recovered audio bytes"); assertTrue(it.setLastModified(System.currentTimeMillis() - 120_000))
@@ -45,7 +45,7 @@ class StorageUnlinkedTest {
     @Test fun recoveringAnUnlinkedNoteCreatesAVerifiedManagedBodyBeforeRemovingTheOldFile() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
+        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations, sharedStorage = false)
         val orphan = UUID.randomUUID().toString()
         var recoveredId: String? = null
         try {
@@ -64,7 +64,7 @@ class StorageUnlinkedTest {
     @Test fun unlinkedFilesAreVisibleExportableAndExplicitCleanupKeepsCurrentNotes() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
+        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations, sharedStorage = false)
         val owner = SavedItem(type = SavedItemType.TEXT, title = "Keep me", content = "")
         val orphan = UUID.randomUUID().toString()
         val late = UUID.randomUUID().toString()

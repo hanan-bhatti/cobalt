@@ -19,7 +19,7 @@ class PreparedNoteCommitTest {
     @Test fun preparedCommitDoesNotSerializeAProjectionOrRewriteTheBody() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        val files = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
+        val files = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations, sharedStorage = false)
         var writes = 0
         val store = object : NoteBodyStore by files {
             override fun writeAtomic(id: String, input: java.io.InputStream, allowOversize: Boolean, progress: (Long) -> Unit): NoteBodyRef {
@@ -50,7 +50,7 @@ class PreparedNoteCommitTest {
     @Test fun failedVerificationLeavesTheSavedReferenceAndBodyUntouched() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
+        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations, sharedStorage = false)
         val persistence = NotePersistence(context, database, store)
         val note = SavedItem(type = SavedItemType.TEXT, title = "Retained", content = "")
         try {
@@ -66,7 +66,7 @@ class PreparedNoteCommitTest {
     @Test fun savingAListProjectionCannotReplaceTheRealBodyWithItsPreview() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        val files = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations)
+        val files = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations, sharedStorage = false)
         var writes = 0
         val counting = object : NoteBodyStore by files {
             override fun writeAtomic(id: String, input: java.io.InputStream, allowOversize: Boolean, progress: (Long) -> Unit): NoteBodyRef {

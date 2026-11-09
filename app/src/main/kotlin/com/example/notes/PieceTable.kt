@@ -44,8 +44,8 @@ class NoteByteSlice(val source: NoteByteSource, val offset: Long, override val s
     }
 }
 
-class FileNoteByteSource(private val store: NoteBodyStore, private val id: String,
-    private val hash: String, override val size: Long) : NoteByteSource {
+class FileNoteByteSource(private val store: NoteBodyStore, internal val id: String,
+    internal val hash: String, override val size: Long) : NoteByteSource {
     override fun read(offset: Long, count: Int) = store.readRange(id, hash, offset, count)
     override fun openRange(offset: Long, length: Long): InputStream {
         require(offset >= 0 && offset <= size && length >= 0 && length <= size - offset)
@@ -85,6 +85,7 @@ class FileNoteByteSource(private val store: NoteBodyStore, private val id: Strin
  * All methods are confined to the owning background editing coroutine.
  */
 class PieceTable(original: NoteByteSource, private val keepUndo: Boolean = true) {
+    internal data class Range(val source: NoteByteSource, val offset: Long, val length: Long)
     private data class Piece(val source: NoteByteSource, val offset: Long, val length: Long)
     private data class Edit(val start: Long, val removed: List<Piece>, val inserted: List<Piece>)
     private var pieces = if (original.size == 0L) emptyList() else listOf(Piece(original, 0, original.size))
@@ -102,9 +103,12 @@ class PieceTable(original: NoteByteSource, private val keepUndo: Boolean = true)
 
     private fun slice(start: Long, end: Long): List<Piece> {
         require(start in 0..end && end <= size)
+        return sliceParts(pieces, start, end)
+    }
+    private fun sliceParts(parts: List<Piece>, start: Long, end: Long): List<Piece> {
         val result = mutableListOf<Piece>()
         var cursor = 0L
-        for (piece in pieces) {
+        for (piece in parts) {
             val from = maxOf(start, cursor)
             val until = minOf(end, cursor + piece.length)
             if (from < until) result.add(Piece(piece.source, piece.offset + from - cursor, until - from))
@@ -155,7 +159,24 @@ class PieceTable(original: NoteByteSource, private val keepUndo: Boolean = true)
         catch (error: Throwable) { pieces = before; size = beforeSize; throw error }
         finally { grouping = false }
         if (keepUndo) {
-            undo.addLast(Edit(0, before, pieces))
+            // Keep only the changed interval. Whole descriptor snapshots made 100
+            // tiny undo groups repeat the entire fragmented document's metadata.
+            fun common(a: List<Piece>, b: List<Piece>, reverse: Boolean): Long {
+                var i=0;var j=0;var x=0L;var y=0L;var matched=0L
+                while(i<a.size && j<b.size) {
+                    val p=if(reverse)a[a.lastIndex-i] else a[i]
+                    val q=if(reverse)b[b.lastIndex-j] else b[j]
+                    val po=if(reverse)p.offset+p.length-x else p.offset+x
+                    val qo=if(reverse)q.offset+q.length-y else q.offset+y
+                    if(p.source !== q.source || po!=qo)break
+                    val count=minOf(p.length-x,q.length-y);matched+=count;x+=count;y+=count
+                    if(x==p.length){i++;x=0};if(y==q.length){j++;y=0}
+                }
+                return matched
+            }
+            val prefix=common(before,pieces,false)
+            val suffix=minOf(common(before,pieces,true),beforeSize-prefix,size-prefix)
+            undo.addLast(Edit(prefix,sliceParts(before,prefix,beforeSize-suffix),sliceParts(pieces,prefix,size-suffix)))
             if (undo.size > MAX_UNDO_OPERATIONS) undo.removeFirst()
         }
         redo.clear()
@@ -207,6 +228,12 @@ class PieceTable(original: NoteByteSource, private val keepUndo: Boolean = true)
         override val size = 0L
         override fun read(offset: Long, count: Int) = ByteArray(0)
     }, keepUndo = false).also { it.pieces = pieces; it.size = size }
+
+    internal fun ranges(start: Long = 0, end: Long = size): List<Range> = slice(start, end).map { Range(it.source, it.offset, it.length) }
+    internal fun sharedUtf8Pieces(owner: String): List<SharedNotePiece> = ranges().map { part ->
+        val file = (part.source as? FileNoteByteSource)?.takeIf { it.id == owner }
+        SharedNotePiece(file?.hash, part.offset, part.length, if (file == null) ({ part.source.openRange(part.offset, part.length) }) else null)
+    }
 
     /** Serialize descriptors only. Sources own the immutable bytes and must outlive this state. */
     internal fun writeState(output: java.io.DataOutputStream, sourceId: (NoteByteSource) -> Int) {

@@ -13,7 +13,7 @@ import org.json.JSONObject
 class SectionDraftStore(context: Context, private val persistenceFactory: (Context) -> NotePersistence = { NotePersistence(it) }) {
     private val context = context.applicationContext
     private val prefs = this.context.getSharedPreferences("note_section_drafts", Context.MODE_PRIVATE)
-    private val store = PrivateMarkdownStore(this.context)
+    private val store by lazy { persistenceFactory(this.context).store }
     data class Entry(val expectedHash: String, val start: Long, val end: Long, val hash: String, val bytes: Long)
     private fun key(id: String) = "section-draft:$id"
 
@@ -35,7 +35,8 @@ class SectionDraftStore(context: Context, private val persistenceFactory: (Conte
                 require(start >= 0 && end >= start)
                 val old = reference(id)
                 val ref = TextUtf8InputStream(text).use { input ->
-                    store.writeAtomic(key(id), input) { cancellation.ensureActive() }
+                    if (old != null) store.writeReplacement(key(id), old.hash, input) { cancellation.ensureActive() }
+                    else store.writeAtomic(key(id), input) { cancellation.ensureActive() }
                 }
                 cancellation.ensureActive()
                 val json = JSONObject().put("expected", expectedHash).put("start", start).put("end", end)

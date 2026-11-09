@@ -29,6 +29,9 @@ class DiskTextModel private constructor(
     private var selection = Position(0, 0)
     private var closed = false
     private var failed = false
+    private var checkpointRanges: List<PieceTable.Range>? = null
+    private var checkpointHash: String? = null
+    private var checkpointBytes = 0L
     internal val needsRecovery: Boolean get() = failed
     val status: Status get() = Status(revision, (table.size / 2).toInt(), byteLength, selection, table.canUndo, table.canRedo)
     private fun ready() { check(!closed && !failed) { "Editor is closed or needs recovery" }; checkAlive() }
@@ -49,6 +52,68 @@ class DiskTextModel private constructor(
         ready(); require(start in 0..end && end <= status.characters)
         return DiskJournalRecovery.ReaderUtf8Stream(DiskJournalRecovery.Utf16UnitReader(
             table.openStream(start.toLong() * 2, end.toLong() * 2)), checkCancelled)
+    }
+    internal fun sharedPieces(): List<SharedNotePiece>? {
+        ready()
+        val previous = checkpointRanges
+        if (previous != null && checkpointHash != null) {
+            val current = table.ranges()
+            fun common(a: List<PieceTable.Range>, b: List<PieceTable.Range>, reverse: Boolean): Long {
+                var i=0;var j=0;var x=0L;var y=0L;var total=0L
+                while(i<a.size && j<b.size) {
+                    val p=if(reverse)a[a.lastIndex-i] else a[i]
+                    val q=if(reverse)b[b.lastIndex-j] else b[j]
+                    val po=if(reverse)p.offset+p.length-x else p.offset+x
+                    val qo=if(reverse)q.offset+q.length-y else q.offset+y
+                    if(p.source !== q.source || po != qo)break
+                    val n=minOf(p.length-x,q.length-y);total+=n;x+=n;y+=n
+                    if(x==p.length){i++;x=0};if(y==q.length){j++;y=0}
+                }
+                return total
+            }
+            val prefix=common(previous,current,false)
+            val oldUnits=previous.sumOf { it.length }
+            val suffix=minOf(common(previous,current,true),oldUnits-prefix,table.size-prefix)
+            val first=sharedParts(table.ranges(0,prefix)) ?: return null
+            val last=sharedParts(table.ranges(table.size-suffix,table.size)) ?: return null
+            val middle=sharedParts(table.ranges(prefix,table.size-suffix)) ?: return null
+            val prefixBytes=first.sumOf { it.bytes };val suffixBytes=last.sumOf { it.bytes }
+            return buildList {
+                if(prefixBytes>0)add(SharedNotePiece(checkpointHash,0,prefixBytes))
+                addAll(middle)
+                if(suffixBytes>0)add(SharedNotePiece(checkpointHash,checkpointBytes-suffixBytes,suffixBytes))
+            }
+        }
+        return sharedParts(table.ranges())
+    }
+    internal fun acceptCheckpoint(ref: NoteBodyRef) {
+        ready();check(ref.bytes==byteLength)
+        checkpointRanges=table.ranges();checkpointHash=ref.hash;checkpointBytes=ref.bytes
+    }
+    private fun sharedParts(parts: List<PieceTable.Range>): List<SharedNotePiece>? {
+        val result = ArrayList<SharedNotePiece>()
+        for (part in parts) {
+            if (part.source === original) {
+                val start = original.utf8Offset(part.offset / 2) ?: return null
+                val end = original.utf8Offset((part.offset + part.length) / 2) ?: return null
+                result.add(SharedNotePiece(base.hash, start, end - start))
+            } else {
+                // Encoding each addition separately is safe only at scalar boundaries.
+                if (part.length > 0) {
+                    val first = part.source.read(part.offset, 2)
+                    val last = part.source.read(part.offset + part.length - 2, 2)
+                    fun char(bytes: ByteArray) = (((bytes[0].toInt() and 255) shl 8) or (bytes[1].toInt() and 255)).toChar()
+                    if (Character.isLowSurrogate(char(first)) || Character.isHighSurrogate(char(last))) return null
+                }
+                val open = { DiskJournalRecovery.ReaderUtf8Stream(DiskJournalRecovery.Utf16UnitReader(
+                    part.source.openRange(part.offset, part.length))) {} }
+                var size = 0L
+                open().use { input -> val buffer = ByteArray(NoteSizePolicy.IO_CHUNK_BYTES)
+                    while (true) { val n = input.read(buffer); if (n < 0) break; size += n } }
+                result.add(SharedNotePiece(null, 0, size, open))
+            }
+        }
+        return result
     }
     /** Export remains possible when an internal state write failed. Never mutates or fsyncs. */
     fun openRecoveryUtf8(pending: List<List<Replacement>> = emptyList()): InputStream {
