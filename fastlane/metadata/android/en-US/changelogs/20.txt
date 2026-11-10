@@ -1,1 +1,8 @@
-Cobalt 2.3.0 includes all changes since 2.2.2. Continuous Markdown editing, Find/Replace and table tools. Recoverable drafts, saved history, Undo/Redo, Trash and storage cleanup. Optional Trakt sync, configurable Jikan, and movie/TV/anime/manga tracking. Local fonts, smart folders, reminders and styled share cards. One local app without a Cobalt account. Refreshed screenshots and privacy disclosures. Reliable release notes and verified APK links. Web Companion stays disabled for users.
+Cobalt 2.3.0:
+- Edit Markdown with Find/Replace and table tools.
+- Recover drafts, restore saved versions and keep Undo/Redo history.
+- Restore deleted items from 30-day Trash and review storage usage.
+- Optional Trakt sync and configurable Jikan servers.
+- Custom fonts, smart folders, reminders and styled share cards.
+- Offline release notes and verified APK links.
+- One local app, with no Cobalt account required.

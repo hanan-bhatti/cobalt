@@ -5,7 +5,7 @@ The next release is **2.3.0 / version code 20**. The GitHub API response confirm
 ## Release contents
 
 - Root and bundled changelogs match, with highlights followed by the full development record since 2.2.2.
-- F-Droid metadata targets v2.3.0/code 20, and its build recipe expects the v2.3.0 tag created at publication. Fastlane code-20 release notes are 490 characters. Full description is 3,576 characters; short description is 67.
+- F-Droid metadata targets v2.3.0/code 20, and its build recipe expects the v2.3.0 tag created at publication. Fastlane code-20 release notes are 418 characters. Full description is 3,576 characters; short description is 67.
 - Release summary date, issue template and security version references match 2.3.0. Website downloads identify the actual published APK version, which can differ until 2.3.0 is published. Trakt's User-Agent reads the actual BuildConfig version.
 - All reviewed local work is included: Trakt browser sign-in/default and device-code fallback, website/legal/network disclosures, signing configuration, showcase source/previews, and the experimental web client/server work.
 

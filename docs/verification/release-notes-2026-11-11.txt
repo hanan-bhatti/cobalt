@@ -41,7 +41,7 @@ resolve actual published metadata with its authenticated workflow token.
 
 Release consistency:
 Root and bundled CHANGELOG.md match byte for byte; notes extraction selects one
-nonempty 2.3.0 section. Fastlane code-20 notes are 490 characters (500 maximum).
+nonempty 2.3.0 section. Fastlane code-20 notes are 418 characters (500 maximum).
 App version remains 2.3.0 / code 20. git diff --check passed.
 Android download/update/changelog callers and custom download drawable were
 reviewed in source, but native Compose compilation and rendering are unverified.
