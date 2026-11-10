@@ -52,7 +52,13 @@ def published_assets(release, allow_draft=False):
         datetime.strptime(published, '%Y-%m-%dT%H:%M:%SZ')
     version = tag[1:]
     page = release.get('html_url', '')
-    if not official_url(page, f'/{REPO}/releases/tag/{tag}'):
+    download_tag = tag
+    if release['draft']:
+        draft_path = urlsplit(page).path
+        match = re.fullmatch(rf'/{REPO}/releases/tag/(untagged-[0-9a-f]+)', draft_path)
+        if match:
+            download_tag = match[1]
+    if not official_url(page, f'/{REPO}/releases/tag/{download_tag}'):
         raise ValueError('Release page belongs to a different repository or tag')
     if tuple(map(int, version.split('.'))) >= (2, 3, 0):
         expected = [(f'cobalt-v{version}.apk', 'Download APK')]
@@ -69,7 +75,7 @@ def published_assets(release, allow_draft=False):
         url = asset.get('browser_download_url', '')
         if (asset.get('state') != 'uploaded' or type(asset.get('size')) is not int or asset['size'] <= 0 or
                 type(asset.get('id')) is not int or asset['id'] <= 0 or
-                not official_url(url, f'/{REPO}/releases/download/{tag}/{name}')):
+                not official_url(url, f'/{REPO}/releases/download/{download_tag}/{name}')):
             continue
         result.append({**asset, 'label': label})
     return version, page, result

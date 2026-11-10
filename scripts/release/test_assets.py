@@ -145,6 +145,24 @@ class ReleaseAssetsTest(unittest.TestCase):
         self.assertEqual(item['assets'][0]['browser_download_url'], assets.confirm_upload(item, self.apk, allow_draft=True))
         with self.assertRaises(ValueError): assets.confirm_upload(item, self.apk)
 
+    def test_github_temporary_draft_urls_are_private_verification_only(self):
+        item = release(); item['draft'] = True; item['published_at'] = None
+        temporary = 'untagged-9cab0077b4b8ac3d84e2'
+        item['html_url'] = f'https://github.com/hanan-bhatti/cobalt/releases/tag/{temporary}'
+        item['assets'][0]['browser_download_url'] = f'https://github.com/hanan-bhatti/cobalt/releases/download/{temporary}/cobalt-v2.3.0.apk'
+        self.assertEqual(item['assets'][0]['browser_download_url'], assets.confirm_upload(item, self.apk, allow_draft=True))
+        with self.assertRaises(ValueError): assets.confirm_upload(item, self.apk)
+        item['draft'] = False; item['published_at'] = '2026-11-11T12:00:00Z'
+        with self.assertRaises(ValueError): assets.confirm_upload(item, self.apk)
+
+    def test_draft_urls_must_share_the_same_official_temporary_identity(self):
+        item = release(); item['draft'] = True
+        item['html_url'] = 'https://github.com/hanan-bhatti/cobalt/releases/tag/untagged-abc123'
+        item['assets'][0]['browser_download_url'] = 'https://github.com/hanan-bhatti/cobalt/releases/download/untagged-def456/cobalt-v2.3.0.apk'
+        with self.assertRaises(ValueError): assets.confirm_upload(item, self.apk, allow_draft=True)
+        item['html_url'] = 'https://example.com/hanan-bhatti/cobalt/releases/tag/untagged-abc123'
+        with self.assertRaises(ValueError): assets.confirm_upload(item, self.apk, allow_draft=True)
+
 
 if __name__ == '__main__':
     unittest.main()
