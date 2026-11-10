@@ -21,12 +21,6 @@ package com.example.util
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import org.json.JSONObject
-import java.util.concurrent.TimeUnit
 
 /**
  * Result model for real-time online update checks against GitHub releases.
@@ -39,7 +33,8 @@ sealed class UpdateCheckResult {
         val releaseUrl: String = "",
         val releaseNotes: String = "",
         val apkDownloadUrl: String? = null,
-        val apkSizeBytes: Long? = null
+        val apkSizeBytes: Long? = null,
+        val apkAssets: List<ReleaseApk> = emptyList()
     ) : UpdateCheckResult() {
         val formattedSize: String?
             get() = formatFileSize(apkSizeBytes)
@@ -104,7 +99,8 @@ data class ReleaseNote(
     val bugFixes: List<String> = emptyList(),
     val markdownContent: String = "",
     val downloadUrl: String? = null,
-    val downloadSizeBytes: Long? = null
+    val downloadSizeBytes: Long? = null,
+    val apkAssets: List<ReleaseApk> = emptyList()
 )
 
 /**
@@ -112,13 +108,6 @@ data class ReleaseNote(
  * Integrates directly with dynamic GitHub releases and CHANGELOG.md.
  */
 object AppVersionManager {
-
-    private val okHttpClient by lazy {
-        OkHttpClient.Builder()
-            .connectTimeout(10, TimeUnit.SECONDS)
-            .readTimeout(10, TimeUnit.SECONDS)
-            .build()
-    }
 
     fun parseVersionTag(versionName: String = com.example.BuildConfig.VERSION_NAME): AppVersionTag {
         val lower = versionName.lowercase()
@@ -165,77 +154,20 @@ object AppVersionManager {
     /**
      * Performs a real HTTP network query against GitHub Releases API to check for updates.
      */
-    suspend fun checkOnlineUpdates(context: Context? = null): UpdateCheckResult = withContext(Dispatchers.IO) {
-        try {
-            val request = Request.Builder()
-                .url("https://api.github.com/repos/hanan-bhatti/cobalt/releases/latest")
-                .header("User-Agent", "Cobalt-AndroidApp")
-                .header("Accept", "application/vnd.github+json")
-                .build()
-
-            okHttpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    if (response.code == 404) {
-                        return@withContext UpdateCheckResult.UpToDate(currentVersionName)
-                    }
-                    return@withContext UpdateCheckResult.Error("HTTP ${response.code}: ${response.message}")
-                }
-
-                val responseBody = response.body?.string() ?: return@withContext UpdateCheckResult.Error("Empty response from server")
-                val json = JSONObject(responseBody)
-
-                val tagName = json.optString("tag_name", "").removePrefix("v").trim()
-                val htmlUrl = json.optString("html_url", "https://github.com/hanan-bhatti/cobalt/releases")
-                val releaseName = json.optString("name", "Cobalt v$tagName")
-                val publishedAt = json.optString("published_at", "")
-                var bodyText = json.optString("body", "").trim()
-
-                // Extract APK asset if available
-                var apkUrl: String? = null
-                var apkSize: Long? = null
-                val assets = json.optJSONArray("assets")
-                if (assets != null) {
-                    for (i in 0 until assets.length()) {
-                        val asset = assets.optJSONObject(i) ?: continue
-                        val name = asset.optString("name", "")
-                        if (name.endsWith(".apk", ignoreCase = true)) {
-                            apkUrl = asset.optString("browser_download_url", "")
-                            apkSize = asset.optLong("size", 0L)
-                            break
-                        }
-                    }
-                }
-
-                // If release body is short or just comparison link, attempt enriching from dynamic changelog
-                if (context != null && (bodyText.isBlank() || (bodyText.contains("Full Changelog") && bodyText.length < 150))) {
-                    try {
-                        val releases = ChangelogManager.getReleases(context, forceRefresh = false)
-                        val matching = releases.firstOrNull { it.versionName.equals(tagName, ignoreCase = true) }
-                        if (matching != null && matching.markdownContent.isNotBlank()) {
-                            bodyText = matching.markdownContent
-                        }
-                    } catch (_: Exception) {}
-                }
-
-                val formattedDate = formatIsoDate(publishedAt)
-
-                if (tagName.isNotBlank() && isVersionNewer(tagName, currentVersionName)) {
-                    UpdateCheckResult.UpdateAvailable(
-                        latestVersionName = tagName,
-                        releaseName = releaseName,
-                        releaseDate = formattedDate,
-                        releaseUrl = htmlUrl,
-                        releaseNotes = bodyText,
-                        apkDownloadUrl = apkUrl,
-                        apkSizeBytes = if (apkSize != null && apkSize > 0) apkSize else null
-                    )
-                } else {
-                    UpdateCheckResult.UpToDate(tagName.ifBlank { currentVersionName })
-                }
-            }
-        } catch (e: Exception) {
-            UpdateCheckResult.Error(e.localizedMessage ?: "Failed to connect to update server")
-        }
+    suspend fun checkOnlineUpdates(context: Context? = null): UpdateCheckResult {
+        if (context == null) return UpdateCheckResult.Error("Open Updates & Changelog to check for releases.")
+        val feed = GitHubReleaseRepository.load(context, allowNetwork = true, forceRefresh = true)
+        if (feed.error != null) return UpdateCheckResult.Error(feed.error)
+        val latest = feed.releases.firstOrNull()
+            ?: return UpdateCheckResult.Error("No published stable releases are available.")
+        if (compareStableVersions(latest.version, currentVersionName) <= 0) return UpdateCheckResult.UpToDate(currentVersionName)
+        val single = latest.apks.singleOrNull()
+        return UpdateCheckResult.UpdateAvailable(
+            latestVersionName = latest.version, releaseName = latest.name,
+            releaseDate = formatIsoDate(latest.publishedAt), releaseUrl = latest.htmlUrl,
+            releaseNotes = latest.notes, apkDownloadUrl = single?.url, apkSizeBytes = single?.sizeBytes,
+            apkAssets = latest.apks
+        )
     }
 
     private fun formatIsoDate(isoString: String): String {

@@ -1,11 +1,6 @@
 name: Build Release
 on:
   workflow_dispatch:
-    inputs:
-      release_notes:
-        description: 'Release notes (leave blank to use auto-generated notes)'
-        required: false
-        default: ''
   push:
     branches: [main]
     paths:
@@ -14,6 +9,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: cobalt-release
+  cancel-in-progress: false
+
 jobs:
   check-version:
     runs-on: ubuntu-latest
@@ -21,118 +20,119 @@ jobs:
       should_build: ${{ steps.check.outputs.should_build }}
       version_name: ${{ steps.check.outputs.version_name }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Extract version and compare to last release
+      - name: Check official release state
         id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts)
-          echo "Detected versionName: $VERSION"
-
-          if [ -z "$VERSION" ]; then
-            echo "::error::Could not extract versionName from app/build.gradle.kts"
-            exit 1
-          fi
-
-          # Only consider tags that look like our own release tags: v<anything>
-          # Sorted by version so the *highest* tag wins, not just the most recent commit-wise
-          LAST_TAG=$(git tag -l 'v*' | sort -V | tail -n1 || echo "")
-
-          if [ -z "$LAST_TAG" ]; then
-            echo "No previous release tag found — this is the first release"
-            LAST_VERSION=""
-          else
-            LAST_VERSION="${LAST_TAG#v}"
-            echo "Last released version: $LAST_VERSION (tag: $LAST_TAG)"
-          fi
-
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "should_build=true" >> "$GITHUB_OUTPUT"
-            echo "Manual trigger — building regardless of version"
-          elif [ "$VERSION" != "$LAST_VERSION" ]; then
-            echo "should_build=true" >> "$GITHUB_OUTPUT"
-            echo "Version changed ($LAST_VERSION -> $VERSION) — building"
-          else
-            echo "should_build=false" >> "$GITHUB_OUTPUT"
-            echo "Version unchanged ($VERSION) — skipping build"
-          fi
-
+          VERSION=$(python3 -c 'import sys; sys.path.insert(0,"scripts/release"); from assets import app_version; print(app_version()[0])')
           echo "version_name=$VERSION" >> "$GITHUB_OUTPUT"
+          export VERSION
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" > "$RUNNER_TEMP/release-pages.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          pages = json.loads((Path(os.environ['RUNNER_TEMP'])/'release-pages.json').read_text())
+          matching = [release for page in pages for release in page if release['tag_name'] == 'v' + os.environ['VERSION']]
+          if len(matching) > 1:
+              raise SystemExit('Multiple releases use this version tag; resolve the ambiguity before publishing.')
+          release = matching[0] if matching else None
+          if release and release['draft'] and release['target_commitish'] != os.environ['GITHUB_SHA']:
+              raise SystemExit('Existing draft belongs to another source revision; resolve it before publishing.')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('should_build=' + ('true' if release is None or release['draft'] else 'false') + '\n')
+          PY
 
   build:
     needs: check-version
     if: needs.check-version.outputs.should_build == 'true'
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.check-version.outputs.version_name }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
           validate-wrappers: false
-
-      - name: Verify Release Secrets
-        run: |
-          MISSING_SECRETS=()
-          if [ -z "${{ secrets.KEYSTORE_BASE64 }}" ]; then MISSING_SECRETS+=("KEYSTORE_BASE64"); fi
-          if [ -z "${{ secrets.KEYSTORE_PASSWORD }}" ]; then MISSING_SECRETS+=("KEYSTORE_PASSWORD"); fi
-          if [ -z "${{ secrets.KEY_ALIAS }}" ]; then MISSING_SECRETS+=("KEY_ALIAS"); fi
-          if [ -z "${{ secrets.KEY_PASSWORD }}" ]; then MISSING_SECRETS+=("KEY_PASSWORD"); fi
-
-          if [ ${#MISSING_SECRETS[@]} -ne 0 ]; then
-            echo "::error::Missing required release secrets: ${MISSING_SECRETS[*]}"
-            echo "Please set up these secrets in your GitHub repository: Settings -> Secrets and variables -> Actions"
-            exit 1
-          fi
-
-      - name: Decode Keystore
+      - name: Check release publication rules
+        run: python3 -m unittest discover -s scripts/release -p 'test_*.py' -v
+      - name: Verify signing configuration
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          python3 - <<'PY'
+          import os
+          required = ['KEYSTORE_BASE64', 'KEYSTORE_PASSWORD', 'KEY_ALIAS', 'KEY_PASSWORD']
+          missing = [key for key in required if not os.environ.get(key)]
+          if missing:
+              raise SystemExit('Missing release secrets: ' + ', '.join(missing))
+          PY
           printf '%s' "$KEYSTORE_BASE64" | base64 -di > app/release-key.jks
-
-      - name: Build Release APKs
+      - name: Prepare exact release notes
+        run: python3 scripts/release/assets.py notes --version "$VERSION" --output "$RUNNER_TEMP/release-notes.md"
+      - name: Build release APK
         env:
           KEYSTORE_PATH: "release-key.jks"
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --parallel --build-cache
-
-      - name: Name release APK
-        env:
-          VERSION: ${{ needs.check-version.outputs.version_name }}
-        run: mv app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/cobalt-v${VERSION}.apk"
-
-      - name: Upload release APK and R8 mapping
+        run: ./gradlew :app:assembleRelease --parallel --build-cache
+      - name: Name and verify the signed APK
+        run: |
+          mv app/build/outputs/apk/release/app-release.apk "app/build/outputs/apk/release/cobalt-v$VERSION.apk"
+          python3 scripts/release/assets.py verify-apk --apk "app/build/outputs/apk/release/cobalt-v$VERSION.apk"
+      - name: Retain APK, checksum and R8 mapping
         uses: actions/upload-artifact@v4
         with:
           name: cobalt-release
           path: |
             app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/release/*.sha256
             app/build/outputs/mapping/release/mapping.txt
           if-no-files-found: error
           retention-days: 90
-
-      - name: Create GitHub Release
+      - name: Upload to a draft release
+        id: upload_release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.check-version.outputs.version_name }}
-          name: "Cobalt v${{ needs.check-version.outputs.version_name }}"
-          generate_release_notes: true
-          body: ${{ github.event.inputs.release_notes }}
-          draft: false
-          files: app/build/outputs/apk/release/*.apk
+          tag_name: v${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
+          name: Cobalt v${{ env.VERSION }}
+          body_path: ${{ runner.temp }}/release-notes.md
+          draft: true
+          prerelease: false
+          fail_on_unmatched_files: true
+          files: |
+            app/build/outputs/apk/release/cobalt-v${{ env.VERSION }}.apk
+            app/build/outputs/apk/release/cobalt-v${{ env.VERSION }}.apk.sha256
+      - name: Confirm uploaded identity and bytes
+        env:
+          RELEASE_ID: ${{ steps.upload_release.outputs.id }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" > "$RUNNER_TEMP/uploaded-release.json"
+          python3 scripts/release/assets.py confirm-upload --allow-draft --release-json "$RUNNER_TEMP/uploaded-release.json" --apk "app/build/outputs/apk/release/cobalt-v$VERSION.apk"
+          ASSET_ID=$(python3 -c 'import json,os; from pathlib import Path; r=json.loads((Path(os.environ["RUNNER_TEMP"])/"uploaded-release.json").read_text()); print(next(a["id"] for a in r["assets"] if a["name"]=="cobalt-v"+os.environ["VERSION"]+".apk"))')
+          gh api "repos/$GITHUB_REPOSITORY/releases/assets/$ASSET_ID" -H 'Accept: application/octet-stream' > "$RUNNER_TEMP/uploaded.apk"
+          cmp "app/build/outputs/apk/release/cobalt-v$VERSION.apk" "$RUNNER_TEMP/uploaded.apk"
+      - name: Publish complete release
+        env:
+          RELEASE_ID: ${{ steps.upload_release.outputs.id }}
+        run: |
+          gh api --method PATCH "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" -F draft=false -f make_latest=true > "$RUNNER_TEMP/publication-result.json"
+          gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" > "$RUNNER_TEMP/published-release.json"
+          python3 scripts/release/assets.py confirm-upload --release-json "$RUNNER_TEMP/published-release.json" --apk "app/build/outputs/apk/release/cobalt-v$VERSION.apk"

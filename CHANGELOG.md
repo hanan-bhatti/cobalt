@@ -143,8 +143,14 @@ The detailed source changes follow. Historical validation and its limits are in
   token history and interactive activity charts; show configured model names.
 - Add public product/legal/callback pages for Trakt App Links. These pages are a
   website and OAuth callback, not a note-editing web companion.
-- Refresh release-history UI with GitHub release/changelog loading, cache/retry and
-  opt-in update checks; expand the open-source library directory.
+- Keep the installed version's complete changelog bundled with the app. Load
+  published history from GitHub Releases with timestamped offline caching,
+  conditional refresh and clear retry errors; preserve opt-in update checks.
+- Verify the exact uploaded APK for the selected release before opening a download.
+  Show explicit FOSS/Play choices for older releases and label missing APKs clearly.
+  Publish releases only after checking the signed APK and uploaded bytes; generate
+  website download links from confirmed release assets.
+- Expand the open-source library directory.
 - Allow consecutive bug reports through Report Another/input reset (issue #23).
   Refresh reporter/version headers and share icons across feedback and survey.
 - Redesign the experience survey as two short steps using existing icons and theme

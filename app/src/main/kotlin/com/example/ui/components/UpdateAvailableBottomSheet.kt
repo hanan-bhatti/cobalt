@@ -48,10 +48,11 @@ fun UpdateAvailableBottomSheet(
     releaseName: String = "",
     releaseDate: String = "",
     releaseNotesMarkdown: String = "",
-    downloadUrl: String = "",
+    apkAssets: List<com.example.util.ReleaseApk> = emptyList(),
+    releaseUrl: String? = null,
     apkSizeBytes: Long? = null,
     onDismissRequest: () -> Unit,
-    onUpdateClick: () -> Unit = {},
+    onDownloadOpened: () -> Unit = {},
     onViewChangelogClick: () -> Unit = {},
     sheetState: SheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden)
 ) {
@@ -137,27 +138,10 @@ fun UpdateAvailableBottomSheet(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(
-                    onClick = {
-                        onDismissRequest()
-                        onUpdateClick()
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("update_now_button"),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_custom_download),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Download Update", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                }
+                ReleaseApkActions(
+                    version = versionName, assets = apkAssets, releaseUrl = releaseUrl,
+                    onDownloadOpened = { onDismissRequest(); onDownloadOpened() }
+                )
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -193,7 +177,7 @@ fun UpdateAvailableBottomSheet(
 fun UpdateAvailableBottomSheet(
     latestRelease: ReleaseNote = AppVersionManager.getLatestRelease(),
     onDismissRequest: () -> Unit,
-    onUpdateClick: () -> Unit = {},
+    onDownloadOpened: () -> Unit = {},
     onViewChangelogClick: () -> Unit = {},
     sheetState: SheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden)
 ) {
@@ -205,10 +189,10 @@ fun UpdateAvailableBottomSheet(
         releaseName = "Cobalt v${latestRelease.versionName}",
         releaseDate = latestRelease.releaseDate,
         releaseNotesMarkdown = markdown,
-        downloadUrl = latestRelease.downloadUrl ?: "",
+        apkAssets = latestRelease.apkAssets,
         apkSizeBytes = latestRelease.downloadSizeBytes,
         onDismissRequest = onDismissRequest,
-        onUpdateClick = onUpdateClick,
+        onDownloadOpened = onDownloadOpened,
         onViewChangelogClick = onViewChangelogClick,
         sheetState = sheetState
     )

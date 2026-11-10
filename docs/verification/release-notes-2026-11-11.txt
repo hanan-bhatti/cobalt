@@ -1,0 +1,62 @@
+Cobalt 2.3.0 release notes, cache and APK publication verification — 2026-11-11
+
+Standalone JVM verification compiled the actual production ReleaseNoteCatalog.kt,
+GitHubReleaseParser.kt and ReleaseFeedClient.kt with their JUnit regressions.
+Kotlin compiler 2.2.10, JDK 21, JUnit 4.13.2, coroutines 1.10.2.
+org.json 20250517 was downloaded from Maven Central only to the temporary JVM
+harness; it was not added to Android dependencies. Android supplies org.json.
+No Gradle, Android compilation, APK build or installation was run.
+
+JUnit version 4.13.2
+..................
+Time: 0.319
+
+OK (18 tests)
+
+Publication regression tests:
+python3 -m unittest discover -s scripts/release -p 'test_*.py' -v
+OK (15 tests). Synthetic APK bytes and injected SDK outputs check the manifest,
+signer, checksum, upload identity/digest, release notes and website rules.
+These tests do not verify a real signed APK or a live upload.
+
+Workflow validation:
+actionlint 1.7.10 passed for build-release.yml and deploy-pages.yml.
+Shellcheck was unavailable and disabled in actionlint. YAML parsing, bash -n
+for every run step, and Python AST parsing for embedded scripts also passed.
+Draft identity checks use authenticated paginated release listings; upload
+verification and publication use the draft action's exact release ID.
+Hosted Actions execution and signing/upload/publication remain untested locally.
+
+Website Chromium verification:
+Six cases passed: 1440px, 390px and 320px, each in light and dark mode.
+Confirmed exact metadata download URLs, explicit FOSS/Play labels, existing SVG
+icons, no horizontal overflow, and no JavaScript page errors. Reviewed desktop
+light and mobile dark screenshots. Fixed the mobile header's navigation overflow.
+
+Browser checks used a public GitHub API response confirmed earlier in this
+session: v2.2.2, FOSS APK 5740067 bytes and Play APK 8308638 bytes. A later anonymous
+API request returned HTTP 403 rate limit; no new latest-release result was claimed.
+No publicly uploaded 2.3.0 APK was used in these checks. Website deployment will
+resolve actual published metadata with its authenticated workflow token.
+
+Release consistency:
+Root and bundled CHANGELOG.md match byte for byte; notes extraction selects one
+nonempty 2.3.0 section. Fastlane code-20 notes are 490 characters (500 maximum).
+App version remains 2.3.0 / code 20. git diff --check passed.
+Android download/update/changelog callers and custom download drawable were
+reviewed in source, but native Compose compilation and rendering are unverified.
+
+Local delivery:
+Changes are included in a local commit at the user's request. No push, release,
+tag, APK build or installation was performed. Before that commit, main at 7465c48
+reported ahead 534 / behind 516 against origin/main; no merge base was found.
+The user confirmed a separate author/email history rewrite caused the divergence.
+No history rewrite or reconciliation ran as part of this release-feed work.
+
+User rebuild checks:
+1. Open Updates & Changelog offline: installed 2.3.0 notes should be available.
+2. Refresh online: published history and its checked timestamp should appear.
+3. Refresh without connectivity: retain notes/history and show a retry error.
+4. APK actions must confirm the exact selected asset; missing assets are unavailable.
+5. A newly opened screen must not say latest version before a successful check.
+6. Normal release builds must hide Web Companion and refuse its server startup.

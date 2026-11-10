@@ -47,8 +47,8 @@ import com.example.data.repository.SettingsRepository
 import com.example.util.AppVersionManager
 import com.example.util.ChangelogManager
 import com.example.util.ChangelogRelease
-import com.example.util.CobaltCustomTabsLauncher
 import com.example.util.UpdateCheckResult
+import com.example.ui.components.ReleaseApkActions
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -76,9 +76,17 @@ fun ReleaseUpdatesScreen(
     var releases by remember { mutableStateOf<List<ChangelogRelease>>(emptyList()) }
     var expandedVersion by remember { mutableStateOf<String?>(AppVersionManager.currentVersionName) }
 
-    // Load releases on first entry
-    LaunchedEffect(Unit) {
-        releases = ChangelogManager.getReleases(context, forceRefresh = false)
+    var historyStatus by remember { mutableStateOf("Installed release notes. Refresh to load published releases.") }
+    fun updateHistoryStatus() {
+        val feed = ChangelogManager.lastFeed
+        historyStatus = feed?.error ?: feed?.fetchedAt?.let {
+            "Published history checked " + SimpleDateFormat("d MMM, h:mm a", Locale.getDefault()).format(Date(it))
+        } ?: "Installed release notes. Refresh to load published releases."
+    }
+    LaunchedEffect(isAutoUpdateEnabled) {
+        releases = ChangelogManager.getCachedReleases(context)
+        releases = ChangelogManager.getReleases(context, allowNetwork = isAutoUpdateEnabled)
+        updateHistoryStatus()
     }
 
     fun checkForUpdates() {
@@ -88,6 +96,8 @@ fun ReleaseUpdatesScreen(
             val result = AppVersionManager.checkOnlineUpdates(context)
             isCheckingUpdates = false
             updateResult = result
+            releases = ChangelogManager.getReleases(context)
+            updateHistoryStatus()
             val timeFmt = SimpleDateFormat("h:mm a", Locale.getDefault())
             lastCheckedTimeText = "Checked today at ${timeFmt.format(Date())}"
         }
@@ -222,7 +232,7 @@ fun ReleaseUpdatesScreen(
                                             color = MaterialTheme.colorScheme.error
                                         )
                                     }
-                                    else -> {
+                                    is UpdateCheckResult.UpToDate -> {
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -248,6 +258,11 @@ fun ReleaseUpdatesScreen(
                                             )
                                         }
                                     }
+                                    null -> Text(
+                                        text = if (isCheckingUpdates) "Checking published releases…" else "Updates have not been checked yet",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                             }
                         }
@@ -257,41 +272,9 @@ fun ReleaseUpdatesScreen(
                         // Actions
                         val activeUpdate = updateResult as? UpdateCheckResult.UpdateAvailable
                         if (activeUpdate != null) {
-                            val downloadTarget = activeUpdate.apkDownloadUrl ?: activeUpdate.releaseUrl
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Button(
-                                    onClick = {
-                                        CobaltCustomTabsLauncher.launch(
-                                            context = context,
-                                            url = downloadTarget
-                                        )
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary
-                                    )
-                                ) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_custom_download),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "Download v${activeUpdate.latestVersionName}",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 13.sp
-                                    )
-                                }
-
-                                OutlinedButton(
-                                    onClick = { checkForUpdates() },
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                ReleaseApkActions(activeUpdate.latestVersionName, activeUpdate.apkAssets, activeUpdate.releaseUrl)
+                                OutlinedButton(onClick = { checkForUpdates() }, enabled = !isCheckingUpdates) {
                                     Text("Check Again", fontSize = 13.sp)
                                 }
                             }
@@ -388,6 +371,7 @@ fun ReleaseUpdatesScreen(
                                 isRefreshingChangelog = true
                                 coroutineScope.launch {
                                     releases = ChangelogManager.getReleases(context, forceRefresh = true)
+                                    updateHistoryStatus()
                                     isRefreshingChangelog = false
                                 }
                             }
@@ -406,6 +390,9 @@ fun ReleaseUpdatesScreen(
                     }
                 }
             }
+
+            item { Text(historyStatus, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant) }
 
             // Dynamic Changelog Release Cards
             items(releases) { release ->
@@ -518,49 +505,8 @@ fun ReleaseUpdatesScreen(
                                     )
                                 }
 
-                                if (release.downloadUrl != null || release.htmlUrl != null) {
-                                    Spacer(modifier = Modifier.height(10.dp))
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        if (release.downloadUrl != null) {
-                                            OutlinedButton(
-                                                onClick = {
-                                                    CobaltCustomTabsLauncher.launch(
-                                                        context = context,
-                                                        url = release.downloadUrl
-                                                    )
-                                                },
-                                                shape = RoundedCornerShape(10.dp),
-                                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-                                            ) {
-                                                Icon(
-                                                    painter = painterResource(id = R.drawable.ic_custom_download),
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(14.dp)
-                                                )
-                                                Spacer(modifier = Modifier.width(4.dp))
-                                                val label = if (release.formattedSize != null) "APK (${release.formattedSize})" else "Download APK"
-                                                Text(label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                            }
-                                        }
-
-                                        if (release.htmlUrl != null) {
-                                            TextButton(
-                                                onClick = {
-                                                    CobaltCustomTabsLauncher.launch(
-                                                        context = context,
-                                                        url = release.htmlUrl
-                                                    )
-                                                },
-                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                                            ) {
-                                                Text("GitHub Release ↗", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
-                                            }
-                                        }
-                                    }
-                                }
+                                Spacer(modifier = Modifier.height(10.dp))
+                                ReleaseApkActions(release.versionName, release.apkAssets, release.htmlUrl)
                             }
                         }
                     }

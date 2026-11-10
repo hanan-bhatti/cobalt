@@ -327,21 +327,16 @@ class MainActivity : ComponentActivity() {
 
                 if (availableUpdate != null) {
                     val update = availableUpdate!!
-                    val downloadTarget = update.apkDownloadUrl ?: update.releaseUrl
                     com.example.ui.components.UpdateAvailableBottomSheet(
                         versionName = update.latestVersionName,
                         releaseName = update.releaseName,
                         releaseDate = update.releaseDate,
                         releaseNotesMarkdown = update.releaseNotes,
-                        downloadUrl = downloadTarget,
+                        apkAssets = update.apkAssets,
+                        releaseUrl = update.releaseUrl,
                         apkSizeBytes = update.apkSizeBytes,
                         onDismissRequest = { viewModel.dismissUpdateBanner() },
-                        onUpdateClick = {
-                            com.example.util.CobaltCustomTabsLauncher.launch(
-                                context = this@MainActivity,
-                                url = downloadTarget
-                            )
-                        },
+                        onDownloadOpened = { viewModel.dismissUpdateBanner() },
                         onViewChangelogClick = {
                             viewModel.dismissUpdateBanner()
                             navController.navigate("release_updates")

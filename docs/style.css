@@ -585,9 +585,11 @@ footer.site-footer {
 @media (max-width: 640px) {
   .header-container {
     padding: 12px 16px;
+    flex-wrap: wrap;
   }
   nav.site-nav {
     gap: 8px;
+    flex-wrap: wrap;
   }
   nav.site-nav a {
     font-size: 0.88rem;
