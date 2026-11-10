@@ -75,6 +75,7 @@ object WebCompanionManager {
         repo: CobaltRepository,
         port: Int = 8080
     ): Boolean {
+        if (!com.example.util.AppFeatureFlags.webCompanion) return false
         if (_isRunning.value) return true
 
         val localIp = getLocalIpAddress(context)

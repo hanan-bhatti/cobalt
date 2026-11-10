@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.toArgb
 import com.example.ui.theme.DarkColorScheme
 import com.example.ui.theme.LightColorScheme
 import org.json.JSONObject
+import com.example.data.repository.SettingsRepository
 
 /**
  * Extracts and exports Cobalt's active Android theme colors (Dark, Light, or Dynamic Material You)
@@ -77,12 +78,26 @@ object WebThemeExporter {
                 put("surfaceContainerHigh", hex(scheme.surfaceContainerHigh))
                 put("outline", hex(scheme.outline))
                 put("outlineVariant", hex(scheme.outlineVariant))
+                put("error", hex(scheme.error))
+                put("secondaryContainer", hex(scheme.secondaryContainer))
+                put("onSecondaryContainer", hex(scheme.onSecondaryContainer))
             }
 
             JSONObject().apply {
                 put("isDark", isDark)
                 put("dynamicColor", dynamicColor)
                 put("colors", colorsObj)
+                val typography = SettingsRepository(context).typographyPrefs.value
+                put("typography", JSONObject().apply {
+                    put("textFont", if (typography.useCustomFont) typography.textFont.key else "system")
+                    put("codeFont", if (typography.useCustomFont) typography.codeFont.key else "system_monospace")
+                    put("applyToAppUi", typography.useCustomFont && typography.applyToAppUi)
+                    put("fontSize", typography.fontSize)
+                    put("fontWeight", typography.fontWeight)
+                    put("lineHeight", typography.lineHeight.toDouble())
+                    put("letterSpacing", typography.letterSpacing.toDouble())
+                    put("paragraphSpacing", typography.paragraphSpacing)
+                })
             }.toString()
         } catch (_: Exception) {
             fallbackDarkThemeJson()

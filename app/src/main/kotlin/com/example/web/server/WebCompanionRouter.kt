@@ -35,6 +35,11 @@ import com.example.data.model.SavedItemType
 import com.example.web.session.LockAcquisitionResult
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.CancellationException
+import java.net.URI
+import java.io.RandomAccessFile
+import com.example.R
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Request router for the Cobalt Local Web Companion.
@@ -55,11 +60,12 @@ class WebCompanionRouter(
     val contextProvider: () -> Context? = { null },
     val noteStoreProvider: () -> WebNoteStore? = { repositoryProvider()?.let(::RepositoryWebNoteStore) }
 ) {
+    private val captureMutex = Mutex()
 
     suspend fun handleRequest(request: HttpRequest): HttpResponse {
         val path = request.path
         if (request.method !in setOf("GET", "POST", "PUT", "DELETE")) return HttpResponse.text(405, "Method not allowed")
-        if (request.method != "GET" && !request.header("Content-Type").orEmpty().startsWith("application/json", true)) {
+        if (request.method != "GET" && path != "/api/attachments" && !request.header("Content-Type").orEmpty().startsWith("application/json", true)) {
             return HttpResponse.text(415, "JSON content type required")
         }
 
@@ -92,6 +98,10 @@ class WebCompanionRouter(
         return when {
             path == "/api/status" && request.method == "GET" -> handleStatus()
             path == "/api/notes" && request.method == "GET" -> handleNotesList(request)
+            path == "/api/notes" && request.method == "POST" -> captureMutex.withLock { handleCapture(request) }
+            path == "/api/folders" && request.method == "GET" -> handleFolders()
+            path == "/api/folders" && request.method == "POST" -> captureMutex.withLock { handleFolderCreate(request) }
+            path == "/api/attachments" && request.method == "POST" -> captureMutex.withLock { handleAttachment(request) }
             path.startsWith("/api/notes/") -> {
                 val segments = path.removePrefix("/api/notes/").split('/')
                 when {
@@ -103,7 +113,7 @@ class WebCompanionRouter(
             }
             path.startsWith("/api/media/") && request.method == "GET" -> {
                 val mediaId = path.removePrefix("/api/media/").substringBefore('/')
-                handleMediaStream(mediaId)
+                handleMediaStream(mediaId, request)
             }
             else -> HttpResponse.notFound("Endpoint not found")
         }
@@ -202,15 +212,21 @@ class WebCompanionRouter(
         val limit = (request.queryParams["limit"]?.toIntOrNull() ?: 25).coerceIn(1, 100)
         val folder = request.queryParams["folder"]?.trim()
         val type = request.queryParams["type"]?.trim()?.uppercase()
-        val filtered = store.list(request.queryParams["q"]?.trim()).filter { item ->
+        val matched = store.list(request.queryParams["q"]?.trim()).filter { item ->
             !item.isDeleted && (folder.isNullOrEmpty() || folder in item.folders) &&
                 (type.isNullOrEmpty() || item.type.name == type ||
                     type == "ATTACHMENT" && item.type in setOf(SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.AUDIO))
         }
+        val filtered = when (request.queryParams["sort"]) {
+            "title" -> matched.sortedWith(compareBy<SavedItem> { it.title.lowercase(java.util.Locale.ROOT) }.thenBy { it.id })
+            "newest" -> matched.sortedWith(compareByDescending<SavedItem> { it.timestamp }.thenBy { it.id })
+            else -> matched.sortedWith(compareByDescending<SavedItem> { it.updatedAt }.thenBy { it.id })
+        }
 
         val totalItems = filtered.size
         val totalPages = if (totalItems == 0) 1 else ((totalItems + limit - 1) / limit)
-        val startIndex = (page - 1) * limit
+        val effectivePage = page.coerceAtMost(totalPages)
+        val startIndex = (effectivePage - 1) * limit
         val pageItems = if (startIndex < totalItems) {
             filtered.subList(startIndex, minOf(startIndex + limit, totalItems))
         } else {
@@ -224,6 +240,7 @@ class WebCompanionRouter(
                 put("id", item.id)
                 put("title", item.title.ifBlank { "Untitled Note" })
                 put("type", item.type.name)
+                put("thumbnailUrl", thumbnailUrl(item) ?: JSONObject.NULL)
                 put("preview", item.preview.ifBlank { if (item.type in setOf(SavedItemType.TEXT, SavedItemType.CODE, SavedItemType.LINK)) item.content.take(200) else item.type.displayName })
                 put("timestamp", item.timestamp)
                 put("updatedAt", item.updatedAt)
@@ -237,7 +254,7 @@ class WebCompanionRouter(
 
         val responseJson = JSONObject().apply {
             put("items", itemsArray)
-            put("page", page)
+            put("page", effectivePage)
             put("limit", limit)
             put("totalItems", totalItems)
             put("totalPages", totalPages)
@@ -271,6 +288,23 @@ class WebCompanionRouter(
             put("isLockedByMobile", locked)
             put("isLockedByOtherWeb", EditorSessionRegistry.canWriteNote(item.id, extractSessionToken(request)) is LockAcquisitionResult.ConflictWeb)
             put("folders", JSONArray(item.folders))
+            put("linkTitle", item.linkTitle ?: JSONObject.NULL)
+            put("linkDescription", item.linkDescription ?: JSONObject.NULL)
+            put("thumbnailUrl", thumbnailUrl(item) ?: JSONObject.NULL)
+            put("mediaType", item.mediaType ?: JSONObject.NULL)
+            put("watchStatus", item.watchStatus ?: JSONObject.NULL)
+            put("releaseYear", item.releaseYear ?: JSONObject.NULL)
+            put("rating", item.rating ?: JSONObject.NULL)
+            put("runtime", item.runtime ?: JSONObject.NULL)
+            put("tagline", item.tagline ?: JSONObject.NULL)
+            put("genres", JSONArray(item.genres))
+            put("watchProviders", JSONArray(item.watchProviders))
+            put("trailerUrl", safeWebUrl(item.trailerUrl) ?: JSONObject.NULL)
+            put("sourceUrl", safeWebUrl(item.mediaFacts?.sourceUrl) ?: JSONObject.NULL)
+            put("source", item.mediaFacts?.source ?: JSONObject.NULL)
+            put("episodeCount", item.mediaFacts?.episodeCount ?: JSONObject.NULL)
+            put("chapterCount", item.mediaFacts?.chapterCount ?: JSONObject.NULL)
+            put("sizeBytes", item.sizeBytes)
             if (item.type in setOf(SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.AUDIO)) {
                 put("mediaUrl", "/api/media/${java.net.URLEncoder.encode(item.id, "UTF-8").replace("+", "%20")}")
             }
@@ -329,54 +363,193 @@ class WebCompanionRouter(
         }
         return try {
             guard()
-            val saved = store.save(item.copy(title = title, content = content, bodyLoaded = true), guard)
+            val folders = if (json.has("folders")) parseFolders(json.optJSONArray("folders")) else item.folders
+            val saved = store.save(item.copy(title = title, content = content, folders = folders, bodyLoaded = true), guard)
             noteResponse(saved, request)
         } catch (cancel: CancellationException) { throw cancel
         } catch (_: IllegalStateException) {
             HttpResponse.conflict("The note changed or its editing lock is unavailable. Your draft is retained; reopen before saving.")
+        } catch (_: IllegalArgumentException) {
+            HttpResponse.text(400, "Invalid folder selection")
         } catch (_: java.io.IOException) {
             HttpResponse.conflict("Could not commit this note. Your draft is retained. Check the note on your phone.")
         }
     }
 
-    private suspend fun handleMediaStream(mediaId: String): HttpResponse {
-        if (mediaId.isBlank()) return HttpResponse.notFound("Media ID missing")
-        val db = databaseProvider() ?: return HttpResponse.notFound()
-        val item = db.savedItemDao().getItemById(mediaId) ?: return HttpResponse.notFound()
+    private fun safeWebUrl(value: String?): String? = try {
+        val uri = URI(value.orEmpty())
+        value?.takeIf { uri.scheme in setOf("https", "http") && !uri.host.isNullOrBlank() && uri.userInfo == null }
+    } catch (_: Exception) { null }
 
-        if (item.isDeleted || item.type !in setOf("IMAGE", "VIDEO", "AUDIO")) return HttpResponse.notFound()
+    private fun thumbnailUrl(item: SavedItem): String? {
+        val path = item.thumbnailPath ?: item.linkImage ?: item.backdropUrl ?: return null
+        return if (path.startsWith("/")) "/api/media/${item.id}?thumbnail=1" else safeWebUrl(path)
+    }
+
+    private fun parseFolders(array: JSONArray?): List<String> {
+        require(array != null && array.length() <= 30)
+        return (0 until array.length()).map {
+            require(array.opt(it) is String)
+            array.getString(it).trim().also { name -> require(name.isNotBlank() && name.length <= 100 && name.none { it.isISOControl() }) }
+        }.distinct()
+    }
+
+    private suspend fun handleFolders(): HttpResponse {
+        val store = noteStoreProvider() ?: return HttpResponse.serverError("Repository unavailable")
+        val items = store.list(null).filterNot { it.isDeleted }
+        val known = store.folders().associateBy { it.name }
+        val names = (known.keys + items.flatMap { it.folders }).distinct()
+        return HttpResponse.json(200, JSONObject().apply {
+            put("folders", JSONArray(names.map { name -> JSONObject().apply {
+                put("name", name); put("color", known[name]?.colorHex ?: JSONObject.NULL)
+                put("icon", known[name]?.iconName ?: JSONObject.NULL)
+                put("isPinned", known[name]?.isPinned ?: false)
+                put("count", items.count { name in it.folders })
+            } }))
+            put("counts", JSONObject().apply {
+                put("ALL", items.size)
+                SavedItemType.entries.forEach { type -> put(type.name, items.count { it.type == type }) }
+                put("ATTACHMENT", items.count { it.type in setOf(SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.AUDIO) })
+            })
+        }.toString())
+    }
+
+    private suspend fun handleFolderCreate(request: HttpRequest): HttpResponse {
+        val store = noteStoreProvider() ?: return HttpResponse.serverError("Repository unavailable")
+        val json = try { JSONObject(request.textBody()) } catch (_: Exception) { return HttpResponse.text(400, "Invalid folder") }
+        val name = json.optString("name").trim()
+        if (name.isBlank() || name.length > 40 || name.any { it.isISOControl() }) return HttpResponse.text(400, "Use a folder name between 1 and 40 characters")
+        if (store.folders().any { it.name.trim().equals(name, ignoreCase = true) }) return HttpResponse.conflict("A folder with this name already exists")
+        val color = json.optString("color").takeIf { it.isNotBlank() }
+        val icon = json.optString("icon").takeIf { it.isNotBlank() }
+        if (color != null && !Regex("#[0-9a-fA-F]{6}").matches(color) ||
+            icon != null && icon !in setOf("folder", "star", "bookmark", "idea", "checklist", "vault", "tools", "heart", "work", "school", "code", "book", "home", "shopping", "globe", "music", "movie", "image", "archive", "lock"))
+            return HttpResponse.text(400, "Choose a valid folder color and icon")
+        if (json.has("isPinned") && json.get("isPinned") !is Boolean) return HttpResponse.text(400, "Choose a valid pin setting")
+        store.createFolder(name, color, icon, json.optBoolean("isPinned", false))
+        return HttpResponse.json(201, JSONObject().put("name", name).toString())
+    }
+
+    private suspend fun handleCapture(request: HttpRequest): HttpResponse {
+        val store = noteStoreProvider() ?: return HttpResponse.serverError("Repository unavailable")
+        val item = try {
+            val json = JSONObject(request.textBody())
+            val id = json.optString("id").ifBlank { java.util.UUID.randomUUID().toString() }
+            require(Regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}").matches(id))
+            val type = SavedItemType.valueOf(json.getString("type"))
+            require(type in setOf(SavedItemType.TEXT, SavedItemType.CODE, SavedItemType.LINK, SavedItemType.MEDIA))
+            val title = json.getString("title").trim()
+            val content = json.getString("content")
+            require(title.length <= 512)
+            if (content.toByteArray(Charsets.UTF_8).size > WebNoteStore.MAX_BODY_BYTES) return HttpResponse.text(413, "Web notes are limited to 5 MB")
+            require(type != SavedItemType.LINK || safeWebUrl(content) != null)
+            require(type != SavedItemType.MEDIA || title.isNotBlank())
+            val folders = parseFolders(json.optJSONArray("folders") ?: JSONArray())
+            val mediaType = json.optString("mediaType", "movie")
+            require(type != SavedItemType.MEDIA || mediaType in setOf("movie", "tv", "anime", "manga"))
+            SavedItem(id = id, type = type, title = title.ifBlank { if (type == SavedItemType.LINK) URI(content).host else "Untitled note" },
+                content = content, folders = folders,
+                linkDescription = if (type == SavedItemType.LINK) json.optString("description").take(10000) else null,
+                extractedText = if (type == SavedItemType.MEDIA) content else null,
+                mediaType = if (type == SavedItemType.MEDIA) mediaType else null,
+                watchStatus = if (type == SavedItemType.MEDIA) "Plan to Watch" else null,
+                releaseYear = if (type == SavedItemType.MEDIA) json.optString("releaseYear").take(4) else null)
+        } catch (_: Exception) { return HttpResponse.text(400, "Check the capture type, title, folders and URL. Links must use http or https.") }
+        val existing = store.read(item.id)
+        if (existing != null) {
+            return if (!existing.isDeleted && existing.type == item.type && existing.title == item.title &&
+                existing.content == item.content && existing.folders == item.folders)
+                noteResponse(existing, request) else HttpResponse.conflict("This capture was already saved. Open it from your archive before making changes.")
+        }
+        return try { noteResponse(store.create(item), request).copy(statusCode = 201, statusMessage = "Created") }
+        catch (cancel: CancellationException) { throw cancel }
+        catch (_: Exception) { HttpResponse.serverError("Could not save this capture. Your draft is retained; try again.") }
+    }
+
+    private suspend fun handleAttachment(request: HttpRequest): HttpResponse {
+        val store = noteStoreProvider() ?: return HttpResponse.serverError("Repository unavailable")
+        val context = contextProvider() ?: return HttpResponse.serverError("Storage unavailable")
+        val mime = request.header("Content-Type").orEmpty().substringBefore(';').lowercase()
+        val extension = mapOf("image/jpeg" to "jpg", "image/png" to "png", "image/webp" to "webp", "image/gif" to "gif",
+            "video/mp4" to "mp4", "video/webm" to "webm", "audio/mpeg" to "mp3", "audio/mp4" to "m4a", "audio/wav" to "wav", "audio/ogg" to "ogg", "audio/webm" to "webm")[mime]
+            ?: return HttpResponse.text(415, "Choose a supported image, audio or video file")
+        if (request.body.isEmpty()) return HttpResponse.text(400, "The attachment is empty")
+        if (request.body.size > 10_485_760) return HttpResponse.text(413, "Attachments are limited to 10 MB per upload")
+        val title = request.queryParams["title"].orEmpty().trim()
+        if (title.length > 512) return HttpResponse.text(400, "Title is too long")
+        val folders = try { parseFolders(JSONArray(request.queryParams["folders"] ?: "[]")) } catch (_: Exception) { return HttpResponse.text(400, "Invalid folder selection") }
+        val type = when { mime.startsWith("image/") -> SavedItemType.IMAGE; mime.startsWith("video/") -> SavedItemType.VIDEO; else -> SavedItemType.AUDIO }
+        val id = request.queryParams["id"] ?: java.util.UUID.randomUUID().toString()
+        if (!Regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}").matches(id)) return HttpResponse.text(400, "Invalid capture identifier")
+        val existing = store.read(id)
+        if (existing != null) return if (!existing.isDeleted && existing.type == type)
+            noteResponse(existing, request) else HttpResponse.conflict("This capture was already saved.")
+        val directory = File(context.filesDir, "media/web").apply { mkdirs() }
+        val file = File(directory, "$id.$extension")
+        return try {
+            java.io.FileOutputStream(file).use { output -> output.write(request.body); output.fd.sync() }
+            val saved = store.create(SavedItem(id = id, type = type, title = title.ifBlank { "New attachment" },
+                content = if (type == SavedItemType.AUDIO) "" else file.path,
+                thumbnailPath = if (type == SavedItemType.AUDIO) file.path else null, folders = folders, sizeBytes = file.length()))
+            noteResponse(saved, request).copy(statusCode = 201, statusMessage = "Created")
+        } catch (cancel: CancellationException) { file.delete(); throw cancel
+        } catch (_: Exception) { file.delete(); HttpResponse.serverError("Could not save this attachment. Try again.") }
+    }
+
+    private suspend fun handleMediaStream(mediaId: String, request: HttpRequest): HttpResponse {
+        val item = noteStoreProvider()?.read(mediaId) ?: return HttpResponse.notFound()
+        if (item.isDeleted) return HttpResponse.notFound()
+        val thumbnail = request.queryParams["thumbnail"] == "1"
+        if (!thumbnail && item.type !in setOf(SavedItemType.IMAGE, SavedItemType.VIDEO, SavedItemType.AUDIO)) return HttpResponse.notFound()
         val context = contextProvider() ?: return HttpResponse.notFound()
-        val file = File(item.content).canonicalFile
+        val path = if (thumbnail) item.thumbnailPath ?: item.linkImage ?: item.backdropUrl else
+            if (item.type == SavedItemType.AUDIO) item.thumbnailPath ?: item.content else item.content
+        if (path.isNullOrBlank() || !path.startsWith("/")) return HttpResponse.notFound()
+        val file = File(path).canonicalFile
         val roots = listOfNotNull(context.filesDir, context.cacheDir, context.getExternalFilesDir(null))
-        if (roots.none { file.path.startsWith(it.canonicalPath + File.separator) }) return HttpResponse.notFound()
-        if (!file.exists() || !file.isFile) {
-            return HttpResponse.notFound("Media file not found")
-        }
-
-        if (file.length() > 10_485_760) return HttpResponse.text(413, "Attachment is too large for the web viewer")
-        val bytes = try {
-            file.inputStream().use { input ->
-                val output = ByteArrayOutputStream()
-                val buffer = ByteArray(16 * 1024)
-                while (true) {
-                    val count = input.read(buffer)
-                    if (count < 0) break
-                    if (output.size() + count > 10_485_760) return HttpResponse.text(413, "Attachment is too large for the web viewer")
-                    output.write(buffer, 0, count)
-                }
-                output.toByteArray()
+        if (roots.none { file.path.startsWith(it.canonicalPath + File.separator) } || !file.isFile) return HttpResponse.notFound("Attachment unavailable on this device")
+        val length = file.length()
+        val range = request.header("Range")
+        var start = 0L
+        var end = length - 1
+        if (range != null) {
+            val match = Regex("bytes=(\\d*)-(\\d*)").matchEntire(range)
+                ?: return HttpResponse.text(416, "Invalid range", mapOf("Content-Range" to "bytes */$length"))
+            val first = match.groupValues[1]
+            val last = match.groupValues[2]
+            if (first.isBlank()) {
+                val suffix = last.toLongOrNull() ?: 0
+                start = (length - suffix).coerceAtLeast(0)
+            } else {
+                start = first.toLongOrNull() ?: length
+                end = last.toLongOrNull()?.coerceAtMost(end) ?: end
             }
-        } catch (_: Exception) {
-            return HttpResponse.serverError("Unable to read media file")
+            if (start < 0 || start >= length || end < start) return HttpResponse.text(416, "Range unavailable", mapOf("Content-Range" to "bytes */$length"))
+            end = minOf(end, start + 1_048_575)
+        } else if (length > 10_485_760) {
+            return HttpResponse.text(413, "Use the media player to stream this attachment")
         }
-
-        val mimeType = mimeTypeFor(file.name)
-        return HttpResponse.bytes(mimeType, bytes)
+        if (length == 0L) return HttpResponse.notFound("Empty attachment")
+        return try {
+            val bytes = ByteArray((end - start + 1).toInt())
+            RandomAccessFile(file, "r").use { it.seek(start); it.readFully(bytes) }
+            val headers = mutableMapOf("Accept-Ranges" to "bytes")
+            if (range != null) headers["Content-Range"] = "bytes $start-$end/$length"
+            HttpResponse.bytes(mimeTypeFor(file.name), bytes, if (range != null) 206 else 200, headers)
+        } catch (_: Exception) { HttpResponse.serverError("Unable to read attachment") }
     }
 
     private fun serveStaticAsset(rawPath: String): HttpResponse {
         val path = if (rawPath == "/" || rawPath.isBlank()) "/index.html" else rawPath
-        if (path !in setOf("/index.html", "/app.js", "/style.css")) return HttpResponse.notFound("Asset not found")
+        val fonts = mapOf("inter" to R.font.inter_variable, "literata" to R.font.literata_variable,
+            "source_serif_4" to R.font.source_serif_4_variable, "lexend" to R.font.lexend_variable,
+            "atkinson_hyperlegible" to R.font.atkinson_hyperlegible_regular, "jetbrains_mono" to R.font.jetbrains_mono_variable)
+        if (path.startsWith("/fonts/")) {
+            val resource = fonts[path.removePrefix("/fonts/").removeSuffix(".ttf")] ?: return HttpResponse.notFound()
+            val context = contextProvider() ?: return HttpResponse.notFound()
+            return HttpResponse.bytes("font/ttf", context.resources.openRawResource(resource).use { it.readBytes() })
+        }
+        if (path !in setOf("/index.html", "/app.js", "/style.css", "/capture.css", "/editor.js", "/markdown.js", "/highlight.js", "/markdown-renderer.js", "/markdown-worker.js")) return HttpResponse.notFound("Asset not found")
         val assetPath = "web" + (if (path.startsWith("/")) path else "/$path")
 
         val context = contextProvider()
@@ -419,6 +592,8 @@ class WebCompanionRouter(
                 "png" -> "image/png"
                 "jpg", "jpeg" -> "image/jpeg"
                 "webp" -> "image/webp"
+                "gif" -> "image/gif"
+                "webm" -> "video/webm"
                 "mp4" -> "video/mp4"
                 "mp3" -> "audio/mpeg"
                 "m4a" -> "audio/mp4"

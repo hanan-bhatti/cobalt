@@ -16,7 +16,7 @@ body:
       label: App Version
       description: What version of Cobalt are you running? (Refer to SECURITY.md for supported versions)
       options:
-        - v2.2.3 (Latest Release)
+        - v2.3.0 (Latest Release)
         - v2.2.2
         - v2.2.1
         - v2.2.0

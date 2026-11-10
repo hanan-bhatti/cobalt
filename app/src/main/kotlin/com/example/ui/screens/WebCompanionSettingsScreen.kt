@@ -62,6 +62,10 @@ fun WebCompanionSettingsScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (!com.example.util.AppFeatureFlags.webCompanion) {
+        LaunchedEffect(Unit) { onNavigateBack() }
+        return
+    }
     val context = LocalContext.current
     val clipboard = LocalClipboard.current
     val coroutineScope = rememberCoroutineScope()

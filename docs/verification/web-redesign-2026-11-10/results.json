@@ -1,0 +1,28 @@
+{
+  "date": "2026-11-11",
+  "scope": "Isolated Chromium UI tests with synthetic APIs. Latest Android feature gates and folder routes require an Android rebuild; this run does not validate a device backend.",
+  "checks": [
+    "PIN login layout",
+    "Login and desktop archive",
+    "Markdown, checklists, quotes, nested lists, table and syntax highlighting",
+    "Every icon references a native vector symbol",
+    "Shortcut dialog with native icons",
+    "Keyboard search and filtering",
+    "Failed save preserves draft and restores controls",
+    "Failed-save draft survives reload and reacquires its editing lease",
+    "Discard protection and keyboard save",
+    "Native folder sheet, all 20 colors/icons, live preview, duplicate validation, pin and assignment",
+    "Link validation, creation and source card",
+    "Create and read media entry",
+    "Code capture, keyboard indentation and Tab focus navigation",
+    "Title Enter, selection-preserving formatting, toggle and undo/redo",
+    "Capture wheel scrolling, sticky toolbar, reachable Save and narrow folder sheet",
+    "UTF-8 Markdown import",
+    "Attachment upload and reader",
+    "Large-note worker rendering keeps Markdown and pages complete blocks",
+    "430 px layout, scrolling and return navigation",
+    "Exported dark theme and native code palette",
+    "No JavaScript page errors"
+  ],
+  "errors": []
+}

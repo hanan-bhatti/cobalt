@@ -89,7 +89,7 @@ object TraktClient {
                 original.url.newBuilder().host("auth.trakt.tv").build() else original.url
             val builder = original.newBuilder().url(url)
                 .header("Content-Type", "application/json")
-                .header("User-Agent", "Cobalt/2.2.3 (Android)")
+                .header("User-Agent", "Cobalt/${com.example.BuildConfig.VERSION_NAME} (Android)")
                 .header("trakt-api-version", "2")
                 .header("trakt-api-key", clientIdProvider?.invoke()?.takeIf { it.isNotBlank() } ?: TraktAuthManager.DEFAULT_CLIENT_ID)
             val token = tokenProvider?.invoke()

@@ -110,6 +110,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.R
+import com.example.util.AppFeatureFlags
 import com.example.data.repository.SettingsRepository
 import com.example.ui.components.CollapsibleCommonTopBar
 import com.example.ui.components.ExpressiveSearchableModelSelectorItem
@@ -409,7 +410,9 @@ fun SettingsScreen(
         ) {
             item {
                 ExpressiveSettingsGroup {
-                    val categories = SettingsCategory.entries
+                    val categories = SettingsCategory.entries.filter {
+                        it != SettingsCategory.WEB_COMPANION || AppFeatureFlags.webCompanion
+                    }
                     val total = categories.size
 
                     categories.forEachIndexed { index, category ->

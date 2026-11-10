@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
   alias(libs.plugins.android.application)
@@ -7,6 +8,16 @@ plugins {
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.roborazzi)
 }
+
+// Local credentials stay in the ignored root .env; CI environment variables take priority.
+val localSigningProperties = Properties().apply {
+  providers.fileContents(rootProject.layout.projectDirectory.file(".env")).asText.orNull
+    ?.reader()?.use { load(it) }
+}
+
+fun signingSetting(name: String): String? =
+  providers.environmentVariable(name).orNull?.takeIf { it.isNotBlank() }
+    ?: localSigningProperties.getProperty(name)?.takeIf { it.isNotBlank() }
 
 android {
   namespace = "com.example"
@@ -16,8 +27,9 @@ android {
     applicationId = "com.hanan_bhatti.cobalt"
     minSdk = 24
     targetSdk = 37
-    versionCode = 19
-    versionName = "2.2.3"
+    versionCode = 20
+    versionName = "2.3.0"
+    buildConfigField("boolean", "WEB_COMPANION_ENABLED", "false")
 
     manifestPlaceholders["appName"] = "Cobalt"
 
@@ -26,12 +38,12 @@ android {
 
   signingConfigs {
     create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH")
+      val keystorePath = signingSetting("KEYSTORE_PATH")
       if (keystorePath != null) {
         storeFile = file(keystorePath)
-        storePassword = System.getenv("KEYSTORE_PASSWORD")
-        keyAlias = System.getenv("KEY_ALIAS")
-        keyPassword = System.getenv("KEY_PASSWORD")
+        storePassword = signingSetting("KEYSTORE_PASSWORD")
+        keyAlias = signingSetting("KEY_ALIAS")
+        keyPassword = signingSetting("KEY_PASSWORD")
         enableV1Signing = true
         enableV2Signing = true
       } else {
@@ -59,6 +71,10 @@ android {
       signingConfig = signingConfigs.findByName("release")
     }
     debug {
+      // Explicit local opt-in; release builds always inherit false above.
+      buildConfigField("boolean", "WEB_COMPANION_ENABLED",
+        providers.gradleProperty("cobalt.enableWebCompanion")
+          .map { it.toBooleanStrict() }.orElse(false).get().toString())
       applicationIdSuffix = ".debug"
       manifestPlaceholders["appName"] = "Cobalt Debug"
       signingConfig = signingConfigs.findByName("debugConfig")

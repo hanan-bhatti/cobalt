@@ -1,5 +1,7 @@
 # Local web companion implementation and review
 
+Historical report for the unpublished 2.2.3/19 builds. See [2.3.0 release preparation](release-preparation-2.3.0.md) for the current version, development feature flag and verification limits.
+
 Branch: `feature/local-web-companion`. App version remains **2.2.3 / code 19**. This branch does not create or publish a 2.3.0 release.
 
 ## Gemini changes reviewed

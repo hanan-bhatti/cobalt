@@ -275,7 +275,7 @@ class CobaltEmbeddedServer(
             put("X-Frame-Options", "DENY")
             put("Cache-Control", "no-store")
             put("Referrer-Policy", "no-referrer")
-            put("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
+            put("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http:; media-src 'self' blob:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'")
             putAll(response.headers)
             if (!containsKey("Content-Length")) {
                 put("Content-Length", response.body.size.toString())

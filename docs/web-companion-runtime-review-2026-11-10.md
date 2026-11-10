@@ -1,5 +1,7 @@
 # Web companion runtime review — 2026-11-10
 
+Historical report for the unpublished 2.2.3/19 builds. See [2.3.0 release preparation](release-preparation-2.3.0.md) for the current version, development feature flag and verification limits.
+
 The latest debug APK was built with Gradle, installed in place on **emulator-5554 (Pixel 10 Pro XL, Android 17/API 37)**, and tested through its actual HTTP server. Its version is still **2.2.3 / code 19**, package `com.hanan_bhatti.cobalt.debug`. The installed APK's SHA-256 matches the local Gradle output.
 
 **Result:** reading, editing and saving text/code notes now work. The original implementation had no edit/save endpoint or editor UI. Full bodies above the native small-note threshold were also not loaded correctly. The full source/commit audit and corrections are in [the implementation ledger](web-companion-implementation-ledger.md).

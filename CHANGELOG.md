@@ -1,9 +1,23 @@
-## [2.2.3] - Unreleased
+## [2.3.0] - 2026-11-11
 
-Development changes since the published v2.2.2 release. This section describes
-implemented source behavior; test results and remaining gaps are documented in
-`docs/version-comparison-v2.2.2-to-current-2026-11-09.md`. It does not certify every
-feature or device. Version name/code remain 2.2.3/19.
+Cobalt 2.3.0 combines all development since the published v2.2.2 release.
+The planned 2.2.3 release was never published; its changes are included here.
+
+### Release highlights
+
+- Write Markdown with continuous editing, Find/Replace, table tools and recoverable drafts.
+- Keep saved note history and Undo/Redo; manage local storage, Trash and recovery.
+- Track movies, TV, anime and manga with optional Trakt sync and configurable providers.
+- Personalize local fonts, smart folders, reminders and styled sharing.
+- Use one local Cobalt app without a Cobalt account or retired cloud services.
+- Refresh the product website, privacy disclosures and fifteen store screenshots.
+
+Web Companion remains experimental. Its settings and server startup are disabled
+in release builds; development can continue through an explicit debug feature flag.
+
+The detailed source changes follow. Historical validation and its limits are in
+`docs/version-comparison-v2.2.2-to-current-2026-11-09.md`. Those tests used pre-release
+2.2.3 builds and do not constitute validation of the final 2.3.0 APK.
 
 ### Distribution and privacy
 
@@ -156,8 +170,9 @@ feature or device. Version name/code remain 2.2.3/19.
 - Verify the subsequent survey/polish revision with 77 targeted tests, including
   slider interaction and light/dark renders. Device checks and email-delivery
   limits are recorded in `docs/app-polish-verification-2026-11-10.md`.
-- Complete app backup/restore, encrypted notes, biometric app lock, a note-editing
-  web companion and per-note image galleries are not implemented by this changelog.
+- Complete app backup/restore, encrypted notes, biometric app lock and per-note
+  image galleries are outside this release. The experimental Web Companion is
+  disabled in release builds and is not a published user feature.
   Media/account/network features, large-file budgets and every supported Android
   version require their own verified results; untested work is not marked passed.
 
