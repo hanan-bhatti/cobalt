@@ -72,23 +72,18 @@ Crash reports are saved locally and shared through an email chooser only on requ
 ## 📱 Screenshots
 
 <p align="center">
-  <img src="assets/screenshots/dashboard_home.png" width="31%" alt="Dashboard Screen"/>
-  &nbsp;
-  <img src="assets/screenshots/floating_edge_panel.png" width="31%" alt="Cobalt SideDock Panel"/>
-  &nbsp;
-  <img src="assets/screenshots/voice_memo_recording.png" width="31%" alt="Voice Memo Player"/>
+  <img src="assets/screenshots/01-home.png" width="31%" alt="Mixed archive" />
+  <img src="assets/screenshots/04-notes.png" width="31%" alt="Markdown notes" />
+  <img src="assets/screenshots/07-folders.png" width="31%" alt="Colored folders" />
 </p>
 
 <p align="center">
-  <img src="assets/screenshots/ocr_target_screenshot.png" width="31%" alt="OCR Target Selection"/>
-  &nbsp;
-  <img src="assets/screenshots/ocr_extracted_links.png" width="31%" alt="OCR Extracted Links"/>
-  &nbsp;
-  <img src="assets/screenshots/folders_screen.png" width="31%" alt="Folders and Categories"/>
+  <img src="assets/screenshots/08-create-folder.png" width="31%" alt="Create a folder" />
+  <img src="assets/screenshots/11-media-hub.png" width="31%" alt="Media Hub" />
+  <img src="assets/screenshots/13-settings.png" width="31%" alt="Activity and settings" />
 </p>
 
-> [!TIP]
-> For a full visual walkthrough of all 14 screens, theme variations, and workflows, check out the [Screenshots Directory Guide](assets/screenshots/README.md).
+[Explore all 15 screenshots and the connected folder panorama](assets/screenshots/README.md).
 
 ---
 

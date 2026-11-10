@@ -32,7 +32,7 @@
     <div class="container-prose">
       <header class="legal-header">
         <h1>Privacy Policy</h1>
-        <p class="meta">Last updated: 3 November 2026</p>
+        <p class="meta">Last updated: 11 November 2026</p>
       </header>
 
       <article class="legal-content">
@@ -65,7 +65,7 @@
           Connecting Trakt is optional. Authentication uses OAuth 2.0 Authorization Code Flow with PKCE (Proof Key for Code Exchange) via an external browser or Chrome Custom Tab redirecting to <code>https://cobalt.hanan-bhatti.site/callback</code>, with an alternative Device Code flow (<code>trakt.tv/activate</code>) supported for convenience. Cobalt never handles or stores your Trakt password and never embeds a client secret in distributed software.
         </p>
         <p>
-          When connected, Cobalt reads your Trakt profile, watched movie and TV history (including episode plays), ratings, and watchlist. Cobalt sends updates to Trakt when you mark movies or episodes as watched, rate items, or change watchlist status. Cobalt runs an initial sync upon connecting and updates when you tap "Sync Now". Cobalt does not run scheduled periodic background sync.
+          When connected, Cobalt reads your Trakt profile, watched movie and TV history (including episode plays), ratings, and watchlist. Cobalt sends updates to Trakt when you mark movies or episodes as watched, rate items, or change watchlist status. Cobalt runs an initial sync upon connecting, updates when you tap "Sync Now", refreshes account data on eligible app starts (after 15 minutes), and schedules a daily background sync via Android WorkManager. Category switches pause their respective uploads and imports.
         </p>
         <p>
           Disconnecting Trakt clears your stored Trakt tokens and session details locally and attempts server-side revocation on Trakt's servers. If your device is offline or the revocation request fails, local disconnect still completes, and you can revoke Cobalt's access at any time through your Trakt account settings on trakt.tv. Previously synchronized items remain in your local Cobalt library. Disconnecting Trakt, uninstalling Cobalt, or deleting local items does not remove your watch history, ratings, or watchlist from your Trakt account.
@@ -108,7 +108,7 @@
           Third-party services—including Google Gemini, TMDb, Jikan, Trakt, YouTube, and GitHub—operate independently of Cobalt. Their own terms and privacy policies govern how they handle connection metadata and request content.
         </p>
         <p>
-          Cobalt uses Trakt but is not endorsed or certified by Trakt. Cobalt uses the TMDB API but is not endorsed or certified by TMDB.
+          Cobalt uses <a href="https://trakt.tv" target="_blank" rel="noopener noreferrer">Trakt</a> but is not endorsed or certified by Trakt. Cobalt uses the TMDB API but is not endorsed or certified by TMDB.
         </p>
         <p>
           This public website is hosted as a static site on GitHub Pages. The website serves static files only, sets no tracking cookies, loads no external fonts or tracking scripts, and collects no personal data or login credentials.

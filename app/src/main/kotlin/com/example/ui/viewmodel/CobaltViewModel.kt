@@ -1382,6 +1382,14 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private var editOriginalId: String? = null
+        set(value) {
+            field = value
+            if (value != null) {
+                com.example.web.session.EditorSessionRegistry.acquireMobileLock(value)
+            } else {
+                com.example.web.session.EditorSessionRegistry.releaseMobileLock()
+            }
+        }
     private val _isEditingItem = MutableStateFlow(false)
     val isEditingItem: StateFlow<Boolean> = _isEditingItem.asStateFlow()
 
@@ -2541,7 +2549,30 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         )
     }
 
+    fun startWebCompanion(port: Int = 8080): Boolean {
+        val app = getApplication<Application>()
+        return com.example.web.WebCompanionManager.start(
+            context = app,
+            scope = viewModelScope,
+            db = com.example.data.local.AppDatabase.getDatabase(app),
+            repo = repository,
+            port = port
+        )
+    }
 
+    fun stopWebCompanion() {
+        com.example.web.WebCompanionManager.stop(getApplication())
+    }
+
+    fun rotateWebCompanionPin(): String {
+        return com.example.web.WebCompanionManager.rotatePin(getApplication())
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        stopWebCompanion()
+        com.example.web.session.EditorSessionRegistry.releaseMobileLock()
+    }
 }
 
 data class ExtractedLinkReview(

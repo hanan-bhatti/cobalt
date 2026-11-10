@@ -245,7 +245,7 @@ class NotePersistence(
         return result
     }
 
-    suspend fun save(item: SavedItem, expectedUpdatedAt: Long = item.updatedAt, progress: (Long) -> Unit = {}): SavedItem = withContext(Dispatchers.IO) {
+    suspend fun save(item: SavedItem, expectedUpdatedAt: Long = item.updatedAt, beforeCommit: () -> Unit = {}, progress: (Long) -> Unit = {}): SavedItem = withContext(Dispatchers.IO) {
         if (!isNote(item)) {
             return@withContext NoteWriteLock.mutex.withLock { saveNonNoteLocked(item) }
         }
@@ -253,6 +253,7 @@ class NotePersistence(
             deletionFence.requireAlive(item.id)
             check(!item.isDeleted && dao.isItemDeleted(item.id) != true) { "This note is in Trash. Restore it before editing." }
             var old = dao.getNoteBodyMetadata(item.id)
+            beforeCommit()
             check(old == null || old.updatedAt == expectedUpdatedAt) { "Note metadata changed; reopen before saving. Original retained." }
             if (item.bodyLoaded && old != null && item.contentHash == null) {
                 check(old.bodyLocation != "FILE") { "Note changed; reopen before saving. Original retained." }
@@ -269,6 +270,7 @@ class NotePersistence(
                     preview = current.preview, formatVersion = 1
                 )
                 database.withTransaction {
+                    beforeCommit()
                     unchanged(item.id, old)
                     dao.insertItem(entity)
                     if (old == null) index(item.id, current.contentHash!!)
@@ -296,6 +298,7 @@ class NotePersistence(
                 sizeBytes = ref.bytes, preview = ref.preview, formatVersion = 1, bodyMissing = false, updatedAt = editTime(item, old))
             NoteGenerationHistory.protectReplacement(old?.contentHash)
             database.withTransaction {
+                beforeCommit()
                 unchanged(item.id, old)
                 dao.insertItem(SavedItemEntity.fromDomainModel(saved))
                 index(item.id, ref.hash)

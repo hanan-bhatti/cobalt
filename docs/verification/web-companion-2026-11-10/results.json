@@ -1,0 +1,83 @@
+{
+  "package": "com.hanan_bhatti.cobalt.debug",
+  "versionName": "2.2.3",
+  "versionCode": 19,
+  "device": "emulator-5554, Pixel 10 Pro XL, Android 17/API 37",
+  "jvmTests": {
+    "distinctPassed": 48,
+    "suites": {
+      "WebCompanionSecurityManagerTest": 11,
+      "EditorSessionRegistryTest": 7,
+      "CobaltEmbeddedServerTest": 10,
+      "WebCompanionRouterTest": 7,
+      "WebNoteEditingTest": 9,
+      "PreparedNoteCommitTest": 4
+    },
+    "note": "47/48 passed initially; the logout fixture was corrected to send the required JSON content type and all seven router tests passed on rerun."
+  },
+  "clientRegressionTestsPassed": 9,
+  "deviceInstrumentationMethodsPassed": 2,
+  "browser": {
+    "readerMarkdown": true,
+    "xssBlocked": true,
+    "editSaveReopenReloadExactUnicode": true,
+    "largeNote": true,
+    "codeSave": true,
+    "emptyNote": true,
+    "imageLoads": true,
+    "linkAndMovieShowReadOnly": true,
+    "audioVideoPlayback": true,
+    "copyText": true,
+    "narrowReadEditSaveBack": true,
+    "searchFilterPagination": true,
+    "cancelDraftGuard": true,
+    "logoutClearsNote": true,
+    "pageErrors": [],
+    "textAndCodeFilters": true,
+    "punctuationSearch": true
+  },
+  "nativeEditor": {
+    "actualAndroidEditorBlocksWeb": true,
+    "backCancelReleasesLock": true
+  },
+  "retentionAndPerformance": {
+    "originalRowsRetainedExactly": 500,
+    "totalRows": 515,
+    "types": {
+      "AUDIO": 1,
+      "CODE": 2,
+      "IMAGE": 2,
+      "LINK": 1,
+      "MEDIA": 2,
+      "TEXT": 506,
+      "VIDEO": 1
+    },
+    "newFixtures": 15,
+    "processRestartRetainsBodyAndGeneration": true,
+    "oldSessionsInvalidAfterRestartAndPinRotation": true,
+    "fiveBadPinsLockOutFor600Seconds": true,
+    "pinFailureResponseMs": [
+      509,
+      1017,
+      1517,
+      2011,
+      9
+    ],
+    "largeNoteUtf8Bytes": 456083,
+    "readSamples": 10,
+    "medianReadMs": 93.8,
+    "maxReadMs": 106.3,
+    "installedApkMatchesGradleOutput": true,
+    "apkSha256": "752753d4455e73adba2302c4b006d557c44c7d0aa0f713a4c9ce9e4918c3118c",
+    "writeSamples": 5,
+    "medianWriteMs": 382.3,
+    "maxWriteMs": 518.9,
+    "fiveLargeWritesReopenedExactly": true,
+    "originalFingerprintRecheckedAfterAllWrites": true
+  },
+  "scope": "Local debug app and headless Chromium; no release/version bump, no production uninstall or data clear.",
+  "crashObservation": {
+    "debugJavaCrashMarkersDuringReview": 0,
+    "recentExitReasons": "Intentional force-stops and package updates; no crash/ANR in the recorded review interval."
+  }
+}

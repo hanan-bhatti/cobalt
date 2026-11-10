@@ -145,7 +145,7 @@ object AppVersionManager {
         ReleaseNote(
             versionName = currentVersionName,
             versionCode = currentVersionCode,
-            releaseDate = "Unreleased",
+            releaseDate = "2026-11-11",
             tag = currentTag,
             isCurrent = true,
             isLatest = true,

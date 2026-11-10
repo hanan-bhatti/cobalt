@@ -91,4 +91,24 @@ class PreparedNoteCommitTest {
         } finally { files.deleteAll(note.id); database.close() }
     }
 
+
+    @Test fun revokedWebGuardBeforeMetadataCommitRetainsOriginalGeneration() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
+        val store = PrivateMarkdownStore(context, fileOperations = HostTestNoteFileOperations, sharedStorage = false)
+        val persistence = NotePersistence(context, database, store)
+        val note = SavedItem(type = SavedItemType.TEXT, title = "Guard fixture", content = "Original 🙂")
+        try {
+            val saved = persistence.save(note)
+            var checks = 0
+            val result = runCatching { persistence.save(saved.copy(content = "Must not commit", bodyLoaded = true), beforeCommit = {
+                checks++
+                check(checks == 1) { "Mobile editor opened while the body was staged" }
+            }) }
+            assertTrue(result.isFailure)
+            assertEquals(2, checks)
+            assertEquals(saved.contentHash, database.savedItemDao().getNoteBodyMetadata(saved.id)!!.contentHash)
+            assertEquals("Original 🙂", store.open(saved.id, saved.contentHash!!).bufferedReader().use { it.readText() })
+        } finally { store.deleteAll(note.id); database.close() }
+    }
 }

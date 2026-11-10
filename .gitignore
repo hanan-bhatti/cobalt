@@ -15,6 +15,7 @@
 .cxx
 local.properties
 .env
+node_modules/
 debug.keystore
 
 # Keystore for release
@@ -25,7 +26,8 @@ Commit.md
 docs/superpowers/
 plans/
 raw_screenshots/
-screenshots/
+/screenshots/
+/app/src/test/screenshots/
 
 # Firebase logs
 firebase-debug.log

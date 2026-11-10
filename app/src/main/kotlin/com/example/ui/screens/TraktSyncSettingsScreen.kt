@@ -431,7 +431,7 @@ fun TraktSyncSettingsScreen(
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "Authorize Cobalt with a device code. Your password stays with Trakt.",
+                                        text = "Sign in securely via browser. Your password stays with Trakt.",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -439,7 +439,7 @@ fun TraktSyncSettingsScreen(
                             }
 
                             Button(
-                                onClick = { authManager.startDeviceAuth() },
+                                onClick = { authManager.startPkceAuth(context) },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = Color(0xFFED1C24)
                                 ),
@@ -458,11 +458,11 @@ fun TraktSyncSettingsScreen(
                             }
 
                             TextButton(
-                                onClick = { authManager.startPkceAuth(context) },
+                                onClick = { authManager.startDeviceAuth() },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = "Browser sign-in (requires an approved callback)",
+                                    text = "Sign in with device code instead",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

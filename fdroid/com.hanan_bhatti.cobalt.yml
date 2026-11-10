@@ -52,9 +52,9 @@ Builds:
     prebuild: sed -i -e '/playImplementation/d' build.gradle.kts
 
 # Historical recipes above retain the configuration required by their pinned commits.
-  - versionName: 2.2.3
-    versionCode: 19
-    commit: v2.2.3
+  - versionName: 2.3.0
+    versionCode: 20
+    commit: v2.3.0
     subdir: app
     gradle:
       - yes
@@ -63,5 +63,5 @@ AllowedAPKSigningKeys: 9af192bc1865c315591539bd4022e69e6a35e597384b846d3b3f272e7
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 2.2.3
-CurrentVersionCode: 19
+CurrentVersion: 2.3.0
+CurrentVersionCode: 20
