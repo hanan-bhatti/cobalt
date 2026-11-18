@@ -29,6 +29,9 @@ interface CustomFolderDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFolder(folder: CustomFolderEntity)
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertBookmarkFolder(folder: CustomFolderEntity): Long
+
     @Delete
     suspend fun deleteFolder(folder: CustomFolderEntity)
 

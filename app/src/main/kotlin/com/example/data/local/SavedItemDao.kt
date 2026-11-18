@@ -24,6 +24,16 @@ import com.example.notes.NoteSizePolicy
 
 @Dao
 interface SavedItemDao {
+    @Query("SELECT id, content, isDeleted FROM saved_items WHERE upper(type) = 'LINK'")
+    suspend fun getBookmarkIdentities(): List<com.example.bookmarks.BookmarkIdentity>
+
+    @Query("SELECT * FROM saved_items WHERE upper(type) = 'LINK' AND (content IN (:urls) OR id IN (:ids)) ORDER BY isDeleted ASC")
+    suspend fun getBookmarkCandidates(urls: List<String>, ids: List<String>): List<SavedItemEntity>
+
+    /** Bookmark transfer reads links only, including Trash for duplicate reporting. */
+    @Query("SELECT * FROM saved_items WHERE upper(type) = 'LINK' ORDER BY orderIndex ASC, id ASC")
+    suspend fun getBookmarkLinks(): List<SavedItemEntity>
+
     @Query("SELECT id, type, substr(title, 1, 180) AS title, timestamp, updatedAt, foldersJson, substr(linkTitle, 1, 180) AS linkTitle, CASE WHEN upper(type) IN ('TEXT', 'CODE') THEN substr(CASE WHEN bodyLocation = 'FILE' THEN preview ELSE content END, 1, 240) ELSE '' END AS excerpt, CASE WHEN upper(type) IN ('IMAGE', 'VIDEO') THEN substr(content, 1, 2048) ELSE '' END AS mediaPath, substr(thumbnailPath, 1, 2048) AS thumbnailPath, substr(linkImage, 1, 2048) AS linkImage, substr(linkDescription, 1, 240) AS linkDescription FROM saved_items WHERE isDeleted = 0 AND isArchived = 0")
     suspend fun getFolioItems(): List<com.example.widget.FolioItemRow>
 
