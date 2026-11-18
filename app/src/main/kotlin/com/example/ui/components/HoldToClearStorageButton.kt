@@ -33,6 +33,24 @@ import kotlinx.coroutines.*
  */
 @Composable
 fun HoldToClearStorageButton(enabled: Boolean, onConfirmed: () -> Unit) {
+    HoldToConfirmButton(
+        enabled = enabled,
+        label = "Hold to clear storage (5s)",
+        accessibilityLabel = "Press and hold for five seconds to clear disposable storage",
+        testTag = "clear_disposable_hold",
+        onConfirmed = onConfirmed
+    )
+}
+
+/** Shared five-second confirmation, with the same cancellation behavior as storage cleanup. */
+@Composable
+fun HoldToConfirmButton(
+    enabled: Boolean,
+    label: String,
+    accessibilityLabel: String,
+    testTag: String,
+    onConfirmed: () -> Unit
+) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val scope = rememberCoroutineScope()
     val callback by rememberUpdatedState(onConfirmed)
@@ -69,7 +87,7 @@ fun HoldToClearStorageButton(enabled: Boolean, onConfirmed: () -> Unit) {
 
     val shape = RoundedCornerShape(16.dp)
     val errorColor = MaterialTheme.colorScheme.error
-    val text = if (progress == 0f) "Hold to clear storage (5s)"
+    val text = if (progress == 0f) label
                else "Keep holding · ${kotlin.math.ceil((1f - progress) * 5).toInt()}s"
 
     Surface(
@@ -83,8 +101,8 @@ fun HoldToClearStorageButton(enabled: Boolean, onConfirmed: () -> Unit) {
             .fillMaxWidth()
             .height(54.dp)
             .clip(shape)
-            .testTag("clear_disposable_hold")
-            .semantics { role = Role.Button; contentDescription = "Press and hold for five seconds to clear disposable storage" }
+            .testTag(testTag)
+            .semantics { role = Role.Button; contentDescription = accessibilityLabel }
             .onFocusChanged { if (!it.hasFocus) cancel() }
             .onKeyEvent {
                 if (it.key != Key.Enter && it.key != Key.Spacebar) false

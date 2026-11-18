@@ -14,6 +14,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import com.example.notes.NoteMigrationManager
 import com.example.notes.NoteMigrationManager.Phase
 import com.example.ui.components.*
@@ -58,49 +60,57 @@ fun NoteMigrationScreen(startup: Boolean, onDone: () -> Unit, onBack: () -> Unit
         composable("migration") {
             NoteStorageRoute(navigation, this) {
                 NoteBackSurface(enabled = startup && !showPrompt, onBack = onBack) {
-                    NoteSettingsPage(title = "Data Migration", subtitle = "Update and verify note storage", onBack = onBack) {
+                    NoteSettingsPage(title = "Note storage update", subtitle = "Update and verify saved notes", onBack = onBack) {
                         item {
-                            SettingsSubsectionHeader(title = "Note storage",
-                                description = "Check each note as it moves to the current storage format.")
-                            Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
-                                Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                        Column(Modifier.weight(1f)) {
-                                            Text(when (status.phase) {
-                                                Phase.READY -> "Ready to move"
-                                                Phase.RUNNING -> "Moving your notes"
-                                                Phase.COMPLETE -> "Your notes are ready"
+                            Text("This tool is temporary and will be removed soon. Your saved notes will remain available.",
+                                modifier = Modifier.padding(horizontal = 4.dp), style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        item {
+                            Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                                Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                                    SettingsIconBadge(when {
+                                        complete -> R.drawable.ic_custom_check
+                                        status.phase == Phase.ATTENTION -> R.drawable.ic_custom_info
+                                        else -> R.drawable.ic_custom_sync
+                                    })
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(when {
+                                            starting -> "Preparing notes…"
+                                            else -> when (status.phase) {
+                                                Phase.READY -> "Ready to update"
+                                                Phase.RUNNING -> "Updating notes"
+                                                Phase.COMPLETE -> "Storage is up to date"
                                                 Phase.ATTENTION -> "Some notes need attention"
                                                 Phase.INTERRUPTED -> "Ready to resume"
-                                            }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                                            Text(when {
-                                                running && status.total > 0 -> "${status.verified} of ${status.total} notes verified"
-                                                running -> "Preparing your notes…"
-                                                complete -> "${status.verified} of ${status.total} notes verified"
-                                                status.total > 0 -> "${status.total} notes · kept on this device"
-                                                else -> "Original content is retained until verification"
-                                            }, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
+                                        }, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+                                        Text(when {
+                                            running && status.total > 0 -> "${checked} of ${status.total} notes checked"
+                                            running -> "Preparing your notes for verification."
+                                            complete -> "${status.verified} notes verified"
+                                            status.phase == Phase.INTERRUPTED -> "Continue the interrupted storage update."
+                                            status.phase == Phase.ATTENTION -> "Retry the notes that could not be verified."
+                                            else -> "Update note storage on this device and check the saved content."
+                                        }, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    if (status.total > 0) {
+                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                            MigrationCount("Verified", status.verified, Modifier.weight(1f), false)
+                                            MigrationCount("Needs attention", status.failed, Modifier.weight(1f), status.failed > 0)
                                         }
-                                        if (running && status.total > 0) Text("${(progress * 100).toInt()}%",
-                                            style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                                     }
                                     if (running) {
                                         if (running && status.total == 0) LinearProgressIndicator(Modifier.fillMaxWidth().height(6.dp))
                                         else LinearProgressIndicator(progress = { progress },
                                             modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape))
                                     }
-                                    Text(when {
-                                        running && status.bytes > 0 -> "${formatNoteSize(context, status.bytes)} processed this run · verifying content"
-                                        running -> "Original content is kept until the updated note is verified."
-                                        complete -> "Everything is saved locally. You can continue using Cobalt."
-                                        status.phase == Phase.ATTENTION -> "Unfinished notes and their originals are retained. Retry when ready."
-                                        status.phase == Phase.INTERRUPTED -> "Continue from the last verified note."
-                                        else -> "Update Markdown note storage on this device, then verify the saved content."
-                                    }, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    if (status.failed > 0) {
-                                        Text("${status.failed} notes need attention", style = MaterialTheme.typography.labelLarge,
-                                            color = MaterialTheme.colorScheme.error)
-                                    }
+                                    if (running && status.bytes > 0) Text(
+                                        "${formatNoteSize(context, status.bytes)} processed · verifying content",
+                                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    if (status.phase == Phase.ATTENTION) Text(
+                                        "Unfinished notes and their originals are retained. Retry when ready.",
+                                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     if (status.lastRun > 0) Text("Last checked " + DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
                                         .format(Date(status.lastRun)), style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -111,26 +121,35 @@ fun NoteMigrationScreen(startup: Boolean, onDone: () -> Unit, onBack: () -> Unit
                             Button(onClick = { if (complete && startup) onDone() else migrate() }, enabled = !running,
                                 shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).bounceClick()) {
                                 Text(when {
-                                    running -> "Moving notes…"
+                                    running -> "Updating notes…"
                                     complete && startup -> "Open Cobalt"
                                     complete -> "Check notes again"
                                     status.phase == Phase.ATTENTION -> "Retry unfinished notes"
-                                    status.phase == Phase.INTERRUPTED -> "Resume migration"
+                                    status.phase == Phase.INTERRUPTED -> "Resume update"
                                     else -> "Update notes"
                                 }, fontWeight = FontWeight.SemiBold)
                             }
                         }
                         if (status.errors.isNotEmpty()) item {
-                            Column(Modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Needs attention", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.error)
-                                status.errors.forEach { Text(it, style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                            Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.errorContainer) {
+                                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("Needs attention", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onErrorContainer)
+                                    status.errors.forEach { Text(it, style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onErrorContainer) }
+                                }
                             }
                         }
                         item {
-                            Text("This migration tool is temporary. Your Markdown notes will stay available after it is retired.",
-                                modifier = Modifier.padding(horizontal = 12.dp), style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                                Row(Modifier.padding(20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Icon(painterResource(R.drawable.ic_custom_info), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Text("What this does", style = MaterialTheme.typography.titleMedium)
+                                        Text("Updates Markdown note storage locally and verifies each note. Original content is retained until verification.",
+                                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -157,6 +176,19 @@ fun NoteStorageErrorScreen(onRetry: () -> Unit, onRecovery: () -> Unit, onBack: 
             item {
                 ExpressiveSettingsNavigationItem(title = "Note recovery", subtitle = "Read or export your saved notes", onClick = onRecovery)
             }
+        }
+    }
+}
+
+@Composable
+private fun MigrationCount(label: String, count: Int, modifier: Modifier, needsAttention: Boolean) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(20.dp),
+        color = if (needsAttention) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(java.text.NumberFormat.getIntegerInstance().format(count), style = MaterialTheme.typography.headlineMedium,
+                color = if (needsAttention) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface)
+            Text(label, style = MaterialTheme.typography.labelMedium,
+                color = if (needsAttention) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

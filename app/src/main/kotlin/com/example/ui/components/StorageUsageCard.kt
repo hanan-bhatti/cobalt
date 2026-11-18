@@ -44,11 +44,12 @@ fun StorageUsageCard(report: NoteStorageManager.Report?, busy: Boolean) {
     Surface(shape = RoundedCornerShape(24.dp), color = colors.surfaceContainer) {
         Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Stored by Cobalt", style = MaterialTheme.typography.labelLarge, color = colors.onSurfaceVariant)
+                Text("On this device", style = MaterialTheme.typography.labelLarge, color = colors.onSurfaceVariant)
                 if (report != null) {
                     Text(
                         formatNoteSize(context, report.total),
-                        style = MaterialTheme.typography.headlineLarge,
+                        style = MaterialTheme.typography.displaySmall,
+                        color = colors.primary,
                         fontWeight = FontWeight.SemiBold
                     )
                 } else if (busy) {
@@ -148,7 +149,7 @@ fun StorageUsageCard(report: NoteStorageManager.Report?, busy: Boolean) {
                     color = colors.onSurfaceVariant
                 )
                 Text(
-                    "This shows storage used by Cobalt on this device. Review eligible cache and older versions in Cache & database before clearing space.",
+                    "Storage used by Cobalt, including notes, media and retained data.",
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.onSurfaceVariant.copy(alpha = 0.8f)
                 )

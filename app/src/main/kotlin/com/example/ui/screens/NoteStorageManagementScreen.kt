@@ -20,7 +20,7 @@ import com.example.ui.components.*
 import kotlinx.coroutines.*
 
 /** One storage hub with focused actions; the existing settings shell owns theme and predictive back. */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun NoteStorageManagementScreen(onBack: () -> Unit) {
     val context = LocalContext.current
@@ -74,59 +74,58 @@ fun NoteStorageManagementScreen(onBack: () -> Unit) {
                 ) {
                     item { StorageUsageCard(report, busy) }
                     item {
-                        SettingsSubsectionHeader("YOUR CONTENT")
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        BoxWithConstraints(Modifier.fillMaxWidth()) {
+                            val cardWidth = if (androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f)
+                                maxWidth.coerceAtMost(220.dp) else ((maxWidth - 12.dp) / 2).coerceAtMost(160.dp)
+                            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                StorageQuickAccess(
+                                    title = "Trash", detail = report?.let { "${it.trashCount} items · ${formatNoteSize(context, it.trash)}" } ?: "Restore deleted items",
+                                    icon = R.drawable.ic_custom_delete, onClick = { open("trash") },
+                                    modifier = Modifier.width(cardWidth), accent = MaterialTheme.colorScheme.tertiaryContainer,
+                                    onAccent = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                                StorageQuickAccess(
+                                    title = "Draft recovery", detail = report?.let { formatNoteSize(context, it.recovery) } ?: "Recover unsaved writing",
+                                    icon = R.drawable.ic_custom_history, onClick = { open("drafts") },
+                                    modifier = Modifier.width(cardWidth), accent = MaterialTheme.colorScheme.secondaryContainer,
+                                    onAccent = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                        }
+                    }
+                    item {
+                        SettingsGroupLabel("Notes & history")
+                        ExpressiveSettingsGroup {
                             ExpressiveSettingsNavigationItem(
-                                title = "Saved notes",
-                                onClick = { open("recovery") },
-                                subtitle = "Browse and inspect your saved notes",
-                                shape = connectedPillShape(0, 3)
+                                title = "Saved notes", onClick = { open("recovery") }, subtitle = "Browse and inspect stored notes",
+                                leadingIcon = { SettingsIconBadge(R.drawable.ic_custom_text) },
+                                shape = connectedPillShape(0, 2), compact = true
                             )
                             ExpressiveSettingsNavigationItem(
-                                title = "Draft recovery",
-                                onClick = { open("drafts") },
-                                subtitle = "Recover unsaved writing and interrupted edits",
-                                trailingBadge = report?.let { formatNoteSize(context, it.recovery) },
-                                trailingContent = if (report == null && busy) { { SkeletonBadge(46.dp) } } else null,
-                                shape = connectedPillShape(1, 3)
-                            )
-                            ExpressiveSettingsNavigationItem(
-                                title = "Trash",
-                                onClick = { open("trash") },
-                                subtitle = "Restore items or empty deleted notes",
-                                trailingBadge = report?.let { "${it.trashCount} · ${formatNoteSize(context, it.trash)}" },
-                                trailingContent = if (report == null && busy) { { SkeletonBadge(40.dp) } } else null,
-                                shape = connectedPillShape(2, 3)
+                                title = "Note history", onClick = { open("history") }, subtitle = "Review earlier versions and edit history",
+                                trailingBadge = report?.let { formatNoteSize(context, it.older) },
+                                trailingContent = if (report == null && busy) { { SkeletonBadge(50.dp) } } else null,
+                                leadingIcon = { SettingsIconBadge(R.drawable.ic_custom_history) },
+                                shape = connectedPillShape(1, 2), compact = true
                             )
                         }
                     }
                     item {
-                        SettingsSubsectionHeader("HISTORY & COPIES")
-                        ExpressiveSettingsNavigationItem(
-                            title = "Saved history",
-                            onClick = { open("history") },
-                            subtitle = "Inspect older note versions and edit history",
-                            trailingBadge = report?.let { formatNoteSize(context, it.older) },
-                            trailingContent = if (report == null && busy) { { SkeletonBadge(50.dp) } } else null,
-                            shape = connectedPillShape(0, 1)
-                        )
-                    }
-                    item {
-                        SettingsSubsectionHeader("CLEANUP & SYSTEM")
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        SettingsGroupLabel("Free up space")
+                        ExpressiveSettingsGroup {
                             ExpressiveSettingsNavigationItem(
-                                title = "Cache & database",
-                                onClick = { open("maintenance") },
-                                subtitle = "Clear temporary preview cache and optimize space",
-                                shape = connectedPillShape(0, 2)
+                                title = "Cache & database", onClick = { open("maintenance") },
+                                subtitle = "Clear temporary previews and optimize the database",
+                                leadingIcon = { SettingsIconBadge(R.drawable.ic_custom_storage) },
+                                shape = connectedPillShape(0, 2), compact = true
                             )
                             ExpressiveSettingsNavigationItem(
-                                title = "Unlinked storage",
-                                onClick = { open("unlinked") },
-                                subtitle = "Clean up orphaned media and interrupted imports",
+                                title = "Unattached files", onClick = { open("unlinked") },
+                                subtitle = "Review files not linked to saved items",
                                 trailingBadge = report?.let { formatNoteSize(context, it.unattached) },
                                 trailingContent = if (report == null && busy) { { SkeletonBadge(44.dp) } } else null,
-                                shape = connectedPillShape(1, 2)
+                                leadingIcon = { SettingsIconBadge(R.drawable.ic_storage_unlinked) },
+                                shape = connectedPillShape(1, 2), compact = true
                             )
                         }
                     }
@@ -484,6 +483,20 @@ internal fun StorageMaintenanceCard(
                         fontWeight = FontWeight.SemiBold
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StorageQuickAccess(title: String, detail: String, icon: Int, onClick: () -> Unit,
+    modifier: Modifier, accent: androidx.compose.ui.graphics.Color, onAccent: androidx.compose.ui.graphics.Color) {
+    Surface(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(20.dp), color = accent, contentColor = onAccent) {
+        Column(Modifier.fillMaxWidth().heightIn(min = 104.dp).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(painterResource(icon), null, modifier = Modifier.size(22.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text(detail, style = MaterialTheme.typography.bodySmall)
             }
         }
     }
