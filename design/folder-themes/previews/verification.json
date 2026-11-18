@@ -1,0 +1,62 @@
+{
+  "presets": 20,
+  "cardStatesChecked": 40,
+  "proposed": {
+    "listIconMinimum": 5.463331581859634,
+    "pinnedIconMinimum": 6.096541105234944,
+    "itemCountMinimum": 7.911627499741797,
+    "labelMinimum": 11.04930884037187
+  },
+  "currentIndigoIcon": 2.8,
+  "responsive": [
+    {
+      "viewport": 320,
+      "layout": "list",
+      "width": 288,
+      "overflow": false
+    },
+    {
+      "viewport": 320,
+      "layout": "pinned",
+      "width": 288,
+      "overflow": false
+    },
+    {
+      "viewport": 360,
+      "layout": "list",
+      "width": 328,
+      "overflow": false
+    },
+    {
+      "viewport": 360,
+      "layout": "pinned",
+      "width": 328,
+      "overflow": false
+    },
+    {
+      "viewport": 736,
+      "layout": "list",
+      "width": 704,
+      "overflow": false
+    },
+    {
+      "viewport": 736,
+      "layout": "pinned",
+      "width": 704,
+      "overflow": false
+    },
+    {
+      "viewport": 1024,
+      "layout": "list",
+      "width": 992,
+      "overflow": false
+    },
+    {
+      "viewport": 1024,
+      "layout": "pinned",
+      "width": 992,
+      "overflow": false
+    }
+  ],
+  "browserErrors": []
+}

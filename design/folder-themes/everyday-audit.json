@@ -1,0 +1,198 @@
+{
+  "metric": "Euclidean OKLab distance times 100; comparative design diagnostic only",
+  "original": {
+    "light": {
+      "minimum": {
+        "pair": [
+          "Peach Sun",
+          "Terra Cotta"
+        ],
+        "deltaEOKx100": 2.349
+      },
+      "closestFive": [
+        {
+          "pair": [
+            "Peach Sun",
+            "Terra Cotta"
+          ],
+          "deltaEOKx100": 2.349
+        },
+        {
+          "pair": [
+            "Minty Teal",
+            "Ocean Mist"
+          ],
+          "deltaEOKx100": 3.91
+        },
+        {
+          "pair": [
+            "Coral Rose",
+            "Terra Cotta"
+          ],
+          "deltaEOKx100": 6.873
+        },
+        {
+          "pair": [
+            "Coral Rose",
+            "Flamingo Pink"
+          ],
+          "deltaEOKx100": 6.961
+        },
+        {
+          "pair": [
+            "Peach Sun",
+            "Soft Gold"
+          ],
+          "deltaEOKx100": 8.328
+        }
+      ]
+    },
+    "dark": {
+      "minimum": {
+        "pair": [
+          "Peach Sun",
+          "Terra Cotta"
+        ],
+        "deltaEOKx100": 1.961
+      },
+      "closestFive": [
+        {
+          "pair": [
+            "Peach Sun",
+            "Terra Cotta"
+          ],
+          "deltaEOKx100": 1.961
+        },
+        {
+          "pair": [
+            "Royal Indigo",
+            "Twilight Blue"
+          ],
+          "deltaEOKx100": 4.08
+        },
+        {
+          "pair": [
+            "Ocean Mist",
+            "Crystal Cyan"
+          ],
+          "deltaEOKx100": 5.185
+        },
+        {
+          "pair": [
+            "Terra Cotta",
+            "Desert Sand"
+          ],
+          "deltaEOKx100": 5.236
+        },
+        {
+          "pair": [
+            "Coral Rose",
+            "Terra Cotta"
+          ],
+          "deltaEOKx100": 5.312
+        }
+      ]
+    }
+  },
+  "everyday": {
+    "light": {
+      "minimum": {
+        "pair": [
+          "Tangerine",
+          "Marigold"
+        ],
+        "deltaEOKx100": 7.548
+      },
+      "closestFive": [
+        {
+          "pair": [
+            "Tangerine",
+            "Marigold"
+          ],
+          "deltaEOKx100": 7.548
+        },
+        {
+          "pair": [
+            "Coral",
+            "Tangerine"
+          ],
+          "deltaEOKx100": 7.549
+        },
+        {
+          "pair": [
+            "Cyan",
+            "Sky"
+          ],
+          "deltaEOKx100": 7.574
+        },
+        {
+          "pair": [
+            "Lime",
+            "Leaf"
+          ],
+          "deltaEOKx100": 7.721
+        },
+        {
+          "pair": [
+            "Coral",
+            "Rose"
+          ],
+          "deltaEOKx100": 8.089
+        }
+      ]
+    },
+    "dark": {
+      "minimum": {
+        "pair": [
+          "Coral",
+          "Sand"
+        ],
+        "deltaEOKx100": 7.545
+      },
+      "closestFive": [
+        {
+          "pair": [
+            "Coral",
+            "Sand"
+          ],
+          "deltaEOKx100": 7.545
+        },
+        {
+          "pair": [
+            "Sunflower",
+            "Sand"
+          ],
+          "deltaEOKx100": 8.398
+        },
+        {
+          "pair": [
+            "Tangerine",
+            "Marigold"
+          ],
+          "deltaEOKx100": 8.529
+        },
+        {
+          "pair": [
+            "Coral",
+            "Rose"
+          ],
+          "deltaEOKx100": 8.607
+        },
+        {
+          "pair": [
+            "Rose",
+            "Sand"
+          ],
+          "deltaEOKx100": 8.659
+        }
+      ]
+    }
+  },
+  "contrast": {
+    "states": 80,
+    "minimumIcon": 3.1129903428545918,
+    "minimumLabel": 11.237025116065958,
+    "minimumCount": 5.399180661739842
+  },
+  "limitations": "Not user recognition testing. Twenty colors cannot be assumed distinct for every viewer. Labels and icons remain required. Theme-role contrast applies to the authored backgrounds, not all wallpaper-derived themes."
+}

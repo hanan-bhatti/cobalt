@@ -1,0 +1,493 @@
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap">
+<section id="cobalt-folder-themes-1113" aria-label="Cobalt folder color comparison">
+  <style>
+    #cobalt-folder-themes-1113 {
+      --c-ink: light-dark(#29221e, #f0dfd8);
+      --c-muted: light-dark(#71665f, #bdaea5);
+      --c-line: light-dark(#e4dcd7, #493c34);
+      --c-control: light-dark(#eee8e4, #30251f);
+      --c-selected: light-dark(#e5d9d1, #4a3428);
+      --c-accent: light-dark(#784b34, #ffb690);
+      --c-highlight: light-dark(#f6f0eb, #35271f);
+      color: var(--c-ink);
+      font: 400 14px/1.5 Roboto, Arial, sans-serif;
+      background: transparent;
+      width: 100%;
+      color-scheme: light dark;
+    }
+    #cobalt-folder-themes-1113 *,
+    #cobalt-folder-themes-1113 *::before,
+    #cobalt-folder-themes-1113 *::after { box-sizing: border-box; }
+    #cobalt-folder-themes-1113 h2,
+    #cobalt-folder-themes-1113 h3,
+    #cobalt-folder-themes-1113 p,
+    #cobalt-folder-themes-1113 dl,
+    #cobalt-folder-themes-1113 dd { margin: 0; }
+    #cobalt-folder-themes-1113 button { font: inherit; }
+    #cobalt-folder-themes-1113 .c-heading {
+      display: flex; flex-wrap: wrap; align-items: center;
+      justify-content: space-between; gap: 16px; padding: 0 90px 22px 0;
+    }
+    #cobalt-folder-themes-1113 .c-headingText { padding-right: 90px; }
+    #cobalt-folder-themes-1113 .c-eyebrow {
+      color: var(--c-muted); font-size: 11px; font-weight: 500;
+      letter-spacing: .12em; margin-bottom: 4px;
+    }
+    #cobalt-folder-themes-1113 h2 { font-size: 25px; line-height: 1.25; font-weight: 600; }
+    #cobalt-folder-themes-1113 .c-layoutControls {
+      display: inline-flex; flex-wrap: wrap; gap: 3px;
+      background: var(--c-control); padding: 4px; border-radius: 12px;
+    }
+    #cobalt-folder-themes-1113 .c-layoutControls button {
+      border: 0; border-radius: 8px; padding: 8px 13px;
+      color: var(--c-muted); background: transparent; min-height: 40px;
+      font-size: 13px; font-weight: 500;
+    }
+    #cobalt-folder-themes-1113 .c-layoutControls button[aria-pressed="true"] {
+      background: var(--c-selected); color: var(--c-ink);
+    }
+    #cobalt-folder-themes-1113 .c-selection {
+      display: flex; flex-wrap: wrap; align-items: baseline;
+      justify-content: space-between; gap: 6px 16px; padding-bottom: 18px;
+    }
+    #cobalt-folder-themes-1113 .c-selectionName { font-weight: 500; font-size: 16px; }
+    #cobalt-folder-themes-1113 .c-selectionId { color: var(--c-muted); font-size: 12px; }
+    #cobalt-folder-themes-1113 .c-comparison {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;
+    }
+    #cobalt-folder-themes-1113 .c-theme { min-width: 0; }
+    #cobalt-folder-themes-1113 .c-themeHeading {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; margin-bottom: 10px;
+    }
+    #cobalt-folder-themes-1113 .c-themeHeading h3 {
+      display: flex; gap: 7px; align-items: center; font-size: 14px; font-weight: 500;
+    }
+    #cobalt-folder-themes-1113 .c-themeHeading svg { width: 16px; height: 16px; }
+    #cobalt-folder-themes-1113 .c-hex {
+      font: 400 11px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace;
+      color: var(--c-muted); white-space: nowrap;
+    }
+    #cobalt-folder-themes-1113 .c-app {
+      padding: 18px 14px 14px; border-radius: 22px;
+      background: var(--c-appBg); color: var(--c-appText);
+      border: 1px solid var(--c-appLine);
+    }
+    #cobalt-folder-themes-1113 .c-theme[data-theme="light"] {
+      --c-appBg: #fdfbf9; --c-appText: #171717;
+      --c-appMuted: #70665f; --c-appLine: #e8dfd9;
+    }
+    #cobalt-folder-themes-1113 .c-theme[data-theme="current"],
+    #cobalt-folder-themes-1113 .c-theme[data-theme="proposed"] {
+      --c-appBg: #1a120e; --c-appText: #f0dfd8;
+      --c-appMuted: #d7c2b9; --c-appLine: #493930;
+    }
+    #cobalt-folder-themes-1113 .c-theme[data-theme="light"] .c-app { color-scheme: light; }
+    #cobalt-folder-themes-1113 .c-theme[data-theme="current"] .c-app,
+    #cobalt-folder-themes-1113 .c-theme[data-theme="proposed"] .c-app { color-scheme: dark; }
+    #cobalt-folder-themes-1113 .c-appHeader {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 8px; margin: 0 2px 18px;
+    }
+    #cobalt-folder-themes-1113 .c-appHeader strong { font-size: 18px; font-weight: 600; }
+    #cobalt-folder-themes-1113 .c-appHeader span { font-size: 11px; color: var(--c-appMuted); }
+    #cobalt-folder-themes-1113 .c-folders { display: grid; gap: 10px; }
+    #cobalt-folder-themes-1113 .c-folder {
+      display: flex; align-items: center; gap: 12px; min-width: 0;
+      height: 72px; padding: 12px; border: 1px solid var(--c-folderBorder);
+      border-radius: 16px; color: var(--c-appText); background: var(--c-folderBg);
+    }
+    #cobalt-folder-themes-1113 .c-iconBox {
+      width: 40px; height: 40px; flex: 0 0 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--c-iconBg); color: var(--c-folderAccent);
+    }
+    #cobalt-folder-themes-1113 .c-iconBox svg { width: 20px; height: 20px; stroke-width: 2; }
+    #cobalt-folder-themes-1113 .c-folderCopy { flex: 1; min-width: 0; }
+    #cobalt-folder-themes-1113 .c-folderName {
+      display: flex; align-items: center; gap: 4px; font-size: 13px;
+      line-height: 19px; font-weight: 700;
+    }
+    #cobalt-folder-themes-1113 .c-count {
+      display: block; font-size: 11px; line-height: 15px; font-weight: 600;
+      color: var(--c-folderCount);
+    }
+    #cobalt-folder-themes-1113 .c-gear {
+      display: flex; justify-content: center; align-items: center;
+      flex: 0 0 26px; color: var(--c-folderGear);
+    }
+    #cobalt-folder-themes-1113 .c-gear svg { width: 26px; height: 26px; stroke-width: 1.7; }
+    #cobalt-folder-themes-1113[data-layout="pinned"] .c-folders {
+      grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
+    }
+    #cobalt-folder-themes-1113[data-layout="pinned"] .c-folder {
+      display: flex; flex-direction: column; align-items: stretch; gap: 0;
+      height: 115px; border-radius: 20px; border-width: 1.5px;
+    }
+    #cobalt-folder-themes-1113 .c-pinnedTop {
+      display: flex; align-items: center; justify-content: space-between;
+      color: var(--c-folderAccent); margin-bottom: auto;
+    }
+    #cobalt-folder-themes-1113 .c-pinnedTop > svg { width: 26px; height: 26px; }
+    #cobalt-folder-themes-1113 .c-folderName svg {
+      width: 18px; height: 18px; color: var(--c-folderAccent); flex: 0 0 18px;
+    }
+    #cobalt-folder-themes-1113[data-layout="pinned"] .c-folderCopy { flex: 0; }
+    #cobalt-folder-themes-1113[data-layout="pinned"] .c-count { font-weight: 400; }
+    #cobalt-folder-themes-1113 .c-measures {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+      padding: 12px 2px 0; font-size: 11px; color: var(--c-muted);
+    }
+    #cobalt-folder-themes-1113 .c-measures dd {
+      color: var(--c-ink); font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums;
+    }
+    #cobalt-folder-themes-1113 .c-paletteSection { margin-top: 28px; }
+    #cobalt-folder-themes-1113 .c-sectionHeading {
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline;
+      justify-content: space-between; margin-bottom: 10px;
+    }
+    #cobalt-folder-themes-1113 .c-sectionHeading h3 { font-size: 14px; font-weight: 500; }
+    #cobalt-folder-themes-1113 .c-sectionHeading span { font-size: 11px; color: var(--c-muted); }
+    #cobalt-folder-themes-1113 .c-palette {
+      display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px;
+    }
+    #cobalt-folder-themes-1113 .c-paletteButton {
+      display: flex; align-items: center; gap: 9px; text-align: left;
+      min-width: 0; min-height: 44px; padding: 8px 10px; border: 0;
+      border-radius: 10px; background: transparent; color: var(--c-ink);
+      font-size: 12px; line-height: 16px;
+    }
+    #cobalt-folder-themes-1113 .c-paletteButton:hover { background: var(--c-highlight); }
+    #cobalt-folder-themes-1113 .c-paletteButton[aria-pressed="true"] {
+      background: var(--c-selected); font-weight: 500;
+    }
+    #cobalt-folder-themes-1113 .c-paletteSwatch {
+      display: block; width: 19px; height: 19px; flex: 0 0 19px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, var(--c-lightColor) 0% 50%, var(--c-darkColor) 50% 100%);
+    }
+    #cobalt-folder-themes-1113 details {
+      margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--c-line);
+    }
+    #cobalt-folder-themes-1113 summary {
+      color: var(--c-muted); font-size: 12px; padding: 4px 0;
+    }
+    #cobalt-folder-themes-1113 .c-tokens {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 20px; padding-top: 16px;
+    }
+    #cobalt-folder-themes-1113 .c-tokenGroup { min-width: 0; }
+    #cobalt-folder-themes-1113 .c-tokenGroup h3 { font-size: 12px; font-weight: 500; margin-bottom: 8px; }
+    #cobalt-folder-themes-1113 .c-tokenRow {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 5px 0; font-size: 11px; color: var(--c-muted);
+    }
+    #cobalt-folder-themes-1113 .c-tokenRow dd {
+      display: flex; align-items: center; gap: 7px;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      color: var(--c-ink); font-variant-numeric: tabular-nums;
+    }
+    #cobalt-folder-themes-1113 .c-tokenSwatch {
+      width: 13px; height: 13px; border-radius: 4px;
+      background: var(--c-tokenColor); display: inline-block;
+    }
+    #cobalt-folder-themes-1113 .c-a11y {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+    }
+    @media (max-width: 820px) {
+      #cobalt-folder-themes-1113 .c-comparison { grid-template-columns: 1fr; gap: 24px; }
+      #cobalt-folder-themes-1113 .c-theme { width: 100%; max-width: 480px; margin: 0 auto; }
+      #cobalt-folder-themes-1113 .c-palette { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+    @media (max-width: 560px) {
+      #cobalt-folder-themes-1113 .c-palette { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #cobalt-folder-themes-1113 .c-tokens { grid-template-columns: 1fr; gap: 16px; }
+      #cobalt-folder-themes-1113 .c-heading { padding: 0 0 18px; gap: 12px; }
+      #cobalt-folder-themes-1113 .c-headingText { padding-right: 90px; }
+      #cobalt-folder-themes-1113 .c-selectionId { overflow-wrap: anywhere; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      #cobalt-folder-themes-1113 .c-folder,
+      #cobalt-folder-themes-1113 .c-iconBox {
+        transition: background-color .18s ease, color .18s ease, border-color .18s ease;
+      }
+    }
+    @media (pointer: coarse) {
+      #cobalt-folder-themes-1113 .c-layoutControls button { min-height: 44px; }
+      #cobalt-folder-themes-1113 summary { padding: 14px 0; }
+    }
+  </style>
+  <div class="c-heading">
+    <div class="c-headingText">
+      <p class="c-eyebrow">COBALT</p>
+      <h2>Folder colors</h2>
+    </div>
+    <div class="c-layoutControls" role="group" aria-label="Folder card style">
+      <button type="button" class="cursor-interaction" data-layout-choice="list" aria-pressed="true">List cards</button>
+      <button type="button" class="cursor-interaction" data-layout-choice="pinned" aria-pressed="false">Pinned cards</button>
+    </div>
+  </div>
+  <div class="c-selection">
+    <span class="c-selectionName" data-selected-name>Royal Indigo</span>
+    <span class="c-selectionId" data-selected-id>folder/royal-indigo</span>
+  </div>
+  <div class="c-comparison">
+    <section class="c-theme" data-theme="light" aria-label="Light theme folder preview">
+      <div class="c-themeHeading"><h3><i data-lucide="sun" aria-hidden="true"></i>Light</h3><span class="c-hex" data-accent-hex></span></div>
+      <div class="c-app"><div class="c-appHeader"><strong>Folders</strong><span>4 sample folders</span></div><div class="c-folders"></div></div>
+      <dl class="c-measures" aria-label="Selected light color contrast"></dl>
+    </section>
+    <section class="c-theme" data-theme="current" aria-label="Current dark theme folder preview">
+      <div class="c-themeHeading"><h3><i data-lucide="moon" aria-hidden="true"></i>Current dark</h3><span class="c-hex" data-accent-hex></span></div>
+      <div class="c-app"><div class="c-appHeader"><strong>Folders</strong><span>4 sample folders</span></div><div class="c-folders"></div></div>
+      <dl class="c-measures" aria-label="Selected current dark color contrast"></dl>
+    </section>
+    <section class="c-theme" data-theme="proposed" aria-label="Proposed dark theme folder preview">
+      <div class="c-themeHeading"><h3><i data-lucide="moon-star" aria-hidden="true"></i>Proposed dark</h3><span class="c-hex" data-accent-hex></span></div>
+      <div class="c-app"><div class="c-appHeader"><strong>Folders</strong><span>4 sample folders</span></div><div class="c-folders"></div></div>
+      <dl class="c-measures" aria-label="Selected proposed dark color contrast"></dl>
+    </section>
+  </div>
+  <section class="c-paletteSection" aria-label="Choose a folder color">
+    <div class="c-sectionHeading"><h3>All 20 folder colors</h3><span>Swatches: light / proposed dark</span></div>
+    <div class="c-palette" role="group" aria-label="Folder colors"></div>
+  </section>
+  <details data-token-details>
+    <summary class="cursor-interaction">Inspect selected color tokens</summary>
+    <div class="c-tokens"></div>
+  </details>
+  <p class="c-a11y" data-announcement role="status" aria-live="polite"></p>
+  <script>
+    (() => {
+      const root = document.getElementById('cobalt-folder-themes-1113');
+      if (!root) return;
+
+      // Light and current-dark values are the app's 20 presets. The current
+      // conversion was extracted using AndroidX float32 HSL arithmetic.
+      // Proposed accents are individually tuned in OKLCH, then gamut mapped.
+      const colors = [
+        ['coral-rose', 'Coral Rose', '#FF6B6B', '#E98181', '#FD938F'],
+        ['peach-sun', 'Peach Sun', '#FF8E53', '#E5966D', '#FEA77C'],
+        ['soft-gold', 'Soft Gold', '#FFA800', '#E0B052', '#FFB54D'],
+        ['emerald-sage', 'Emerald Sage', '#4CAF50', '#71C174', '#81C980'],
+        ['minty-teal', 'Minty Teal', '#00BFA5', '#52E0CD', '#5AD4BC'],
+        ['ice-blue', 'Ice Blue', '#29B6F6', '#52B4E0', '#67C5F8'],
+        ['royal-indigo', 'Royal Indigo', '#5C6BC0', '#6C79C6', '#98AAFC'],
+        ['lavender-dream', 'Lavender Dream', '#BA68C8', '#BB69C9', '#DC99E7'],
+        ['crimson-berry', 'Crimson Berry', '#D81B60', '#E05286', '#FE839E'],
+        ['slate-silver', 'Slate Silver', '#78909C', '#75A5BD', '#9AB2BF'],
+        ['flamingo-pink', 'Flamingo Pink', '#F06292', '#E56D95', '#FF99B6'],
+        ['terra-cotta', 'Terra Cotta', '#FF8A65', '#E8967C', '#FDA68A'],
+        ['golden-silk', 'Golden Silk', '#FFD54F', '#E5C769', '#F4D36F'],
+        ['matcha-green', 'Matcha Green', '#AED581', '#AED581', '#AFD288'],
+        ['ocean-mist', 'Ocean Mist', '#4DB6AC', '#6EC4BC', '#70CAC0'],
+        ['crystal-cyan', 'Crystal Cyan', '#4DD0E1', '#52D0E0', '#6CD7E5'],
+        ['twilight-blue', 'Twilight Blue', '#7986CB', '#7986CB', '#A5B4FC'],
+        ['periwinkle-sky', 'Periwinkle Sky', '#9FA8DA', '#9FA8DA', '#BAC4F7'],
+        ['cocoa-bean', 'Cocoa Bean', '#8D6E63', '#BD8875', '#C2A195'],
+        ['desert-sand', 'Desert Sand', '#BCAAA4', '#CCA294', '#CAB8B2']
+      ].map(([id, name, light, current, proposed]) => ({ id, name, light, current, proposed }));
+      const byId = new Map(colors.map(color => [color.id, color]));
+      const themeNames = { light: 'Light', current: 'Current dark', proposed: 'Proposed dark' };
+      const defaultState = {
+        selectedId: 'royal-indigo', layout: 'list', surfaceLightness: .255,
+        surfaceChroma: 1, inspectorOpen: false
+      };
+      const state = { ...defaultState };
+      const details = root.querySelector('[data-token-details]');
+      const selectionButtons = new Map();
+      const previewCards = new Map();
+
+      function readSaved(snapshot) {
+        const saved = snapshot?.privateContent;
+        if (!saved || saved.version !== 1) return;
+        if (byId.has(saved.selectedId)) state.selectedId = saved.selectedId;
+        if (['list', 'pinned'].includes(saved.layout)) state.layout = saved.layout;
+        if (Number.isFinite(saved.surfaceLightness)) state.surfaceLightness = Math.max(.23, Math.min(.30, saved.surfaceLightness));
+        if (Number.isFinite(saved.surfaceChroma)) state.surfaceChroma = Math.max(.4, Math.min(1.4, saved.surfaceChroma));
+        if (typeof saved.inspectorOpen === 'boolean') state.inspectorOpen = saved.inspectorOpen;
+      }
+      readSaved(window.openai?.widgetState);
+
+      function save() {
+        if (!window.openai?.setWidgetState) return;
+        const color = byId.get(state.selectedId);
+        Promise.resolve(window.openai.setWidgetState({
+          modelContent: {
+            folderColor: color.name, colorId: `folder/${color.id}`, cardStyle: state.layout,
+            lightAccent: color.light, currentDarkAccent: color.current, proposedDarkAccent: color.proposed,
+            proposedSurfaceLightness: state.surfaceLightness, proposedSurfaceChroma: state.surfaceChroma
+          },
+          privateContent: { version: 1, ...state }
+        })).catch(() => {});
+      }
+
+      const parse = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+      const toHex = rgb => '#' + rgb.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('').toUpperCase();
+      const mix = (front, back, alpha) => front.map((v, i) => v * alpha + back[i] * (1 - alpha));
+      const linear = v => { const s = v / 255; return s <= .04045 ? s / 12.92 : ((s + .055) / 1.055) ** 2.4; };
+      const luminance = rgb => rgb.map(linear).reduce((sum, v, i) => sum + v * [.2126, .7152, .0722][i], 0);
+      const contrast = (front, back) => {
+        const a = luminance(front), b = luminance(back);
+        return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+      };
+      function toLch(hex) {
+        const [r, g, b] = parse(hex).map(linear);
+        const l = Math.cbrt(.4122214708 * r + .5363325363 * g + .0514459929 * b);
+        const m = Math.cbrt(.2119034982 * r + .6806995451 * g + .1073969566 * b);
+        const s = Math.cbrt(.0883024619 * r + .2817188376 * g + .6299787005 * b);
+        const a = 1.9779984951 * l - 2.4285922050 * m + .4505937099 * s;
+        const bb = .0259040371 * l + .7827717662 * m - .8086757660 * s;
+        return { L: .2104542553 * l + .7936177850 * m - .0040720468 * s, C: Math.hypot(a, bb), h: Math.atan2(bb, a) };
+      }
+      function fromLch(L, chroma, h) {
+        // Reduce chroma at the same hue/lightness until the color fits sRGB.
+        let rgb, C = chroma;
+        for (let n = 0; n < 96; n++) {
+          const a = C * Math.cos(h), b = C * Math.sin(h);
+          const l = (L + .3963377774 * a + .2158037573 * b) ** 3;
+          const m = (L - .1055613458 * a - .0638541728 * b) ** 3;
+          const s = (L - .0894841775 * a - 1.291485548 * b) ** 3;
+          rgb = [4.0767416621 * l - 3.3077115913 * m + .2309699292 * s,
+            -1.2684380046 * l + 2.6097574011 * m - .3413193965 * s,
+            -.0041960863 * l - .7034186147 * m + 1.707614701 * s];
+          if (rgb.every(v => v >= 0 && v <= 1)) break;
+          C *= .97;
+        }
+        return parse(toHex(rgb.map(v => 255 * (v <= .0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - .055))));
+      }
+
+      function roles(color, theme, layout = state.layout) {
+        const isLight = theme === 'light', pinned = layout === 'pinned';
+        const bg = parse(isLight ? '#FDFBF9' : '#1A120E');
+        const text = parse(isLight ? '#171717' : '#F0DFD8');
+        const accent = parse(color[theme]);
+        let card, box, border, count, gear;
+        if (theme === 'proposed') {
+          const { C, h } = toLch(color.light);
+          const chroma = state.surfaceChroma;
+          const cardL = state.surfaceLightness + (pinned ? .028 : 0);
+          card = fromLch(cardL, Math.min(C * .22, .026) * chroma, h);
+          box = fromLch(state.surfaceLightness + .06, Math.min(C * .38, .045) * chroma, h);
+          border = fromLch(pinned ? .415 : .37, Math.min(C * .30, .040) * chroma, h);
+          count = parse('#CDBEB6');
+          gear = parse('#B9AAA2');
+        } else {
+          card = mix(accent, bg, pinned ? (isLight ? .12 : .22) : (isLight ? .08 : .16));
+          box = mix(accent, card, isLight ? .15 : .25);
+          border = mix(accent, card, pinned ? (isLight ? .40 : .55) : (isLight ? .20 : .35));
+          count = pinned ? mix(text, card, .60) : mix(accent, card, .80);
+          gear = pinned ? mix(accent, card, .60) : mix(parse(isLight ? '#775847' : '#E6BEAB'), card, .60);
+          // Use the same opaque, 8-bit values in the cards and contrast math.
+          card = parse(toHex(card)); box = parse(toHex(box)); border = parse(toHex(border));
+          count = parse(toHex(count)); gear = parse(toHex(gear));
+        }
+        return {
+          bg, text, accent, card, box, border, count, gear,
+          iconContrast: contrast(accent, pinned ? card : box),
+          countContrast: contrast(count, card), nameContrast: contrast(text, card)
+        };
+      }
+
+      const samples = [
+        { name: 'Research', count: 12, color: null },
+        { name: 'Personal', count: 8, color: 'coral-rose' },
+        { name: 'Reading', count: 24, color: 'matcha-green' },
+        { name: 'Ideas', count: 6, color: 'soft-gold' }
+      ];
+
+      function cardMarkup(sample, pinned) {
+        const icon = '<i data-lucide="folder" aria-hidden="true"></i>';
+        const gear = '<span class="c-gear" aria-hidden="true"><i data-lucide="settings" aria-hidden="true"></i></span>';
+        const copy = `<div class="c-folderCopy"><span class="c-folderName">${sample.name}${pinned ? '<i data-lucide="pin" aria-hidden="true"></i>' : ''}</span><span class="c-count">${sample.count} items</span></div>`;
+        return pinned ? `<div class="c-pinnedTop">${icon}${gear}</div>${copy}` : `<span class="c-iconBox">${icon}</span>${copy}${gear}`;
+      }
+      function setRoles(card, r) {
+        for (const [property, rgb] of Object.entries({
+          '--c-folderAccent': r.accent, '--c-folderBg': r.card, '--c-iconBg': r.box,
+          '--c-folderBorder': r.border, '--c-folderCount': r.count, '--c-folderGear': r.gear
+        })) card.style.setProperty(property, toHex(rgb));
+      }
+      for (const themeElement of root.querySelectorAll('.c-theme')) {
+        const cards = [];
+        for (const sample of samples) {
+          const card = document.createElement('article');
+          card.className = 'c-folder';
+          themeElement.querySelector('.c-folders').append(card);
+          cards.push(card);
+        }
+        previewCards.set(themeElement.dataset.theme, cards);
+      }
+      for (const color of colors) {
+        const button = document.createElement('button');
+        button.type = 'button'; button.className = 'c-paletteButton cursor-interaction';
+        button.dataset.colorId = color.id;
+        button.style.setProperty('--c-lightColor', color.light);
+        button.style.setProperty('--c-darkColor', color.proposed);
+        button.innerHTML = `<span class="c-paletteSwatch" aria-hidden="true"></span><span>${color.name}</span>`;
+        button.setAttribute('aria-label', `${color.name}, light ${color.light}, proposed dark ${color.proposed}`);
+        button.addEventListener('click', () => {
+          state.selectedId = color.id; render(); save(); announce();
+        });
+        root.querySelector('.c-palette').append(button);
+        selectionButtons.set(color.id, button);
+      }
+      function announce() {
+        const color = byId.get(state.selectedId), r = roles(color, 'proposed');
+        root.querySelector('[data-announcement]').textContent = `${color.name}, ${state.layout} cards. Proposed dark icon contrast ${r.iconContrast.toFixed(2)} to 1. Item count contrast ${r.countContrast.toFixed(2)} to 1.`;
+      }
+      function render() {
+        const selected = byId.get(state.selectedId), pinned = state.layout === 'pinned';
+        root.dataset.layout = state.layout;
+        root.querySelector('[data-selected-name]').textContent = selected.name;
+        root.querySelector('[data-selected-id]').textContent = `folder/${selected.id}`;
+        for (const button of root.querySelectorAll('[data-layout-choice]')) button.setAttribute('aria-pressed', String(button.dataset.layoutChoice === state.layout));
+        for (const [id, button] of selectionButtons) button.setAttribute('aria-pressed', String(id === state.selectedId));
+        const tokenGroups = [];
+        for (const themeElement of root.querySelectorAll('.c-theme')) {
+          const theme = themeElement.dataset.theme;
+          const cards = previewCards.get(theme);
+          samples.forEach((sample, i) => {
+            const color = i === 0 ? selected : byId.get(sample.color);
+            const r = roles(color, theme);
+            if (cards[i].dataset.layout !== state.layout) {
+              cards[i].innerHTML = cardMarkup(sample, pinned); cards[i].dataset.layout = state.layout;
+            }
+            setRoles(cards[i], r);
+            cards[i].dataset.colorId = color.id;
+            cards[i].setAttribute('aria-label', `${sample.name}, ${sample.count} items, ${color.name}${pinned ? ', pinned' : ''}`);
+          });
+          const r = roles(selected, theme);
+          themeElement.querySelector('[data-accent-hex]').textContent = selected[theme];
+          themeElement.querySelector('.c-measures').innerHTML = `<div><dt>Icon · target 3:1</dt><dd>${r.iconContrast.toFixed(2)}:1</dd></div><div><dt>Item count · target 4.5:1</dt><dd>${r.countContrast.toFixed(2)}:1</dd></div>`;
+          const tokens = [['Icon accent', r.accent], ['Card surface', r.card], ...(!pinned ? [['Icon box', r.box]] : []), ['Card border', r.border], ['Folder label', r.text], ['Item count', r.count]];
+          tokenGroups.push(`<section class="c-tokenGroup"><h3>${themeNames[theme]}</h3><dl>${tokens.map(([name, rgb]) => `<div class="c-tokenRow"><dt>${name}</dt><dd><span class="c-tokenSwatch" style="--c-tokenColor:${toHex(rgb)}" aria-hidden="true"></span>${toHex(rgb)}</dd></div>`).join('')}</dl></section>`);
+        }
+        root.querySelector('.c-tokens').innerHTML = tokenGroups.join('');
+        details.open = state.inspectorOpen;
+        if (globalThis.lucide) globalThis.lucide.createIcons({ attrs: { width: 20, height: 20 } });
+      }
+      for (const button of root.querySelectorAll('[data-layout-choice]')) button.addEventListener('click', () => {
+        state.layout = button.dataset.layoutChoice; render(); save(); announce();
+      });
+      details.addEventListener('toggle', () => {
+        if (state.inspectorOpen === details.open) return;
+        state.inspectorOpen = details.open; save();
+      });
+      window.addEventListener('openai:set_globals', event => {
+        if (!event.detail?.globals?.widgetState) return;
+        readSaved(event.detail.globals.widgetState); render();
+      });
+      render();
+      if (globalThis.Tweak) {
+        const tweak = new Tweak({
+          container: root.querySelector('[data-theme="proposed"]'),
+          onChange: () => { render(); save(); announce(); }
+        });
+        tweak.addSlider(state, 'surfaceLightness', { label: 'Dark surface lightness', min: .23, max: .30, step: .005, reference: 'folder.dark.surface.L' });
+        tweak.addSlider(state, 'surfaceChroma', { label: 'Color in dark surfaces', min: .4, max: 1.4, step: .1, reference: 'folder.dark.surface.chroma' });
+      }
+    })();
+  </script>
+</section>

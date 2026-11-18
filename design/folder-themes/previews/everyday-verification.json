@@ -1,0 +1,59 @@
+{
+  "presets": 20,
+  "renderedColorThemeCardStates": 80,
+  "minimumIcon": 3.1129903428545918,
+  "minimumLabel": 11.23702511606596,
+  "minimumCount": 5.399180661739842,
+  "originalColorsVerified": 20,
+  "responsive": [
+    {
+      "width": 320,
+      "layout": "list",
+      "overflow": false,
+      "colorNamesVisible": true
+    },
+    {
+      "width": 320,
+      "layout": "pinned",
+      "overflow": false,
+      "colorNamesVisible": true
+    },
+    {
+      "width": 360,
+      "layout": "list",
+      "overflow": false,
+      "colorNamesVisible": true
+    },
+    {
+      "width": 360,
+      "layout": "pinned",
+      "overflow": false,
+      "colorNamesVisible": true
+    },
+    {
+      "width": 736,
+      "layout": "list",
+      "overflow": false,
+      "colorNamesVisible": true
+    },
+    {
+      "width": 736,
+      "layout": "pinned",
+      "overflow": false,
+      "colorNamesVisible": true
+    },
+    {
+      "width": 1024,
+      "layout": "list",
+      "overflow": false,
+      "colorNamesVisible": true
+    },
+    {
+      "width": 1024,
+      "layout": "pinned",
+      "overflow": false,
+      "colorNamesVisible": true
+    }
+  ],
+  "browserErrors": []
+}

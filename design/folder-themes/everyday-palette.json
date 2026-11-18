@@ -1,0 +1,2769 @@
+{
+  "name": "Cobalt Everyday 20",
+  "version": 2,
+  "status": "proposal",
+  "colors": [
+    {
+      "id": "F01",
+      "slug": "cherry",
+      "token": "folder/cherry",
+      "name": "Cherry",
+      "family": "Warm",
+      "everydayCue": "Ripe cherries",
+      "association": "Attention",
+      "exampleFolder": "Priorities",
+      "light": "#C53443",
+      "dark": "#FD5C67",
+      "targets": {
+        "hue": 20,
+        "light": {
+          "L": 0.55,
+          "C": 0.18
+        },
+        "dark": {
+          "L": 0.69,
+          "C": 0.195
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#C53443",
+            "card": "#FFF8F8",
+            "iconBox": "#FFEBEA",
+            "border": "#F1D5D4",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#C53443",
+            "card": "#FFF0EF",
+            "iconBox": "#FFEBEA",
+            "border": "#E4C8C7",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#FD5C67",
+            "card": "#311A1A",
+            "iconBox": "#482122",
+            "border": "#5A3636",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#FD5C67",
+            "card": "#382121",
+            "iconBox": "#482122",
+            "border": "#684343",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    },
+    {
+      "id": "F02",
+      "slug": "coral",
+      "token": "folder/coral",
+      "name": "Coral",
+      "family": "Warm",
+      "everydayCue": "Coral and peach sunsets",
+      "association": "Warmth",
+      "exampleFolder": "People",
+      "light": "#C66F51",
+      "dark": "#FEB79E",
+      "targets": {
+        "hue": 40,
+        "light": {
+          "L": 0.633,
+          "C": 0.118
+        },
+        "dark": {
+          "L": 0.84,
+          "C": 0.09
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#C66F51",
+            "card": "#FFF8F6",
+            "iconBox": "#FFEBE5",
+            "border": "#F0D6CD",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#C66F51",
+            "card": "#FEF0EC",
+            "iconBox": "#FFEBE5",
+            "border": "#E3C9C0",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#FEB79E",
+            "card": "#2C1E18",
+            "iconBox": "#40271F",
+            "border": "#533C33",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#FEB79E",
+            "card": "#33241F",
+            "iconBox": "#40271F",
+            "border": "#604840",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    },
+    {
+      "id": "F03",
+      "slug": "tangerine",
+      "token": "folder/tangerine",
+      "name": "Tangerine",
+      "family": "Warm",
+      "everydayCue": "Orange citrus peel",
+      "association": "Energy",
+      "exampleFolder": "Projects",
+      "light": "#B0600B",
+      "dark": "#FE973C",
+      "targets": {
+        "hue": 58,
+        "light": {
+          "L": 0.57,
+          "C": 0.15
+        },
+        "dark": {
+          "L": 0.77,
+          "C": 0.185
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#B0600B",
+            "card": "#FFF8F4",
+            "iconBox": "#FFECDF",
+            "border": "#EDD8C8",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#B0600B",
+            "card": "#FDF1EA",
+            "iconBox": "#FFECDF",
+            "border": "#E0CBBB",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#FE973C",
+            "card": "#2F1D0F",
+            "iconBox": "#45260C",
+            "border": "#573B25",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#FE973C",
+            "card": "#362315",
+            "iconBox": "#45260C",
+            "border": "#644731",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    },
+    {
+      "id": "F04",
+      "slug": "marigold",
+      "token": "folder/marigold",
+      "name": "Marigold",
+      "family": "Warm",
+      "everydayCue": "Golden marigold petals",
+      "association": "Confidence",
+      "exampleFolder": "Plans",
+      "light": "#876606",
+      "dark": "#D0A016",
+      "targets": {
+        "hue": 86,
+        "light": {
+          "L": 0.53,
+          "C": 0.11
+        },
+        "dark": {
+          "L": 0.73,
+          "C": 0.145
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#876606",
+            "card": "#FCF9F3",
+            "iconBox": "#F9EFDA",
+            "border": "#E5DBC7",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#876606",
+            "card": "#F9F3E8",
+            "iconBox": "#F9EFDA",
+            "border": "#D8CEBA",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#D0A016",
+            "card": "#29200B",
+            "iconBox": "#3C2C02",
+            "border": "#4E401F",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#D0A016",
+            "card": "#302712",
+            "iconBox": "#3C2C02",
+            "border": "#5B4C2C",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    },
+    {
+      "id": "F05",
+      "slug": "sunflower",
+      "token": "folder/sunflower",
+      "name": "Sunflower",
+      "family": "Warm",
+      "everydayCue": "Sunflower petals",
+      "association": "Optimism",
+      "exampleFolder": "Ideas",
+      "light": "#948B04",
+      "dark": "#ECE36D",
+      "targets": {
+        "hue": 105,
+        "light": {
+          "L": 0.625,
+          "C": 0.14
+        },
+        "dark": {
+          "L": 0.9,
+          "C": 0.14
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#948B04",
+            "card": "#FAFAF3",
+            "iconBox": "#F3F2DB",
+            "border": "#DFDEC6",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#948B04",
+            "card": "#F5F5E8",
+            "iconBox": "#F3F2DB",
+            "border": "#D2D1B9",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#ECE36D",
+            "card": "#24230C",
+            "iconBox": "#333004",
+            "border": "#464321",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#ECE36D",
+            "card": "#2B2913",
+            "iconBox": "#333004",
+            "border": "#53502E",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    },
+    {
+      "id": "F06",
+      "slug": "lime",
+      "token": "folder/lime",
+      "name": "Lime",
+      "family": "Nature",
+      "everydayCue": "Fresh lime peel",
+      "association": "Freshness",
+      "exampleFolder": "Habits",
+      "light": "#5E7F0C",
+      "dark": "#A8DC33",
+      "targets": {
+        "hue": 126,
+        "light": {
+          "L": 0.55,
+          "C": 0.14
+        },
+        "dark": {
+          "L": 0.83,
+          "C": 0.195
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#5E7F0C",
+            "card": "#F8FBF4",
+            "iconBox": "#EBF4DF",
+            "border": "#D7E1CA",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#5E7F0C",
+            "card": "#F1F6EA",
+            "iconBox": "#EBF4DF",
+            "border": "#CAD4BD",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#A8DC33",
+            "card": "#1D2511",
+            "iconBox": "#27340F",
+            "border": "#3B4728",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#A8DC33",
+            "card": "#242B17",
+            "iconBox": "#27340F",
+            "border": "#475434",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    },
+    {
+      "id": "F07",
+      "slug": "leaf",
+      "token": "folder/leaf",
+      "name": "Leaf",
+      "family": "Nature",
+      "everydayCue": "New green leaves",
+      "association": "Growth",
+      "exampleFolder": "Health",
+      "light": "#2E9752",
+      "dark": "#3FC56D",
+      "targets": {
+        "hue": 151,
+        "light": {
+          "L": 0.6,
+          "C": 0.14
+        },
+        "dark": {
+          "L": 0.73,
+          "C": 0.17
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#2E9752",
+            "card": "#F6FCF7",
+            "iconBox": "#E2F6E6",
+            "border": "#CEE3D2",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#2E9752",
+            "card": "#ECF7EE",
+            "iconBox": "#E2F6E6",
+            "border": "#C1D6C5",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#3FC56D",
+            "card": "#142718",
+            "iconBox": "#14371E",
+            "border": "#2C4A34",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#3FC56D",
+            "card": "#1A2D1F",
+            "iconBox": "#14371E",
+            "border": "#395740",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    },
+    {
+      "id": "F08",
+      "slug": "forest",
+      "token": "folder/forest",
+      "name": "Forest",
+      "family": "Nature",
+      "everydayCue": "Evergreen trees",
+      "association": "Stability",
+      "exampleFolder": "Home",
+      "light": "#23593E",
+      "dark": "#5D9476",
+      "targets": {
+        "hue": 159,
+        "light": {
+          "L": 0.42,
+          "C": 0.074
+        },
+        "dark": {
+          "L": 0.62,
+          "C": 0.075
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#23593E",
+            "card": "#F5FCF8",
+            "iconBox": "#E4F5EA",
+            "border": "#D2E1D8",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#23593E",
+            "card": "#EDF6F1",
+            "iconBox": "#E4F5EA",
+            "border": "#C5D4CB",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#5D9476",
+            "card": "#19251E",
+            "iconBox": "#1F3428",
+            "border": "#34473C",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#5D9476",
+            "card": "#1F2B24",
+            "iconBox": "#1F3428",
+            "border": "#415448",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    },
+    {
+      "id": "F09",
+      "slug": "teal",
+      "token": "folder/teal",
+      "name": "Teal",
+      "family": "Nature",
+      "everydayCue": "Deep coastal water",
+      "association": "Balance",
+      "exampleFolder": "Wellbeing",
+      "light": "#027A6E",
+      "dark": "#32DDC9",
+      "targets": {
+        "hue": 183,
+        "light": {
+          "L": 0.52,
+          "C": 0.095
+        },
+        "dark": {
+          "L": 0.81,
+          "C": 0.135
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#027A6E",
+            "card": "#F4FCFA",
+            "iconBox": "#DBF7F2",
+            "border": "#CBE2DE",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#027A6E",
+            "card": "#E9F7F5",
+            "iconBox": "#DBF7F2",
+            "border": "#BED5D1",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#32DDC9",
+            "card": "#082723",
+            "iconBox": "#013731",
+            "border": "#1C4B44",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#32DDC9",
+            "card": "#102E2A",
+            "iconBox": "#013731",
+            "border": "#2A5851",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    },
+    {
+      "id": "F10",
+      "slug": "cyan",
+      "token": "folder/cyan",
+      "name": "Cyan",
+      "family": "Nature",
+      "everydayCue": "Clear glacial water",
+      "association": "Clarity",
+      "exampleFolder": "Learning",
+      "light": "#278EA4",
+      "dark": "#89E8FF",
+      "targets": {
+        "hue": 215,
+        "light": {
+          "L": 0.6,
+          "C": 0.095
+        },
+        "dark": {
+          "L": 0.88,
+          "C": 0.095
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#278EA4",
+            "card": "#F3FBFE",
+            "iconBox": "#DBF6FD",
+            "border": "#CAE1E7",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#278EA4",
+            "card": "#E9F7FA",
+            "iconBox": "#DBF6FD",
+            "border": "#BDD4DA",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#89E8FF",
+            "card": "#12252A",
+            "iconBox": "#10343C",
+            "border": "#29474E",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#89E8FF",
+            "card": "#182C30",
+            "iconBox": "#10343C",
+            "border": "#36545B",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    },
+    {
+      "id": "F11",
+      "slug": "sky",
+      "token": "folder/sky",
+      "name": "Sky",
+      "family": "Cool",
+      "everydayCue": "Open blue sky",
+      "association": "Openness",
+      "exampleFolder": "Travel",
+      "light": "#6688C0",
+      "dark": "#A1C2F8",
+      "targets": {
+        "hue": 260,
+        "light": {
+          "L": 0.625,
+          "C": 0.093
+        },
+        "dark": {
+          "L": 0.81,
+          "C": 0.085
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#6688C0",
+            "card": "#F7FAFF",
+            "iconBox": "#E8F1FF",
+            "border": "#D3DDEE",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#6688C0",
+            "card": "#EEF4FE",
+            "iconBox": "#E8F1FF",
+            "border": "#C6D0E0",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#A1C2F8",
+            "card": "#1B222D",
+            "iconBox": "#232F42",
+            "border": "#374254",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#A1C2F8",
+            "card": "#212834",
+            "iconBox": "#232F42",
+            "border": "#444F61",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    },
+    {
+      "id": "F12",
+      "slug": "cobalt",
+      "token": "folder/cobalt",
+      "name": "Cobalt",
+      "family": "Cool",
+      "everydayCue": "Cobalt blue ceramics",
+      "association": "Focus",
+      "exampleFolder": "Work",
+      "light": "#1D4BC0",
+      "dark": "#4E84FF",
+      "targets": {
+        "hue": 264,
+        "light": {
+          "L": 0.46,
+          "C": 0.19
+        },
+        "dark": {
+          "L": 0.64,
+          "C": 0.21
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#1D4BC0",
+            "card": "#F7FAFF",
+            "iconBox": "#E9F0FF",
+            "border": "#D2DDF2",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#1D4BC0",
+            "card": "#EEF4FF",
+            "iconBox": "#E9F0FF",
+            "border": "#C5D0E5",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#4E84FF",
+            "card": "#182133",
+            "iconBox": "#1F2E4D",
+            "border": "#34425E",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#4E84FF",
+            "card": "#1F283B",
+            "iconBox": "#1F2E4D",
+            "border": "#404E6B",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    },
+    {
+      "id": "F13",
+      "slug": "violet",
+      "token": "folder/violet",
+      "name": "Violet",
+      "family": "Cool",
+      "everydayCue": "Violet flowers",
+      "association": "Imagination",
+      "exampleFolder": "Creativity",
+      "light": "#824FC7",
+      "dark": "#B586FF",
+      "targets": {
+        "hue": 300,
+        "light": {
+          "L": 0.545,
+          "C": 0.18
+        },
+        "dark": {
+          "L": 0.715,
+          "C": 0.18
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#824FC7",
+            "card": "#FAF9FF",
+            "iconBox": "#F2EDFF",
+            "border": "#DFD8EF",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#824FC7",
+            "card": "#F5F2FD",
+            "iconBox": "#F2EDFF",
+            "border": "#D2CBE2",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#B586FF",
+            "card": "#241D31",
+            "iconBox": "#332748",
+            "border": "#463B5A",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#B586FF",
+            "card": "#2B2438",
+            "iconBox": "#332748",
+            "border": "#534867",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    },
+    {
+      "id": "F14",
+      "slug": "orchid",
+      "token": "folder/orchid",
+      "name": "Orchid",
+      "family": "Cool",
+      "everydayCue": "Orchid petals",
+      "association": "Expression",
+      "exampleFolder": "Inspiration",
+      "light": "#BB4EAF",
+      "dark": "#FA90EC",
+      "targets": {
+        "hue": 332,
+        "light": {
+          "L": 0.6,
+          "C": 0.182
+        },
+        "dark": {
+          "L": 0.795,
+          "C": 0.17
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#BB4EAF",
+            "card": "#FEF8FC",
+            "iconBox": "#FDE9F9",
+            "border": "#EAD5E6",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#BB4EAF",
+            "card": "#FBF0F9",
+            "iconBox": "#FDE9F9",
+            "border": "#DDC8D9",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#FA90EC",
+            "card": "#2C1B2A",
+            "iconBox": "#40223C",
+            "border": "#52374E",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#FA90EC",
+            "card": "#332130",
+            "iconBox": "#40223C",
+            "border": "#60445B",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    },
+    {
+      "id": "F15",
+      "slug": "plum",
+      "token": "folder/plum",
+      "name": "Plum",
+      "family": "Cool",
+      "everydayCue": "Dark plum skin",
+      "association": "Reflection",
+      "exampleFolder": "Research",
+      "light": "#713A73",
+      "dark": "#AA6CAC",
+      "targets": {
+        "hue": 326,
+        "light": {
+          "L": 0.44,
+          "C": 0.11
+        },
+        "dark": {
+          "L": 0.62,
+          "C": 0.117
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#713A73",
+            "card": "#FDF8FD",
+            "iconBox": "#FBEAFB",
+            "border": "#E7D6E7",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#713A73",
+            "card": "#FAF0FA",
+            "iconBox": "#FBEAFB",
+            "border": "#DAC9DA",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#AA6CAC",
+            "card": "#2A1C2A",
+            "iconBox": "#3C253D",
+            "border": "#4F394F",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#AA6CAC",
+            "card": "#312331",
+            "iconBox": "#3C253D",
+            "border": "#5C465C",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    },
+    {
+      "id": "F16",
+      "slug": "rose",
+      "token": "folder/rose",
+      "name": "Rose",
+      "family": "Earth & personal",
+      "everydayCue": "Soft rose petals",
+      "association": "Care",
+      "exampleFolder": "Personal",
+      "light": "#B46D86",
+      "dark": "#FECFDE",
+      "targets": {
+        "hue": 358,
+        "light": {
+          "L": 0.62,
+          "C": 0.095
+        },
+        "dark": {
+          "L": 0.9,
+          "C": 0.065
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#B46D86",
+            "card": "#FFF8FA",
+            "iconBox": "#FFEAF0",
+            "border": "#ECD6DC",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#B46D86",
+            "card": "#FDF0F4",
+            "iconBox": "#FFEAF0",
+            "border": "#DEC9CF",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#FECFDE",
+            "card": "#291E22",
+            "iconBox": "#3B282E",
+            "border": "#4E3C42",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#FECFDE",
+            "card": "#302528",
+            "iconBox": "#3B282E",
+            "border": "#5B494E",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    },
+    {
+      "id": "F17",
+      "slug": "clay",
+      "token": "folder/clay",
+      "name": "Clay",
+      "family": "Earth & personal",
+      "everydayCue": "Fired terracotta",
+      "association": "Making",
+      "exampleFolder": "Craft",
+      "light": "#8A4721",
+      "dark": "#CC825B",
+      "targets": {
+        "hue": 48,
+        "light": {
+          "L": 0.475,
+          "C": 0.104
+        },
+        "dark": {
+          "L": 0.675,
+          "C": 0.107
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#8A4721",
+            "card": "#FFF8F5",
+            "iconBox": "#FFECE2",
+            "border": "#EDD7CD",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#8A4721",
+            "card": "#FEF1EB",
+            "iconBox": "#FFECE2",
+            "border": "#E0CAC0",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#CC825B",
+            "card": "#2E1D15",
+            "iconBox": "#422718",
+            "border": "#553B2E",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#CC825B",
+            "card": "#35241B",
+            "iconBox": "#422718",
+            "border": "#62483A",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    },
+    {
+      "id": "F18",
+      "slug": "cocoa",
+      "token": "folder/cocoa",
+      "name": "Cocoa",
+      "family": "Earth & personal",
+      "everydayCue": "Roasted cocoa beans",
+      "association": "Comfort",
+      "exampleFolder": "Journal",
+      "light": "#574029",
+      "dark": "#C5A88D",
+      "targets": {
+        "hue": 64,
+        "light": {
+          "L": 0.39,
+          "C": 0.048
+        },
+        "dark": {
+          "L": 0.75,
+          "C": 0.05
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#574029",
+            "card": "#FEF9F5",
+            "iconBox": "#F8EEE6",
+            "border": "#E3DBD4",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#574029",
+            "card": "#F8F3EF",
+            "iconBox": "#F8EEE6",
+            "border": "#D6CEC7",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#C5A88D",
+            "card": "#27201B",
+            "iconBox": "#372C23",
+            "border": "#4A4037",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#C5A88D",
+            "card": "#2D2721",
+            "iconBox": "#372C23",
+            "border": "#564C43",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    },
+    {
+      "id": "F19",
+      "slug": "sand",
+      "token": "folder/sand",
+      "name": "Sand",
+      "family": "Earth & personal",
+      "everydayCue": "Warm beach sand",
+      "association": "Ease",
+      "exampleFolder": "Memories",
+      "light": "#948464",
+      "dark": "#EBD5A7",
+      "targets": {
+        "hue": 86,
+        "light": {
+          "L": 0.62,
+          "C": 0.05
+        },
+        "dark": {
+          "L": 0.88,
+          "C": 0.065
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#948464",
+            "card": "#FCF9F4",
+            "iconBox": "#F5F0E4",
+            "border": "#E0DCD3",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#948464",
+            "card": "#F6F3EE",
+            "iconBox": "#F5F0E4",
+            "border": "#D3CFC6",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#EBD5A7",
+            "card": "#252118",
+            "iconBox": "#352E1D",
+            "border": "#484132",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#EBD5A7",
+            "card": "#2C281E",
+            "iconBox": "#352E1D",
+            "border": "#554E3E",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    },
+    {
+      "id": "F20",
+      "slug": "slate",
+      "token": "folder/slate",
+      "name": "Slate",
+      "family": "Earth & personal",
+      "everydayCue": "Blue-gray stone",
+      "association": "Order",
+      "exampleFolder": "Admin",
+      "light": "#586D7F",
+      "dark": "#7F99B0",
+      "targets": {
+        "hue": 245,
+        "light": {
+          "L": 0.525,
+          "C": 0.038
+        },
+        "dark": {
+          "L": 0.67,
+          "C": 0.045
+        }
+      },
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#586D7F",
+            "card": "#F6FAFE",
+            "iconBox": "#EAF1F8",
+            "border": "#D7DDE3",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#586D7F",
+            "card": "#F0F4F8",
+            "iconBox": "#EAF1F8",
+            "border": "#CAD0D6",
+            "label": "#171717",
+            "count": "#6C615B",
+            "control": "#75675F"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#7F99B0",
+            "card": "#1D2227",
+            "iconBox": "#263038",
+            "border": "#3A434B",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#7F99B0",
+            "card": "#23292E",
+            "iconBox": "#263038",
+            "border": "#465058",
+            "label": "#F0DFD8",
+            "count": "#CDBEB6",
+            "control": "#B9AAA2"
+          }
+        }
+      }
+    }
+  ],
+  "original": [
+    {
+      "id": "O01",
+      "slug": "coral-rose",
+      "token": "folder/coral-rose",
+      "name": "Coral Rose",
+      "light": "#FF6B6B",
+      "dark": "#E98181",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#FF6B6B",
+            "card": "#FDEFEE",
+            "iconBox": "#FDDBDA",
+            "border": "#FDD5D4",
+            "label": "#171717",
+            "count": "#FF8585",
+            "control": "#AD948A"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#FF6B6B",
+            "card": "#FDEAE8",
+            "iconBox": "#FDD7D5",
+            "border": "#FEB7B6",
+            "label": "#171717",
+            "count": "#736B6B",
+            "control": "#FE9E9D"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#E98181",
+            "card": "#3B2420",
+            "iconBox": "#673B38",
+            "border": "#784542",
+            "label": "#F0DFD8",
+            "count": "#C66E6E",
+            "control": "#A28073"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#E98181",
+            "card": "#482A27",
+            "iconBox": "#70403E",
+            "border": "#A15A59",
+            "label": "#F0DFD8",
+            "count": "#AD9791",
+            "control": "#A95E5D"
+          }
+        }
+      }
+    },
+    {
+      "id": "O02",
+      "slug": "peach-sun",
+      "token": "folder/peach-sun",
+      "name": "Peach Sun",
+      "light": "#FF8E53",
+      "dark": "#E5966D",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#FF8E53",
+            "card": "#FDF2EC",
+            "iconBox": "#FDE3D5",
+            "border": "#FDDECD",
+            "label": "#171717",
+            "count": "#FFA272",
+            "control": "#AD9689"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#FF8E53",
+            "card": "#FDEEE5",
+            "iconBox": "#FDE0CF",
+            "border": "#FEC8AB",
+            "label": "#171717",
+            "count": "#736D69",
+            "control": "#FEB48D"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#E5966D",
+            "card": "#3A271D",
+            "iconBox": "#654331",
+            "border": "#764E39",
+            "label": "#F0DFD8",
+            "count": "#C3805D",
+            "control": "#A18272"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#E5966D",
+            "card": "#472F23",
+            "iconBox": "#6F4936",
+            "border": "#9E684C",
+            "label": "#F0DFD8",
+            "count": "#AC9990",
+            "control": "#A66D4F"
+          }
+        }
+      }
+    },
+    {
+      "id": "O03",
+      "slug": "soft-gold",
+      "token": "folder/soft-gold",
+      "name": "Soft Gold",
+      "light": "#FFA800",
+      "dark": "#E0B052",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#FFA800",
+            "card": "#FDF4E5",
+            "iconBox": "#FDE9C3",
+            "border": "#FDE5B7",
+            "label": "#171717",
+            "count": "#FFB72E",
+            "control": "#AD9686"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#FFA800",
+            "card": "#FDF1DB",
+            "iconBox": "#FDE6BA",
+            "border": "#FED483",
+            "label": "#171717",
+            "count": "#736E65",
+            "control": "#FEC558"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#E0B052",
+            "card": "#3A2B19",
+            "iconBox": "#644C27",
+            "border": "#745A2D",
+            "label": "#F0DFD8",
+            "count": "#BF9547",
+            "control": "#A18371"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#E0B052",
+            "card": "#46351D",
+            "iconBox": "#6D542A",
+            "border": "#9B793A",
+            "label": "#F0DFD8",
+            "count": "#AC9B8D",
+            "control": "#A27F3D"
+          }
+        }
+      }
+    },
+    {
+      "id": "O04",
+      "slug": "emerald-sage",
+      "token": "folder/emerald-sage",
+      "name": "Emerald Sage",
+      "light": "#4CAF50",
+      "dark": "#71C174",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#4CAF50",
+            "card": "#EFF5EB",
+            "iconBox": "#D7EBD4",
+            "border": "#CEE7CC",
+            "label": "#171717",
+            "count": "#6DBD6F",
+            "control": "#A79789"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#4CAF50",
+            "card": "#E8F2E5",
+            "iconBox": "#D1E8CF",
+            "border": "#AAD7A9",
+            "label": "#171717",
+            "count": "#6B6F69",
+            "control": "#8ACA8C"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#71C174",
+            "card": "#282E1E",
+            "iconBox": "#3A5334",
+            "border": "#42613C",
+            "label": "#F0DFD8",
+            "count": "#62A463",
+            "control": "#9A8473"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#71C174",
+            "card": "#2D3924",
+            "iconBox": "#3E5B38",
+            "border": "#528450",
+            "label": "#F0DFD8",
+            "count": "#A29D90",
+            "control": "#568B54"
+          }
+        }
+      }
+    },
+    {
+      "id": "O05",
+      "slug": "minty-teal",
+      "token": "folder/minty-teal",
+      "name": "Minty Teal",
+      "light": "#00BFA5",
+      "dark": "#52E0CD",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#00BFA5",
+            "card": "#E9F6F2",
+            "iconBox": "#C6EEE6",
+            "border": "#BAEBE3",
+            "label": "#171717",
+            "count": "#2FCAB4",
+            "control": "#A5978B"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#00BFA5",
+            "card": "#DFF4EF",
+            "iconBox": "#BEECE4",
+            "border": "#86DFD1",
+            "label": "#171717",
+            "count": "#676F6D",
+            "control": "#59D4C3"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#52E0CD",
+            "card": "#23332D",
+            "iconBox": "#2F5E55",
+            "border": "#337065",
+            "label": "#F0DFD8",
+            "count": "#49BDAD",
+            "control": "#988679"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#52E0CD",
+            "card": "#263F38",
+            "iconBox": "#31675D",
+            "border": "#3E988A",
+            "label": "#F0DFD8",
+            "count": "#9F9F98",
+            "control": "#40A091"
+          }
+        }
+      }
+    },
+    {
+      "id": "O06",
+      "slug": "ice-blue",
+      "token": "folder/ice-blue",
+      "name": "Ice Blue",
+      "light": "#29B6F6",
+      "dark": "#52B4E0",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#29B6F6",
+            "card": "#ECF5F9",
+            "iconBox": "#CFECF9",
+            "border": "#C5E8F8",
+            "label": "#171717",
+            "count": "#50C3F7",
+            "control": "#A6978E"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#29B6F6",
+            "card": "#E4F3F9",
+            "iconBox": "#C8EAF9",
+            "border": "#99DBF8",
+            "label": "#171717",
+            "count": "#696F71",
+            "control": "#74CEF7"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#52B4E0",
+            "card": "#232C30",
+            "iconBox": "#2F4E5C",
+            "border": "#335C6E",
+            "label": "#F0DFD8",
+            "count": "#4999BD",
+            "control": "#98847A"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#52B4E0",
+            "card": "#26363C",
+            "iconBox": "#315665",
+            "border": "#3E7B96",
+            "label": "#F0DFD8",
+            "count": "#9F9B9A",
+            "control": "#40829E"
+          }
+        }
+      }
+    },
+    {
+      "id": "O07",
+      "slug": "royal-indigo",
+      "token": "folder/royal-indigo",
+      "name": "Royal Indigo",
+      "light": "#5C6BC0",
+      "dark": "#6C79C6",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#5C6BC0",
+            "card": "#F0EFF4",
+            "iconBox": "#DADBEC",
+            "border": "#D2D5EA",
+            "label": "#171717",
+            "count": "#7A85CA",
+            "control": "#A7948C"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#5C6BC0",
+            "card": "#EAEAF2",
+            "iconBox": "#D5D7EB",
+            "border": "#B1B7DE",
+            "label": "#171717",
+            "count": "#6B6B6F",
+            "control": "#959ED4"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#6C79C6",
+            "card": "#27222B",
+            "iconBox": "#383852",
+            "border": "#3F4061",
+            "label": "#F0DFD8",
+            "count": "#5E68A7",
+            "control": "#9A8078"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#6C79C6",
+            "card": "#2C2936",
+            "iconBox": "#3C3D5A",
+            "border": "#4F5585",
+            "label": "#F0DFD8",
+            "count": "#A29697",
+            "control": "#52598C"
+          }
+        }
+      }
+    },
+    {
+      "id": "O08",
+      "slug": "lavender-dream",
+      "token": "folder/lavender-dream",
+      "name": "Lavender Dream",
+      "light": "#BA68C8",
+      "dark": "#BB69C9",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#BA68C8",
+            "card": "#F8EFF5",
+            "iconBox": "#EFDBEE",
+            "border": "#ECD4EC",
+            "label": "#171717",
+            "count": "#C683D1",
+            "control": "#AB948D"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#BA68C8",
+            "card": "#F5E9F3",
+            "iconBox": "#ECD6ED",
+            "border": "#DDB5E2",
+            "label": "#171717",
+            "count": "#706B6F",
+            "control": "#D29CD9"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#BB69C9",
+            "card": "#34202C",
+            "iconBox": "#563253",
+            "border": "#633A63",
+            "label": "#F0DFD8",
+            "count": "#A05AAA",
+            "control": "#9F7F78"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#BB69C9",
+            "card": "#3D2537",
+            "iconBox": "#5D365C",
+            "border": "#824A87",
+            "label": "#F0DFD8",
+            "count": "#A89598",
+            "control": "#894E8F"
+          }
+        }
+      }
+    },
+    {
+      "id": "O09",
+      "slug": "crimson-berry",
+      "token": "folder/crimson-berry",
+      "name": "Crimson Berry",
+      "light": "#D81B60",
+      "dark": "#E05286",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#D81B60",
+            "card": "#FAE9ED",
+            "iconBox": "#F5CAD8",
+            "border": "#F3C0D1",
+            "label": "#171717",
+            "count": "#DF447C",
+            "control": "#AB9289"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#D81B60",
+            "card": "#F9E0E7",
+            "iconBox": "#F4C2D3",
+            "border": "#EC91B1",
+            "label": "#171717",
+            "count": "#71676A",
+            "control": "#E56A96"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#E05286",
+            "card": "#3A1C21",
+            "iconBox": "#642A3A",
+            "border": "#742F44",
+            "label": "#F0DFD8",
+            "count": "#BF4772",
+            "control": "#A17D74"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#E05286",
+            "card": "#462028",
+            "iconBox": "#6D2D40",
+            "border": "#9B3C5C",
+            "label": "#F0DFD8",
+            "count": "#AC9392",
+            "control": "#A23E60"
+          }
+        }
+      }
+    },
+    {
+      "id": "O10",
+      "slug": "slate-silver",
+      "token": "folder/slate-silver",
+      "name": "Slate Silver",
+      "light": "#78909C",
+      "dark": "#75A5BD",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#78909C",
+            "card": "#F2F2F2",
+            "iconBox": "#E0E3E5",
+            "border": "#DADEE1",
+            "label": "#171717",
+            "count": "#90A4AD",
+            "control": "#A8968B"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#78909C",
+            "card": "#EDEEEE",
+            "iconBox": "#DBE0E2",
+            "border": "#BEC8CD",
+            "label": "#171717",
+            "count": "#6D6D6D",
+            "control": "#A7B6BD"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#75A5BD",
+            "card": "#292A2A",
+            "iconBox": "#3C494F",
+            "border": "#44555D",
+            "label": "#F0DFD8",
+            "count": "#668CA0",
+            "control": "#9A8377"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#75A5BD",
+            "card": "#2E3235",
+            "iconBox": "#404F57",
+            "border": "#557180",
+            "label": "#F0DFD8",
+            "count": "#A29A97",
+            "control": "#597787"
+          }
+        }
+      }
+    },
+    {
+      "id": "O11",
+      "slug": "flamingo-pink",
+      "token": "folder/flamingo-pink",
+      "name": "Flamingo Pink",
+      "light": "#F06292",
+      "dark": "#E56D95",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#F06292",
+            "card": "#FCEFF1",
+            "iconBox": "#FADAE3",
+            "border": "#FAD3DE",
+            "label": "#171717",
+            "count": "#F27EA5",
+            "control": "#AC948B"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#F06292",
+            "card": "#FBE9ED",
+            "iconBox": "#F9D5DF",
+            "border": "#F7B3C9",
+            "label": "#171717",
+            "count": "#726B6D",
+            "control": "#F498B6"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#E56D95",
+            "card": "#3A2124",
+            "iconBox": "#653440",
+            "border": "#763C4C",
+            "label": "#F0DFD8",
+            "count": "#C35E7E",
+            "control": "#A17F75"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#E56D95",
+            "card": "#47262C",
+            "iconBox": "#6F3846",
+            "border": "#9E4D66",
+            "label": "#F0DFD8",
+            "count": "#AC9593",
+            "control": "#A6516B"
+          }
+        }
+      }
+    },
+    {
+      "id": "O12",
+      "slug": "terra-cotta",
+      "token": "folder/terra-cotta",
+      "name": "Terra Cotta",
+      "light": "#FF8A65",
+      "dark": "#E8967C",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#FF8A65",
+            "card": "#FDF2ED",
+            "iconBox": "#FDE2D9",
+            "border": "#FDDDD2",
+            "label": "#171717",
+            "count": "#FF9F80",
+            "control": "#AD9689"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#FF8A65",
+            "card": "#FDEDE7",
+            "iconBox": "#FDDED4",
+            "border": "#FEC5B3",
+            "label": "#171717",
+            "count": "#736D6A",
+            "control": "#FEB299"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#E8967C",
+            "card": "#3B2720",
+            "iconBox": "#664337",
+            "border": "#784E40",
+            "label": "#F0DFD8",
+            "count": "#C5806A",
+            "control": "#A28273"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#E8967C",
+            "card": "#472F26",
+            "iconBox": "#6F493C",
+            "border": "#A06855",
+            "label": "#F0DFD8",
+            "count": "#AC9991",
+            "control": "#A86D5A"
+          }
+        }
+      }
+    },
+    {
+      "id": "O13",
+      "slug": "golden-silk",
+      "token": "folder/golden-silk",
+      "name": "Golden Silk",
+      "light": "#FFD54F",
+      "dark": "#E5C769",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#FFD54F",
+            "card": "#FDF8EB",
+            "iconBox": "#FDF3D4",
+            "border": "#FDF1CC",
+            "label": "#171717",
+            "count": "#FFDC6E",
+            "control": "#AD9889"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#FFD54F",
+            "card": "#FDF6E5",
+            "iconBox": "#FDF1CF",
+            "border": "#FEE9A9",
+            "label": "#171717",
+            "count": "#737069",
+            "control": "#FEE28B"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#E5C769",
+            "card": "#3A2F1D",
+            "iconBox": "#655530",
+            "border": "#766438",
+            "label": "#F0DFD8",
+            "count": "#C3A95A",
+            "control": "#A18572"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#E5C769",
+            "card": "#473A22",
+            "iconBox": "#6F5D34",
+            "border": "#9E8849",
+            "label": "#F0DFD8",
+            "count": "#AC9D8F",
+            "control": "#A68F4D"
+          }
+        }
+      }
+    },
+    {
+      "id": "O14",
+      "slug": "matcha-green",
+      "token": "folder/matcha-green",
+      "name": "Matcha Green",
+      "light": "#AED581",
+      "dark": "#AED581",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#AED581",
+            "card": "#F7F8EF",
+            "iconBox": "#ECF3DF",
+            "border": "#E8F1D9",
+            "label": "#171717",
+            "count": "#BDDC97",
+            "control": "#AA988A"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#AED581",
+            "card": "#F4F6EB",
+            "iconBox": "#EAF1DB",
+            "border": "#D8E9C1",
+            "label": "#171717",
+            "count": "#6F706C",
+            "control": "#CAE2AB"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#AED581",
+            "card": "#323120",
+            "iconBox": "#515A38",
+            "border": "#5D6A42",
+            "label": "#F0DFD8",
+            "count": "#95B46E",
+            "control": "#9E8673"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#AED581",
+            "card": "#3B3D27",
+            "iconBox": "#58633E",
+            "border": "#7A9159",
+            "label": "#F0DFD8",
+            "count": "#A89E91",
+            "control": "#80985D"
+          }
+        }
+      }
+    },
+    {
+      "id": "O15",
+      "slug": "ocean-mist",
+      "token": "folder/ocean-mist",
+      "name": "Ocean Mist",
+      "light": "#4DB6AC",
+      "dark": "#6EC4BC",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#4DB6AC",
+            "card": "#EFF5F3",
+            "iconBox": "#D7ECE8",
+            "border": "#CFE8E5",
+            "label": "#171717",
+            "count": "#6DC3BA",
+            "control": "#A7978C"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#4DB6AC",
+            "card": "#E8F3F0",
+            "iconBox": "#D1EAE6",
+            "border": "#AADBD5",
+            "label": "#171717",
+            "count": "#6B6F6E",
+            "control": "#8BCEC7"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#6EC4BC",
+            "card": "#272E2A",
+            "iconBox": "#39544F",
+            "border": "#40635D",
+            "label": "#F0DFD8",
+            "count": "#60A69F",
+            "control": "#9A8477"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#6EC4BC",
+            "card": "#2C3934",
+            "iconBox": "#3D5C56",
+            "border": "#50857F",
+            "label": "#F0DFD8",
+            "count": "#A29D96",
+            "control": "#548C86"
+          }
+        }
+      }
+    },
+    {
+      "id": "O16",
+      "slug": "crystal-cyan",
+      "token": "folder/crystal-cyan",
+      "name": "Crystal Cyan",
+      "light": "#4DD0E1",
+      "dark": "#52D0E0",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#4DD0E1",
+            "card": "#EFF8F7",
+            "iconBox": "#D7F2F4",
+            "border": "#CFF0F3",
+            "label": "#171717",
+            "count": "#6DD8E5",
+            "control": "#A7988D"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#4DD0E1",
+            "card": "#E8F6F6",
+            "iconBox": "#D1F0F3",
+            "border": "#AAE7EE",
+            "label": "#171717",
+            "count": "#6B7070",
+            "control": "#8BDFE9"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#52D0E0",
+            "card": "#233030",
+            "iconBox": "#2F585C",
+            "border": "#33686E",
+            "label": "#F0DFD8",
+            "count": "#49B0BD",
+            "control": "#98857A"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#52D0E0",
+            "card": "#263C3C",
+            "iconBox": "#316165",
+            "border": "#3E8D96",
+            "label": "#F0DFD8",
+            "count": "#9F9E9A",
+            "control": "#40959E"
+          }
+        }
+      }
+    },
+    {
+      "id": "O17",
+      "slug": "twilight-blue",
+      "token": "folder/twilight-blue",
+      "name": "Twilight Blue",
+      "light": "#7986CB",
+      "dark": "#7986CB",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#7986CB",
+            "card": "#F2F2F5",
+            "iconBox": "#E0E2EF",
+            "border": "#DADCED",
+            "label": "#171717",
+            "count": "#919CD3",
+            "control": "#A8968D"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#7986CB",
+            "card": "#EDEDF3",
+            "iconBox": "#DCDEED",
+            "border": "#BFC4E3",
+            "label": "#171717",
+            "count": "#6D6D6F",
+            "control": "#A7AFDB"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#7986CB",
+            "card": "#29252C",
+            "iconBox": "#3D3D54",
+            "border": "#454764",
+            "label": "#F0DFD8",
+            "count": "#6973AB",
+            "control": "#9A8178"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#7986CB",
+            "card": "#2F2C38",
+            "iconBox": "#42435D",
+            "border": "#585E89",
+            "label": "#F0DFD8",
+            "count": "#A39798",
+            "control": "#5B6290"
+          }
+        }
+      }
+    },
+    {
+      "id": "O18",
+      "slug": "periwinkle-sky",
+      "token": "folder/periwinkle-sky",
+      "name": "Periwinkle Sky",
+      "light": "#9FA8DA",
+      "dark": "#9FA8DA",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#9FA8DA",
+            "card": "#F5F4F7",
+            "iconBox": "#E8E9F3",
+            "border": "#E4E5F1",
+            "label": "#171717",
+            "count": "#B0B7E0",
+            "control": "#A9968D"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#9FA8DA",
+            "card": "#F2F1F5",
+            "iconBox": "#E6E6F1",
+            "border": "#D1D4EA",
+            "label": "#171717",
+            "count": "#6F6E70",
+            "control": "#C0C5E5"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#9FA8DA",
+            "card": "#2F2A2F",
+            "iconBox": "#4B4A5A",
+            "border": "#56566B",
+            "label": "#F0DFD8",
+            "count": "#898FB8",
+            "control": "#9D8379"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#9FA8DA",
+            "card": "#37333B",
+            "iconBox": "#515063",
+            "border": "#707392",
+            "label": "#F0DFD8",
+            "count": "#A69A99",
+            "control": "#75799A"
+          }
+        }
+      }
+    },
+    {
+      "id": "O19",
+      "slug": "cocoa-bean",
+      "token": "folder/cocoa-bean",
+      "name": "Cocoa Bean",
+      "light": "#8D6E63",
+      "dark": "#BD8875",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#8D6E63",
+            "card": "#F4F0ED",
+            "iconBox": "#E5DDD8",
+            "border": "#DFD6D1",
+            "label": "#171717",
+            "count": "#A2887F",
+            "control": "#A99589"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#8D6E63",
+            "card": "#F0EAE7",
+            "iconBox": "#E1D7D3",
+            "border": "#C8B8B2",
+            "label": "#171717",
+            "count": "#6E6B6A",
+            "control": "#B5A098"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#BD8875",
+            "card": "#34251E",
+            "iconBox": "#563E34",
+            "border": "#64483C",
+            "label": "#F0DFD8",
+            "count": "#A27464",
+            "control": "#9F8173"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#BD8875",
+            "card": "#3E2C25",
+            "iconBox": "#5E4339",
+            "border": "#845F51",
+            "label": "#F0DFD8",
+            "count": "#A99790",
+            "control": "#8A6355"
+          }
+        }
+      }
+    },
+    {
+      "id": "O20",
+      "slug": "desert-sand",
+      "token": "folder/desert-sand",
+      "name": "Desert Sand",
+      "light": "#BCAAA4",
+      "dark": "#CCA294",
+      "family": "Original palette",
+      "exampleFolder": "Research",
+      "everydayCue": "Original app preset",
+      "association": "Existing choice",
+      "roles": {
+        "light": {
+          "list": {
+            "background": "#FDFBF9",
+            "accent": "#BCAAA4",
+            "card": "#F8F5F2",
+            "iconBox": "#EFEAE6",
+            "border": "#ECE6E2",
+            "label": "#171717",
+            "count": "#C8B9B4",
+            "control": "#AB978B"
+          },
+          "pinned": {
+            "background": "#FDFBF9",
+            "accent": "#BCAAA4",
+            "card": "#F5F1EF",
+            "iconBox": "#ECE6E4",
+            "border": "#DED5D1",
+            "label": "#171717",
+            "count": "#706E6D",
+            "control": "#D3C6C2"
+          }
+        },
+        "dark": {
+          "list": {
+            "background": "#1A120E",
+            "accent": "#CCA294",
+            "card": "#362923",
+            "iconBox": "#5C473F",
+            "border": "#6B534B",
+            "label": "#F0DFD8",
+            "count": "#AE8A7D",
+            "control": "#A08275"
+          },
+          "pinned": {
+            "background": "#1A120E",
+            "accent": "#CCA294",
+            "card": "#41322B",
+            "iconBox": "#644E45",
+            "border": "#8D7065",
+            "label": "#F0DFD8",
+            "count": "#AA9A93",
+            "control": "#94756A"
+          }
+        }
+      }
+    }
+  ],
+  "sources": [
+    {
+      "title": "Jonauskaite et al. \u2014 Universal Patterns in Color-Emotion Associations",
+      "url": "https://doi.org/10.1177/0956797620948810",
+      "use": "Emotional associations show broad similarities and cultural variation. The proposed individual meanings are design suggestions, not measured psychological effects."
+    },
+    {
+      "title": "IBM Carbon \u2014 Color palettes",
+      "url": "https://carbondesignsystem.com/data-visualization/color-palettes/",
+      "use": "Categorical colors should differentiate discrete items; inspect the sequence and neighboring colors together. This is an original palette, not an IBM palette."
+    },
+    {
+      "title": "Material Color Utilities",
+      "url": "https://github.com/material-foundation/material-color-utilities",
+      "use": "Use perceptual color models and explicit color roles. This proposal uses OKLCH, not HCT or wallpaper-derived dynamic color."
+    },
+    {
+      "title": "W3C \u2014 Understanding Use of Color",
+      "url": "https://www.w3.org/WAI/WCAG22/Understanding/use-of-color.html",
+      "use": "Folder names and icons must also communicate identity; color is an additional cue."
+    }
+  ],
+  "audit": {
+    "metric": "Euclidean OKLab distance times 100; comparative design diagnostic only",
+    "original": {
+      "light": {
+        "minimum": {
+          "pair": [
+            "Peach Sun",
+            "Terra Cotta"
+          ],
+          "deltaEOKx100": 2.349
+        },
+        "closestFive": [
+          {
+            "pair": [
+              "Peach Sun",
+              "Terra Cotta"
+            ],
+            "deltaEOKx100": 2.349
+          },
+          {
+            "pair": [
+              "Minty Teal",
+              "Ocean Mist"
+            ],
+            "deltaEOKx100": 3.91
+          },
+          {
+            "pair": [
+              "Coral Rose",
+              "Terra Cotta"
+            ],
+            "deltaEOKx100": 6.873
+          },
+          {
+            "pair": [
+              "Coral Rose",
+              "Flamingo Pink"
+            ],
+            "deltaEOKx100": 6.961
+          },
+          {
+            "pair": [
+              "Peach Sun",
+              "Soft Gold"
+            ],
+            "deltaEOKx100": 8.328
+          }
+        ]
+      },
+      "dark": {
+        "minimum": {
+          "pair": [
+            "Peach Sun",
+            "Terra Cotta"
+          ],
+          "deltaEOKx100": 1.961
+        },
+        "closestFive": [
+          {
+            "pair": [
+              "Peach Sun",
+              "Terra Cotta"
+            ],
+            "deltaEOKx100": 1.961
+          },
+          {
+            "pair": [
+              "Royal Indigo",
+              "Twilight Blue"
+            ],
+            "deltaEOKx100": 4.08
+          },
+          {
+            "pair": [
+              "Ocean Mist",
+              "Crystal Cyan"
+            ],
+            "deltaEOKx100": 5.185
+          },
+          {
+            "pair": [
+              "Terra Cotta",
+              "Desert Sand"
+            ],
+            "deltaEOKx100": 5.236
+          },
+          {
+            "pair": [
+              "Coral Rose",
+              "Terra Cotta"
+            ],
+            "deltaEOKx100": 5.312
+          }
+        ]
+      }
+    },
+    "everyday": {
+      "light": {
+        "minimum": {
+          "pair": [
+            "Tangerine",
+            "Marigold"
+          ],
+          "deltaEOKx100": 7.548
+        },
+        "closestFive": [
+          {
+            "pair": [
+              "Tangerine",
+              "Marigold"
+            ],
+            "deltaEOKx100": 7.548
+          },
+          {
+            "pair": [
+              "Coral",
+              "Tangerine"
+            ],
+            "deltaEOKx100": 7.549
+          },
+          {
+            "pair": [
+              "Cyan",
+              "Sky"
+            ],
+            "deltaEOKx100": 7.574
+          },
+          {
+            "pair": [
+              "Lime",
+              "Leaf"
+            ],
+            "deltaEOKx100": 7.721
+          },
+          {
+            "pair": [
+              "Coral",
+              "Rose"
+            ],
+            "deltaEOKx100": 8.089
+          }
+        ]
+      },
+      "dark": {
+        "minimum": {
+          "pair": [
+            "Coral",
+            "Sand"
+          ],
+          "deltaEOKx100": 7.545
+        },
+        "closestFive": [
+          {
+            "pair": [
+              "Coral",
+              "Sand"
+            ],
+            "deltaEOKx100": 7.545
+          },
+          {
+            "pair": [
+              "Sunflower",
+              "Sand"
+            ],
+            "deltaEOKx100": 8.398
+          },
+          {
+            "pair": [
+              "Tangerine",
+              "Marigold"
+            ],
+            "deltaEOKx100": 8.529
+          },
+          {
+            "pair": [
+              "Coral",
+              "Rose"
+            ],
+            "deltaEOKx100": 8.607
+          },
+          {
+            "pair": [
+              "Rose",
+              "Sand"
+            ],
+            "deltaEOKx100": 8.659
+          }
+        ]
+      }
+    },
+    "contrast": {
+      "states": 80,
+      "minimumIcon": 3.1129903428545918,
+      "minimumLabel": 11.237025116065958,
+      "minimumCount": 5.399180661739842
+    },
+    "limitations": "Not user recognition testing. Twenty colors cannot be assumed distinct for every viewer. Labels and icons remain required. Theme-role contrast applies to the authored backgrounds, not all wallpaper-derived themes."
+  }
+}

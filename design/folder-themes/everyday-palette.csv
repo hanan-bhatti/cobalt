@@ -1,0 +1,21 @@
+ID,Token,Name,Group,Light icon,Dark icon,Everyday cue,Suggested association,Example folder
+F01,folder/cherry,Cherry,Warm,#C53443,#FD5C67,Ripe cherries,Attention,Priorities
+F02,folder/coral,Coral,Warm,#C66F51,#FEB79E,Coral and peach sunsets,Warmth,People
+F03,folder/tangerine,Tangerine,Warm,#B0600B,#FE973C,Orange citrus peel,Energy,Projects
+F04,folder/marigold,Marigold,Warm,#876606,#D0A016,Golden marigold petals,Confidence,Plans
+F05,folder/sunflower,Sunflower,Warm,#948B04,#ECE36D,Sunflower petals,Optimism,Ideas
+F06,folder/lime,Lime,Nature,#5E7F0C,#A8DC33,Fresh lime peel,Freshness,Habits
+F07,folder/leaf,Leaf,Nature,#2E9752,#3FC56D,New green leaves,Growth,Health
+F08,folder/forest,Forest,Nature,#23593E,#5D9476,Evergreen trees,Stability,Home
+F09,folder/teal,Teal,Nature,#027A6E,#32DDC9,Deep coastal water,Balance,Wellbeing
+F10,folder/cyan,Cyan,Nature,#278EA4,#89E8FF,Clear glacial water,Clarity,Learning
+F11,folder/sky,Sky,Cool,#6688C0,#A1C2F8,Open blue sky,Openness,Travel
+F12,folder/cobalt,Cobalt,Cool,#1D4BC0,#4E84FF,Cobalt blue ceramics,Focus,Work
+F13,folder/violet,Violet,Cool,#824FC7,#B586FF,Violet flowers,Imagination,Creativity
+F14,folder/orchid,Orchid,Cool,#BB4EAF,#FA90EC,Orchid petals,Expression,Inspiration
+F15,folder/plum,Plum,Cool,#713A73,#AA6CAC,Dark plum skin,Reflection,Research
+F16,folder/rose,Rose,Earth & personal,#B46D86,#FECFDE,Soft rose petals,Care,Personal
+F17,folder/clay,Clay,Earth & personal,#8A4721,#CC825B,Fired terracotta,Making,Craft
+F18,folder/cocoa,Cocoa,Earth & personal,#574029,#C5A88D,Roasted cocoa beans,Comfort,Journal
+F19,folder/sand,Sand,Earth & personal,#948464,#EBD5A7,Warm beach sand,Ease,Memories
+F20,folder/slate,Slate,Earth & personal,#586D7F,#7F99B0,Blue-gray stone,Order,Admin
