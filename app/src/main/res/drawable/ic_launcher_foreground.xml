@@ -1,24 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    
-    <!-- "2" - Atomic number top-left -->
-    <path android:fillColor="#00E5FF"
-        android:pathData="M30,24 h6 v2 h-6 z M30,28 h6 v2 h-6 z M30,32 h6 v2 h-6 z M34,26 h2 v2 h-2 z M30,30 h2 v2 h-2 z"/>
-    
-    <!-- "7" - Atomic number top-left -->
-    <path android:fillColor="#00E5FF"
-        android:pathData="M38,24 h6 v2 h-6 z M42,26 h2 v8 h-2 z"/>
-        
-    <!-- "C" - Left side -->
-    <path android:fillColor="#00B0FF"
-        android:pathData="M52,38 H30 V70 H52 V62 H38 V46 H52 Z"/>
-        
-    <!-- "o" - Right side (using evenOdd for inner hole cutout) -->
-    <path android:fillColor="#00B0FF"
-        android:fillType="evenOdd"
-        android:pathData="M58,46 H78 V70 H58 Z M66,54 H70 V62 H66 Z"/>
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:pathData="M6.667,5.333H8V5.778H6.667V5.333ZM6.667,6.222H8V6.667H6.667V6.222ZM6.667,7.111H8V7.556H6.667V7.111ZM7.556,5.778H8V6.222H7.556V5.778ZM6.667,6.667H7.111V7.111H6.667V6.667Z" android:fillColor="#00E5FF" />
+    <path android:pathData="M8.445,5.333H9.778V5.778H8.445V5.333ZM9.333,5.778H9.778V7.556H9.333V5.778Z" android:fillColor="#00E5FF" />
+    <path android:pathData="M11.556,8.444H6.667V15.556H11.556V13.778H8.445V10.222H11.556V8.444Z" android:fillColor="#00B0FF" />
+    <path android:pathData="M12.889,10.222H17.333V15.556H12.889V10.222ZM14.667,12H15.556V13.778H14.667V12Z" android:fillColor="#00B0FF" android:fillType="evenOdd" />
 </vector>

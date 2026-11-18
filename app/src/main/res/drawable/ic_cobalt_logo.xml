@@ -1,33 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
-  ~ Cobalt - A universal capture and personal knowledge archive
-  ~ Copyright (C) 2026 Hanan Bhatti
-  ~ Official Cobalt Logo Vector (Optimized viewport and zero excess padding)
--->
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="50"
-    android:viewportHeight="50">
-
-    <!-- "2" - Atomic number top-left -->
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M1,2 h6 v2 h-6 z M1,6 h6 v2 h-6 z M1,10 h6 v2 h-6 z M5,4 h2 v2 h-2 z M1,8 h2 v2 h-2 z" />
-
-    <!-- "7" - Atomic number top-left -->
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M9,2 h6 v2 h-6 z M13,4 h2 v8 h-2 z" />
-
-    <!-- "C" - Left side -->
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M23,16 H1 V48 H23 V40 H9 V24 H23 Z" />
-
-    <!-- "o" - Right side (using evenOdd for inner hole cutout) -->
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:fillType="evenOdd"
-        android:pathData="M29,24 H49 V48 H29 Z M37,32 H41 V40 H37 Z" />
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:pathData="M0.48,0.96H3.36V1.92H0.48V0.96ZM0.48,2.88H3.36V3.84H0.48V2.88ZM0.48,4.8H3.36V5.76H0.48V4.8ZM2.4,1.92H3.36V2.88H2.4V1.92ZM0.48,3.84H1.44V4.8H0.48V3.84Z" android:fillColor="#FFFFFF" />
+    <path android:pathData="M4.32,0.96H7.2V1.92H4.32V0.96ZM6.24,1.92H7.2V5.76H6.24V1.92Z" android:fillColor="#FFFFFF" />
+    <path android:pathData="M11.04,7.68H0.48V23.04H11.04V19.2H4.32V11.52H11.04V7.68Z" android:fillColor="#FFFFFF" />
+    <path android:pathData="M13.92,11.52H23.52V23.04H13.92V11.52ZM17.76,15.36H19.68V19.2H17.76V15.36Z" android:fillColor="#FFFFFF" android:fillType="evenOdd" />
 </vector>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Shared geometry: preserve existing resource IDs with one canonical vector. -->
+    <item type="drawable" name="ic_nav_folders_outline">@drawable/ic_custom_folder_open</item>
+    <item type="drawable" name="ic_nav_media_outline">@drawable/ic_custom_movie</item>
+    <item type="drawable" name="ic_format_code_block">@drawable/ic_custom_code</item>
+    <item type="drawable" name="ic_format_quote">@drawable/ic_custom_quote</item>
+    <item type="drawable" name="ic_custom_bookmark_filled">@drawable/ic_custom_bookmark</item>
+</resources>

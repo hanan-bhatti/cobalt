@@ -1,0 +1,8 @@
+<!-- Iconsax linear: essential/video-play_play-view-watch-movie-presentation-media-temp.svg -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:pathData="M16.15 6.19043H17.8101C19.8501 6.19043 21.5 7.84043 21.5 9.88043V17.8004C21.5 19.8404 19.8501 21.4904 17.8101 21.4904H6.19995C4.15995 21.4904 2.51001 19.8404 2.51001 17.8004V9.89043C2.51001 7.85043 4.15995 6.20043 6.19995 6.20043H8.81995" android:fillColor="#00000000" android:strokeColor="#FFFFFF" android:strokeWidth="1.5" android:strokeLineCap="round" android:strokeLineJoin="miter" />
+    <path android:pathData="M8.81006 4.60042V8.84042C8.81006 10.8804 10.31 11.5504 12.15 10.3304L15.33 8.21042C16.39 7.50042 16.39 5.94042 15.33 5.24042L12.15 3.12042C10.31 1.89042 8.81006 2.56042 8.81006 4.60042Z" android:fillColor="#00000000" android:strokeColor="#FFFFFF" android:strokeWidth="1.5" android:strokeLineCap="round" android:strokeLineJoin="miter" />
+    <path android:pathData="M2.5 16.2197H21.5" android:fillColor="#00000000" android:strokeColor="#FFFFFF" android:strokeWidth="1.5" android:strokeLineCap="round" android:strokeLineJoin="miter" />
+    <path android:pathData="M9.92004 16.2197L6.60999 21.4997" android:fillColor="#00000000" android:strokeColor="#FFFFFF" android:strokeWidth="1.5" android:strokeLineCap="round" android:strokeLineJoin="miter" />
+    <path android:pathData="M17.39 16.2197L14.09 21.4997" android:fillColor="#00000000" android:strokeColor="#FFFFFF" android:strokeWidth="1.5" android:strokeLineCap="round" android:strokeLineJoin="miter" />
+</vector>

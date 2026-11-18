@@ -1,19 +1,4 @@
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
-
-    <!-- Phone frame -->
-    <path
-        android:strokeColor="#FF000000"
-        android:strokeWidth="1.8"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M7.5,2.5H16.5A3.5,3.5 0 0 1 20,6V18A3.5,3.5 0 0 1 16.5,21.5H7.5A3.5,3.5 0 0 1 4,18V6A3.5,3.5 0 0 1 7.5,2.5Z" />
-
-    <!-- Dock card -->
-    <path
-        android:fillColor="#FF000000"
-        android:pathData="M14,8H16A1.5,1.5 0 0 1 17.5,9.5V14.5A1.5,1.5 0 0 1 16,16H14A1.5,1.5 0 0 1 12.5,14.5V9.5A1.5,1.5 0 0 1 14,8Z" />
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:pathData="M7.5,2.5H16.5C17.428,2.5 18.319,2.869 18.975,3.525C19.631,4.181 20,5.072 20,6V18C20,18.928 19.631,19.819 18.975,20.475C18.319,21.131 17.428,21.5 16.5,21.5H7.5C6.572,21.5 5.681,21.131 5.025,20.475C4.369,19.819 4,18.928 4,18V6C4,5.072 4.369,4.181 5.025,3.525C5.681,2.869 6.572,2.5 7.5,2.5Z" android:strokeLineJoin="round" android:strokeWidth="1.8" android:fillColor="#00000000" android:strokeColor="#FFFFFF" android:strokeLineCap="round" />
+    <path android:pathData="M14,8H16C16.398,8 16.779,8.158 17.061,8.439C17.342,8.721 17.5,9.102 17.5,9.5V14.5C17.5,14.898 17.342,15.279 17.061,15.561C16.779,15.842 16.398,16 16,16H14C13.602,16 13.221,15.842 12.939,15.561C12.658,15.279 12.5,14.898 12.5,14.5V9.5C12.5,9.102 12.658,8.721 12.939,8.439C13.221,8.158 13.602,8 14,8Z" android:fillColor="#FFFFFF" />
 </vector>
