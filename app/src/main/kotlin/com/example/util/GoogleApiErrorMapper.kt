@@ -128,6 +128,7 @@ object GoogleApiErrorMapper {
      */
     fun formatException(throwable: Throwable): String {
         return when (throwable) {
+            is com.example.data.remote.ai.AiFailure -> throwable.message ?: "Provider request failed. Try again."
             is retrofit2.HttpException -> {
                 val errorBody = try {
                     throwable.response()?.errorBody()?.string()

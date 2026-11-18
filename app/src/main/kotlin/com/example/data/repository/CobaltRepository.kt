@@ -68,140 +68,14 @@ class CobaltRepository(
     private val savedItemDao = db.savedItemDao()
     private val customFolderDao = db.customFolderDao()
 
-    suspend fun extractTextFromAudio(
-        base64Audio: String,
-        apiKey: String,
-        model: String
-    ): String? = withContext(Dispatchers.IO) {
-        if (apiKey.isBlank()) {
-            return@withContext "API Key Missing. Enter your key in the AI Studio Secrets panel or the Profile page."
-        }
-
-        val cleanModel = model.removePrefix("models/").ifBlank { "gemini-2.0-flash" }
-
-        val promptText = "You are an expert audio transcription assistant. Carefully transcribe all spoken words in this audio recording into its spoken language (such as English, Urdu, Hindi, etc.). Format your output in clear Markdown with an H1 title summarizing the recording, followed by organized notes and bullet points. If there is no human speech in the recording, reply with exactly: No speech detected."
-
-        // Place audio inlineData first, then text prompt
-        val parts = if (cleanModel.contains("transcribe", ignoreCase = true)) {
-            listOf(
-                Part(inlineData = InlineData(mimeType = "audio/mp4", data = base64Audio))
-            )
-        } else {
-            listOf(
-                Part(inlineData = InlineData(mimeType = "audio/mp4", data = base64Audio)),
-                Part(text = promptText)
-            )
-        }
-        val request = GenerateContentRequest(
-            contents = listOf(
-                Content(parts = parts)
-            )
-        )
-
-        Log.d("CobaltRepo", "Sending audio transcription request to models/$cleanModel (base64 size: ${base64Audio.length / 1024} KB)")
-
-        try {
-            val response = RetrofitClient.geminiService.generateContent("models/$cleanModel", apiKey, request)
-            val candidate = response.candidates?.firstOrNull()
-            val candidateText = candidate?.content?.parts
-                ?.mapNotNull { it.text ?: it.audioTranscription?.text }
-                ?.joinToString("")
-                ?.trim()
-
-            val usage = response.usageMetadata
-            val promptTokens = usage?.promptTokenCount ?: (base64Audio.length / 400).coerceAtLeast(10)
-            val candTokens = usage?.candidatesTokenCount ?: ((candidateText?.length ?: 0) / 4).coerceAtLeast(1)
-            val totalTokens = usage?.totalTokenCount ?: (promptTokens + candTokens)
-            com.example.util.GeminiUsageTracker.recordUsage(
-                context = context,
-                taskType = "AUDIO",
-                promptTokens = promptTokens,
-                candidateTokens = candTokens,
-                totalTokens = totalTokens,
-                modelName = cleanModel
-            )
-
-            val finishReason = candidate?.finishReason
-            val blockReason = response.promptFeedback?.blockReason
-            Log.d("CobaltRepo", "Gemini Audio call completed: candidatesCount=${response.candidates?.size}, finishReason=$finishReason, blockReason=$blockReason, textLength=${candidateText?.length ?: 0}")
-
-            if (!candidateText.isNullOrBlank()) {
-                if (candidateText.equals("No speech detected", ignoreCase = true) ||
-                    candidateText.equals("No speech detected.", ignoreCase = true)) {
-                    "Error: No speech detected in the audio recording. Please speak clearly into the microphone."
-                } else {
-                    candidateText
-                }
-            } else {
-                Log.w("CobaltRepo", "Gemini Audio call produced no text. finishReason=$finishReason, blockReason=$blockReason")
-                when {
-                    blockReason != null -> "Error: Audio transcription was blocked ($blockReason)."
-                    finishReason == "SAFETY" -> "Error: Transcription was blocked by safety filters."
-                    finishReason == "RECITATION" -> "Error: Transcription was blocked by recitation filters."
-                    finishReason == "MAX_TOKENS" -> "Error: Audio recording exceeded token limits."
-                    finishReason != null && finishReason != "STOP" -> "Error: Audio transcription stopped ($finishReason)."
-                    else -> "Error: No speech detected in the audio recording. Please speak clearly into the microphone."
-                }
-            }
-        } catch (e: Exception) {
-            val errorBody = (e as? retrofit2.HttpException)?.response()?.errorBody()?.string()
-            Log.e("CobaltRepo", "Gemini Audio call failed: ${e.message}, errorBody: $errorBody", e)
-            "Error: ${com.example.util.GoogleApiErrorMapper.formatException(e)}"
-        }
+    suspend fun extractTextFromAudio(base64Audio: String, apiKey: String, model: String): String? = withContext(Dispatchers.IO) {
+        val connection = com.example.data.remote.ai.AiProviderStore(context).connection(audio = true)
+        com.example.data.remote.ai.AiGateway(context).transcribe(connection, base64Audio)
     }
 
-    suspend fun formatSpeechText(
-        speechText: String,
-        apiKey: String,
-        model: String
-    ): String? = withContext(Dispatchers.IO) {
-        if (apiKey.isBlank()) {
-            return@withContext "API Key Missing. Enter your key in the AI Studio Secrets panel or the Profile page."
-        }
-
-        val promptText = """
-            You are an expert voice memo scribe for a Cobalt app.
-            Format the following spoken thought or speech memo into a beautifully organized, professional, and clear Markdown document.
-            Requirements:
-            1. Provide a beautiful, highly descriptive H1 title at the very top (do not use generic titles like "Voice Memo").
-            2. Add a short, punchy summary of the core message.
-            3. Use elegant, structured bullet points, sections, or bold key terms with appropriate emojis to organize action items, key concepts, or reminders.
-            4. Make sure it looks clean, uses generous whitespace, and is easy to scan.
-
-            Input Speech/Memo:
-            $speechText
-        """.trimIndent()
-
-        val request = GenerateContentRequest(
-            contents = listOf(
-                Content(
-                    parts = listOf(
-                        Part(text = promptText)
-                    )
-                )
-            )
-        )
-
-        try {
-            val response = RetrofitClient.geminiService.generateContent("models/$model", apiKey, request)
-            val ocrText = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
-            val usage = response.usageMetadata
-            val promptTokens = usage?.promptTokenCount ?: 258
-            val candTokens = usage?.candidatesTokenCount ?: ((ocrText?.length ?: 0) / 4).coerceAtLeast(1)
-            val totalTokens = usage?.totalTokenCount ?: (promptTokens + candTokens)
-            com.example.util.GeminiUsageTracker.recordUsage(
-                context = context,
-                taskType = "OCR",
-                promptTokens = promptTokens,
-                candidateTokens = candTokens,
-                totalTokens = totalTokens,
-                modelName = model
-            )
-            ocrText
-        } catch (e: Exception) {
-            Log.e("CobaltRepo", "Gemini Speech format call failed: ${e.message}", e)
-            "Error: ${com.example.util.GoogleApiErrorMapper.formatException(e)}"
-        }
+    suspend fun formatSpeechText(speechText: String, apiKey: String, model: String): String? = withContext(Dispatchers.IO) {
+        val connection = com.example.data.remote.ai.AiProviderStore(context).connection()
+        com.example.data.remote.ai.AiGateway(context).format(connection, speechText)
     }
 
     // ----------------------------------------------------
@@ -225,6 +99,14 @@ class CobaltRepository(
             emptyList()
         }
     }
+
+    // Strict widget query: failure must preserve its last preview instead of masquerading as an empty folder.
+    suspend fun getWidgetItems(): List<SavedItem> = withContext(Dispatchers.IO) {
+        savedItemDao.getFolioItems().map { it.toItem() }
+    }
+
+    fun getWidgetItemsFlow(): Flow<List<SavedItem>> = savedItemDao.observeFolioItems()
+        .map { items -> items.map { it.toItem() } }.flowOn(Dispatchers.IO)
 
     fun getAllFoldersFlow(): Flow<List<String>> {
         return customFolderDao.getAllFoldersFlow()
@@ -756,14 +638,18 @@ class CobaltRepository(
             isPinned = isPinned
         )
         customFolderDao.insertFolder(newFolder)
+        com.example.widget.WidgetUpdater.update(context)
     }
 
     suspend fun deleteCustomFolder(folderName: String) = withContext(Dispatchers.IO) {
         customFolderDao.deleteFolder(CustomFolderEntity(folderName))
+        com.example.widget.FolioConfigStore(context).removeFolder(folderName)
+        com.example.widget.WidgetUpdater.update(context)
     }
 
     suspend fun updateCustomFolder(folder: CustomFolderEntity) = withContext(Dispatchers.IO) {
         customFolderDao.insertFolder(folder)
+        com.example.widget.WidgetUpdater.update(context)
     }
 
     suspend fun renameCustomFolder(oldName: String, newName: String) = withContext(Dispatchers.IO) {
@@ -795,131 +681,30 @@ class CobaltRepository(
 
         // 3. Delete old folder
         customFolderDao.deleteFolder(oldFolder)
+        com.example.widget.FolioConfigStore(context).renameFolder(oldName, newName)
+        com.example.widget.WidgetUpdater.update(context)
     }
 
     // ----------------------------------------------------
     // GEMINI VISION OCR (TEXT EXTRACTION)
     // ----------------------------------------------------
 
-    private fun buildOcrResponseSchema(): ResponseSchema {
-        val urlItemSchema = ResponseSchema(
-            type = "OBJECT",
-            properties = mapOf(
-                "url" to ResponseSchema(
-                    type = "STRING",
-                    description = "The exact URL, transcribed character-for-character, with https:// prepended if no scheme was present in the source image."
-                ),
-                "description" to ResponseSchema(
-                    type = "STRING",
-                    description = "A brief factual description of what this URL or its surrounding text indicates, based only on what is visible in the image."
-                )
-            ),
-            required = listOf("url", "description"),
-            propertyOrdering = listOf("url", "description")
-        )
-
-        return ResponseSchema(
-            type = "OBJECT",
-            properties = mapOf(
-                "extractedText" to ResponseSchema(
-                    type = "STRING",
-                    description = "The clean, markdown-formatted text from the image, preserving bold, headings, bullet points, and original script/reading direction (including right-to-left scripts such as Urdu or Arabic)."
-                ),
-                "urls" to ResponseSchema(
-                    type = "ARRAY",
-                    items = urlItemSchema,
-                    description = "All URLs or web addresses found in the image."
-                )
-            ),
-            required = listOf("extractedText", "urls"),
-            propertyOrdering = listOf("extractedText", "urls")
-        )
-    }
-
     suspend fun extractTextFromRegion(
-        bitmap: Bitmap,
-        x: Int,
-        y: Int,
-        width: Int,
-        height: Int,
-        apiKey: String,
-        model: String,
-        sensitivity: String = "Medium",
-        customPrompt: String? = null
+        bitmap: Bitmap, x: Int, y: Int, width: Int, height: Int,
+        apiKey: String, model: String, sensitivity: String = "Medium", customPrompt: String? = null
     ): String? = withContext(Dispatchers.IO) {
-        if (apiKey.isBlank()) {
-            Log.e("CobaltRepo", "Gemini API key is missing or blank.")
-            return@withContext "API Key Missing. Enter your key in the AI Studio Secrets panel or the Profile page."
-        }
-
-        // Crop the bitmap to the marked region
-        val croppedBitmap = if (width > 0 && height > 0) {
-            val safeX = x.coerceIn(0, bitmap.width - 1)
-            val safeY = y.coerceIn(0, bitmap.height - 1)
-            val safeWidth = width.coerceAtMost(bitmap.width - safeX)
-            val safeHeight = height.coerceAtMost(bitmap.height - safeY)
-            if (safeWidth > 0 && safeHeight > 0) {
-                Bitmap.createBitmap(bitmap, safeX, safeY, safeWidth, safeHeight)
-            } else {
-                bitmap
-            }
-        } else {
-            bitmap
-        }
-
-        // Compress and encode base64
-        val outputStream = ByteArrayOutputStream()
-        croppedBitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
-        val base64Data = Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
-
-        // Build prompt: custom user prompt if provided, else system default OCR prompt
-        val basePrompt = if (!customPrompt.isNullOrBlank()) {
-            customPrompt.trim()
-        } else {
-            SettingsRepository.DEFAULT_OCR_PROMPT
-        }
-        val sensitivityPrompt = when (sensitivity) {
-            "Low" -> "\n\nExtract only the most prominent, large text. Ignore small details, noise, or blurry text."
-            "High" -> "\n\nExtract all visible text perfectly, inferring missing characters or fixing typos caused by blurriness, and preserve the layout logic."
-            else -> "\n\nExtract all clearly visible text."
-        }
-        val promptText = basePrompt + sensitivityPrompt
-
-        val request = GenerateContentRequest(
-            contents = listOf(
-                Content(
-                    parts = listOf(
-                        Part(text = promptText),
-                        Part(inlineData = InlineData(mimeType = "image/jpeg", data = base64Data))
-                    )
-                )
-            ),
-            generationConfig = GenerationConfig(
-                temperature = 0.1f,
-                responseMimeType = "application/json",
-                responseSchema = buildOcrResponseSchema()
-            )
-        )
-
+        val connection = com.example.data.remote.ai.AiProviderStore(context).connection()
+        val safeX = x.coerceIn(0, bitmap.width - 1)
+        val safeY = y.coerceIn(0, bitmap.height - 1)
+        val cropped = if (width > 0 && height > 0) Bitmap.createBitmap(bitmap, safeX, safeY,
+            width.coerceAtMost(bitmap.width - safeX), height.coerceAtMost(bitmap.height - safeY)) else bitmap
         try {
-            val response = RetrofitClient.geminiService.generateContent("models/$model", apiKey, request)
-            val ocrText = response.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text?.trim()
-            val usage = response.usageMetadata
-            val promptTokens = usage?.promptTokenCount ?: 258
-            val candTokens = usage?.candidatesTokenCount ?: ((ocrText?.length ?: 0) / 4).coerceAtLeast(1)
-            val totalTokens = usage?.totalTokenCount ?: (promptTokens + candTokens)
-            com.example.util.GeminiUsageTracker.recordUsage(
-                context = context,
-                taskType = "OCR",
-                promptTokens = promptTokens,
-                candidateTokens = candTokens,
-                totalTokens = totalTokens,
-                modelName = model
-            )
-            ocrText
-        } catch (e: Exception) {
-            Log.e("CobaltRepo", "Gemini API call failed: ${e.message}", e)
-            "Error: ${com.example.util.GoogleApiErrorMapper.formatException(e)}"
+            val output = ByteArrayOutputStream()
+            cropped.compress(Bitmap.CompressFormat.JPEG, 80, output)
+            val encoded = Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
+            com.example.data.remote.ai.AiGateway(context).extract(connection, encoded, sensitivity)
+        } finally {
+            if (cropped !== bitmap) cropped.recycle()
         }
     }
 

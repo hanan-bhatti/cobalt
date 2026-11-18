@@ -201,7 +201,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun isApiKeySet(): Boolean {
-        return settingsRepository.geminiApiKey.value.isNotEmpty()
+        val connection = com.example.data.remote.ai.AiProviderStore(context).connection()
+        return connection.key.isNotBlank() || (connection.provider == com.example.data.remote.ai.AiProvider.CUSTOM && connection.baseUrl.isNotBlank())
     }
 
     private val _tmdbApiKey = MutableStateFlow(repository.getTmdbApiKey())
@@ -224,11 +225,19 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     val allItems: StateFlow<List<SavedItem>> = repository.getAllItemsFlow()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+    val screening = com.example.media.recommendation.ScreeningReadModel.get(context)
+    val widgets = com.example.widget.WidgetInventory.get(context)
+
+    val folioItems: StateFlow<List<SavedItem>> = com.example.notes.backgroundNoteDatabaseReads(context) { repository.getWidgetItemsFlow() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     val customFolders: StateFlow<List<String>> = repository.getAllFoldersFlow().map { folders -> folders.filter { it != "Archive" } }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    val customFolderEntities: StateFlow<List<com.example.data.local.CustomFolderEntity>> = repository.getAllFolderEntitiesFlow().map { folders -> folders.filter { it.name != "Archive" } }
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val customFolderEntities: StateFlow<List<com.example.data.local.CustomFolderEntity>> = com.example.notes.backgroundNoteDatabaseReads(context) {
+        repository.getAllFolderEntitiesFlow().map { folders -> folders.filter { it.name != "Archive" } }
+    }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val _selectedFolder = MutableStateFlow(settingsRepository.homeFilterFolder.value)
     val selectedFolder: StateFlow<String> = _selectedFolder.asStateFlow()
@@ -664,95 +673,13 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     val extractedLinksToReview: StateFlow<List<ExtractedLinkReview>> = _extractedLinksToReview.asStateFlow()
 
     fun fetchAvailableModels(isUserTriggered: Boolean = false) {
-        val apiKey = resolveValidApiKeyOrNull()
-        if (apiKey == null) {
-            if (isUserTriggered) {
-                showToast("Please save a valid Gemini API Key first.")
-            }
-            return
-        }
-        if (!isNetworkAvailable()) {
-            if (isUserTriggered) showToast("No internet connection. Cannot refresh models.")
-            return
-        }
         viewModelScope.launch {
             try {
-                val response = com.example.data.remote.RetrofitClient.geminiService.listModels(apiKey)
-                val rawModels = response.models?.map { it.name.replace("models/", "") } ?: emptyList()
-
-                // Vision / OCR models: multimodal LLMs excluding non-vision specialized models
-                val visionModels = rawModels.filter { modelName ->
-                    modelName.contains("gemini", ignoreCase = true) &&
-                    !modelName.contains("embedding", ignoreCase = true) &&
-                    !modelName.contains("embed", ignoreCase = true) &&
-                    !modelName.contains("tts", ignoreCase = true) &&
-                    !modelName.contains("transcribe", ignoreCase = true) &&
-                    !modelName.contains("imagen", ignoreCase = true)
-                }.sortedWith(
-                    compareByDescending<String> { it.contains("flash-lite") }
-                        .thenByDescending { it.contains("2.5") }
-                        .thenByDescending { it.contains("2.0") }
-                        .thenByDescending { it.contains("1.5") }
-                        .thenByDescending { it.contains("flash") }
-                )
-                _availableModels.value = visionModels
-
-                if (visionModels.isNotEmpty()) {
-                    val currentSelected = settingsRepository.selectedModel.value
-                    if (currentSelected.isBlank() || !visionModels.contains(currentSelected)) {
-                        val defaultModel = visionModels.firstOrNull { it.contains("2.5-flash-lite") }
-                            ?: visionModels.firstOrNull { it.contains("2.0-flash-lite") }
-                            ?: visionModels.firstOrNull { it.contains("flash-lite") }
-                            ?: visionModels.firstOrNull { it.contains("2.5-flash") }
-                            ?: visionModels.firstOrNull { it.contains("2.0-flash") }
-                            ?: visionModels.firstOrNull { it.contains("1.5-flash") }
-                            ?: visionModels.firstOrNull { it.contains("flash") }
-                            ?: visionModels.first()
-                        settingsRepository.setSelectedModel(defaultModel)
-                    }
-                }
-
-                // Audio transcribe models: dedicated speech-to-text models or audio-capable multimodal flash models
-                val audioModels = rawModels.filter { modelName ->
-                    modelName.contains("gemini", ignoreCase = true) &&
-                    !modelName.contains("embedding", ignoreCase = true) &&
-                    !modelName.contains("embed", ignoreCase = true) &&
-                    !modelName.contains("tts", ignoreCase = true) &&
-                    !modelName.contains("imagen", ignoreCase = true) &&
-                    (modelName.contains("transcribe", ignoreCase = true) ||
-                     modelName.contains("flash", ignoreCase = true) ||
-                     modelName.contains("pro", ignoreCase = true))
-                }.sortedWith(
-                    compareByDescending<String> { it.contains("transcribe", ignoreCase = true) }
-                        .thenByDescending { it.contains("2.5") }
-                        .thenByDescending { it.contains("2.0") }
-                        .thenByDescending { it.contains("1.5") }
-                        .thenByDescending { it.contains("flash") }
-                )
-                _availableAudioModels.value = audioModels
-
-                if (audioModels.isNotEmpty()) {
-                    val currentAudioSelected = settingsRepository.selectedAudioModel.value
-                    if (currentAudioSelected.isBlank() || !audioModels.contains(currentAudioSelected)) {
-                        val defaultAudio = audioModels.firstOrNull { it.contains("transcribe", ignoreCase = true) }
-                            ?: audioModels.firstOrNull { it.contains("2.5-flash") }
-                            ?: audioModels.firstOrNull { it.contains("2.0-flash") }
-                            ?: audioModels.firstOrNull { it.contains("1.5-flash") }
-                            ?: audioModels.firstOrNull { it.contains("flash") }
-                            ?: audioModels.first()
-                        settingsRepository.setSelectedAudioModel(defaultAudio)
-                    }
-                }
-
-                if (isUserTriggered) {
-                    showToast("Refreshed ${visionModels.size} vision and ${audioModels.size} audio models.")
-                }
-            } catch (e: Exception) {
-                Log.e("CobaltVM", "Failed to fetch models: ${e.message}")
-                if (isUserTriggered) {
-                    showToast("Failed to refresh models: ${e.message ?: "Unknown error"}")
-                }
-            }
+                val store = com.example.data.remote.ai.AiProviderStore(context)
+                _availableModels.value = com.example.data.remote.ai.AiGateway(context).discover(store.connection()).map { it.id }
+                _availableAudioModels.value = store.cachedModels(store.provider(audio = true)).map { it.id }
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel
+            } catch (e: Exception) { if (isUserTriggered) showToast(e.message ?: "Could not load models. Try again.") }
         }
     }
 
@@ -771,15 +698,6 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
     init {
         _isInitialLoading.value = false
-
-        // Auto-fetch models when API key is available or updated
-        viewModelScope.launch {
-            settingsRepository.geminiApiKey.collect { key ->
-                if (key.isNotBlank()) {
-                    fetchAvailableModels(isUserTriggered = false)
-                }
-            }
-        }
     }
 
     // ----------------------------------------------------
@@ -835,6 +753,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     // ----------------------------------------------------
 
     fun startManualCapture(type: SavedItemType, initialFolders: List<String> = emptyList()) {
+        imageRequestRevision++
+        _isOcrLoading.value = false
         _capturedBitmap.value = null
         pendingMediaBytes = null
         pendingMediaDisplayName = null
@@ -854,6 +774,8 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun cancelCapture() {
+        imageRequestRevision++
+        _isOcrLoading.value = false
         metadataFetchToken++
         metadataFetchJob?.cancel()
         sharedPreparationJob?.cancel()
@@ -981,6 +903,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     // ----------------------------------------------------
 
     fun startFloatingOcrCapture(bitmap: Bitmap) {
+        imageRequestRevision++
         captureDrafts.clear()
         _capturedBitmap.value = bitmap
         _activeCaptureItem.value = SavedItem(
@@ -1032,17 +955,15 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                 _activeCaptureItem.value?.let { captureDrafts[SavedItemType.AUDIO] = it }
 
                 val base64Data = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
-                val apiKey = resolveValidApiKeyOrNull()
+                val apiKey = resolveValidApiKeyOrNull(audio = true)
                 if (apiKey == null) {
-                    Log.w("CobaltVM", "No Gemini API key configured for audio transcription.")
-                    _ocrError.value = "Please save a valid Gemini API Key first."
+                    Log.w("CobaltVM", "No provider API key configured for audio transcription.")
+                    _ocrError.value = "Save an API key for the selected provider in AI models first."
                     _isOcrLoading.value = false
                     return@launch
                 }
 
-                val audioModel = settingsRepository.selectedAudioModel.value.takeIf { it.isNotBlank() }
-                    ?: settingsRepository.selectedModel.value.takeIf { it.isNotBlank() }
-                    ?: "gemini-2.0-flash"
+                val audioModel = com.example.data.remote.ai.AiProviderStore(context).connection(audio = true).model
                 Log.d("CobaltVM", "Requesting transcription with model: $audioModel")
 
                 val result = repository.extractTextFromAudio(
@@ -1051,6 +972,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     model = audioModel
                 )
 
+                if (_activeCaptureItem.value?.id != currentItem.id) return@launch
                 if (result != null && !result.startsWith("Error")) {
                     val extractedTitle = extractTitleFromMarkdown(result)
                     val finalMemoTitle = if (!extractedTitle.isNullOrBlank() && !ItemTitleResolver.isInternalPathOrGeneratedName(extractedTitle)) {
@@ -1060,7 +982,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     }
                     _activeCaptureItem.value = _activeCaptureItem.value?.copy(
                         content = result,
-                        title = finalMemoTitle,
+                        title = if (currentItem.id in userNamedCaptureIds) _activeCaptureItem.value?.title.orEmpty() else finalMemoTitle,
                         thumbnailPath = localPath
                     )
                     _activeCaptureItem.value?.let { captureDrafts[SavedItemType.AUDIO] = it }
@@ -1069,8 +991,9 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
                     Log.w("CobaltVM", "Audio transcription returned error/no-speech: $result")
                     _ocrError.value = result ?: "Failed to transcribe audio."
                 }
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel
             } catch (e: Exception) {
-                Log.e("CobaltVM", "transcribeAudioMemo error: ${e.message}", e)
+                Log.e("CobaltVM", "Audio transcription failed")
                 _ocrError.value = e.localizedMessage ?: "Unknown error"
             } finally {
                 _isOcrLoading.value = false
@@ -1087,7 +1010,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val apiKey = resolveValidApiKeyOrNull()
                 if (apiKey == null) {
-                    _ocrError.value = "Please save a valid Gemini API Key first."
+                    _ocrError.value = "Save an API key for the selected provider in AI models first."
                     _isOcrLoading.value = false
                     return@launch
                 }
@@ -1121,167 +1044,78 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
         return line?.trim()?.removePrefix("#")?.trim()
     }
 
-    private fun resolveValidApiKeyOrNull(): String? {
-        val userKey = settingsRepository.geminiApiKey.value
-        return if (userKey.isNotEmpty()) userKey else null
+    private fun resolveValidApiKeyOrNull(audio: Boolean = false): String? {
+        val connection = com.example.data.remote.ai.AiProviderStore(context).connection(audio)
+        return connection.key.takeIf { it.isNotBlank() || connection.provider == com.example.data.remote.ai.AiProvider.CUSTOM }
     }
 
-    private fun parseGeminiOcrResult(raw: String): Pair<String, List<Pair<String, String>>> {
-        var parsedExtractedText = raw
-        val urlsList = mutableListOf<Pair<String, String>>()
-        try {
-            var cleanText = raw.trim()
-            val startRegex = Regex("^```(?:json)?\\s*")
-            val endRegex = Regex("\\s*```$")
-            cleanText = cleanText.replace(startRegex, "").replace(endRegex, "").trim()
+    private var imageRequestRevision = 0L
+    private val userNamedCaptureIds = mutableSetOf<String>()
 
-            val jsonObject = org.json.JSONObject(cleanText)
-            parsedExtractedText = jsonObject.optString("extractedText", raw)
-            val urlsArray = jsonObject.optJSONArray("urls")
-            if (urlsArray != null) {
-                for (i in 0 until urlsArray.length()) {
-                    val urlObj = urlsArray.getJSONObject(i)
-                    val url = urlObj.optString("url", "")
-                    val desc = urlObj.optString("description", "")
-                    if (url.isNotBlank()) {
-                        urlsList.add(Pair(url, desc))
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.w("CobaltVM", "Failed to parse OCR JSON, falling back to raw text.")
+    private fun applyImageExtraction(
+        itemId: String, originalTitle: String, raw: String, requestRevision: Long
+    ) {
+        if (requestRevision != imageRequestRevision) return
+        val current = _activeCaptureItem.value?.takeIf { it.id == itemId } ?: return
+        val parsed = com.example.data.remote.ai.ExtractionContract.decode(raw)
+        if (parsed.text.isBlank() && parsed.urls.isEmpty()) {
+            _ocrError.value = "No readable text or links found. Try a clearer image or region."
+            return
         }
-        return Pair(parsedExtractedText, urlsList)
+        val fallbackLine = parsed.text.lineSequence().map { it.trim().trimStart('#', '*', '-', ' ') }
+            .firstOrNull { it.isNotBlank() && !ItemTitleResolver.isInternalPathOrGeneratedName(it) }
+        val suggested = parsed.title.takeIf { it.isNotBlank() && !ItemTitleResolver.isInternalPathOrGeneratedName(it) }
+            ?: fallbackLine
+        val preserveTitle = itemId in userNamedCaptureIds || current.title != originalTitle || allItems.value.any { it.id == itemId }
+        val title = if (preserveTitle || suggested.isNullOrBlank()) current.title else
+            ItemTitleResolver.resolveItemTitle(suggested, null, current.type, fallbacks = context.loadTitleFallbacks())
+        val updated = current.copy(title = title, extractedText = parsed.text)
+        _activeCaptureItem.value = updated
+        captureDrafts[updated.type] = updated
+        _extractedLinksToReview.value = parsed.urls.map { (url, description) ->
+            ExtractedLinkReview(originalUrl = url, url = url, description = description, isSelected = true)
+        }
     }
 
     fun performFullImageOcr(uri: android.net.Uri, context: android.content.Context) {
-        val currentItem = _activeCaptureItem.value ?: return
+        val item = _activeCaptureItem.value ?: return
+        val revision = ++imageRequestRevision
         _isOcrLoading.value = true
         _ocrError.value = null
-        _activeCaptureItem.value = currentItem.copy(extractedText = null)
-        _extractedLinksToReview.value = emptyList()
-
         viewModelScope.launch {
             try {
-                // Use Coil to load the image robustly. This handles content://, file://, raw paths, and http:// / https:// (remote media)
                 val loader = coil.Coil.imageLoader(context)
-                val request = coil.request.ImageRequest.Builder(context)
-                    .data(uri)
-                    .allowHardware(false) // software bitmap is required for OCR / region selection
-                    .build()
+                val request = coil.request.ImageRequest.Builder(context).data(uri).allowHardware(false).build()
                 val result = loader.execute(request)
-                val bitmap = if (result is coil.request.SuccessResult) {
-                    (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
-                } else {
-                    null
-                }
-
-                if (bitmap == null) {
-                    _ocrError.value = "Failed to decode image for OCR."
-                    _isOcrLoading.value = false
-                    return@launch
-                }
-
-                val apiKey = resolveValidApiKeyOrNull()
-                if (apiKey == null) {
-                    _ocrError.value = "Please save a valid Gemini API Key first."
-                    _isOcrLoading.value = false
-                    return@launch
-                }
-
-                val resultText = repository.extractTextFromRegion(
-                    bitmap = bitmap,
-                    x = 0, y = 0, width = bitmap.width, height = bitmap.height,
-                    apiKey = apiKey,
-                    model = settingsRepository.selectedModel.value,
-                    sensitivity = "High",
-                    customPrompt = settingsRepository.customOcrPrompt.value
-                )
-
-                if (resultText?.startsWith("Error") == true) {
-                    _ocrError.value = com.example.util.GoogleApiErrorMapper.formatUserFriendlyError(resultText)
-                } else if (resultText != null) {
-                    val (parsedExtractedText, urlsList) = parseGeminiOcrResult(resultText)
-
-                    _activeCaptureItem.value = _activeCaptureItem.value?.copy(
-                        extractedText = parsedExtractedText
-                    )
-
-                    val reviews = urlsList.map { (urlStr, desc) ->
-                        ExtractedLinkReview(
-                            originalUrl = urlStr,
-                            url = urlStr,
-                            description = desc,
-                            isSelected = true
-                        )
-                    }
-                    _extractedLinksToReview.value = reviews
-                } else {
-                    _ocrError.value = "No readable text or hyperlinks found. Try selecting a clearer region."
-                }
+                val bitmap = if (result is coil.request.SuccessResult) (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap else null
+                if (bitmap == null) throw com.example.data.remote.ai.AiFailure("Could not open this image. Try another image.")
+                val raw = repository.extractTextFromRegion(bitmap, 0, 0, bitmap.width, bitmap.height,
+                    apiKey = "", model = "", sensitivity = settingsRepository.ocrSensitivity.value)
+                if (raw != null) applyImageExtraction(item.id, item.title, raw, revision)
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel
             } catch (e: Exception) {
-                _ocrError.value = com.example.util.GoogleApiErrorMapper.formatException(e)
-            } finally {
-                _isOcrLoading.value = false
-            }
+                if (revision == imageRequestRevision && _activeCaptureItem.value?.id == item.id)
+                    _ocrError.value = e.message ?: "Could not extract text. Try again."
+            } finally { if (revision == imageRequestRevision) _isOcrLoading.value = false }
         }
     }
 
     fun performRegionOcr(x: Int, y: Int, width: Int, height: Int) {
         val bitmap = _capturedBitmap.value ?: return
-        val currentItem = _activeCaptureItem.value ?: return
-
+        val item = _activeCaptureItem.value ?: return
+        val revision = ++imageRequestRevision
         _isOcrLoading.value = true
         _ocrError.value = null
-
-        // Clear previous extraction results to ensure clean state and hide old bottom panel immediately during extraction
-        _activeCaptureItem.value = currentItem.copy(extractedText = null)
-        _extractedLinksToReview.value = emptyList()
         viewModelScope.launch {
             try {
-                val apiKey = resolveValidApiKeyOrNull()
-                if (apiKey == null) {
-                    _ocrError.value = "Please save a valid Gemini API Key first."
-                    _isOcrLoading.value = false
-                    return@launch
-                }
-                val model = settingsRepository.selectedModel.value
-                val sensitivity = settingsRepository.ocrSensitivity.value
-                val customPrompt = settingsRepository.customOcrPrompt.value
-                val resultText = repository.extractTextFromRegion(bitmap, x, y, width, height, apiKey, model, sensitivity, customPrompt)
-                if (resultText?.startsWith("Error") == true) {
-                    _ocrError.value = com.example.util.GoogleApiErrorMapper.formatUserFriendlyError(resultText)
-                } else if (resultText != null) {
-                    val (parsedExtractedText, urlsList) = parseGeminiOcrResult(resultText)
-
-                    val isHttpLink = parsedExtractedText.startsWith("http://") || parsedExtractedText.startsWith("https://")
-                    _activeCaptureItem.value = currentItem.copy(
-                        extractedText = parsedExtractedText,
-                        // If it's a raw URL (fallback case)
-                        title = if (isHttpLink) "Extracted Shared URL" else currentItem.title,
-                        content = if (isHttpLink) parsedExtractedText else currentItem.content,
-                        type = if (isHttpLink) com.example.data.model.SavedItemType.LINK else currentItem.type
-                    )
-
-                    // Stage extracted URLs for review instead of auto-saving
-                    val reviews = urlsList.map { (urlStr, desc) ->
-                        ExtractedLinkReview(
-                            originalUrl = urlStr,
-                            url = urlStr,
-                            description = desc,
-                            isSelected = true
-                        )
-                    }
-                    _extractedLinksToReview.value = reviews
-                } else {
-                    _ocrError.value = "No readable text or hyperlinks found. Try selecting a clearer region."
-                }
+                val raw = repository.extractTextFromRegion(bitmap, x, y, width, height,
+                    apiKey = "", model = "", sensitivity = settingsRepository.ocrSensitivity.value)
+                if (raw != null) applyImageExtraction(item.id, item.title, raw, revision)
+            } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel
             } catch (e: Exception) {
-                Log.e("CobaltVM", "OCR region extraction failed: ${e.message}")
-                _ocrError.value = com.example.util.GoogleApiErrorMapper.formatException(e)
-            } finally {
-                _isOcrLoading.value = false
-            }
+                if (revision == imageRequestRevision && _activeCaptureItem.value?.id == item.id)
+                    _ocrError.value = e.message ?: "Could not extract text. Try again."
+            } finally { if (revision == imageRequestRevision) _isOcrLoading.value = false }
         }
     }
 
@@ -1918,6 +1752,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
     fun updateActiveCaptureItem(updater: (SavedItem) -> SavedItem) {
         val oldItem = _activeCaptureItem.value
         var newItem = oldItem?.let(updater)
+        if (oldItem != null && newItem != null && oldItem.title != newItem.title) userNamedCaptureIds.add(oldItem.id)
         if (newItem?.type == SavedItemType.LINK &&
             (newItem.content.length > com.example.notes.NoteSizePolicy.URL_CHARACTERS || newItem.content.indexOf('\n') >= 0)) {
             newItem = newItem.copy(type = SavedItemType.TEXT, bodyLoaded = true)
