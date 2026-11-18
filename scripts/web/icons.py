@@ -34,6 +34,17 @@ for path in sorted(drawables.glob('ic_custom_*.xml')) + sorted(drawables.glob('i
         return ''.join(parts)
     parts = [convert(vector)]
     symbols.append('<symbol id="i-' + name + '" viewBox="0 0 ' + vector.get(ns + 'viewportWidth', '24') + ' ' + vector.get(ns + 'viewportHeight', '24') + '">' + ''.join(parts) + '</symbol>')
+aliases_path = root / 'app/src/main/res/values/icon_aliases.xml'
+if aliases_path.exists():
+    for alias in ET.parse(aliases_path).getroot().findall('item'):
+        resource = alias.get('name', '')
+        if not resource.startswith(('ic_custom_', 'ic_format_')):
+            continue
+        target = (alias.text or '').removeprefix('@drawable/')
+        vector = ET.parse(drawables / (target + '.xml')).getroot()
+        name = resource.replace('ic_custom_', '').replace('ic_format_', 'format_')
+        target_name = target.replace('ic_custom_', '').replace('ic_format_', 'format_')
+        symbols.append('<symbol id="i-' + name + '" viewBox="0 0 ' + vector.get(ns + 'viewportWidth', '24') + ' ' + vector.get(ns + 'viewportHeight', '24') + '"><use href="#i-' + target_name + '"/></symbol>')
 html_path = root / 'app/src/main/assets/web/index.html'
 html = html_path.read_text()
 sprite = '<svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:none">' + ''.join(symbols) + '</svg>'

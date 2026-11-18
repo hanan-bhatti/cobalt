@@ -540,7 +540,11 @@ class WebCompanionRouter(
     }
 
     private fun serveStaticAsset(rawPath: String): HttpResponse {
-        val path = if (rawPath == "/" || rawPath.isBlank()) "/index.html" else rawPath
+        val path = when {
+            rawPath == "/" || rawPath.isBlank() -> "/index.html"
+            rawPath == "/workspace" || rawPath == "/workspace/" -> "/workspace/index.html"
+            else -> rawPath
+        }
         val fonts = mapOf("inter" to R.font.inter_variable, "literata" to R.font.literata_variable,
             "source_serif_4" to R.font.source_serif_4_variable, "lexend" to R.font.lexend_variable,
             "atkinson_hyperlegible" to R.font.atkinson_hyperlegible_regular, "jetbrains_mono" to R.font.jetbrains_mono_variable)
@@ -549,7 +553,8 @@ class WebCompanionRouter(
             val context = contextProvider() ?: return HttpResponse.notFound()
             return HttpResponse.bytes("font/ttf", context.resources.openRawResource(resource).use { it.readBytes() })
         }
-        if (path !in setOf("/index.html", "/app.js", "/style.css", "/capture.css", "/editor.js", "/markdown.js", "/highlight.js", "/markdown-renderer.js", "/markdown-worker.js")) return HttpResponse.notFound("Asset not found")
+        val isWorkspaceAsset = Regex("^/workspace/(index[.]html|app[.](js|css)|icons/[a-zA-Z0-9_-]+[.]svg|fonts/roboto[.]ttf)$").matches(path)
+        if (!isWorkspaceAsset && path !in setOf("/index.html", "/app.js", "/style.css", "/capture.css", "/editor.js", "/markdown.js", "/highlight.js", "/markdown-renderer.js", "/markdown-worker.js")) return HttpResponse.notFound("Asset not found")
         val assetPath = "web" + (if (path.startsWith("/")) path else "/$path")
 
         val context = contextProvider()

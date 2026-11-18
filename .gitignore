@@ -42,3 +42,6 @@ __pycache__/
 
 # Isolated media validation outputs; keeps concurrent build caches separate.
 /app/build-media-validation/
+
+# Modular companion dependencies
+/web/node_modules/
