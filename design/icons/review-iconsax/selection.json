@@ -1,0 +1,429 @@
+{
+  "status": "Approved and adopted in Figma and Android; welcome artwork excluded",
+  "newGlyphs": [
+    {
+      "id": "cobalt-attachment",
+      "name": "Attachment",
+      "use": "Attach screenshot / recording",
+      "currentComponentId": "26:2340",
+      "materialDefinitions": [
+        "Icons.Default.AttachFile"
+      ],
+      "candidates": [
+        {
+          "style": "Linear",
+          "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/type-paragraph-character/paperclip_attachment-paper-fastener-documents-office-supplies-temp.svg",
+          "file": "design/icons/review-iconsax/attachment-linear.svg",
+          "componentName": "Cobalt / Review candidates / Attachment / Linear",
+          "figmaNodeId": "47:936"
+        }
+      ],
+      "recommendedStyle": "Linear",
+      "status": "Approved and adopted",
+      "figmaNodeId": "47:936"
+    },
+    {
+      "id": "cobalt-success-circle",
+      "name": "Success circle",
+      "use": "Success banners and selected model",
+      "currentComponentId": "26:2371",
+      "materialDefinitions": [
+        "Icons.Default.CheckCircle",
+        "Icons.Rounded.CheckCircle"
+      ],
+      "candidates": [
+        {
+          "style": "Linear",
+          "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/essential/tick-circle_positive-checkmark-confirmation-success-valid-temp.svg",
+          "file": "design/icons/review-iconsax/success-circle-linear.svg",
+          "componentName": "Cobalt / Review candidates / Success circle / Linear",
+          "figmaNodeId": "47:983"
+        },
+        {
+          "style": "Bold",
+          "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/bold/essential/tick-circle_success-checkmark-confirmation-approval-done-completed-temp.svg",
+          "file": "design/icons/review-iconsax/success-circle-bold.svg",
+          "componentName": "Cobalt / Review candidates / Success circle / Bold",
+          "figmaNodeId": "47:990"
+        }
+      ],
+      "recommendedStyle": "Linear",
+      "status": "Approved and adopted",
+      "figmaNodeId": "47:983"
+    },
+    {
+      "id": "cobalt-error-circle",
+      "name": "Error circle",
+      "use": "Error feedback banner",
+      "currentComponentId": "26:2486",
+      "materialDefinitions": [
+        "Icons.Default.Error"
+      ],
+      "candidates": [
+        {
+          "style": "Linear",
+          "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/essential/info-circle_information-details-help-icon-guide-temp.svg",
+          "file": "design/icons/review-iconsax/error-circle-linear.svg",
+          "componentName": "Cobalt / Review candidates / Error circle / Linear",
+          "figmaNodeId": "47:1046"
+        },
+        {
+          "style": "Bold",
+          "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/bold/essential/info-circle_information-help-icon-data-knowledge-support-temp.svg",
+          "file": "design/icons/review-iconsax/error-circle-bold.svg",
+          "componentName": "Cobalt / Review candidates / Error circle / Bold",
+          "figmaNodeId": "47:1053"
+        }
+      ],
+      "recommendedStyle": "Linear",
+      "status": "Approved and adopted",
+      "figmaNodeId": "47:1046"
+    },
+    {
+      "id": "cobalt-warning-triangle",
+      "name": "Warning",
+      "use": "Extraction errors and overlay permission",
+      "currentComponentId": "26:2612",
+      "materialDefinitions": [
+        "Icons.Default.Warning",
+        "Icons.Outlined.Warning"
+      ],
+      "candidates": [
+        {
+          "style": "Linear",
+          "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/essential/danger_warning-alert-risk-hazard-safety-issue-temp.svg",
+          "file": "design/icons/review-iconsax/warning-triangle-linear.svg",
+          "componentName": "Cobalt / Review candidates / Warning / Linear",
+          "figmaNodeId": "47:1112"
+        },
+        {
+          "style": "Bold",
+          "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/bold/essential/danger_alert-warning-hazard-sign-risk-dangerous-temp.svg",
+          "file": "design/icons/review-iconsax/warning-triangle-bold.svg",
+          "componentName": "Cobalt / Review candidates / Warning / Bold",
+          "figmaNodeId": "47:1119"
+        }
+      ],
+      "recommendedStyle": "Linear",
+      "status": "Approved and adopted",
+      "figmaNodeId": "47:1112"
+    },
+    {
+      "id": "cobalt-media-unavailable",
+      "name": "Media unavailable",
+      "use": "Missing media and playback error",
+      "currentComponentId": "26:2454",
+      "materialDefinitions": [
+        "Icons.Default.CloudOff"
+      ],
+      "candidates": [
+        {
+          "style": "Linear",
+          "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/weather/cloud-cross_cloud-storage-data-synchronization-error-recovery-backup-temp.svg",
+          "file": "design/icons/review-iconsax/media-unavailable-linear.svg",
+          "componentName": "Cobalt / Review candidates / Media unavailable / Linear",
+          "figmaNodeId": "47:1181"
+        },
+        {
+          "style": "Bold",
+          "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/bold/weather/cloud-cross_cloud-storage-data-backup-safety-security-recovery-temp.svg",
+          "file": "design/icons/review-iconsax/media-unavailable-bold.svg",
+          "componentName": "Cobalt / Review candidates / Media unavailable / Bold",
+          "figmaNodeId": "47:1189"
+        }
+      ],
+      "recommendedStyle": "Linear",
+      "status": "Approved and adopted",
+      "figmaNodeId": "47:1181"
+    },
+    {
+      "id": "cobalt-helpful",
+      "name": "Thumbs up",
+      "use": "FAQ answer: helpful",
+      "currentComponentId": "26:2580",
+      "materialDefinitions": [
+        "Icons.Default.ThumbUp"
+      ],
+      "candidates": [
+        {
+          "style": "Linear",
+          "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/support-like-question/like_like-favorite-approval-support-engagement-reaction-temp.svg",
+          "file": "design/icons/review-iconsax/helpful-linear.svg",
+          "componentName": "Cobalt / Review candidates / Thumbs up / Linear",
+          "figmaNodeId": "47:1255"
+        },
+        {
+          "style": "Bold",
+          "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/bold/support-like-question/like_thumb-up-positive-feedback-social-media-engagement-interaction-temp.svg",
+          "file": "design/icons/review-iconsax/helpful-bold.svg",
+          "componentName": "Cobalt / Review candidates / Thumbs up / Bold",
+          "figmaNodeId": "47:1263"
+        }
+      ],
+      "recommendedStyle": "Linear",
+      "status": "Approved and adopted",
+      "figmaNodeId": "47:1255"
+    },
+    {
+      "id": "cobalt-unhelpful",
+      "name": "Thumbs down",
+      "use": "FAQ answer: not helpful",
+      "currentComponentId": "26:2570",
+      "materialDefinitions": [
+        "Icons.Default.ThumbDown"
+      ],
+      "candidates": [
+        {
+          "style": "Linear",
+          "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/support-like-question/dislike_negative-feedback-unpleasurable-reaction-opinion-disapproval-temp.svg",
+          "file": "design/icons/review-iconsax/unhelpful-linear.svg",
+          "componentName": "Cobalt / Review candidates / Thumbs down / Linear",
+          "figmaNodeId": "47:1319"
+        },
+        {
+          "style": "Bold",
+          "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/bold/support-like-question/dislike_unlike-disapprove-disagree-negative-feedback-reject-temp.svg",
+          "file": "design/icons/review-iconsax/unhelpful-bold.svg",
+          "componentName": "Cobalt / Review candidates / Thumbs down / Bold",
+          "figmaNodeId": "47:1327"
+        }
+      ],
+      "recommendedStyle": "Linear",
+      "status": "Approved and adopted",
+      "figmaNodeId": "47:1319"
+    },
+    {
+      "id": "cobalt-volume-muted",
+      "name": "Volume muted",
+      "use": "Muted player / unmute action",
+      "currentComponentId": "26:2592",
+      "materialDefinitions": [
+        "Icons.AutoMirrored.Filled.VolumeMute"
+      ],
+      "candidates": [
+        {
+          "style": "Linear",
+          "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/video-audio-image/volume-cross_volume-mute-sound-off-silence-audio-control-temp.svg",
+          "file": "design/icons/review-iconsax/volume-muted-linear.svg",
+          "componentName": "Cobalt / Review candidates / Volume muted / Linear",
+          "figmaNodeId": "47:1385"
+        },
+        {
+          "style": "Bold",
+          "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/bold/video-audio-image/volume-cross_volume-control-mute-sound-barrier-silence-disable-temp.svg",
+          "file": "design/icons/review-iconsax/volume-muted-bold.svg",
+          "componentName": "Cobalt / Review candidates / Volume muted / Bold",
+          "figmaNodeId": "47:1393"
+        }
+      ],
+      "recommendedStyle": "Linear",
+      "status": "Approved and adopted",
+      "figmaNodeId": "47:1385"
+    },
+    {
+      "id": "cobalt-volume-on",
+      "name": "Volume on",
+      "use": "Audible player / mute action",
+      "currentComponentId": "26:2602",
+      "materialDefinitions": [
+        "Icons.AutoMirrored.Filled.VolumeUp"
+      ],
+      "candidates": [
+        {
+          "style": "Linear",
+          "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/video-audio-image/volume-high_audio-sound-volume-increase-loud-speaker-amplify-temp.svg",
+          "file": "design/icons/review-iconsax/volume-on-linear.svg",
+          "componentName": "Cobalt / Review candidates / Volume on / Linear",
+          "figmaNodeId": "47:1453"
+        },
+        {
+          "style": "Bold",
+          "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/bold/video-audio-image/volume-high_sound-control-volume-speaker-audio-music-temp.svg",
+          "file": "design/icons/review-iconsax/volume-on-bold.svg",
+          "componentName": "Cobalt / Review candidates / Volume on / Bold",
+          "figmaNodeId": "47:1462"
+        }
+      ],
+      "recommendedStyle": "Linear",
+      "status": "Approved and adopted",
+      "figmaNodeId": "47:1453"
+    },
+    {
+      "id": "cobalt-version-tag",
+      "name": "Version tag \u00b7 optional",
+      "use": "Only if version-badge icon is enabled",
+      "currentComponentId": "26:2560",
+      "materialDefinitions": [
+        "Icons.Default.Sell"
+      ],
+      "candidates": [
+        {
+          "style": "Linear",
+          "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/money/tag_label-price-category-organization-filter-temp.svg",
+          "file": "design/icons/review-iconsax/version-tag-linear.svg",
+          "componentName": "Cobalt / Review candidates / Version tag / Linear",
+          "figmaNodeId": "47:1522"
+        },
+        {
+          "style": "Bold",
+          "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/bold/money/tag_label-price-tag-categorize-attach-identifier-temp.svg",
+          "file": "design/icons/review-iconsax/version-tag-bold.svg",
+          "componentName": "Cobalt / Review candidates / Version tag / Bold",
+          "figmaNodeId": "47:1529"
+        }
+      ],
+      "recommendedStyle": "Linear",
+      "status": "Approved and adopted",
+      "figmaNodeId": "47:1522"
+    }
+  ],
+  "reuseExisting": [
+    {
+      "name": "Add",
+      "id": "cobalt-plus",
+      "nodeId": "25:927",
+      "use": "Add folder / reproduction step",
+      "materialDefinitions": [
+        "Icons.Default.Add"
+      ],
+      "source": "app/src/main/res/drawable/ic_custom_plus.xml"
+    },
+    {
+      "name": "Feature request",
+      "id": "cobalt-sparkle",
+      "nodeId": "26:2312",
+      "use": "Feature-request submitted",
+      "materialDefinitions": [
+        "Icons.Default.AutoAwesome"
+      ],
+      "source": "app/src/main/res/drawable/ic_custom_sparkle.xml"
+    },
+    {
+      "name": "Bug report",
+      "id": "cobalt-feedback",
+      "nodeId": "26:2086",
+      "use": "Crash reporting",
+      "materialDefinitions": [
+        "Icons.Default.BugReport"
+      ],
+      "source": "app/src/main/res/drawable/ic_custom_feedback.xml"
+    },
+    {
+      "name": "Check",
+      "id": "cobalt-check",
+      "nodeId": "25:951",
+      "use": "Selected options and switch on",
+      "materialDefinitions": [
+        "Icons.Default.Check",
+        "Icons.Rounded.Check"
+      ],
+      "source": "app/src/main/res/drawable/ic_custom_check.xml"
+    },
+    {
+      "name": "Next",
+      "id": "cobalt-chevron-right",
+      "nodeId": "26:2680",
+      "use": "Open full changelog",
+      "materialDefinitions": [
+        "Icons.Default.ChevronRight"
+      ],
+      "source": "app/src/main/res/drawable/ic_custom_chevron_right.xml"
+    },
+    {
+      "name": "Close / clear",
+      "id": "cobalt-close",
+      "nodeId": "26:2707",
+      "use": "Dismiss, clear search, switch off",
+      "materialDefinitions": [
+        "Icons.Default.Close",
+        "Icons.Rounded.Close",
+        "Icons.Rounded.Clear"
+      ],
+      "source": "app/src/main/res/drawable/ic_custom_close.xml"
+    },
+    {
+      "name": "Copy",
+      "id": "cobalt-copy",
+      "nodeId": "25:974",
+      "use": "Copy crash report",
+      "materialDefinitions": [
+        "Icons.Default.ContentCopy"
+      ],
+      "source": "app/src/main/res/drawable/ic_custom_copy.xml"
+    },
+    {
+      "name": "Email",
+      "id": "cobalt-mail",
+      "nodeId": "26:2188",
+      "use": "Send crash report",
+      "materialDefinitions": [
+        "Icons.Default.Email"
+      ],
+      "source": "app/src/main/res/drawable/ic_custom_mail.xml"
+    },
+    {
+      "name": "Information",
+      "id": "cobalt-info",
+      "nodeId": "26:2162",
+      "use": "Guidance and feedback",
+      "materialDefinitions": [
+        "Icons.Default.Info",
+        "Icons.Outlined.Info"
+      ],
+      "source": "app/src/main/res/drawable/ic_custom_info.xml"
+    },
+    {
+      "name": "Open external",
+      "id": "cobalt-external-link",
+      "nodeId": "26:2779",
+      "use": "Open Google AI Studio",
+      "materialDefinitions": [
+        "Icons.AutoMirrored.Rounded.OpenInNew"
+      ],
+      "source": "app/src/main/res/drawable/ic_custom_link_external.xml"
+    },
+    {
+      "name": "Retry / sync",
+      "id": "cobalt-sync",
+      "nodeId": "26:3548",
+      "use": "Retry video / Trakt sync",
+      "materialDefinitions": [
+        "Icons.Default.Refresh",
+        "Icons.Rounded.Refresh"
+      ],
+      "source": "app/src/main/res/drawable/ic_custom_sync.xml"
+    },
+    {
+      "name": "Search",
+      "id": "cobalt-search",
+      "nodeId": "26:2793",
+      "use": "Find Gemini models",
+      "materialDefinitions": [
+        "Icons.Rounded.Search"
+      ],
+      "source": "app/src/main/res/drawable/ic_custom_search.xml"
+    },
+    {
+      "name": "Change media",
+      "id": "cobalt-edit",
+      "nodeId": "25:1100",
+      "use": "Change selected media, not refresh",
+      "materialDefinitions": [
+        "Icons.Default.Refresh"
+      ],
+      "source": "app/src/main/res/drawable/ic_custom_edit.xml"
+    }
+  ],
+  "recommendation": "Rounded Linear adopted; Bold examples are reference only",
+  "coverage": {
+    "newGlyphs": 10,
+    "existingRoles": 13,
+    "materialDefinitions": 29
+  },
+  "figma": {
+    "fileKey": "dJOugcd2V82nQUA1MjyINI",
+    "pageId": "47:915",
+    "reviewId": "47:916",
+    "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=47-916"
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "figmaFileKey": "dJOugcd2V82nQUA1MjyINI",
+  "date": "2026-11-11",
+  "canonicalAssets": 143,
+  "syncedFromLatestFigma": 141,
+  "androidVectorsSynced": 140,
+  "newLinearGlyphs": 10,
+  "materialDefinitionsReplaced": 29,
+  "exactDuplicatePairsConsolidated": 5,
+  "resourceAliases": [
+    {
+      "id": "cobalt-nav-folders-outline",
+      "name": "Folders \u00b7 outline",
+      "source": "app/src/main/res/drawable/ic_nav_folders_outline.xml",
+      "canonicalId": "cobalt-folder-open",
+      "canonicalResource": "app/src/main/res/drawable/ic_custom_folder_open.xml",
+      "figmaNodeId": "26:1958",
+      "usedIn": [
+        "app/src/main/kotlin/com/example/MainActivity.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt"
+      ]
+    },
+    {
+      "id": "cobalt-nav-media-outline",
+      "name": "Media \u00b7 outline",
+      "source": "app/src/main/res/drawable/ic_nav_media_outline.xml",
+      "canonicalId": "cobalt-movie",
+      "canonicalResource": "app/src/main/res/drawable/ic_custom_movie.xml",
+      "figmaNodeId": "26:1547",
+      "usedIn": [
+        "app/src/main/kotlin/com/example/MainActivity.kt",
+        "app/src/main/kotlin/com/example/ui/screens/MediaHubScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteUnlinkedFilesScreen.kt"
+      ]
+    },
+    {
+      "id": "cobalt-format-code-block",
+      "name": "Code block",
+      "source": "app/src/main/res/drawable/ic_format_code_block.xml",
+      "canonicalId": "cobalt-code",
+      "canonicalResource": "app/src/main/res/drawable/ic_custom_code.xml",
+      "figmaNodeId": "26:1460",
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/RichTextEditor.kt"
+      ]
+    },
+    {
+      "id": "cobalt-format-quote",
+      "name": "Quote",
+      "source": "app/src/main/res/drawable/ic_format_quote.xml",
+      "canonicalId": "cobalt-quote",
+      "canonicalResource": "app/src/main/res/drawable/ic_custom_quote.xml",
+      "figmaNodeId": "26:1600",
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/RichTextEditor.kt"
+      ]
+    },
+    {
+      "id": "cobalt-bookmark-filled",
+      "name": "Bookmark \u00b7 filled",
+      "source": "app/src/main/res/drawable/ic_custom_bookmark_filled.xml",
+      "canonicalId": "cobalt-bookmark",
+      "canonicalResource": "app/src/main/res/drawable/ic_custom_bookmark.xml",
+      "figmaNodeId": "26:1783",
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/TraktMediaControls.kt"
+      ]
+    }
+  ],
+  "appBuildRun": false,
+  "welcomeArtworkChanged": false,
+  "checks": {
+    "svgToVectorDrawableConversion": "All 146 captured exports converted using SDK converter before consolidation",
+    "canonicalAndroidRender": "140 vectors rendered without warnings or empty images",
+    "exactRenderedAndroidDuplicates": 0,
+    "materialIconRuntimeReferences": 0,
+    "nativeWelcomeHash": "unchanged",
+    "assetNaming": "unique canonical IDs and names",
+    "drawableReferences": "All application drawable references resolve, including aliases",
+    "embeddedWebSprite": "Unique symbol IDs; aliases reference canonical symbols",
+    "figmaMutation": "143 canonical masters adopted; 44 instances rewired; final compact board 1840x1122",
+    "figmaFinalReadback": "Passed 2026-11-12: 143 canonical components, board 1840x1122; screenshot visually checked",
+    "approvalReviewLabels": "Updated to approved/adopted 2026-11-12"
+  },
+  "remaining": []
+}

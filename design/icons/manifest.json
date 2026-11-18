@@ -1,0 +1,4264 @@
+{
+  "version": 2,
+  "total": 143,
+  "categories": {
+    "Actions & clipboard": 18,
+    "Bottom navigation": 8,
+    "Brand & artwork": 6,
+    "Capture & content": 13,
+    "Folders & organization": 13,
+    "Help & feedback": 11,
+    "Intelligence & reminders": 4,
+    "Navigation": 12,
+    "People & interests": 5,
+    "Playback": 6,
+    "Privacy & security": 7,
+    "Providers & ratings": 12,
+    "Settings & storage": 14,
+    "Text formatting": 14
+  },
+  "sourceCounts": {
+    "Android vector": 141,
+    "Standalone SVG": 2
+  },
+  "naming": "Stable kebab-case IDs; readable component names grouped by category.",
+  "notes": [
+    "Current Figma vectors are the source of truth.",
+    "One canonical vector per exact shape; Android resource aliases preserve existing roles.",
+    "Welcome artwork is excluded from this sync.",
+    "Rounded Linear defaults; intentional navigation bold states and branding retained.",
+    "Open external link and volume icons preserve Android RTL mirroring."
+  ],
+  "icons": [
+    {
+      "id": "cobalt-plus",
+      "name": "Add",
+      "category": "Actions & clipboard",
+      "componentName": "Cobalt / Icons / Actions & clipboard / Add",
+      "source": "app/src/main/res/drawable/ic_custom_plus.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/actions-clipboard/cobalt-plus.svg",
+      "svgSha256": "2e393306f3cb769f57806e59a5ed3795bb6e5bfc9717007a1286a0b864f47f33",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/OcrCaptureActivity.kt",
+        "app/src/main/kotlin/com/example/ui/components/GlobalExpandingFab.kt",
+        "app/src/main/kotlin/com/example/ui/components/InlineNewFolderCreator.kt",
+        "app/src/main/kotlin/com/example/ui/components/MoveToFolderDialog.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FeedbackScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "25:927",
+        "componentName": "Cobalt / Icons / Actions & clipboard / Add",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=25-927"
+      },
+      "catalogRow": 4,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "25:927"
+    },
+    {
+      "id": "cobalt-check",
+      "name": "Check",
+      "category": "Actions & clipboard",
+      "componentName": "Cobalt / Icons / Actions & clipboard / Check",
+      "source": "app/src/main/res/drawable/ic_custom_check.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/actions-clipboard/cobalt-check.svg",
+      "svgSha256": "3b4b5b5802a5c5680f2ba469967e075df59c387b57c27873e092a14b1848bdd2",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/OcrCaptureActivity.kt",
+        "app/src/main/kotlin/com/example/ui/components/ExpressiveSwitch.kt",
+        "app/src/main/kotlin/com/example/ui/components/ClearDisposableStorageBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/ExpressiveSettingsComponents.kt",
+        "app/src/main/kotlin/com/example/ui/components/FolderBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/HowToCaptureBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/MediaSearchBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/MoveToFolderDialog.kt",
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/EdgePanelAnimationSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ArchiveCards.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/MediaDetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ReleaseUpdatesScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/WidgetSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/TraktSyncSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/ImageShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/LinkShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/MovieShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/NoteShareBottomSheet.kt"
+      ],
+      "figma": {
+        "nodeId": "25:951",
+        "componentName": "Cobalt / Icons / Actions & clipboard / Check",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=25-951"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "25:951"
+    },
+    {
+      "id": "cobalt-copy",
+      "name": "Copy",
+      "category": "Actions & clipboard",
+      "componentName": "Cobalt / Icons / Actions & clipboard / Copy",
+      "source": "app/src/main/res/drawable/ic_custom_copy.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/actions-clipboard/cobalt-copy.svg",
+      "svgSha256": "5e3e8e9b2f7381dcb51123678e055c03a124d5ab393a1a2dd859caba8996aaff",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/OcrCaptureActivity.kt",
+        "app/src/main/kotlin/com/example/util/CobaltCustomTabsLauncher.kt",
+        "app/src/main/kotlin/com/example/ui/components/CobaltEditorSelectionWindow.kt",
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/components/ExpressiveCrashReportDialog.kt",
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/DetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SupportScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/WebCompanionSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/ImageShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/LinkShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/MovieShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/NoteShareBottomSheet.kt"
+      ],
+      "figma": {
+        "nodeId": "25:974",
+        "componentName": "Cobalt / Icons / Actions & clipboard / Copy",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=25-974"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "25:974"
+    },
+    {
+      "id": "cobalt-copy-success",
+      "name": "Copy complete",
+      "category": "Actions & clipboard",
+      "componentName": "Cobalt / Icons / Actions & clipboard / Copy complete",
+      "source": "app/src/main/res/drawable/ic_custom_copy_success.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/actions-clipboard/cobalt-copy-success.svg",
+      "svgSha256": "0e0d2231f06221df4230aab720ad21a0c8874abc286cf8e88bdd135b60a15013",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/DetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/ImageShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/LinkShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/MovieShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/NoteShareBottomSheet.kt"
+      ],
+      "figma": {
+        "nodeId": "25:994",
+        "componentName": "Cobalt / Icons / Actions & clipboard / Copy complete",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=25-994"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "25:994"
+    },
+    {
+      "id": "cobalt-cut",
+      "name": "Cut",
+      "category": "Actions & clipboard",
+      "componentName": "Cobalt / Icons / Actions & clipboard / Cut",
+      "source": "app/src/main/res/drawable/ic_custom_cut.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/actions-clipboard/cobalt-cut.svg",
+      "svgSha256": "cec630a71f711224fd034910e2cf6678d4f688a1c0e0c18136778b7dbdbfb67e",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltEditorSelectionWindow.kt",
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt"
+      ],
+      "figma": {
+        "nodeId": "25:1012",
+        "componentName": "Cobalt / Icons / Actions & clipboard / Cut",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=25-1012"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "25:1012"
+    },
+    {
+      "id": "cobalt-delete",
+      "name": "Delete",
+      "category": "Actions & clipboard",
+      "componentName": "Cobalt / Icons / Actions & clipboard / Delete",
+      "source": "app/src/main/res/drawable/ic_custom_delete.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/actions-clipboard/cobalt-delete.svg",
+      "svgSha256": "2ca5d79956e619bc5af4a4172b685f81e6848e864b5ff0210b24fe124b2437ab",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/ClearDisposableStorageBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/DeleteUndoHost.kt",
+        "app/src/main/kotlin/com/example/ui/components/HoldToClearStorageButton.kt",
+        "app/src/main/kotlin/com/example/ui/components/NoteActionsBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ArchiveCards.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/DetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/GeminiUsageScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteRecoveryScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteStorageManagementScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteTrashScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteUnlinkedFilesScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "25:1036",
+        "componentName": "Cobalt / Icons / Actions & clipboard / Delete",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=25-1036"
+      },
+      "catalogRow": 4,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "25:1036"
+    },
+    {
+      "id": "cobalt-download",
+      "name": "Download",
+      "category": "Actions & clipboard",
+      "componentName": "Cobalt / Icons / Actions & clipboard / Download",
+      "source": "app/src/main/res/drawable/ic_custom_download.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/actions-clipboard/cobalt-download.svg",
+      "svgSha256": "b019e2154ca41dde6926033fccb64a59e3670d0f6e63b21fd03f47b3da9739c7",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/UpdateAvailableBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/ReleaseApkActions.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ReleaseUpdatesScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "25:1068",
+        "componentName": "Cobalt / Icons / Actions & clipboard / Download",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=25-1068"
+      },
+      "catalogRow": 5,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "25:1068"
+    },
+    {
+      "id": "cobalt-edit",
+      "name": "Edit",
+      "category": "Actions & clipboard",
+      "componentName": "Cobalt / Icons / Actions & clipboard / Edit",
+      "source": "app/src/main/res/drawable/ic_custom_edit.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/actions-clipboard/cobalt-edit.svg",
+      "svgSha256": "2df8b3a1fae744a46ff57f53c8b385e7d556770be6a7c82ba2aded319b31fcea",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/OcrCaptureActivity.kt",
+        "app/src/main/kotlin/com/example/ui/components/GlobalExpandingFab.kt",
+        "app/src/main/kotlin/com/example/ui/components/HowToCaptureBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ContinuousNoteEditor.kt",
+        "app/src/main/kotlin/com/example/ui/screens/DetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/RichTextEditor.kt",
+        "app/src/main/kotlin/com/example/ui/screens/WebCompanionSettingsScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "25:1100",
+        "componentName": "Cobalt / Icons / Actions & clipboard / Edit",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=25-1100"
+      },
+      "catalogRow": 4,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "25:1100"
+    },
+    {
+      "id": "cobalt-export",
+      "name": "Export",
+      "category": "Actions & clipboard",
+      "componentName": "Cobalt / Icons / Actions & clipboard / Export",
+      "source": "app/src/main/res/drawable/ic_custom_export.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/actions-clipboard/cobalt-export.svg",
+      "svgSha256": "96b36ea5ff239454defea8b0dd40829d94b8927aa7ecbafca24478d302edbbdd",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/NoteActionsBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureDraftRecoveryScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteOlderCopiesScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteRecoveryScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteUnlinkedFilesScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "25:1121",
+        "componentName": "Cobalt / Icons / Actions & clipboard / Export",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=25-1121"
+      },
+      "catalogRow": 5,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "25:1121"
+    },
+    {
+      "id": "cobalt-import",
+      "name": "Import",
+      "category": "Actions & clipboard",
+      "componentName": "Cobalt / Icons / Actions & clipboard / Import",
+      "source": "app/src/main/res/drawable/ic_custom_import.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/actions-clipboard/cobalt-import.svg",
+      "svgSha256": "c8ff733a39eedb5d8fee778fbc5704e4f274b8518276a79d6dac6bc28a3c6534",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/GlobalExpandingFab.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "25:1137",
+        "componentName": "Cobalt / Icons / Actions & clipboard / Import",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=25-1137"
+      },
+      "catalogRow": 5,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "25:1137"
+    },
+    {
+      "id": "cobalt-paste",
+      "name": "Paste",
+      "category": "Actions & clipboard",
+      "componentName": "Cobalt / Icons / Actions & clipboard / Paste",
+      "source": "app/src/main/res/drawable/ic_custom_paste.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/actions-clipboard/cobalt-paste.svg",
+      "svgSha256": "b97f4361d42b4eb6489fdbeae28130ef3eccb45afe230a7566232d0acd55eebb",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltEditorSelectionWindow.kt",
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt"
+      ],
+      "figma": {
+        "nodeId": "25:1161",
+        "componentName": "Cobalt / Icons / Actions & clipboard / Paste",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=25-1161"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "25:1161"
+    },
+    {
+      "id": "cobalt-redo",
+      "name": "Redo",
+      "category": "Actions & clipboard",
+      "componentName": "Cobalt / Icons / Actions & clipboard / Redo",
+      "source": "app/src/main/res/drawable/ic_custom_redo.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/actions-clipboard/cobalt-redo.svg",
+      "svgSha256": "9b3838a16728f0f6dc724ca8ea541c14a147eb6d3125d5ee89fd081efc7ba98d",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltEditorSelectionWindow.kt",
+        "app/src/main/kotlin/com/example/ui/components/NoteActionsBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "25:1183",
+        "componentName": "Cobalt / Icons / Actions & clipboard / Redo",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=25-1183"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "25:1183"
+    },
+    {
+      "id": "cobalt-select-all-bold",
+      "name": "Select all \u00b7 bold",
+      "category": "Actions & clipboard",
+      "componentName": "Cobalt / Icons / Actions & clipboard / Select all \u00b7 bold",
+      "source": "app/src/main/res/drawable/ic_custom_select_all_bold.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/actions-clipboard/cobalt-select-all-bold.svg",
+      "svgSha256": "6c62af0ce7ee9ee416b3b520928f595cf7d738e543041556010e49568a1a081f",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "25:1201",
+        "componentName": "Cobalt / Icons / Actions & clipboard / Select all \u00b7 bold",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=25-1201"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "25:1201"
+    },
+    {
+      "id": "cobalt-select-all",
+      "name": "Select all \u00b7 outline",
+      "category": "Actions & clipboard",
+      "componentName": "Cobalt / Icons / Actions & clipboard / Select all \u00b7 outline",
+      "source": "app/src/main/res/drawable/ic_custom_select_all.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/actions-clipboard/cobalt-select-all.svg",
+      "svgSha256": "6806ac718e72d0f19ce9fe077d04596f1310d52e7be7e3b7067736310336cfe9",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltEditorSelectionWindow.kt",
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "25:1226",
+        "componentName": "Cobalt / Icons / Actions & clipboard / Select all \u00b7 outline",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=25-1226"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "25:1226"
+    },
+    {
+      "id": "cobalt-send",
+      "name": "Send",
+      "category": "Actions & clipboard",
+      "componentName": "Cobalt / Icons / Actions & clipboard / Send",
+      "source": "app/src/main/res/drawable/ic_custom_send.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/actions-clipboard/cobalt-send.svg",
+      "svgSha256": "412aec6c48251ef2ce2b389fadc6aed14031c314d48b2bed73413c04ce295ae9",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt"
+      ],
+      "figma": {
+        "nodeId": "25:1250",
+        "componentName": "Cobalt / Icons / Actions & clipboard / Send",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=25-1250"
+      },
+      "catalogRow": 6,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "25:1250"
+    },
+    {
+      "id": "cobalt-share",
+      "name": "Share",
+      "category": "Actions & clipboard",
+      "componentName": "Cobalt / Icons / Actions & clipboard / Share",
+      "source": "app/src/main/res/drawable/ic_custom_share.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/actions-clipboard/cobalt-share.svg",
+      "svgSha256": "8bc2c8415af291a9d6abcccca699bec74a004ef061e07c4d3286c4583a646171",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/HowToCaptureBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/NoteActionsBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/DetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FeedbackScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt",
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/ImageShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/LinkShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/MovieShareBottomSheet.kt"
+      ],
+      "figma": {
+        "nodeId": "25:1274",
+        "componentName": "Cobalt / Icons / Actions & clipboard / Share",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=25-1274"
+      },
+      "catalogRow": 6,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "25:1274"
+    },
+    {
+      "id": "cobalt-undo",
+      "name": "Undo",
+      "category": "Actions & clipboard",
+      "componentName": "Cobalt / Icons / Actions & clipboard / Undo",
+      "source": "app/src/main/res/drawable/ic_custom_undo.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/actions-clipboard/cobalt-undo.svg",
+      "svgSha256": "11a4ba48fcb9ee017deb59501d05767978a0c656bcb2ca8df54ab61834e0c466",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltEditorSelectionWindow.kt",
+        "app/src/main/kotlin/com/example/ui/components/NoteActionsBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureDraftRecoveryScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteOlderCopiesScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteTrashScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteUnlinkedFilesScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/TextAndFontsSettingsScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "25:1294",
+        "componentName": "Cobalt / Icons / Actions & clipboard / Undo",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=25-1294"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "25:1294"
+    },
+    {
+      "id": "cobalt-nav-folders-bold",
+      "name": "Folders \u00b7 bold",
+      "category": "Bottom navigation",
+      "componentName": "Cobalt / Icons / Bottom navigation / Folders \u00b7 bold",
+      "source": "app/src/main/res/drawable/ic_nav_folders_bold.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/bottom-navigation/cobalt-nav-folders-bold.svg",
+      "svgSha256": "216ce5876d44a9a174b001ce7ca24afa8bc5c4e759d07f8b7ab8cb375efa0c9c",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/MainActivity.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1043",
+        "componentName": "Cobalt / Icons / Bottom navigation / Folders \u00b7 bold",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1043"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:1043"
+    },
+    {
+      "id": "cobalt-nav-home-bold",
+      "name": "Home \u00b7 bold",
+      "category": "Bottom navigation",
+      "componentName": "Cobalt / Icons / Bottom navigation / Home \u00b7 bold",
+      "source": "app/src/main/res/drawable/ic_nav_home_bold.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/bottom-navigation/cobalt-nav-home-bold.svg",
+      "svgSha256": "599007d8fcee67ccfd8787311a443c147fe87016fec0a04bf65d66abaf1330ee",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/MainActivity.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1074",
+        "componentName": "Cobalt / Icons / Bottom navigation / Home \u00b7 bold",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1074"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:1074"
+    },
+    {
+      "id": "cobalt-nav-home-outline",
+      "name": "Home \u00b7 outline",
+      "category": "Bottom navigation",
+      "componentName": "Cobalt / Icons / Bottom navigation / Home \u00b7 outline",
+      "source": "app/src/main/res/drawable/ic_nav_home_outline.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/bottom-navigation/cobalt-nav-home-outline.svg",
+      "svgSha256": "7d0351615b7ac88cd5f3cc770e981a94eacbb17b00fe84211c0f87fe01a4ecb7",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/MainActivity.kt",
+        "app/src/main/kotlin/com/example/ui/components/ExpressiveSettingsComponents.kt",
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1087",
+        "componentName": "Cobalt / Icons / Bottom navigation / Home \u00b7 outline",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1087"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:1087"
+    },
+    {
+      "id": "cobalt-nav-media-bold",
+      "name": "Media \u00b7 bold",
+      "category": "Bottom navigation",
+      "componentName": "Cobalt / Icons / Bottom navigation / Media \u00b7 bold",
+      "source": "app/src/main/res/drawable/ic_nav_media_bold.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/bottom-navigation/cobalt-nav-media-bold.svg",
+      "svgSha256": "3b54b80393d43dd004034ac929f9578f0fb328f7cd517b0ec67c10360c281487",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/MainActivity.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1102",
+        "componentName": "Cobalt / Icons / Bottom navigation / Media \u00b7 bold",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1102"
+      },
+      "catalogRow": 4,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:1102"
+    },
+    {
+      "id": "cobalt-nav-search-bold",
+      "name": "Search \u00b7 bold",
+      "category": "Bottom navigation",
+      "componentName": "Cobalt / Icons / Bottom navigation / Search \u00b7 bold",
+      "source": "app/src/main/res/drawable/ic_nav_search_bold.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/bottom-navigation/cobalt-nav-search-bold.svg",
+      "svgSha256": "306c14208d405d9ff6a36812063c4db53a145cf9786596ed0e30ca5504570a07",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/MainActivity.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1138",
+        "componentName": "Cobalt / Icons / Bottom navigation / Search \u00b7 bold",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1138"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:1138"
+    },
+    {
+      "id": "cobalt-nav-search-outline",
+      "name": "Search \u00b7 outline",
+      "category": "Bottom navigation",
+      "componentName": "Cobalt / Icons / Bottom navigation / Search \u00b7 outline",
+      "source": "app/src/main/res/drawable/ic_nav_search_outline.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/bottom-navigation/cobalt-nav-search-outline.svg",
+      "svgSha256": "e741fe17ab48f7669984bb0ba26201cb66e2ba7504352b373e48fbe508207014",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/MainActivity.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1154",
+        "componentName": "Cobalt / Icons / Bottom navigation / Search \u00b7 outline",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1154"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:1154"
+    },
+    {
+      "id": "cobalt-nav-settings-bold",
+      "name": "Settings \u00b7 bold",
+      "category": "Bottom navigation",
+      "componentName": "Cobalt / Icons / Bottom navigation / Settings \u00b7 bold",
+      "source": "app/src/main/res/drawable/ic_nav_settings_bold.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/bottom-navigation/cobalt-nav-settings-bold.svg",
+      "svgSha256": "b547f0b38a3430b1e735affb2412b794bc06ff93d5b691abb8dcdd174887e792",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/MainActivity.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1167",
+        "componentName": "Cobalt / Icons / Bottom navigation / Settings \u00b7 bold",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1167"
+      },
+      "catalogRow": 5,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:1167"
+    },
+    {
+      "id": "cobalt-nav-settings-outline",
+      "name": "Settings \u00b7 outline",
+      "category": "Bottom navigation",
+      "componentName": "Cobalt / Icons / Bottom navigation / Settings \u00b7 outline",
+      "source": "app/src/main/res/drawable/ic_nav_settings_outline.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/bottom-navigation/cobalt-nav-settings-outline.svg",
+      "svgSha256": "c1d6d802faf73e07c3d6d901ee9f3f43a4ac231eea2c638f0bf7462999b64263",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/MainActivity.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileMainContent.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1180",
+        "componentName": "Cobalt / Icons / Bottom navigation / Settings \u00b7 outline",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1180"
+      },
+      "catalogRow": 5,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:1180"
+    },
+    {
+      "id": "cobalt-logo",
+      "name": "Cobalt logo",
+      "category": "Brand & artwork",
+      "componentName": "Cobalt / Icons / Brand & artwork / Cobalt logo",
+      "source": "app/src/main/res/drawable/ic_cobalt_logo.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/brand-artwork/cobalt-logo.svg",
+      "svgSha256": "86d4cb343f41c4228fe70c4410aa7c4db3e4ec7855067609a333de81410d63e5",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltWelcomeIllustration.kt",
+        "app/src/main/kotlin/com/example/ui/components/HowToCaptureBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/ImageShareCard.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/LinkShareCard.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/MovieShareCard.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/NoteShareCard.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1201",
+        "componentName": "Cobalt / Icons / Brand & artwork / Cobalt logo",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1201"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:1201"
+    },
+    {
+      "id": "cobalt-launcher-background",
+      "name": "Launcher background",
+      "category": "Brand & artwork",
+      "componentName": "Cobalt / Icons / Brand & artwork / Launcher background",
+      "source": "app/src/main/res/drawable/ic_launcher_background.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/brand-artwork/cobalt-launcher-background.svg",
+      "svgSha256": "40110abee1d81d7abce752e9eb7a6390d629c37b43981b7d27a27f4ae9813d47",
+      "monochrome": false,
+      "nativeSize": [
+        108.0,
+        108.0
+      ],
+      "usedIn": [],
+      "figma": {
+        "nodeId": "26:1218",
+        "componentName": "Cobalt / Icons / Brand & artwork / Launcher background",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1218"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:1218"
+    },
+    {
+      "id": "cobalt-launcher-foreground",
+      "name": "Launcher foreground",
+      "category": "Brand & artwork",
+      "componentName": "Cobalt / Icons / Brand & artwork / Launcher foreground",
+      "source": "app/src/main/res/drawable/ic_launcher_foreground.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/brand-artwork/cobalt-launcher-foreground.svg",
+      "svgSha256": "82e49d3ed9ed276c29546e4d613ee212dca6cb0fbb81dec124e25bac4329e427",
+      "monochrome": false,
+      "nativeSize": [
+        108.0,
+        108.0
+      ],
+      "usedIn": [],
+      "figma": {
+        "nodeId": "26:1233",
+        "componentName": "Cobalt / Icons / Brand & artwork / Launcher foreground",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1233"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:1233"
+    },
+    {
+      "id": "cobalt-website-favicon",
+      "name": "Website favicon",
+      "category": "Brand & artwork",
+      "componentName": "Cobalt / Icons / Brand & artwork / Website favicon",
+      "source": "docs/favicon.svg",
+      "sourceKind": "Standalone SVG",
+      "svgFile": "design/icons/svg/brand-artwork/cobalt-website-favicon.svg",
+      "svgSha256": "b3d8b3c6ec3730aba08a927b95f1a4f21b0aa2b857b90f47f0b3e7cfed86ce08",
+      "monochrome": false,
+      "nativeSize": [
+        32.0,
+        32.0
+      ],
+      "usedIn": [],
+      "figma": {
+        "nodeId": "26:1251",
+        "componentName": "Cobalt / Icons / Brand & artwork / Website favicon",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1251"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:1251"
+    },
+    {
+      "id": "cobalt-welcome-backdrop",
+      "name": "Welcome backdrop",
+      "category": "Brand & artwork",
+      "componentName": "Cobalt / Icons / Brand & artwork / Welcome backdrop",
+      "source": "app/src/main/res/drawable/ic_welcome_blob.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/brand-artwork/cobalt-welcome-backdrop.svg",
+      "svgSha256": "13859421c5de5c8ec65e03d4469c8fa53475e451d4e18dbd3a8cc4c9337c3fc4",
+      "monochrome": true,
+      "nativeSize": [
+        240.0,
+        140.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltWelcomeIllustration.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1267",
+        "componentName": "Cobalt / Icons / Brand & artwork / Welcome backdrop",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1267"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 1
+    },
+    {
+      "id": "cobalt-welcome-illustration",
+      "name": "Welcome illustration \u00b7 SVG source",
+      "category": "Brand & artwork",
+      "componentName": "Cobalt / Icons / Brand & artwork / Welcome illustration \u00b7 SVG source",
+      "source": "assets/welcome_illustration.svg",
+      "sourceKind": "Standalone SVG",
+      "svgFile": "design/icons/svg/brand-artwork/cobalt-welcome-illustration.svg",
+      "svgSha256": "add84086cffd14dec6d762b1f2725323ad94ba3db5cb1202a773548fcdd11e1f",
+      "monochrome": false,
+      "nativeSize": [
+        285.0,
+        160.0
+      ],
+      "usedIn": [],
+      "figma": {
+        "nodeId": "26:1335",
+        "componentName": "Cobalt / Icons / Brand & artwork / Welcome illustration \u00b7 SVG source",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1335"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 2
+    },
+    {
+      "id": "cobalt-camera",
+      "name": "Camera capture",
+      "category": "Capture & content",
+      "componentName": "Cobalt / Icons / Capture & content / Camera capture",
+      "source": "app/src/main/res/drawable/ic_capture_camera.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/capture-content/cobalt-camera.svg",
+      "svgSha256": "c9dd17d43d7d8750cc2a843896677510dbe08e1a6ea82a340a3c4c557bed0151",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/FabCaptureSheets.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1413",
+        "componentName": "Cobalt / Icons / Capture & content / Camera capture",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1413"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:1413"
+    },
+    {
+      "id": "cobalt-checklist",
+      "name": "Checklist",
+      "category": "Capture & content",
+      "componentName": "Cobalt / Icons / Capture & content / Checklist",
+      "source": "app/src/main/res/drawable/ic_custom_checklist.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/capture-content/cobalt-checklist.svg",
+      "svgSha256": "ce1c36c775142cda3dad7da4b7580124b5e2b3c3ff40ec685b50d9f6b2eae45d",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1437",
+        "componentName": "Cobalt / Icons / Capture & content / Checklist",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1437"
+      },
+      "catalogRow": 5,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:1437"
+    },
+    {
+      "id": "cobalt-code",
+      "name": "Code",
+      "category": "Capture & content",
+      "componentName": "Cobalt / Icons / Capture & content / Code",
+      "source": "app/src/main/res/drawable/ic_custom_code.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/capture-content/cobalt-code.svg",
+      "svgSha256": "a3c1abe568c5eab3062d51f9bd46c9780c6a3d33fe24c1adc645dbea580dfa4d",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/MainActivity.kt",
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/components/GlobalExpandingFab.kt",
+        "app/src/main/kotlin/com/example/ui/components/HomeFilterBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ArchiveCards.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/DetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileMainContent.kt",
+        "app/src/main/kotlin/com/example/ui/screens/RichTextEditor.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SearchScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/WidgetSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/widget/QuickCaptureWidget.kt",
+        "app/src/main/kotlin/com/example/widget/RecentItemsWidget.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1460",
+        "componentName": "Cobalt / Icons / Capture & content / Code",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1460"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:1460"
+    },
+    {
+      "id": "cobalt-image",
+      "name": "Image",
+      "category": "Capture & content",
+      "componentName": "Cobalt / Icons / Capture & content / Image",
+      "source": "app/src/main/res/drawable/ic_custom_image.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/capture-content/cobalt-image.svg",
+      "svgSha256": "02f50ed44e912c8f84e05417b580ba4c20b85e957b11425d345c3a6c76be1b7b",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/widget/QuickCaptureWidget.kt",
+        "app/src/main/kotlin/com/example/widget/RecentItemsWidget.kt",
+        "app/src/main/kotlin/com/example/ui/components/CobaltWelcomeIllustration.kt",
+        "app/src/main/kotlin/com/example/ui/components/FabCaptureSheets.kt",
+        "app/src/main/kotlin/com/example/ui/components/GlobalExpandingFab.kt",
+        "app/src/main/kotlin/com/example/ui/components/HomeFilterBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ArchiveCards.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/DetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FeedbackScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileMainContent.kt",
+        "app/src/main/kotlin/com/example/ui/screens/WidgetSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/ImageShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/ImageShareCard.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/LinkShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/MovieShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/NoteShareBottomSheet.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1486",
+        "componentName": "Cobalt / Icons / Capture & content / Image",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1486"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:1486"
+    },
+    {
+      "id": "cobalt-link",
+      "name": "Link",
+      "category": "Capture & content",
+      "componentName": "Cobalt / Icons / Capture & content / Link",
+      "source": "app/src/main/res/drawable/ic_custom_link.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/capture-content/cobalt-link.svg",
+      "svgSha256": "c906695d2e0049409fa73912f17ed68ae0cca11da44ccb1ee69c6a0b2befb9e2",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/OcrCaptureActivity.kt",
+        "app/src/main/kotlin/com/example/widget/QuickCaptureWidget.kt",
+        "app/src/main/kotlin/com/example/widget/RecentItemsWidget.kt",
+        "app/src/main/kotlin/com/example/ui/components/CobaltWelcomeIllustration.kt",
+        "app/src/main/kotlin/com/example/ui/components/GlobalExpandingFab.kt",
+        "app/src/main/kotlin/com/example/ui/components/HomeFilterBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ArchiveCards.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/DetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileMainContent.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SearchScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/WidgetSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1512",
+        "componentName": "Cobalt / Icons / Capture & content / Link",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1512"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:1512"
+    },
+    {
+      "id": "cobalt-markdown",
+      "name": "Markdown",
+      "category": "Capture & content",
+      "componentName": "Cobalt / Icons / Capture & content / Markdown",
+      "source": "app/src/main/res/drawable/ic_custom_markdown.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/capture-content/cobalt-markdown.svg",
+      "svgSha256": "90d1eacd284e4531e95c01d1e5b4206c1ad9acfc3ef96e86d354e038839302cb",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/NoteActionsBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/NoteShareBottomSheet.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1530",
+        "componentName": "Cobalt / Icons / Capture & content / Markdown",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1530"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:1530"
+    },
+    {
+      "id": "cobalt-movie",
+      "name": "Movie / show",
+      "category": "Capture & content",
+      "componentName": "Cobalt / Icons / Capture & content / Movie / show",
+      "source": "app/src/main/res/drawable/ic_custom_movie.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/capture-content/cobalt-movie.svg",
+      "svgSha256": "8bcd3721c28ea7e2d0908351b09a61383ba567df20add53b207191a3111f395d",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/MainActivity.kt",
+        "app/src/main/kotlin/com/example/ui/components/ExpressiveSettingsComponents.kt",
+        "app/src/main/kotlin/com/example/ui/components/GlobalExpandingFab.kt",
+        "app/src/main/kotlin/com/example/ui/components/HomeFilterBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/MediaSearchBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/MovieShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/MovieShareCard.kt",
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ArchiveCards.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/DetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/MediaDetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/MediaHubScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/MovieApiKeyScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteUnlinkedFilesScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileMainContent.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SearchScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/WidgetSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/widget/QuickCaptureWidget.kt",
+        "app/src/main/kotlin/com/example/widget/RecentItemsWidget.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1547",
+        "componentName": "Cobalt / Icons / Capture & content / Movie / show",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1547"
+      },
+      "catalogRow": 4,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:1547"
+    },
+    {
+      "id": "cobalt-music",
+      "name": "Music",
+      "category": "Capture & content",
+      "componentName": "Cobalt / Icons / Capture & content / Music",
+      "source": "app/src/main/res/drawable/ic_custom_music.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/capture-content/cobalt-music.svg",
+      "svgSha256": "c28ff7c16fe8914f92c655b7e11ef39f6974573b85066a8fd8fb7f1adbf39701",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1573",
+        "componentName": "Cobalt / Icons / Capture & content / Music",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1573"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:1573"
+    },
+    {
+      "id": "cobalt-quote",
+      "name": "Quote",
+      "category": "Capture & content",
+      "componentName": "Cobalt / Icons / Capture & content / Quote",
+      "source": "app/src/main/res/drawable/ic_custom_quote.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/capture-content/cobalt-quote.svg",
+      "svgSha256": "128d88a031b2caf498dc7a12c535f26dcf45efe2198f40a4c6e96a33feb3e585",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/components/MarkdownRenderer.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/RichTextEditor.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1600",
+        "componentName": "Cobalt / Icons / Capture & content / Quote",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1600"
+      },
+      "catalogRow": 5,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:1600"
+    },
+    {
+      "id": "cobalt-ocr",
+      "name": "Scan text (OCR)",
+      "category": "Capture & content",
+      "componentName": "Cobalt / Icons / Capture & content / Scan text (OCR)",
+      "source": "app/src/main/res/drawable/ic_custom_ocr.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/capture-content/cobalt-ocr.svg",
+      "svgSha256": "35bae6321ea8eb88296d9786a00f127edbb1374b75a26082efb6b8252c478d54",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/CobaltOcrTileService.kt",
+        "app/src/main/kotlin/com/example/widget/QuickCaptureWidget.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/GeminiUsageScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SupportScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/WidgetSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1630",
+        "componentName": "Cobalt / Icons / Capture & content / Scan text (OCR)",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1630"
+      },
+      "catalogRow": 5,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:1630"
+    },
+    {
+      "id": "cobalt-text",
+      "name": "Text note",
+      "category": "Capture & content",
+      "componentName": "Cobalt / Icons / Capture & content / Text note",
+      "source": "app/src/main/res/drawable/ic_custom_text.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/capture-content/cobalt-text.svg",
+      "svgSha256": "7c50ce58c5b4a3bc738f12e534e9080190d7daa8dd78e80e5b0ad33fbaf4d23d",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/OcrCaptureActivity.kt",
+        "app/src/main/kotlin/com/example/widget/QuickCaptureWidget.kt",
+        "app/src/main/kotlin/com/example/widget/RecentItemsWidget.kt",
+        "app/src/main/kotlin/com/example/ui/components/CobaltWelcomeIllustration.kt",
+        "app/src/main/kotlin/com/example/ui/components/ExpressiveSettingsComponents.kt",
+        "app/src/main/kotlin/com/example/ui/components/HomeFilterBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ArchiveCards.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureDraftRecoveryScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/DetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteRecoveryScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteUnlinkedFilesScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileMainContent.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SearchScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/WidgetSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt",
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/ImageShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/LinkShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/MovieShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/NoteShareBottomSheet.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1664",
+        "componentName": "Cobalt / Icons / Capture & content / Text note",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1664"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:1664"
+    },
+    {
+      "id": "cobalt-video",
+      "name": "Video",
+      "category": "Capture & content",
+      "componentName": "Cobalt / Icons / Capture & content / Video",
+      "source": "app/src/main/res/drawable/ic_custom_video.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/capture-content/cobalt-video.svg",
+      "svgSha256": "a0b906f5c022a2fe7962405d92174e7d09e2d058daafbc15ce3fad6a61ea7d70",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/GlobalExpandingFab.kt",
+        "app/src/main/kotlin/com/example/ui/components/HomeFilterBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ArchiveCards.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/DetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileMainContent.kt",
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/MovieShareBottomSheet.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1694",
+        "componentName": "Cobalt / Icons / Capture & content / Video",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1694"
+      },
+      "catalogRow": 4,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:1694"
+    },
+    {
+      "id": "cobalt-voice",
+      "name": "Voice recording",
+      "category": "Capture & content",
+      "componentName": "Cobalt / Icons / Capture & content / Voice recording",
+      "source": "app/src/main/res/drawable/ic_custom_voice.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/capture-content/cobalt-voice.svg",
+      "svgSha256": "8be57cab486debd6fced06a0e34b46005e5bfbf8a58a901f94a45538a036c223",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/widget/QuickCaptureWidget.kt",
+        "app/src/main/kotlin/com/example/widget/RecentItemsWidget.kt",
+        "app/src/main/kotlin/com/example/ui/components/AudioPlayerComponent.kt",
+        "app/src/main/kotlin/com/example/ui/components/AudioRecorderComponent.kt",
+        "app/src/main/kotlin/com/example/ui/components/GlobalExpandingFab.kt",
+        "app/src/main/kotlin/com/example/ui/components/HomeFilterBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ArchiveCards.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/DetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/GeminiUsageScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileMainContent.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SearchScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SupportScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/WidgetSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1722",
+        "componentName": "Cobalt / Icons / Capture & content / Voice recording",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1722"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:1722"
+    },
+    {
+      "id": "cobalt-archive",
+      "name": "Archive",
+      "category": "Folders & organization",
+      "componentName": "Cobalt / Icons / Folders & organization / Archive",
+      "source": "app/src/main/res/drawable/ic_custom_archive.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/folders-organization/cobalt-archive.svg",
+      "svgSha256": "625a4f6f650392bdcbf7727ee41c9aed55ed443a56cb46ac2050a40eb2e03018",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/HomeFilterBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ArchiveCards.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/DetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1756",
+        "componentName": "Cobalt / Icons / Folders & organization / Archive",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1756"
+      },
+      "catalogRow": 4,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:1756"
+    },
+    {
+      "id": "cobalt-bookmark",
+      "name": "Bookmark",
+      "category": "Folders & organization",
+      "componentName": "Cobalt / Icons / Folders & organization / Bookmark",
+      "source": "app/src/main/res/drawable/ic_custom_bookmark.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/folders-organization/cobalt-bookmark.svg",
+      "svgSha256": "9b6236d543e4167d7698eee4dd56f0a754f59d8cc5d8ef17a1117d3266954193",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/TraktMediaControls.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1783",
+        "componentName": "Cobalt / Icons / Folders & organization / Bookmark",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1783"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:1783"
+    },
+    {
+      "id": "cobalt-outline",
+      "name": "Document outline",
+      "category": "Folders & organization",
+      "componentName": "Cobalt / Icons / Folders & organization / Document outline",
+      "source": "app/src/main/res/drawable/ic_custom_outline.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/folders-organization/cobalt-outline.svg",
+      "svgSha256": "5d3e98df89ab417cb7d81c5b8134d2dc81e99b0f5b9840f87b8ba1cea2dcc60a",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/NoteActionsBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1828",
+        "componentName": "Cobalt / Icons / Folders & organization / Document outline",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1828"
+      },
+      "catalogRow": 6,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:1828"
+    },
+    {
+      "id": "cobalt-filter",
+      "name": "Filter",
+      "category": "Folders & organization",
+      "componentName": "Cobalt / Icons / Folders & organization / Filter",
+      "source": "app/src/main/res/drawable/ic_custom_filter.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/folders-organization/cobalt-filter.svg",
+      "svgSha256": "06c80a750a32335715dafae666a1eba8fb8f3be98f3f9495211a0ed8a3b83af8",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/HomeFilterBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/MediaHubFilterBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/MediaHubScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1849",
+        "componentName": "Cobalt / Icons / Folders & organization / Filter",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1849"
+      },
+      "catalogRow": 6,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:1849"
+    },
+    {
+      "id": "cobalt-folder",
+      "name": "Folder",
+      "category": "Folders & organization",
+      "componentName": "Cobalt / Icons / Folders & organization / Folder",
+      "source": "app/src/main/res/drawable/ic_custom_folder.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/folders-organization/cobalt-folder.svg",
+      "svgSha256": "391ab7eef4298c3db972fa17ae01eb154216088986c8229e622f53d60d32e19d",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/OcrCaptureActivity.kt",
+        "app/src/main/kotlin/com/example/ui/components/HomeFilterBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/MoveToFolderDialog.kt",
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/DetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1871",
+        "componentName": "Cobalt / Icons / Folders & organization / Folder",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1871"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:1871"
+    },
+    {
+      "id": "cobalt-grid",
+      "name": "Grid",
+      "category": "Folders & organization",
+      "componentName": "Cobalt / Icons / Folders & organization / Grid",
+      "source": "app/src/main/res/drawable/ic_custom_grid.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/folders-organization/cobalt-grid.svg",
+      "svgSha256": "31828164d40ee14204edec6a358544f0aaf945bfbe686a6215d7bcc6b65833fb",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/HowToCaptureBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/ImageShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/LinkShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/NoteShareBottomSheet.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1896",
+        "componentName": "Cobalt / Icons / Folders & organization / Grid",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1896"
+      },
+      "catalogRow": 5,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:1896"
+    },
+    {
+      "id": "cobalt-list",
+      "name": "List",
+      "category": "Folders & organization",
+      "componentName": "Cobalt / Icons / Folders & organization / List",
+      "source": "app/src/main/res/drawable/ic_custom_list.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/folders-organization/cobalt-list.svg",
+      "svgSha256": "76af3bc97e5a51b1ef8db9ba07e1493dc4de1ee8bde1056334c8876ea819ea17",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/ExpressiveSettingsComponents.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SearchScreen.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/LinkShareBottomSheet.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1918",
+        "componentName": "Cobalt / Icons / Folders & organization / List",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1918"
+      },
+      "catalogRow": 5,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:1918"
+    },
+    {
+      "id": "cobalt-add-folder",
+      "name": "New folder",
+      "category": "Folders & organization",
+      "componentName": "Cobalt / Icons / Folders & organization / New folder",
+      "source": "app/src/main/res/drawable/ic_custom_add_folder.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/folders-organization/cobalt-add-folder.svg",
+      "svgSha256": "c6253ed3f4bc762e42a15e06ab579bfdc4954ad58e8e802ede69d834fb644d8c",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/GlobalExpandingFab.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1937",
+        "componentName": "Cobalt / Icons / Folders & organization / New folder",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1937"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:1937"
+    },
+    {
+      "id": "cobalt-folder-open",
+      "name": "Open folder",
+      "category": "Folders & organization",
+      "componentName": "Cobalt / Icons / Folders & organization / Open folder",
+      "source": "app/src/main/res/drawable/ic_custom_folder_open.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/folders-organization/cobalt-folder-open.svg",
+      "svgSha256": "d0729528b08b41a1003d74a981f1c4067559ade21d83cc373fdd30b58733e5a6",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/MainActivity.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ArchiveCards.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1958",
+        "componentName": "Cobalt / Icons / Folders & organization / Open folder",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1958"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:1958"
+    },
+    {
+      "id": "cobalt-organization",
+      "name": "Organization",
+      "category": "Folders & organization",
+      "componentName": "Cobalt / Icons / Folders & organization / Organization",
+      "source": "app/src/main/res/drawable/ic_custom_organization.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/folders-organization/cobalt-organization.svg",
+      "svgSha256": "7c9a31607d8c7986e2e942762f00b27e728befb44f4f5b485ed92627ac1b6f54",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt"
+      ],
+      "figma": {
+        "nodeId": "26:1979",
+        "componentName": "Cobalt / Icons / Folders & organization / Organization",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-1979"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:1979"
+    },
+    {
+      "id": "cobalt-pin",
+      "name": "Pin",
+      "category": "Folders & organization",
+      "componentName": "Cobalt / Icons / Folders & organization / Pin",
+      "source": "app/src/main/res/drawable/ic_custom_pin.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/folders-organization/cobalt-pin.svg",
+      "svgSha256": "64d4219772992d9e82bed5568c97b712f7ffba56e8baa4188aa23bbf5357884a",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2003",
+        "componentName": "Cobalt / Icons / Folders & organization / Pin",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2003"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:2003"
+    },
+    {
+      "id": "cobalt-unarchive",
+      "name": "Restore from archive",
+      "category": "Folders & organization",
+      "componentName": "Cobalt / Icons / Folders & organization / Restore from archive",
+      "source": "app/src/main/res/drawable/ic_custom_unarchive.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/folders-organization/cobalt-unarchive.svg",
+      "svgSha256": "f2e84ea76a3e5ebff73ce848dc976405690d9cc05e2e09bf925911182d449a04",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/ArchiveCards.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2028",
+        "componentName": "Cobalt / Icons / Folders & organization / Restore from archive",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2028"
+      },
+      "catalogRow": 4,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:2028"
+    },
+    {
+      "id": "cobalt-folder-special",
+      "name": "Special folder",
+      "category": "Folders & organization",
+      "componentName": "Cobalt / Icons / Folders & organization / Special folder",
+      "source": "app/src/main/res/drawable/ic_custom_folder_special.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/folders-organization/cobalt-folder-special.svg",
+      "svgSha256": "321b0fdcaf60078db58adb89c599eaf79489600c2bc5e6485f36806d57fad6e1",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [],
+      "figma": {
+        "nodeId": "26:2057",
+        "componentName": "Cobalt / Icons / Folders & organization / Special folder",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2057"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:2057"
+    },
+    {
+      "id": "cobalt-feedback",
+      "name": "Feedback",
+      "category": "Help & feedback",
+      "componentName": "Cobalt / Icons / Help & feedback / Feedback",
+      "source": "app/src/main/res/drawable/ic_custom_feedback.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/help-feedback/cobalt-feedback.svg",
+      "svgSha256": "07c1f605b14d08f0809e5756d6a3c2adec5bc3133a64f5024b5bc43c4513b99a",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/ExpressiveCrashReportDialog.kt",
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FeedbackScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileMainContent.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SupportScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2086",
+        "componentName": "Cobalt / Icons / Help & feedback / Feedback",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2086"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:2086"
+    },
+    {
+      "id": "cobalt-github",
+      "name": "Github",
+      "category": "Help & feedback",
+      "componentName": "Cobalt / Icons / Help & feedback / Github",
+      "source": "app/src/main/res/drawable/ic_custom_github.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/help-feedback/cobalt-github.svg",
+      "svgSha256": "42421625463c7baff33a1378d897ed24a4d5219d07c23fc6e702c6648476a00b",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/FeedbackScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2110",
+        "componentName": "Cobalt / Icons / Help & feedback / Github",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2110"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:2110"
+    },
+    {
+      "id": "cobalt-help",
+      "name": "Help",
+      "category": "Help & feedback",
+      "componentName": "Cobalt / Icons / Help & feedback / Help",
+      "source": "app/src/main/res/drawable/ic_custom_help.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/help-feedback/cobalt-help.svg",
+      "svgSha256": "06058018a511f6ec07067be0e23fc66f398c246265db7572e62dbf0e4ef1b5e5",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileMainContent.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SupportScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2135",
+        "componentName": "Cobalt / Icons / Help & feedback / Help",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2135"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:2135"
+    },
+    {
+      "id": "cobalt-info",
+      "name": "Info",
+      "category": "Help & feedback",
+      "componentName": "Cobalt / Icons / Help & feedback / Info",
+      "source": "app/src/main/res/drawable/ic_custom_info.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/help-feedback/cobalt-info.svg",
+      "svgSha256": "734dde2ac647adb2cdd7137cd5d74f83f9e95a1e7d2365ce78c56ed21318680f",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        25.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/MainActivity.kt",
+        "app/src/main/kotlin/com/example/util/UserFeedbackState.kt",
+        "app/src/main/kotlin/com/example/ui/components/ClearDisposableStorageBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/ExpressiveSettingsComponents.kt",
+        "app/src/main/kotlin/com/example/ui/components/NoteStorageUi.kt",
+        "app/src/main/kotlin/com/example/ui/screens/EdgePanelAnimationSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileMainContent.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2162",
+        "componentName": "Cobalt / Icons / Help & feedback / Info",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2162"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:2162"
+    },
+    {
+      "id": "cobalt-mail",
+      "name": "Mail",
+      "category": "Help & feedback",
+      "componentName": "Cobalt / Icons / Help & feedback / Mail",
+      "source": "app/src/main/res/drawable/ic_custom_mail.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/help-feedback/cobalt-mail.svg",
+      "svgSha256": "57de27ec45498ca9558c72d7acb2372b225fe43d64e0821930f04567daa538c6",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/ExpressiveCrashReportDialog.kt",
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FeedbackScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2188",
+        "componentName": "Cobalt / Icons / Help & feedback / Mail",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2188"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:2188"
+    },
+    {
+      "id": "cobalt-survey",
+      "name": "Survey",
+      "category": "Help & feedback",
+      "componentName": "Cobalt / Icons / Help & feedback / Survey",
+      "source": "app/src/main/res/drawable/ic_custom_survey.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/help-feedback/cobalt-survey.svg",
+      "svgSha256": "2bd0a16a37802e0a659dcee6ee1a633511b388e394a33e352607c60e9415e732",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileMainContent.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2208",
+        "componentName": "Cobalt / Icons / Help & feedback / Survey",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2208"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:2208"
+    },
+    {
+      "id": "cobalt-ai-brain",
+      "name": "AI intelligence",
+      "category": "Intelligence & reminders",
+      "componentName": "Cobalt / Icons / Intelligence & reminders / AI intelligence",
+      "source": "app/src/main/res/drawable/ic_custom_ai_brain.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/intelligence-reminders/cobalt-ai-brain.svg",
+      "svgSha256": "5dbbbe81757ce4ff3003e07f8c1e18d4b1423c2c4b78fd0ea7b3e469e00528c6",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/GeminiUsageScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2236",
+        "componentName": "Cobalt / Icons / Intelligence & reminders / AI intelligence",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2236"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:2236"
+    },
+    {
+      "id": "cobalt-idea",
+      "name": "Idea",
+      "category": "Intelligence & reminders",
+      "componentName": "Cobalt / Icons / Intelligence & reminders / Idea",
+      "source": "app/src/main/res/drawable/ic_custom_idea.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/intelligence-reminders/cobalt-idea.svg",
+      "svgSha256": "057c04d4e9f6d4e0dcf0fb41d905b77dc0cde608bd24579dcf47aa22d7c23eb4",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2267",
+        "componentName": "Cobalt / Icons / Intelligence & reminders / Idea",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2267"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:2267"
+    },
+    {
+      "id": "cobalt-reminder",
+      "name": "Reminder",
+      "category": "Intelligence & reminders",
+      "componentName": "Cobalt / Icons / Intelligence & reminders / Reminder",
+      "source": "app/src/main/res/drawable/ic_custom_reminder.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/intelligence-reminders/cobalt-reminder.svg",
+      "svgSha256": "739e355ef6d37db9939ad4b33f6e9c2dfc60e89d8828c2418381db8556c12a8e",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/util/AdaptiveReminderNotificationHelper.kt",
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2293",
+        "componentName": "Cobalt / Icons / Intelligence & reminders / Reminder",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2293"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:2293"
+    },
+    {
+      "id": "cobalt-sparkle",
+      "name": "Sparkle",
+      "category": "Intelligence & reminders",
+      "componentName": "Cobalt / Icons / Intelligence & reminders / Sparkle",
+      "source": "app/src/main/res/drawable/ic_custom_sparkle.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/intelligence-reminders/cobalt-sparkle.svg",
+      "svgSha256": "f7bb105a01eda88c783a9b02071bbf4b8fa90dbb2a51ffaced65e5efb9393e9c",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltWelcomeIllustration.kt",
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FeedbackScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteStorageManagementScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2312",
+        "componentName": "Cobalt / Icons / Intelligence & reminders / Sparkle",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2312"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:2312"
+    },
+    {
+      "id": "cobalt-arrow-right",
+      "name": "Arrow right",
+      "category": "Navigation",
+      "componentName": "Cobalt / Icons / Navigation / Arrow right",
+      "source": "app/src/main/res/drawable/ic_custom_arrow_right.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/navigation/cobalt-arrow-right.svg",
+      "svgSha256": "d4ec46d428432f270cc3f77c164ab29cfa9f01c7070631df78a90d3f5e042c18",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/HowToCaptureBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/TraktMediaControls.kt",
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SearchScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2639",
+        "componentName": "Cobalt / Icons / Navigation / Arrow right",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2639"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:2639"
+    },
+    {
+      "id": "cobalt-back",
+      "name": "Back",
+      "category": "Navigation",
+      "componentName": "Cobalt / Icons / Navigation / Back",
+      "source": "app/src/main/res/drawable/ic_custom_back.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/navigation/cobalt-back.svg",
+      "svgSha256": "3121568d6135d1e85065707a8c7dc43262b9e3b97cc5cdf111ca92e84f8a43b8",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/util/CobaltCustomTabsLauncher.kt",
+        "app/src/main/kotlin/com/example/ui/components/CollapsibleCommonTopBar.kt",
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/EdgePanelAnimationSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/LegalScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FeedbackScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ReleaseUpdatesScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SearchScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SupportScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/WidgetSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2655",
+        "componentName": "Cobalt / Icons / Navigation / Back",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2655"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:2655"
+    },
+    {
+      "id": "cobalt-chevron-down",
+      "name": "Chevron down",
+      "category": "Navigation",
+      "componentName": "Cobalt / Icons / Navigation / Chevron down",
+      "source": "app/src/main/res/drawable/ic_custom_chevron_down.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/navigation/cobalt-chevron-down.svg",
+      "svgSha256": "80e504c3274a1247f7f4b9eda7524aa0b415134d37910227176b8aed17420635",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/FloatingScrollPill.kt",
+        "app/src/main/kotlin/com/example/ui/components/MediaSearchBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/NoteActionsBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/LegalScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ContinuousNoteEditor.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ReleaseUpdatesScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SupportScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2668",
+        "componentName": "Cobalt / Icons / Navigation / Chevron down",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2668"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:2668"
+    },
+    {
+      "id": "cobalt-chevron-right",
+      "name": "Chevron right",
+      "category": "Navigation",
+      "componentName": "Cobalt / Icons / Navigation / Chevron right",
+      "source": "app/src/main/res/drawable/ic_custom_chevron_right.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/navigation/cobalt-chevron-right.svg",
+      "svgSha256": "0182d7969305738372cb8da7eeb969afe62ffde28deb9ca47d4fb0528dc9e1a0",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/ExpressiveSettingsComponents.kt",
+        "app/src/main/kotlin/com/example/ui/components/ReleaseNotesBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileMainContent.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt",
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/MovieShareBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/NoteShareBottomSheet.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2680",
+        "componentName": "Cobalt / Icons / Navigation / Chevron right",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2680"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:2680"
+    },
+    {
+      "id": "cobalt-chevron-up",
+      "name": "Chevron up",
+      "category": "Navigation",
+      "componentName": "Cobalt / Icons / Navigation / Chevron up",
+      "source": "app/src/main/res/drawable/ic_custom_chevron_up.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/navigation/cobalt-chevron-up.svg",
+      "svgSha256": "b2275ca17728ddfa7d0e32506020d157476a93dd0f16fb909994cfb572afa747",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/FloatingScrollPill.kt",
+        "app/src/main/kotlin/com/example/ui/components/NoteActionsBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ContinuousNoteEditor.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ReleaseUpdatesScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SupportScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2693",
+        "componentName": "Cobalt / Icons / Navigation / Chevron up",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2693"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:2693"
+    },
+    {
+      "id": "cobalt-close",
+      "name": "Close",
+      "category": "Navigation",
+      "componentName": "Cobalt / Icons / Navigation / Close",
+      "source": "app/src/main/res/drawable/ic_custom_close.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/navigation/cobalt-close.svg",
+      "svgSha256": "13f62314ab175ef6e16b280c68a0a8d673d1a8652e7737c00cdce276f4dba128",
+      "monochrome": true,
+      "nativeSize": [
+        17.0,
+        17.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/OcrCaptureActivity.kt",
+        "app/src/main/kotlin/com/example/ui/components/ExpressiveSwitch.kt",
+        "app/src/main/kotlin/com/example/ui/components/ExpressiveSettingsComponents.kt",
+        "app/src/main/kotlin/com/example/ui/components/FolderBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/InlineNewFolderCreator.kt",
+        "app/src/main/kotlin/com/example/ui/components/MediaSearchBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/MoveToFolderDialog.kt",
+        "app/src/main/kotlin/com/example/ui/components/NoteActionsBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/ReleaseNotesBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ContinuousNoteEditor.kt",
+        "app/src/main/kotlin/com/example/ui/screens/DetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FeedbackScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/MediaDetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SearchScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SupportScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/TraktSyncSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/NoteShareBottomSheet.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2707",
+        "componentName": "Cobalt / Icons / Navigation / Close",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2707"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:2707"
+    },
+    {
+      "id": "cobalt-dock-close",
+      "name": "Close side dock",
+      "category": "Navigation",
+      "componentName": "Cobalt / Icons / Navigation / Close side dock",
+      "source": "app/src/main/res/drawable/ic_dock_close.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/navigation/cobalt-dock-close.svg",
+      "svgSha256": "279ceb9eb0668ac9f6a48dcceee7e3b760de519b16c404f0a97878f5cad08367",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/TraktMediaControls.kt",
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2722",
+        "componentName": "Cobalt / Icons / Navigation / Close side dock",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2722"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:2722"
+    },
+    {
+      "id": "cobalt-home",
+      "name": "Home",
+      "category": "Navigation",
+      "componentName": "Cobalt / Icons / Navigation / Home",
+      "source": "app/src/main/res/drawable/ic_custom_home.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/navigation/cobalt-home.svg",
+      "svgSha256": "cd9d2dd005a8031c2bd8ae00d5bc1db3c066a854c49da36529df3f1ce8358686",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2746",
+        "componentName": "Cobalt / Icons / Navigation / Home",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2746"
+      },
+      "catalogRow": 4,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:2746"
+    },
+    {
+      "id": "cobalt-more-vert",
+      "name": "More options",
+      "category": "Navigation",
+      "componentName": "Cobalt / Icons / Navigation / More options",
+      "source": "app/src/main/res/drawable/ic_custom_more_vert.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/navigation/cobalt-more-vert.svg",
+      "svgSha256": "46a49dfade47a236904efc6376245a0750f2d8906e5311324c70c39d6d6839b2",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/components/GlobalExpandingFab.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureDraftRecoveryScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteOlderCopiesScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteRecoveryScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteTrashScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteUnlinkedFilesScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/UnifiedNoteBody.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2767",
+        "componentName": "Cobalt / Icons / Navigation / More options",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2767"
+      },
+      "catalogRow": 5,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:2767"
+    },
+    {
+      "id": "cobalt-external-link",
+      "name": "Open external link",
+      "category": "Navigation",
+      "componentName": "Cobalt / Icons / Navigation / Open external link",
+      "source": "app/src/main/res/drawable/ic_custom_link_external.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/navigation/cobalt-external-link.svg",
+      "svgSha256": "2ef518aaf88665fe6bdb0bc3899a6c0bbefae0faef9e7141fae70e85c96564f9",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/GlobalExpandingFab.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ArchiveCards.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/DetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/MediaDetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt",
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2779",
+        "componentName": "Cobalt / Icons / Navigation / Open external link",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2779"
+      },
+      "catalogRow": 4,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:2779"
+    },
+    {
+      "id": "cobalt-search",
+      "name": "Search",
+      "category": "Navigation",
+      "componentName": "Cobalt / Icons / Navigation / Search",
+      "source": "app/src/main/res/drawable/ic_custom_search.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/navigation/cobalt-search.svg",
+      "svgSha256": "e0173988c86042149caa67c984ad8084f919398802690137a79d0534a8da76d2",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/ExpressiveSettingsComponents.kt",
+        "app/src/main/kotlin/com/example/ui/components/MediaSearchBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/MoveToFolderDialog.kt",
+        "app/src/main/kotlin/com/example/ui/components/NoteActionsBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ContinuousNoteEditor.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/MediaHubScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SearchScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SupportScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/UnifiedNoteBody.kt",
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2793",
+        "componentName": "Cobalt / Icons / Navigation / Search",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2793"
+      },
+      "catalogRow": 4,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:2793"
+    },
+    {
+      "id": "cobalt-sidedock",
+      "name": "Side dock",
+      "category": "Navigation",
+      "componentName": "Cobalt / Icons / Navigation / Side dock",
+      "source": "app/src/main/res/drawable/ic_custom_sidedock.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/navigation/cobalt-sidedock.svg",
+      "svgSha256": "5af28fe6f652831f7930b7f253c588c076876fb8427351bbd8d7f639ff57734f",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2807",
+        "componentName": "Cobalt / Icons / Navigation / Side dock",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2807"
+      },
+      "catalogRow": 5,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:2807"
+    },
+    {
+      "id": "cobalt-heart",
+      "name": "Favorite",
+      "category": "People & interests",
+      "componentName": "Cobalt / Icons / People & interests / Favorite",
+      "source": "app/src/main/res/drawable/ic_custom_heart.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/people-interests/cobalt-heart.svg",
+      "svgSha256": "03e682989e817600a90400a3530c1dd0b97e5608ca2e1c6b3e4329458df80354",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2833",
+        "componentName": "Cobalt / Icons / People & interests / Favorite",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2833"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:2833"
+    },
+    {
+      "id": "cobalt-shopping",
+      "name": "Shopping",
+      "category": "People & interests",
+      "componentName": "Cobalt / Icons / People & interests / Shopping",
+      "source": "app/src/main/res/drawable/ic_custom_shopping.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/people-interests/cobalt-shopping.svg",
+      "svgSha256": "e3c90c3ebe7b0d289898443a63c92ff338cab581494830fcec2d26c315ed817e",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2864",
+        "componentName": "Cobalt / Icons / People & interests / Shopping",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2864"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:2864"
+    },
+    {
+      "id": "cobalt-star",
+      "name": "Star",
+      "category": "People & interests",
+      "componentName": "Cobalt / Icons / People & interests / Star",
+      "source": "app/src/main/res/drawable/ic_custom_star.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/people-interests/cobalt-star.svg",
+      "svgSha256": "01ac73fa03ebafb671e84e32babd52b0de1cd8e90cf41c18fe47d593c3a46922",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/StarRatingInput.kt",
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/MediaDetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SupportScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2889",
+        "componentName": "Cobalt / Icons / People & interests / Star",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2889"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:2889"
+    },
+    {
+      "id": "cobalt-school",
+      "name": "Study",
+      "category": "People & interests",
+      "componentName": "Cobalt / Icons / People & interests / Study",
+      "source": "app/src/main/res/drawable/ic_custom_school.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/people-interests/cobalt-school.svg",
+      "svgSha256": "884b18a909f57be5e42872b09cbd53fd77c7817fa2ff77a62177474100db7ce1",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/CobaltSideDockService.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2913",
+        "componentName": "Cobalt / Icons / People & interests / Study",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2913"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:2913"
+    },
+    {
+      "id": "cobalt-work",
+      "name": "Work",
+      "category": "People & interests",
+      "componentName": "Cobalt / Icons / People & interests / Work",
+      "source": "app/src/main/res/drawable/ic_custom_work.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/people-interests/cobalt-work.svg",
+      "svgSha256": "e98860b8745e7bbc4f5666702bac76295bc88b20547a1ab77d769bff021cd508",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2937",
+        "componentName": "Cobalt / Icons / People & interests / Work",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2937"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:2937"
+    },
+    {
+      "id": "cobalt-pause",
+      "name": "Pause",
+      "category": "Playback",
+      "componentName": "Cobalt / Icons / Playback / Pause",
+      "source": "app/src/main/res/drawable/ic_custom_pause.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/playback/cobalt-pause.svg",
+      "svgSha256": "d537ac077293ca42f99151875ab900b111efa88d47894c7abbc418b56bdb372c",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/AudioPlayerComponent.kt",
+        "app/src/main/kotlin/com/example/ui/components/InAppTrailerPlayer.kt",
+        "app/src/main/kotlin/com/example/ui/components/VideoPlayer.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2963",
+        "componentName": "Cobalt / Icons / Playback / Pause",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2963"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:2963"
+    },
+    {
+      "id": "cobalt-play",
+      "name": "Play",
+      "category": "Playback",
+      "componentName": "Cobalt / Icons / Playback / Play",
+      "source": "app/src/main/res/drawable/ic_custom_play.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/playback/cobalt-play.svg",
+      "svgSha256": "81acb00d67de5b8455ecfdbee333f68f1970a29832fe613a5ceeb3bb0075e1b4",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/AudioPlayerComponent.kt",
+        "app/src/main/kotlin/com/example/ui/components/InAppTrailerPlayer.kt",
+        "app/src/main/kotlin/com/example/ui/components/VideoPlayer.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ArchiveCards.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/MediaDetailScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:2988",
+        "componentName": "Cobalt / Icons / Playback / Play",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-2988"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:2988"
+    },
+    {
+      "id": "cobalt-stop",
+      "name": "Stop",
+      "category": "Playback",
+      "componentName": "Cobalt / Icons / Playback / Stop",
+      "source": "app/src/main/res/drawable/ic_custom_stop.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/playback/cobalt-stop.svg",
+      "svgSha256": "08ef5daecc26db924f795145ba19b74ede1e6b790afd742c89f7c1062c980de9",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/AudioRecorderComponent.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3010",
+        "componentName": "Cobalt / Icons / Playback / Stop",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3010"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:3010"
+    },
+    {
+      "id": "cobalt-eye-off",
+      "name": "Hide",
+      "category": "Privacy & security",
+      "componentName": "Cobalt / Icons / Privacy & security / Hide",
+      "source": "app/src/main/res/drawable/ic_custom_eye_off.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/privacy-security/cobalt-eye-off.svg",
+      "svgSha256": "c49f359ab7bb20311632f04da3e22aab73e532eaf2bb6c209bb331de987a6e38",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/MovieApiKeyScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3041",
+        "componentName": "Cobalt / Icons / Privacy & security / Hide",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3041"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:3041"
+    },
+    {
+      "id": "cobalt-key",
+      "name": "Key",
+      "category": "Privacy & security",
+      "componentName": "Cobalt / Icons / Privacy & security / Key",
+      "source": "app/src/main/res/drawable/ic_custom_key.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/privacy-security/cobalt-key.svg",
+      "svgSha256": "3984bd42eb43e843d7206b62322cd3ce8e7eadb38ea26d68331789c8b600c08c",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3068",
+        "componentName": "Cobalt / Icons / Privacy & security / Key",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3068"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:3068"
+    },
+    {
+      "id": "cobalt-lock",
+      "name": "Lock",
+      "category": "Privacy & security",
+      "componentName": "Cobalt / Icons / Privacy & security / Lock",
+      "source": "app/src/main/res/drawable/ic_custom_lock.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/privacy-security/cobalt-lock.svg",
+      "svgSha256": "72382c69a189a7ce30a5516a41d855686da302c03f07d205eb72342b8fb07126",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/MainActivity.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileMainContent.kt",
+        "app/src/main/kotlin/com/example/ui/screens/WebCompanionSettingsScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3092",
+        "componentName": "Cobalt / Icons / Privacy & security / Lock",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3092"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:3092"
+    },
+    {
+      "id": "cobalt-privacy",
+      "name": "Privacy",
+      "category": "Privacy & security",
+      "componentName": "Cobalt / Icons / Privacy & security / Privacy",
+      "source": "app/src/main/res/drawable/ic_custom_privacy.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/privacy-security/cobalt-privacy.svg",
+      "svgSha256": "4f455635f243c7cd03e31cf7e350f80d86b409ad60a673a18385d3bf3ced1005",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/SupportScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/WebCompanionSettingsScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3123",
+        "componentName": "Cobalt / Icons / Privacy & security / Privacy",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3123"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:3123"
+    },
+    {
+      "id": "cobalt-eye",
+      "name": "Show",
+      "category": "Privacy & security",
+      "componentName": "Cobalt / Icons / Privacy & security / Show",
+      "source": "app/src/main/res/drawable/ic_custom_eye.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/privacy-security/cobalt-eye.svg",
+      "svgSha256": "1acf146d1400f1ba03be3917a6ad76656cab3cbabe48c60e993bfa3187320db5",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/MediaDetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/MovieApiKeyScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/RichTextEditor.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3152",
+        "componentName": "Cobalt / Icons / Privacy & security / Show",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3152"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:3152"
+    },
+    {
+      "id": "cobalt-terms",
+      "name": "Terms of use",
+      "category": "Privacy & security",
+      "componentName": "Cobalt / Icons / Privacy & security / Terms of use",
+      "source": "app/src/main/res/drawable/ic_custom_terms.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/privacy-security/cobalt-terms.svg",
+      "svgSha256": "8a79f73a6a709f5881efa106f1e89d5ddfc4f3fc87a987a5c6944f6524638115",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/MainActivity.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileMainContent.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3172",
+        "componentName": "Cobalt / Icons / Privacy & security / Terms of use",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3172"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:3172"
+    },
+    {
+      "id": "cobalt-vault",
+      "name": "Vault",
+      "category": "Privacy & security",
+      "componentName": "Cobalt / Icons / Privacy & security / Vault",
+      "source": "app/src/main/res/drawable/ic_custom_vault.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/privacy-security/cobalt-vault.svg",
+      "svgSha256": "293e931c32076995917c1fa9e89e25c7889c14603aae1926f92693dc6e91d720",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3195",
+        "componentName": "Cobalt / Icons / Privacy & security / Vault",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3195"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:3195"
+    },
+    {
+      "id": "cobalt-provider-apple",
+      "name": "Apple TV",
+      "category": "Providers & ratings",
+      "componentName": "Cobalt / Icons / Providers & ratings / Apple TV",
+      "source": "app/src/main/res/drawable/ic_provider_apple.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/providers-ratings/cobalt-provider-apple.svg",
+      "svgSha256": "c49dfd741816815ddc88f404fbbc40cad0940484b3ebe9c494e97483cae71b14",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [],
+      "figma": {
+        "nodeId": "26:3222",
+        "componentName": "Cobalt / Icons / Providers & ratings / Apple TV",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3222"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:3222"
+    },
+    {
+      "id": "cobalt-provider-crunchyroll",
+      "name": "Crunchyroll",
+      "category": "Providers & ratings",
+      "componentName": "Cobalt / Icons / Providers & ratings / Crunchyroll",
+      "source": "app/src/main/res/drawable/ic_provider_crunchyroll.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/providers-ratings/cobalt-provider-crunchyroll.svg",
+      "svgSha256": "cd1b87e3703410c45e04ca3c10da1eadb59bc39fbf46578ec01d3a16f9fd034c",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [],
+      "figma": {
+        "nodeId": "26:3236",
+        "componentName": "Cobalt / Icons / Providers & ratings / Crunchyroll",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3236"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:3236"
+    },
+    {
+      "id": "cobalt-provider-disney",
+      "name": "Disney+",
+      "category": "Providers & ratings",
+      "componentName": "Cobalt / Icons / Providers & ratings / Disney+",
+      "source": "app/src/main/res/drawable/ic_provider_disney.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/providers-ratings/cobalt-provider-disney.svg",
+      "svgSha256": "e75499dfe2531c04cfb3a7bcf65fbf293ce6e2dc40c5281d934df3b700832cd3",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [],
+      "figma": {
+        "nodeId": "26:3249",
+        "componentName": "Cobalt / Icons / Providers & ratings / Disney+",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3249"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:3249"
+    },
+    {
+      "id": "cobalt-provider-hbo",
+      "name": "HBO",
+      "category": "Providers & ratings",
+      "componentName": "Cobalt / Icons / Providers & ratings / HBO",
+      "source": "app/src/main/res/drawable/ic_provider_hbo.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/providers-ratings/cobalt-provider-hbo.svg",
+      "svgSha256": "3ee1303b4246f3be82ef070429678ae67250a0628be04c928cce7fb4a89ac252",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [],
+      "figma": {
+        "nodeId": "26:3262",
+        "componentName": "Cobalt / Icons / Providers & ratings / HBO",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3262"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:3262"
+    },
+    {
+      "id": "cobalt-provider-hulu",
+      "name": "Hulu",
+      "category": "Providers & ratings",
+      "componentName": "Cobalt / Icons / Providers & ratings / Hulu",
+      "source": "app/src/main/res/drawable/ic_provider_hulu.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/providers-ratings/cobalt-provider-hulu.svg",
+      "svgSha256": "390e6a70063daf6d08aeb9f7e14d82f0dac9e47a2a2279ca6809ef78c2f77779",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [],
+      "figma": {
+        "nodeId": "26:3275",
+        "componentName": "Cobalt / Icons / Providers & ratings / Hulu",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3275"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:3275"
+    },
+    {
+      "id": "cobalt-rating-imdb",
+      "name": "IMDb",
+      "category": "Providers & ratings",
+      "componentName": "Cobalt / Icons / Providers & ratings / IMDb",
+      "source": "app/src/main/res/drawable/ic_rating_imdb.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/providers-ratings/cobalt-rating-imdb.svg",
+      "svgSha256": "0ed43004be3539d15fb7c6169ffd22ec731e45064bd71d64244854c47efeb6b9",
+      "monochrome": false,
+      "nativeSize": [
+        36.0,
+        18.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/MediaRatingsRow.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3291",
+        "componentName": "Cobalt / Icons / Providers & ratings / IMDb",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3291"
+      },
+      "catalogRow": 4,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:3291"
+    },
+    {
+      "id": "cobalt-provider-netflix",
+      "name": "Netflix",
+      "category": "Providers & ratings",
+      "componentName": "Cobalt / Icons / Providers & ratings / Netflix",
+      "source": "app/src/main/res/drawable/ic_provider_netflix.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/providers-ratings/cobalt-provider-netflix.svg",
+      "svgSha256": "6a323433cdc7c50eedf8058393146b0e6668a594da4ff2fb11761f77ff35d73c",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [],
+      "figma": {
+        "nodeId": "26:3307",
+        "componentName": "Cobalt / Icons / Providers & ratings / Netflix",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3307"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:3307"
+    },
+    {
+      "id": "cobalt-rating-popcornmeter",
+      "name": "Popcornmeter",
+      "category": "Providers & ratings",
+      "componentName": "Cobalt / Icons / Providers & ratings / Popcornmeter",
+      "source": "app/src/main/res/drawable/ic_rating_popcornmeter.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/providers-ratings/cobalt-rating-popcornmeter.svg",
+      "svgSha256": "0a6f589bd58a4a612cdfd31f9543c7e0aef849cfcc42d67a08611f079d760254",
+      "monochrome": false,
+      "nativeSize": [
+        18.0,
+        18.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/MediaRatingsRow.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3327",
+        "componentName": "Cobalt / Icons / Providers & ratings / Popcornmeter",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3327"
+      },
+      "catalogRow": 4,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:3327"
+    },
+    {
+      "id": "cobalt-provider-prime",
+      "name": "Prime Video",
+      "category": "Providers & ratings",
+      "componentName": "Cobalt / Icons / Providers & ratings / Prime Video",
+      "source": "app/src/main/res/drawable/ic_provider_prime.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/providers-ratings/cobalt-provider-prime.svg",
+      "svgSha256": "0300146927f3b7b029b154905069fb179ed302ebff1f85861eb949976718e40f",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [],
+      "figma": {
+        "nodeId": "26:3345",
+        "componentName": "Cobalt / Icons / Providers & ratings / Prime Video",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3345"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:3345"
+    },
+    {
+      "id": "cobalt-rating-rotten-tomatoes",
+      "name": "Rotten Tomatoes",
+      "category": "Providers & ratings",
+      "componentName": "Cobalt / Icons / Providers & ratings / Rotten Tomatoes",
+      "source": "app/src/main/res/drawable/ic_rating_rotten_tomatoes.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/providers-ratings/cobalt-rating-rotten-tomatoes.svg",
+      "svgSha256": "112651a3a43a9c9f6296f03a26725874fec95890ac47eb38bce1902650066aed",
+      "monochrome": false,
+      "nativeSize": [
+        19.0,
+        18.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/MediaRatingsRow.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3359",
+        "componentName": "Cobalt / Icons / Providers & ratings / Rotten Tomatoes",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3359"
+      },
+      "catalogRow": 4,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:3359"
+    },
+    {
+      "id": "cobalt-trakt",
+      "name": "Trakt",
+      "category": "Providers & ratings",
+      "componentName": "Cobalt / Icons / Providers & ratings / Trakt",
+      "source": "app/src/main/res/drawable/ic_trakt.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/providers-ratings/cobalt-trakt.svg",
+      "svgSha256": "eed773a333b15a5e443eae95b09d9f5066cfb62a2727386d687bac1715151c64",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/util/TraktNotificationHelper.kt",
+        "app/src/main/kotlin/com/example/ui/screens/MediaDetailScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/TraktSyncSettingsScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3374",
+        "componentName": "Cobalt / Icons / Providers & ratings / Trakt",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3374"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:3374"
+    },
+    {
+      "id": "cobalt-provider-youtube",
+      "name": "YouTube",
+      "category": "Providers & ratings",
+      "componentName": "Cobalt / Icons / Providers & ratings / YouTube",
+      "source": "app/src/main/res/drawable/ic_provider_youtube.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/providers-ratings/cobalt-provider-youtube.svg",
+      "svgSha256": "acb64e1260f50f619554c98962f21a39ba01792bd210a545b6404ef2307973f7",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [],
+      "figma": {
+        "nodeId": "26:3386",
+        "componentName": "Cobalt / Icons / Providers & ratings / YouTube",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3386"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:3386"
+    },
+    {
+      "id": "cobalt-api-call",
+      "name": "API request",
+      "category": "Settings & storage",
+      "componentName": "Cobalt / Icons / Settings & storage / API request",
+      "source": "app/src/main/res/drawable/ic_custom_api_call.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/settings-storage/cobalt-api-call.svg",
+      "svgSha256": "26c6bf5831ea05a9566f998834afd189f093bb79f53cee993e20be6dd98271a0",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/GeminiUsageScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3403",
+        "componentName": "Cobalt / Icons / Settings & storage / API request",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3403"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:3403"
+    },
+    {
+      "id": "cobalt-settings-appearance",
+      "name": "Appearance",
+      "category": "Settings & storage",
+      "componentName": "Cobalt / Icons / Settings & storage / Appearance",
+      "source": "app/src/main/res/drawable/ic_settings_appearance.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/settings-storage/cobalt-settings-appearance.svg",
+      "svgSha256": "a6e773fe6f8fed8b111e4ef2233c26fbfc82afdcf3f1939a9738595340b02e39",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3428",
+        "componentName": "Cobalt / Icons / Settings & storage / Appearance",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3428"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:3428"
+    },
+    {
+      "id": "cobalt-settings-floating-dock",
+      "name": "Floating dock",
+      "category": "Settings & storage",
+      "componentName": "Cobalt / Icons / Settings & storage / Floating dock",
+      "source": "app/src/main/res/drawable/ic_settings_floating_dock.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/settings-storage/cobalt-settings-floating-dock.svg",
+      "svgSha256": "a06060cb2a971f9d9547e7b07afde2d6c6e2a4b2153c82627cc435872f9a1f12",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3451",
+        "componentName": "Cobalt / Icons / Settings & storage / Floating dock",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3451"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:3451"
+    },
+    {
+      "id": "cobalt-history",
+      "name": "History",
+      "category": "Settings & storage",
+      "componentName": "Cobalt / Icons / Settings & storage / History",
+      "source": "app/src/main/res/drawable/ic_custom_history.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/settings-storage/cobalt-history.svg",
+      "svgSha256": "e2e75284128a907eeca15bf09a69c12a16052b16a8e12f776c0ad06631646ad0",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SearchScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3471",
+        "componentName": "Cobalt / Icons / Settings & storage / History",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3471"
+      },
+      "catalogRow": 4,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:3471"
+    },
+    {
+      "id": "cobalt-settings-intelligence",
+      "name": "Intelligence",
+      "category": "Settings & storage",
+      "componentName": "Cobalt / Icons / Settings & storage / Intelligence",
+      "source": "app/src/main/res/drawable/ic_settings_intelligence.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/settings-storage/cobalt-settings-intelligence.svg",
+      "svgSha256": "70d2dd3d49b89c4795f96320621be60c549b270615cdc0950257e267a2fffbb4",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/KnowledgeHeatmap.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3491",
+        "componentName": "Cobalt / Icons / Settings & storage / Intelligence",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3491"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:3491"
+    },
+    {
+      "id": "cobalt-settings",
+      "name": "Settings",
+      "category": "Settings & storage",
+      "componentName": "Cobalt / Icons / Settings & storage / Settings",
+      "source": "app/src/main/res/drawable/ic_custom_settings.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/settings-storage/cobalt-settings.svg",
+      "svgSha256": "17345db36f7628d9a0ce808578face006505e2ac3d148b5af2a75b63d38feb03",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/MediaHubScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileMainContent.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3509",
+        "componentName": "Cobalt / Icons / Settings & storage / Settings",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3509"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:3509"
+    },
+    {
+      "id": "cobalt-storage",
+      "name": "Storage",
+      "category": "Settings & storage",
+      "componentName": "Cobalt / Icons / Settings & storage / Storage",
+      "source": "app/src/main/res/drawable/ic_custom_storage.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/settings-storage/cobalt-storage.svg",
+      "svgSha256": "e72e56432b5350f7fe928945b76f3490ad86f31100e3dac6f3ecec875d183816",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteStorageManagementScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3529",
+        "componentName": "Cobalt / Icons / Settings & storage / Storage",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3529"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:3529"
+    },
+    {
+      "id": "cobalt-sync",
+      "name": "Sync",
+      "category": "Settings & storage",
+      "componentName": "Cobalt / Icons / Settings & storage / Sync",
+      "source": "app/src/main/res/drawable/ic_custom_sync.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/settings-storage/cobalt-sync.svg",
+      "svgSha256": "e05ac1fca35a10035ff9dd279a7f2fbf2f02fd0a21e3fd2b12e24e8c954c272f",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/widget/RecentItemsWidget.kt",
+        "app/src/main/kotlin/com/example/ui/components/AudioPlayerComponent.kt",
+        "app/src/main/kotlin/com/example/ui/components/ExpressiveSettingsComponents.kt",
+        "app/src/main/kotlin/com/example/ui/components/ReleaseNotesBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/components/VideoPlayer.kt",
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ContinuousNoteEditor.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileMainContent.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ReleaseUpdatesScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/WidgetSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt",
+        "app/src/main/kotlin/com/example/ui/screens/TraktSyncSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/WebCompanionSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/ui/components/share/ShareControlToolbar.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3548",
+        "componentName": "Cobalt / Icons / Settings & storage / Sync",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3548"
+      },
+      "catalogRow": 4,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:3548"
+    },
+    {
+      "id": "cobalt-settings-system-health",
+      "name": "System health",
+      "category": "Settings & storage",
+      "componentName": "Cobalt / Icons / Settings & storage / System health",
+      "source": "app/src/main/res/drawable/ic_settings_system_health.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/settings-storage/cobalt-settings-system-health.svg",
+      "svgSha256": "ad8d4d727ffa2c4fbfd2b99c96b88d1637304663918ccdd2cfaddff634838396",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3571",
+        "componentName": "Cobalt / Icons / Settings & storage / System health",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3571"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:3571"
+    },
+    {
+      "id": "cobalt-tools",
+      "name": "Tools",
+      "category": "Settings & storage",
+      "componentName": "Cobalt / Icons / Settings & storage / Tools",
+      "source": "app/src/main/res/drawable/ic_custom_tools.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/settings-storage/cobalt-tools.svg",
+      "svgSha256": "4d30f856384e8fd1933c02d2c6f76eff16374339ffba0acf46867dff15cf1659",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/EdgePanelAnimationSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/SupportScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3598",
+        "componentName": "Cobalt / Icons / Settings & storage / Tools",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3598"
+      },
+      "catalogRow": 5,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:3598"
+    },
+    {
+      "id": "cobalt-bar-chart",
+      "name": "Usage statistics",
+      "category": "Settings & storage",
+      "componentName": "Cobalt / Icons / Settings & storage / Usage statistics",
+      "source": "app/src/main/res/drawable/ic_custom_bar_chart.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/settings-storage/cobalt-bar-chart.svg",
+      "svgSha256": "d6e650194a24a963b341cdd0cacf1d772707b85bc9bb92460896c61848a78858",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/GeminiUsageScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/MovieApiKeyScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3625",
+        "componentName": "Cobalt / Icons / Settings & storage / Usage statistics",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3625"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:3625"
+    },
+    {
+      "id": "cobalt-globe",
+      "name": "Web companion",
+      "category": "Settings & storage",
+      "componentName": "Cobalt / Icons / Settings & storage / Web companion",
+      "source": "app/src/main/res/drawable/ic_custom_globe.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/settings-storage/cobalt-globe.svg",
+      "svgSha256": "8656504e6c87a22b0f5dfd1f049a3fff513373bee647e4f700894bf3b1e51416",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/web/WebCompanionManager.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt",
+        "app/src/main/kotlin/com/example/ui/screens/WebCompanionSettingsScreen.kt",
+        "app/src/main/kotlin/com/example/ui/dock/SideDockContent.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3651",
+        "componentName": "Cobalt / Icons / Settings & storage / Web companion",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3651"
+      },
+      "catalogRow": 5,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:3651"
+    },
+    {
+      "id": "cobalt-settings-widgets",
+      "name": "Widgets",
+      "category": "Settings & storage",
+      "componentName": "Cobalt / Icons / Settings & storage / Widgets",
+      "source": "app/src/main/res/drawable/ic_settings_widgets.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/settings-storage/cobalt-settings-widgets.svg",
+      "svgSha256": "92c366e636f0d7bc20f93ca708d7b2cd2feba02620af0ca266ece60a2dc22186",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/SurveyBottomSheet.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3671",
+        "componentName": "Cobalt / Icons / Settings & storage / Widgets",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3671"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:3671"
+    },
+    {
+      "id": "cobalt-format-bold",
+      "name": "Bold",
+      "category": "Text formatting",
+      "componentName": "Cobalt / Icons / Text formatting / Bold",
+      "source": "app/src/main/res/drawable/ic_format_bold.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/text-formatting/cobalt-format-bold.svg",
+      "svgSha256": "b60fa7dce9daac1dff94ff53cd6952ecc9907a67439a2fc2873100413c1f9f35",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/RichTextEditor.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3696",
+        "componentName": "Cobalt / Icons / Text formatting / Bold",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3696"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:3696"
+    },
+    {
+      "id": "cobalt-format-list-bullet",
+      "name": "Bulleted list",
+      "category": "Text formatting",
+      "componentName": "Cobalt / Icons / Text formatting / Bulleted list",
+      "source": "app/src/main/res/drawable/ic_format_list_bullet.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/text-formatting/cobalt-format-list-bullet.svg",
+      "svgSha256": "2be4939bc98741687ac7d77d479eafe83fea57e6d17004e035f522472e3eed0f",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/RichTextEditor.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3717",
+        "componentName": "Cobalt / Icons / Text formatting / Bulleted list",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3717"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:3717"
+    },
+    {
+      "id": "cobalt-format-checklist",
+      "name": "Checklist",
+      "category": "Text formatting",
+      "componentName": "Cobalt / Icons / Text formatting / Checklist",
+      "source": "app/src/main/res/drawable/ic_format_checklist.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/text-formatting/cobalt-format-checklist.svg",
+      "svgSha256": "cc280ca08540529e2fcb15fc571132af7131b3f8f1b634503eafb2a95bca8d33",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/RichTextEditor.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3740",
+        "componentName": "Cobalt / Icons / Text formatting / Checklist",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3740"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:3740"
+    },
+    {
+      "id": "cobalt-format-h1",
+      "name": "Heading 1",
+      "category": "Text formatting",
+      "componentName": "Cobalt / Icons / Text formatting / Heading 1",
+      "source": "app/src/main/res/drawable/ic_format_h1.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/text-formatting/cobalt-format-h1.svg",
+      "svgSha256": "e1e3b4d7f4d4fcb8150e3fe57ae7ee8c82f8e087cc2bfec40ac2961d98e570b1",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/RichTextEditor.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3793",
+        "componentName": "Cobalt / Icons / Text formatting / Heading 1",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3793"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:3793"
+    },
+    {
+      "id": "cobalt-format-h2",
+      "name": "Heading 2",
+      "category": "Text formatting",
+      "componentName": "Cobalt / Icons / Text formatting / Heading 2",
+      "source": "app/src/main/res/drawable/ic_format_h2.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/text-formatting/cobalt-format-h2.svg",
+      "svgSha256": "9885f88092d66478e2777a751e994eff9ccd251744352b138e1007f802f6ab08",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/RichTextEditor.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3812",
+        "componentName": "Cobalt / Icons / Text formatting / Heading 2",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3812"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:3812"
+    },
+    {
+      "id": "cobalt-format-h3",
+      "name": "Heading 3",
+      "category": "Text formatting",
+      "componentName": "Cobalt / Icons / Text formatting / Heading 3",
+      "source": "app/src/main/res/drawable/ic_format_h3.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/text-formatting/cobalt-format-h3.svg",
+      "svgSha256": "bf4897dd2888723c0206891716ebe2b6d47233e11ca50c8cdf8a0c149e6e66e7",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/RichTextEditor.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3830",
+        "componentName": "Cobalt / Icons / Text formatting / Heading 3",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3830"
+      },
+      "catalogRow": 2,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:3830"
+    },
+    {
+      "id": "cobalt-format-code-inline",
+      "name": "Inline code",
+      "category": "Text formatting",
+      "componentName": "Cobalt / Icons / Text formatting / Inline code",
+      "source": "app/src/main/res/drawable/ic_format_code_inline.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/text-formatting/cobalt-format-code-inline.svg",
+      "svgSha256": "6985453715787ca889dfba20b928d70b3e2dbe908d1aed7823fa7ba2749d0809",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        17.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/RichTextEditor.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3851",
+        "componentName": "Cobalt / Icons / Text formatting / Inline code",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3851"
+      },
+      "catalogRow": 4,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:3851"
+    },
+    {
+      "id": "cobalt-format-link",
+      "name": "Insert link",
+      "category": "Text formatting",
+      "componentName": "Cobalt / Icons / Text formatting / Insert link",
+      "source": "app/src/main/res/drawable/ic_format_link.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/text-formatting/cobalt-format-link.svg",
+      "svgSha256": "c238d6b57bdcf684ac86f4bbea2013247618bf12b298a142b9edd763225b9d0c",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/RichTextEditor.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3873",
+        "componentName": "Cobalt / Icons / Text formatting / Insert link",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3873"
+      },
+      "catalogRow": 5,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:3873"
+    },
+    {
+      "id": "cobalt-format-italic",
+      "name": "Italic",
+      "category": "Text formatting",
+      "componentName": "Cobalt / Icons / Text formatting / Italic",
+      "source": "app/src/main/res/drawable/ic_format_italic.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/text-formatting/cobalt-format-italic.svg",
+      "svgSha256": "6bb6de0195cf8279b83e0cc376cfdafb2824a34e0bf6b014edb76824b90fe67f",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/RichTextEditor.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3898",
+        "componentName": "Cobalt / Icons / Text formatting / Italic",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3898"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:3898"
+    },
+    {
+      "id": "cobalt-format-list-numbered",
+      "name": "Numbered list",
+      "category": "Text formatting",
+      "componentName": "Cobalt / Icons / Text formatting / Numbered list",
+      "source": "app/src/main/res/drawable/ic_format_list_numbered.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/text-formatting/cobalt-format-list-numbered.svg",
+      "svgSha256": "aa0967c40aba6d9bc1bcab3bb1be74f9d8fad518d1ab78b06650d493603cac8f",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/RichTextEditor.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3923",
+        "componentName": "Cobalt / Icons / Text formatting / Numbered list",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3923"
+      },
+      "catalogRow": 3,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:3923"
+    },
+    {
+      "id": "cobalt-format-strikethrough",
+      "name": "Strikethrough",
+      "category": "Text formatting",
+      "componentName": "Cobalt / Icons / Text formatting / Strikethrough",
+      "source": "app/src/main/res/drawable/ic_format_strikethrough.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/text-formatting/cobalt-format-strikethrough.svg",
+      "svgSha256": "5e053e485655deedf7a3114eca61c0dc686604cc841ecd7edef1961cd700fcc0",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/RichTextEditor.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3970",
+        "componentName": "Cobalt / Icons / Text formatting / Strikethrough",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3970"
+      },
+      "catalogRow": 1,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:3970"
+    },
+    {
+      "id": "cobalt-format-table",
+      "name": "Table",
+      "category": "Text formatting",
+      "componentName": "Cobalt / Icons / Text formatting / Table",
+      "source": "app/src/main/res/drawable/ic_format_table.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/text-formatting/cobalt-format-table.svg",
+      "svgSha256": "35319983e0c8613b282685187da9c6f1d19966c0e352ee4203cef1a645c2882f",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt"
+      ],
+      "figma": {
+        "nodeId": "26:3988",
+        "componentName": "Cobalt / Icons / Text formatting / Table",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-3988"
+      },
+      "catalogRow": 6,
+      "catalogPosition": 1,
+      "lastSyncedFromFigma": "26:3988"
+    },
+    {
+      "id": "cobalt-format-table-column",
+      "name": "Table column",
+      "category": "Text formatting",
+      "componentName": "Cobalt / Icons / Text formatting / Table column",
+      "source": "app/src/main/res/drawable/ic_format_table_column.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/text-formatting/cobalt-format-table-column.svg",
+      "svgSha256": "c84a47232e8c1559518eed24dfbc24c9344cb12403fb11d034daf5a25351ab19",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt"
+      ],
+      "figma": {
+        "nodeId": "26:4003",
+        "componentName": "Cobalt / Icons / Text formatting / Table column",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-4003"
+      },
+      "catalogRow": 6,
+      "catalogPosition": 2,
+      "lastSyncedFromFigma": "26:4003"
+    },
+    {
+      "id": "cobalt-format-table-row",
+      "name": "Table row",
+      "category": "Text formatting",
+      "componentName": "Cobalt / Icons / Text formatting / Table row",
+      "source": "app/src/main/res/drawable/ic_format_table_row.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/text-formatting/cobalt-format-table-row.svg",
+      "svgSha256": "0775aa24783030e58e3488765b66c91cfad702a7cb7cba9cd0462c2f1d57b390",
+      "monochrome": true,
+      "nativeSize": [
+        24.0,
+        24.0
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt"
+      ],
+      "figma": {
+        "nodeId": "26:4017",
+        "componentName": "Cobalt / Icons / Text formatting / Table row",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=26-4017"
+      },
+      "catalogRow": 6,
+      "catalogPosition": 3,
+      "lastSyncedFromFigma": "26:4017"
+    },
+    {
+      "id": "cobalt-attachment",
+      "name": "Attachment",
+      "category": "Actions & clipboard",
+      "componentName": "Cobalt / Icons / Actions & clipboard / Attachment",
+      "source": "app/src/main/res/drawable/ic_custom_attachment.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/actions-clipboard/cobalt-attachment.svg",
+      "monochrome": true,
+      "nativeSize": [
+        24,
+        24
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/FeedbackScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "47:936",
+        "componentName": "Cobalt / Icons / Actions & clipboard / Attachment",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=47-936"
+      },
+      "svgSha256": "4fcd6dc1df778076da49831f0cbbc2f3501b5219b94682dba66db4c81de7d275",
+      "lastSyncedFromFigma": "47:936"
+    },
+    {
+      "id": "cobalt-success-circle",
+      "name": "Success circle",
+      "category": "Help & feedback",
+      "componentName": "Cobalt / Icons / Help & feedback / Success circle",
+      "source": "app/src/main/res/drawable/ic_custom_success_circle.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/help-feedback/cobalt-success-circle.svg",
+      "monochrome": true,
+      "nativeSize": [
+        24,
+        24
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/util/UserFeedbackState.kt",
+        "app/src/main/kotlin/com/example/ui/components/ExpressiveSettingsComponents.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FeedbackScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "47:983",
+        "componentName": "Cobalt / Icons / Help & feedback / Success circle",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=47-983"
+      },
+      "svgSha256": "438465e9faaa4a0b4aae016ce557d4258b53aec97ad39863645e4b275ce9e9e6",
+      "lastSyncedFromFigma": "47:983"
+    },
+    {
+      "id": "cobalt-error-circle",
+      "name": "Error circle",
+      "category": "Help & feedback",
+      "componentName": "Cobalt / Icons / Help & feedback / Error circle",
+      "source": "app/src/main/res/drawable/ic_custom_error_circle.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/help-feedback/cobalt-error-circle.svg",
+      "monochrome": true,
+      "nativeSize": [
+        24,
+        24
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/util/UserFeedbackState.kt"
+      ],
+      "figma": {
+        "nodeId": "47:1046",
+        "componentName": "Cobalt / Icons / Help & feedback / Error circle",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=47-1046"
+      },
+      "svgSha256": "df1d1d63aef4bd7414df8dde074e3fa697c563fb142406f8181b6395498a21fc",
+      "lastSyncedFromFigma": "47:1046"
+    },
+    {
+      "id": "cobalt-warning-triangle",
+      "name": "Warning",
+      "category": "Help & feedback",
+      "componentName": "Cobalt / Icons / Help & feedback / Warning",
+      "source": "app/src/main/res/drawable/ic_custom_warning_triangle.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/help-feedback/cobalt-warning-triangle.svg",
+      "monochrome": true,
+      "nativeSize": [
+        24,
+        24
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/util/UserFeedbackState.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/ProfileSettings.kt"
+      ],
+      "figma": {
+        "nodeId": "47:1112",
+        "componentName": "Cobalt / Icons / Help & feedback / Warning",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=47-1112"
+      },
+      "svgSha256": "ef8f859c47eb9a83aa23a9cd18d17640d81c07d9a0de2066044d061808317a5e",
+      "lastSyncedFromFigma": "47:1112"
+    },
+    {
+      "id": "cobalt-media-unavailable",
+      "name": "Media unavailable",
+      "category": "Playback",
+      "componentName": "Cobalt / Icons / Playback / Media unavailable",
+      "source": "app/src/main/res/drawable/ic_custom_media_unavailable.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/playback/cobalt-media-unavailable.svg",
+      "monochrome": true,
+      "nativeSize": [
+        24,
+        24
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/UnavailableMediaPlaceholder.kt",
+        "app/src/main/kotlin/com/example/ui/components/VideoPlayer.kt",
+        "app/src/main/kotlin/com/example/ui/screens/HomeScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "47:1181",
+        "componentName": "Cobalt / Icons / Playback / Media unavailable",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=47-1181"
+      },
+      "svgSha256": "3e63d3bd2b5852b9dddffa43a438de2f0a8622ed9c5f08095a6950b32480232b",
+      "lastSyncedFromFigma": "47:1181"
+    },
+    {
+      "id": "cobalt-helpful",
+      "name": "Thumbs up",
+      "category": "Help & feedback",
+      "componentName": "Cobalt / Icons / Help & feedback / Thumbs up",
+      "source": "app/src/main/res/drawable/ic_custom_helpful.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/help-feedback/cobalt-helpful.svg",
+      "monochrome": true,
+      "nativeSize": [
+        24,
+        24
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/SupportScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "47:1255",
+        "componentName": "Cobalt / Icons / Help & feedback / Thumbs up",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=47-1255"
+      },
+      "svgSha256": "2f7b43994a11f2dd504a350c0fef5c739e53d8ead0635b285a8d6c3b67bc70d5",
+      "lastSyncedFromFigma": "47:1255"
+    },
+    {
+      "id": "cobalt-unhelpful",
+      "name": "Thumbs down",
+      "category": "Help & feedback",
+      "componentName": "Cobalt / Icons / Help & feedback / Thumbs down",
+      "source": "app/src/main/res/drawable/ic_custom_unhelpful.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/help-feedback/cobalt-unhelpful.svg",
+      "monochrome": true,
+      "nativeSize": [
+        24,
+        24
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/screens/SupportScreen.kt"
+      ],
+      "figma": {
+        "nodeId": "47:1319",
+        "componentName": "Cobalt / Icons / Help & feedback / Thumbs down",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=47-1319"
+      },
+      "svgSha256": "0f74090aca2752d770a8d046e5f0ebce3ae9b30ed15803d0d7ecd9f2b0fafc8e",
+      "lastSyncedFromFigma": "47:1319"
+    },
+    {
+      "id": "cobalt-volume-muted",
+      "name": "Volume muted",
+      "category": "Playback",
+      "componentName": "Cobalt / Icons / Playback / Volume muted",
+      "source": "app/src/main/res/drawable/ic_custom_volume_muted.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/playback/cobalt-volume-muted.svg",
+      "monochrome": true,
+      "nativeSize": [
+        24,
+        24
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/VideoPlayer.kt"
+      ],
+      "figma": {
+        "nodeId": "47:1385",
+        "componentName": "Cobalt / Icons / Playback / Volume muted",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=47-1385"
+      },
+      "svgSha256": "a85e9e784145aba22da60deb0f3039d56aaa335d26e7ec4a3e65073b491adc1a",
+      "lastSyncedFromFigma": "47:1385"
+    },
+    {
+      "id": "cobalt-volume-on",
+      "name": "Volume on",
+      "category": "Playback",
+      "componentName": "Cobalt / Icons / Playback / Volume on",
+      "source": "app/src/main/res/drawable/ic_custom_volume_on.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/playback/cobalt-volume-on.svg",
+      "monochrome": true,
+      "nativeSize": [
+        24,
+        24
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/VideoPlayer.kt"
+      ],
+      "figma": {
+        "nodeId": "47:1453",
+        "componentName": "Cobalt / Icons / Playback / Volume on",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=47-1453"
+      },
+      "svgSha256": "1a224222a13bb7002124452ee2cea46d78b113ad4f8f48ae1048440ae82f63d4",
+      "lastSyncedFromFigma": "47:1453"
+    },
+    {
+      "id": "cobalt-version-tag",
+      "name": "Version tag \u00b7 optional",
+      "category": "Settings & storage",
+      "componentName": "Cobalt / Icons / Settings & storage / Version tag \u00b7 optional",
+      "source": "app/src/main/res/drawable/ic_custom_version_tag.xml",
+      "sourceKind": "Android vector",
+      "svgFile": "design/icons/svg/settings-storage/cobalt-version-tag.svg",
+      "monochrome": true,
+      "nativeSize": [
+        24,
+        24
+      ],
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/AppVersionBadge.kt"
+      ],
+      "figma": {
+        "nodeId": "47:1522",
+        "componentName": "Cobalt / Icons / Settings & storage / Version tag \u00b7 optional",
+        "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=47-1522"
+      },
+      "svgSha256": "52eb9e197b091629fc445bf3bcb8e97cb0a535eb796fd05d295876242d826814",
+      "lastSyncedFromFigma": "47:1522"
+    }
+  ],
+  "figma": {
+    "fileKey": "dJOugcd2V82nQUA1MjyINI",
+    "pageId": "23:915",
+    "catalogNodeId": "23:916",
+    "url": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=23-916",
+    "verifiedComponents": 167,
+    "verifiedCategories": 15,
+    "mainComponentsNodeId": "23:925",
+    "mainComponentsUrl": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=23-925"
+  },
+  "aliases": [
+    {
+      "id": "cobalt-nav-folders-outline",
+      "name": "Folders \u00b7 outline",
+      "source": "app/src/main/res/drawable/ic_nav_folders_outline.xml",
+      "canonicalId": "cobalt-folder-open",
+      "canonicalResource": "app/src/main/res/drawable/ic_custom_folder_open.xml",
+      "figmaNodeId": "26:1958",
+      "usedIn": [
+        "app/src/main/kotlin/com/example/MainActivity.kt",
+        "app/src/main/kotlin/com/example/ui/screens/FoldersScreen.kt"
+      ]
+    },
+    {
+      "id": "cobalt-nav-media-outline",
+      "name": "Media \u00b7 outline",
+      "source": "app/src/main/res/drawable/ic_nav_media_outline.xml",
+      "canonicalId": "cobalt-movie",
+      "canonicalResource": "app/src/main/res/drawable/ic_custom_movie.xml",
+      "figmaNodeId": "26:1547",
+      "usedIn": [
+        "app/src/main/kotlin/com/example/MainActivity.kt",
+        "app/src/main/kotlin/com/example/ui/screens/MediaHubScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/NoteUnlinkedFilesScreen.kt"
+      ]
+    },
+    {
+      "id": "cobalt-format-code-block",
+      "name": "Code block",
+      "source": "app/src/main/res/drawable/ic_format_code_block.xml",
+      "canonicalId": "cobalt-code",
+      "canonicalResource": "app/src/main/res/drawable/ic_custom_code.xml",
+      "figmaNodeId": "26:1460",
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/RichTextEditor.kt"
+      ]
+    },
+    {
+      "id": "cobalt-format-quote",
+      "name": "Quote",
+      "source": "app/src/main/res/drawable/ic_format_quote.xml",
+      "canonicalId": "cobalt-quote",
+      "canonicalResource": "app/src/main/res/drawable/ic_custom_quote.xml",
+      "figmaNodeId": "26:1600",
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/CobaltSelectionMenus.kt",
+        "app/src/main/kotlin/com/example/ui/screens/CaptureScreen.kt",
+        "app/src/main/kotlin/com/example/ui/screens/RichTextEditor.kt"
+      ]
+    },
+    {
+      "id": "cobalt-bookmark-filled",
+      "name": "Bookmark \u00b7 filled",
+      "source": "app/src/main/res/drawable/ic_custom_bookmark_filled.xml",
+      "canonicalId": "cobalt-bookmark",
+      "canonicalResource": "app/src/main/res/drawable/ic_custom_bookmark.xml",
+      "figmaNodeId": "26:1783",
+      "usedIn": [
+        "app/src/main/kotlin/com/example/ui/components/TraktMediaControls.kt"
+      ]
+    }
+  ],
+  "materialReplacements": {
+    "Icons.Default.Add": "cobalt-plus",
+    "Icons.Default.AutoAwesome": "cobalt-sparkle",
+    "Icons.Default.BugReport": "cobalt-feedback",
+    "Icons.Default.Check": "cobalt-check",
+    "Icons.Rounded.Check": "cobalt-check",
+    "Icons.Default.ChevronRight": "cobalt-chevron-right",
+    "Icons.Default.Close": "cobalt-close",
+    "Icons.Rounded.Close": "cobalt-close",
+    "Icons.Rounded.Clear": "cobalt-close",
+    "Icons.Default.ContentCopy": "cobalt-copy",
+    "Icons.Default.Email": "cobalt-mail",
+    "Icons.Default.Info": "cobalt-info",
+    "Icons.Outlined.Info": "cobalt-info",
+    "Icons.AutoMirrored.Rounded.OpenInNew": "cobalt-external-link",
+    "Icons.Default.Refresh": "cobalt-sync",
+    "Icons.Rounded.Refresh": "cobalt-sync",
+    "Icons.Rounded.Search": "cobalt-search",
+    "Icons.Default.AttachFile": "cobalt-attachment",
+    "Icons.Default.CheckCircle": "cobalt-success-circle",
+    "Icons.Rounded.CheckCircle": "cobalt-success-circle",
+    "Icons.Default.Error": "cobalt-error-circle",
+    "Icons.Default.Warning": "cobalt-warning-triangle",
+    "Icons.Outlined.Warning": "cobalt-warning-triangle",
+    "Icons.Default.CloudOff": "cobalt-media-unavailable",
+    "Icons.Default.ThumbUp": "cobalt-helpful",
+    "Icons.Default.ThumbDown": "cobalt-unhelpful",
+    "Icons.AutoMirrored.Filled.VolumeMute": "cobalt-volume-muted",
+    "Icons.AutoMirrored.Filled.VolumeUp": "cobalt-volume-on",
+    "Icons.Default.Sell": "cobalt-version-tag"
+  }
+}
