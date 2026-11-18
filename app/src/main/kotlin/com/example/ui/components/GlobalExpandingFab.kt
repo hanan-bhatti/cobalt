@@ -140,7 +140,7 @@ fun GlobalExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
         RadialMenuItem(R.drawable.ic_custom_link, "Link", CategoryLink.toThemeColor(isDark)) { viewModel.startManualCapture(SavedItemType.LINK) },
         RadialMenuItem(R.drawable.ic_custom_image, "Image", CategoryImage.toThemeColor(isDark), imageAction),
         RadialMenuItem(R.drawable.ic_custom_voice, "Voice", CategoryAudio.toThemeColor(isDark)) { viewModel.startManualCapture(SavedItemType.AUDIO) },
-        RadialMenuItem(R.drawable.ic_custom_import, "Import", CategoryText.toThemeColor(isDark), importText),
+        RadialMenuItem(R.drawable.ic_transfer_import, "Import", CategoryText.toThemeColor(isDark), importText),
         RadialMenuItem(R.drawable.ic_custom_more_vert, "More", MaterialTheme.colorScheme.onSurface) { showMoreActions = true }
     )
     if (showMoreActions) FabActionSheet("More actions", listOf(
@@ -498,11 +498,11 @@ fun ClassicExpandingFab(viewModel: CobaltViewModel, hazeState: HazeState) {
                         }
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Import text", color = Color.White, fontWeight = FontWeight.Medium, modifier = Modifier.padding(end = 8.dp))
+                            Text("Import", color = Color.White, fontWeight = FontWeight.Medium, modifier = Modifier.padding(end = 8.dp))
                             SmallFloatingActionButton(onClick = { isFabExpanded = false; importText() },
                                 containerColor = MaterialTheme.colorScheme.surface,
                                 contentColor = MaterialTheme.colorScheme.primary) {
-                                Icon(painterResource(R.drawable.ic_custom_import), contentDescription = "Import text document")
+                                Icon(painterResource(R.drawable.ic_transfer_import), contentDescription = "Import bookmarks or notes")
                             }
                         }
 

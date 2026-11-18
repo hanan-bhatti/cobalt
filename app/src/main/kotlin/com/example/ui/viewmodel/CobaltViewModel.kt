@@ -49,6 +49,7 @@ class CobaltViewModel(application: Application) : AndroidViewModel(application) 
 
     private val context = application.applicationContext
     private val repository = CobaltRepository(context)
+    val bookmarkTransfer = com.example.bookmarks.BookmarkTransferController(context, viewModelScope)
     private val fileEditor = com.example.notes.FileEditorSession(context, viewModelScope)
     val fileEditorState = fileEditor.state
     fun enableContinuousEditor() = fileEditor.enableContinuous()

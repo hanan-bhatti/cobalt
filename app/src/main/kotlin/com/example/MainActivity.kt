@@ -268,6 +268,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
                     com.example.ui.components.TextDocumentImportSheetHost(viewModel)
+                    com.example.ui.screens.BookmarkTransferHost(viewModel)
                     val activeCaptureItem by viewModel.activeCaptureItem.collectAsState()
                     val activeDetailItem by viewModel.activeDetailItem.collectAsState()
                     val availableUpdate by viewModel.availableUpdate.collectAsState()
@@ -549,6 +550,11 @@ class MainActivity : ComponentActivity() {
                                                 onNavigateToSideDock = { navController.navigate("edge_panel_settings") },
                                                 showBackButton = false
                                             )
+                                        }
+                                    }
+                                    composable("import_export") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.BookmarkTransferSettingsScreen(viewModel) { navController.popBackStack() }
                                         }
                                     }
                                     composable("trash") {

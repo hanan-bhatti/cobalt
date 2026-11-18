@@ -45,4 +45,6 @@
     <!-- Web Companion -->
     <string name="web_companion_title">Web Companion</string>
     <string name="web_companion_subtitle">Access your notes from desktop via local Wi-Fi</string>
+    <string name="settings_import_export">Import &amp; export</string>
+    <string name="settings_import_export_summary">Browser bookmarks and Markdown notes</string>
 </resources>

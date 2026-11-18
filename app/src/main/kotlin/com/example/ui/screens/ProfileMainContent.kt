@@ -204,6 +204,7 @@ fun ProfileMainContent(
             item(key = "library_device") {
                 SettingsOverviewGroup(stringResource(R.string.settings_library_device)) {
                     SettingsOverviewRow(R.string.settings_media_providers, R.string.settings_media_providers_summary, R.drawable.ic_custom_movie, null, isDark, onClick = onNavigateToTraktSync)
+                    SettingsOverviewRow(R.string.settings_import_export, R.string.settings_import_export_summary, R.drawable.ic_transfer_export, null, isDark) { onNavigateToLegal("import_export") }
                     SettingsOverviewRow(R.string.settings_storage, R.string.settings_storage_summary, R.drawable.ic_custom_storage, SettingsCategory.STORAGE_RECOVERY, isDark) { onNavigateToPreferences(SettingsCategory.STORAGE_RECOVERY) }
                     SettingsOverviewRow(R.string.settings_storage_update, R.string.settings_storage_update_summary, R.drawable.ic_custom_sync, null, isDark) { onNavigateToPreferences(SettingsCategory.DATA_MIGRATION) }
                     if (com.example.util.AppFeatureFlags.webCompanion) {
@@ -275,6 +276,7 @@ private fun SettingsOverviewRow(
         R.string.settings_gemini -> com.example.ui.theme.MainSettingsAccent.AI_MODELS
         R.string.settings_reminders -> com.example.ui.theme.MainSettingsAccent.REMINDERS
         R.string.settings_media_providers -> com.example.ui.theme.MainSettingsAccent.MEDIA_ACCOUNTS
+        R.string.settings_import_export -> com.example.ui.theme.MainSettingsAccent.IMPORT_EXPORT
         R.string.settings_storage -> com.example.ui.theme.MainSettingsAccent.STORAGE
         R.string.settings_storage_update -> com.example.ui.theme.MainSettingsAccent.STORAGE_UPDATE
         R.string.settings_background -> com.example.ui.theme.MainSettingsAccent.BACKGROUND_ACTIVITY

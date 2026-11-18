@@ -19,7 +19,12 @@ import java.text.NumberFormat
 
 /** Import belongs to Add. One activity-level sheet also handles incoming shared files. */
 @Composable
-fun rememberTextImportAction(viewModel: CobaltViewModel): () -> Unit {
+fun rememberTextImportAction(viewModel: CobaltViewModel): () -> Unit = {
+    if (!viewModel.markdownImport.value.running) viewModel.bookmarkTransfer.chooseImport()
+}
+
+@Composable
+fun rememberMarkdownImportAction(viewModel: CobaltViewModel): () -> Unit {
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) viewModel.importMarkdown(uri)
     }
