@@ -62,4 +62,10 @@ class NoteMigrationGateTest {
             assertTrue(needed())
         }
     }
+    @Test fun legacyNotesAfterCompletedRunReturnToReadyInsteadOfFalseCompletion() = runBlocking {
+        context.getSharedPreferences("note_migration", 0).edit().putString("phase", "COMPLETE").putInt("completed_format", 1).commit()
+        assertTrue(NoteMigrationManager.evaluateStartupMigration(context) { true })
+        assertTrue(NoteMigrationManager.shouldPauseBackground(context))
+        assertEquals(NoteMigrationManager.Phase.READY, NoteMigrationManager.status.value.phase)
+    }
 }

@@ -56,7 +56,8 @@ object StartupCrashGuard {
     @Synchronized
     fun leaveSafeMode() {
         policy.reset()
-        preferences.edit().putInt("startup_crashes", 0).apply()
+        // Readiness observers must see the cleared guard when the preference change notifies them.
         isSafeMode = false
+        preferences.edit().putInt("startup_crashes", 0).apply()
     }
 }

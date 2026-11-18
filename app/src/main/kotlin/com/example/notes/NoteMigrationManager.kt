@@ -50,6 +50,9 @@ object NoteMigrationManager {
             }
             val update = prefs.edit().putBoolean("migration_required", needed)
             if (!needed) update.putInt("completed_format", BODY_FORMAT_VERSION).putString("phase", Phase.COMPLETE.name)
+            // A prior completed run does not mean newly imported legacy notes are migrated.
+            // Otherwise the startup screen offers "Open Cobalt" while all background widgets stay paused.
+            else if (phase == Phase.COMPLETE) update.putString("phase", Phase.READY.name)
             check(update.commit()) { "Cannot persist migration state" }
             refreshStatus(context)
             needed
