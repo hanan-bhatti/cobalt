@@ -90,12 +90,13 @@ data class SavedItemEntity(
 ) {
     fun toDomainModel(bodyLoaded: Boolean = false): com.example.data.model.SavedItem {
         val foldersList = try {
-            foldersJson.removeSurrounding("[", "]")
-                .split(",")
-                .map { it.trim().removeSurrounding("\"") }
-                .filter { it.isNotEmpty() }
+            // Browser folders can contain commas, quotes, backslashes and non-Latin text.
+            val json = org.json.JSONArray(foldersJson)
+            (0 until json.length()).map { json.getString(it) }.filter { it.isNotEmpty() }
         } catch (_: Exception) {
-            emptyList()
+            // Retain compatibility with older records written without JSON escaping.
+            foldersJson.removeSurrounding("[", "]").split(",")
+                .map { it.trim().removeSurrounding("\"") }.filter { it.isNotEmpty() }
         }
         val genresList = try {
             genresJson.removeSurrounding("[", "]")
@@ -197,7 +198,7 @@ data class SavedItemEntity(
                 title = item.title,
                 content = if (item.bodyLocation == "FILE" && item.type in listOf(com.example.data.model.SavedItemType.TEXT, com.example.data.model.SavedItemType.CODE)) "" else item.content,
                 timestamp = item.timestamp,
-                foldersJson = "[${item.folders.joinToString(",") { "\"$it\"" }}]",
+                foldersJson = org.json.JSONArray(item.folders).toString(),
                 extractedText = item.extractedText,
                 thumbnailPath = item.thumbnailPath,
                 orderIndex = item.orderIndex,
