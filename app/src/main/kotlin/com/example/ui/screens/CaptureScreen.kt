@@ -47,9 +47,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.animation.core.*
@@ -920,7 +917,7 @@ fun AudioCapturePage(
                             color = pageCategoryColor
                         )
                         Text(
-                            "Gemini AI transcribing audio...",
+                            "Transcribing audio…",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
                             color = pageCategoryColor
@@ -1324,7 +1321,7 @@ fun LinkCapturePage(
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Warning,
+                                        painter = painterResource(R.drawable.ic_custom_warning_triangle),
                                         contentDescription = "Error",
                                         tint = MaterialTheme.colorScheme.error,
                                         modifier = Modifier.size(16.dp)
@@ -2466,7 +2463,7 @@ fun CaptureScreen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                "Gemini AI OCR extracting text...",
+                                "Extracting text…",
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -2880,7 +2877,7 @@ fun CaptureScreen(
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Refresh,
+                                painter = painterResource(R.drawable.ic_custom_edit),
                                 contentDescription = "Change",
                                 modifier = Modifier.size(16.dp)
                             )
@@ -2971,7 +2968,7 @@ fun CaptureScreen(
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    "Gemini AI transcribing audio...",
+                                    "Transcribing audio…",
                                     fontSize = 12.sp,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -3196,7 +3193,7 @@ fun CaptureScreen(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Warning,
+                                        painter = painterResource(R.drawable.ic_custom_warning_triangle),
                                         contentDescription = "Error",
                                         tint = MaterialTheme.colorScheme.error,
                                         modifier = Modifier.size(18.dp)

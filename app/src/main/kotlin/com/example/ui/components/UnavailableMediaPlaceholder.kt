@@ -11,10 +11,10 @@
 
 package com.example.ui.components
 
+import com.example.R
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -60,7 +60,7 @@ fun UnavailableMediaPlaceholder(
                 .padding(padding)
         ) {
             Icon(
-                imageVector = Icons.Default.CloudOff,
+                painter = painterResource(R.drawable.ic_custom_media_unavailable),
                 contentDescription = "Media Unavailable",
                 tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
                 modifier = Modifier.size(iconSize)

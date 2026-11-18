@@ -32,11 +32,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeMute
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.CloudOff
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -324,7 +319,7 @@ fun VideoPlayer(
                     verticalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.CloudOff,
+                        painter = painterResource(R.drawable.ic_custom_media_unavailable),
                         contentDescription = "Playback Error",
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(44.dp)
@@ -368,7 +363,7 @@ fun VideoPlayer(
                         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Refresh,
+                            painter = painterResource(R.drawable.ic_custom_sync),
                             contentDescription = "Retry",
                             modifier = Modifier.size(18.dp)
                         )
@@ -411,7 +406,7 @@ fun VideoPlayer(
                             .background(Color.Black.copy(alpha = 0.45f), CircleShape)
                     ) {
                         Icon(
-                            imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeMute else Icons.AutoMirrored.Filled.VolumeUp,
+                            painter = painterResource(if (isMuted) R.drawable.ic_custom_volume_muted else R.drawable.ic_custom_volume_on),
                             contentDescription = if (isMuted) "Unmute" else "Mute",
                             tint = Color.White,
                             modifier = Modifier.size(20.dp)

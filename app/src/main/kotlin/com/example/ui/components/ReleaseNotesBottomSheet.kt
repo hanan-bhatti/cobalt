@@ -22,9 +22,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -117,7 +114,7 @@ fun ReleaseNotesBottomSheet(
 
                 IconButton(onClick = onDismissRequest) {
                     Icon(
-                        imageVector = Icons.Default.Close,
+                        painter = painterResource(R.drawable.ic_custom_close),
                         contentDescription = "Close",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -174,7 +171,7 @@ fun ReleaseNotesBottomSheet(
                 ) {
                     Text("View Full Changelog & Version History", fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(painter = painterResource(R.drawable.ic_custom_chevron_right), contentDescription = null, modifier = Modifier.size(18.dp))
                 }
             }
         }

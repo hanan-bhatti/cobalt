@@ -31,15 +31,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.PriorityHigh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -457,7 +448,7 @@ private fun ExpressiveBugReportContent(
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                         modifier = Modifier.bounceClick().testTag("add_step_button")
                     ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(painter = painterResource(R.drawable.ic_custom_plus), contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Add Step", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
@@ -581,7 +572,7 @@ private fun ExpressiveBugReportContent(
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.fillMaxWidth().bounceClick().testTag("attach_media_button")
                     ) {
-                        Icon(imageVector = Icons.Default.AttachFile, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(painter = painterResource(R.drawable.ic_custom_attachment), contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Attach Screenshot or Recording")
                     }
@@ -620,7 +611,7 @@ private fun ExpressiveBugReportContent(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
+                            Icon(painter = painterResource(R.drawable.ic_custom_success_circle), contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer)
                             Text(
                                 text = "Bug Report Submitted! Thank you for helping us improve Cobalt.",
                                 color = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -1130,7 +1121,7 @@ private fun ExpressiveFeatureRequestContent(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Icon(painter = painterResource(R.drawable.ic_custom_sparkle), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
                             Text(
                                 text = "Feature Request Submitted! We love your ideas.",
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,

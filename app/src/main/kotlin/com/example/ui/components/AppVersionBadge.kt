@@ -1,14 +1,13 @@
 package com.example.ui.components
 
+import com.example.R
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.NewReleases
-import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -70,7 +69,7 @@ fun AppVersionBadge(
         ) {
             if (showIcon) {
                 Icon(
-                    imageVector = Icons.Default.Sell,
+                    painter = painterResource(R.drawable.ic_custom_version_tag),
                     contentDescription = null,
                     tint = finalContentColor,
                     modifier = Modifier.size((fontSize.value + 2).dp)

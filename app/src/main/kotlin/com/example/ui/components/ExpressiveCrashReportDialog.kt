@@ -1,5 +1,7 @@
 package com.example.ui.components
 
+import com.example.R
+import androidx.compose.ui.res.painterResource
 import android.content.Context
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -20,10 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -71,7 +69,7 @@ fun ExpressiveCrashReportDialog(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = Icons.Default.BugReport,
+                            painter = painterResource(R.drawable.ic_custom_feedback),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(24.dp)
@@ -141,7 +139,7 @@ fun ExpressiveCrashReportDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 modifier = Modifier.bounceClick().testTag("send_crash_report_email_button")
             ) {
-                Icon(imageVector = Icons.Default.Email, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(painter = painterResource(R.drawable.ic_custom_mail), contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
                 Text("Send Report Email", fontWeight = FontWeight.Bold)
             }
@@ -156,7 +154,7 @@ fun ExpressiveCrashReportDialog(
                     shape = RoundedCornerShape(14.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                 ) {
-                    Icon(imageVector = Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Icon(painter = painterResource(R.drawable.ic_custom_copy), contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Copy", fontSize = 12.sp)
                 }

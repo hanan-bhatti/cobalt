@@ -65,9 +65,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -1714,7 +1711,7 @@ fun RecentCaptureMicroCard(
                     SavedItemType.IMAGE, SavedItemType.VIDEO -> {
                         if (item.isUnavailable) {
                             Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Default.CloudOff,
+                                painter = painterResource(R.drawable.ic_custom_media_unavailable),
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                                 modifier = Modifier.size(16.dp)

@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.compose.ui.res.painterResource
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.input.pointer.pointerInput
@@ -106,7 +107,7 @@ fun AppFeedbackBanner(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = feedbackMessage.icon,
+                        painter = painterResource(feedbackMessage.iconRes),
                         contentDescription = null,
                         tint = contentColor,
                         modifier = Modifier.size(18.dp)

@@ -42,53 +42,55 @@ fun MediaSettingsScreen(onBack: () -> Unit, onTrakt: () -> Unit, onTmdb: () -> U
     val pending by remember(connected) { if (connected) db.traktOutboxDao().observePendingCount(auth.syncSessionId()) else kotlinx.coroutines.flow.flowOf(0) }.collectAsState(initial = 0)
     val scope = rememberCoroutineScope()
     var resetIgnored by remember { mutableStateOf(false) }
-    if (resetIgnored) ExpressiveAlertDialog(onDismissRequest = { resetIgnored = false }, title = "Allow deleted titles to return?",
-        text = { Text("Cobalt remembers only provider IDs of locally deleted titles so background sync won’t recreate them. Resetting allows Trakt to import them again. Nothing is deleted from your Trakt account.") },
-        confirmButtonText = "Reset ignored titles", onConfirm = { scope.launch { db.mediaTombstoneDao().clearAll() }; resetIgnored = false },
+    if (resetIgnored) ExpressiveAlertDialog(onDismissRequest = { resetIgnored = false }, title = "Allow removed titles to return?",
+        text = { Text("Titles removed in Cobalt may be imported again during Trakt sync. This clears the list used to keep them out. Nothing is deleted from your Trakt account.") },
+        confirmButtonText = "Allow titles to return", onConfirm = { scope.launch { db.mediaTombstoneDao().clearAll() }; resetIgnored = false },
         dismissButtonText = "Cancel", onDismiss = { resetIgnored = false })
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).imePadding().nestedScroll(header.nestedScrollConnection)) {
-        LazyColumn(state = list, contentPadding = PaddingValues(start = 16.dp, end = 16.dp,
+        LazyColumn(state = list, contentPadding = PaddingValues(start = 20.dp, end = 20.dp,
             top = height + 12.dp, bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 32.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            verticalArrangement = Arrangement.spacedBy(24.dp)) {
             item {
-                SettingsSubsectionHeader(title = "Connections", description = "Manage your Trakt account and movie metadata.")
+                SettingsSubsectionHeader(title = "Accounts & API keys", description = "Connect Trakt and set up movie and TV details.")
                 ExpressiveSettingsGroup {
-                    ExpressiveSettingsNavigationItem("Trakt account & sync", onTrakt, subtitle = if (connected) "Connected · history, watchlist and personal ratings" else "Connect to sync your saved movies and TV", shape = connectedPillShape(0, 2))
-                    ExpressiveSettingsNavigationItem("TMDB API key", onTmdb, subtitle = "Posters, trailers and movie or TV details", shape = connectedPillShape(1, 2))
+                    ExpressiveSettingsNavigationItem("Trakt account", onTrakt, subtitle = if (connected) "Connected · watched history, watchlist and ratings" else "Connect to sync movies and TV shows with Trakt", shape = connectedPillShape(0, 2))
+                    ExpressiveSettingsNavigationItem("TMDB API key", onTmdb, subtitle = "Set up posters, trailers and movie and TV details", shape = connectedPillShape(1, 2))
                 }
             }
             item {
-                SettingsSubsectionHeader(title = "Search sources", description = "Applies to media search in Capture, the Media Hub and Side Dock.")
+                SettingsSubsectionHeader(title = "Search sources", description = "Choose sources for search in Capture, Media Hub and Side Dock.")
                 ExpressiveSettingsGroup {
                     listOf("trakt" to "Trakt", "tmdb" to "TMDB", "jikan" to "Jikan").forEachIndexed { index, (key, title) ->
                         var enabled by remember(key) { mutableStateOf(settings.enabled(key)) }
                         ExpressiveSettingsSwitchItem(title = title, subtitle = when(key) {
-                            "trakt" -> "Movies and TV; requires a connected account"
-                            "tmdb" -> "Movies and TV; uses your API key"
-                            else -> "Anime and optional manga; no account required"
+                            "trakt" -> "Search movies and TV shows · requires Trakt connection"
+                            "tmdb" -> "Search movies and TV shows · requires TMDB API key"
+                            else -> "Search anime and manga · no account or API key needed"
                         }, checked = enabled, onCheckedChange = { enabled = it; settings.setEnabled(key, it) }, shape = connectedPillShape(index, 3))
                     }
                 }
+                Spacer(Modifier.height(12.dp))
+                ExpressiveSettingsSelectorItem(title = "Preferred movie & TV source",
+                    options = linkedMapOf("trakt" to "Trakt first", "tmdb" to "TMDB first"), selectedKey = priority,
+                    onSelectionChanged = { priority = it; settings.priority = it },
+                    description = "Prefer details from this source when Trakt and TMDB find the same title.")
             }
-            item { ExpressiveSettingsSelectorItem(title = "Movie & TV metadata priority",
-                options = linkedMapOf("trakt" to "Trakt first", "tmdb" to "TMDB first"), selectedKey = priority,
-                onSelectionChanged = { priority = it; settings.priority = it },
-                description = "Choose which source leads when both find the same title.") }
             item {
-                SettingsSubsectionHeader(title = "Anime & manga", description = "Jikan provides catalogue details. Reading progress stays on this device.")
-                ExpressiveSettingsSwitchItem(title = "Include manga", subtitle = "Save chapter, volume and publication details separately from anime",
+                SettingsSubsectionHeader(title = "Anime & manga", description = "Search anime and manga through Jikan. Reading progress stays on this device.")
+                ExpressiveSettingsSwitchItem(title = "Include manga in search", subtitle = "Show manga results alongside anime when Jikan is enabled",
                     checked = manga, onCheckedChange = { manga = it; settings.mangaEnabled = it })
+                Spacer(Modifier.height(12.dp))
+                JikanServerSettings(settings)
             }
-            item { JikanServerSettings(settings) }
             item {
-                SettingsSubsectionHeader(title = "Sync & local archive", description = "Review outgoing changes and titles you removed locally.")
+                SettingsSubsectionHeader(title = "Sync & removed titles", description = "Manage pending Trakt changes and titles removed from Cobalt.")
                 ExpressiveSettingsGroup {
-                    ExpressiveSettingsNavigationItem("Pending Trakt changes", onPending, subtitle = "Review queued titles, paused categories and retries", trailingBadge = pending.toString(), shape = connectedPillShape(0, 2))
-                    ExpressiveSettingsNavigationItem("Ignored deleted titles", { resetIgnored = true }, subtitle = "Keeps local deletions from returning during imports", trailingBadge = ignored.toString(), enabled = ignored > 0, shape = connectedPillShape(1, 2))
+                    ExpressiveSettingsNavigationItem("Pending sync changes", onPending, subtitle = "Review changes waiting to sync with Trakt", trailingBadge = pending.toString(), shape = connectedPillShape(0, 2))
+                    ExpressiveSettingsNavigationItem("Allow removed titles to return", { resetIgnored = true }, subtitle = "Clear the list that keeps removed titles out of imports", trailingBadge = ignored.toString(), enabled = ignored > 0, shape = connectedPillShape(1, 2))
                 }
             }
         }
-        CollapsibleCommonTopBar(title = "Media & Providers", subtitle = "Search providers, metadata & sync",
+        CollapsibleCommonTopBar(title = "Media & accounts", subtitle = "Search, accounts and sync",
             collapseFraction = header.collapseFraction, headerHeight = height, onBackClick = onBack)
     }
 }
@@ -114,19 +116,19 @@ internal fun JikanServerSettings(settings: MediaProviderSettings) {
     }
     Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Jikan server", style = MaterialTheme.typography.titleMedium)
-            Text("The public server works without a key. You can also use your own Jikan v4 instance.",
+            Text("Anime & manga server", style = MaterialTheme.typography.titleMedium)
+            Text("Use the public Jikan server or enter your own Jikan v4 API address. No API key is needed.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedTextField(value = endpoint, onValueChange = { endpoint = it; error = null; saved = false },
-                label = { Text("API URL") }, placeholder = { Text(MediaProviderSettings.DEFAULT_JIKAN) },
-                supportingText = { Text(error ?: if (saved) "Server saved" else "Include /v4/ in your server address.") },
+                label = { Text("Server URL") }, placeholder = { Text(MediaProviderSettings.DEFAULT_JIKAN) },
+                supportingText = { Text(error ?: if (saved) "Server address saved" else "Use a Jikan v4 API address, including /v4/.") },
                 isError = error != null, singleLine = true, shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { save() }),
                 modifier = Modifier.fillMaxWidth().bringIntoViewRequester(requester).onFocusChanged { focused = it.isFocused })
-            Button(onClick = { save() }, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Save server") }
-            TextButton(onClick = { endpoint = MediaProviderSettings.DEFAULT_JIKAN; save() }, modifier = Modifier.fillMaxWidth()) { Text("Use public server") }
+            Button(onClick = { save() }, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Save address") }
+            TextButton(onClick = { endpoint = MediaProviderSettings.DEFAULT_JIKAN; save() }, modifier = Modifier.fillMaxWidth()) { Text("Use default server") }
         }
     }
 }

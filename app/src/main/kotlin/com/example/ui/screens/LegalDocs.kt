@@ -38,7 +38,7 @@ object LegalDocs {
 
         **3. Media and Remote Content**
 
-        When you search for movies and TV shows, Cobalt contacts The Movie Database (TMDb) using your configured API key. Anime and manga searches use your selected Jikan v4 server. A local server needs a connection to that server; saved catalogue details remain available offline. Search providers and source priority are controlled in Media & Providers. Uncached remote images will not load while offline.
+        When you search for movies and TV shows, Cobalt contacts The Movie Database (TMDb) using your configured API key. Anime and manga searches use your selected Jikan v4 server. A local server needs a connection to that server; saved catalogue details remain available offline. Search providers and source priority are controlled in Media & accounts. Uncached remote images will not load while offline.
 
         Posters, backdrops, cast photos, user avatars, and other remote images load automatically when media cards or details are displayed. When you save or share a URL, Cobalt automatically contacts the host website to fetch page titles and preview metadata. Opening saved items that reference remote media may download and cache those media files locally. Cobalt does not contact OMDb; that integration is unused.
 
@@ -257,11 +257,6 @@ object LegalDocs {
           Coordinates: `androidx.media3:media3-exoplayer`, `media3-ui`
           License: Apache License 2.0
           Website: [https://developer.android.com/media/media3](https://developer.android.com/media/media3)
-
-        - **AndroidX Glance** (`1.1.0`)
-          Coordinates: `androidx.glance:glance-appwidget`, `glance-material3`
-          License: Apache License 2.0
-          Website: [https://developer.android.com/jetpack/androidx/releases/glance](https://developer.android.com/jetpack/androidx/releases/glance)
 
         - **AndroidX Room** (`2.7.0`)
           Coordinates: `androidx.room:room-runtime`, `room-ktx`, `room-compiler`
