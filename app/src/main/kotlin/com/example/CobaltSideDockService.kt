@@ -128,16 +128,10 @@ class CobaltSideDockService : Service() {
     private fun getEdgePanelYPercent(): Float = prefs.getFloat("edge_panel_y_percent", 0.4f)
     private fun getEdgePanelThickness(): Int = prefs.getInt("edge_panel_thickness", 6)
     private fun getEdgePanelHeight(): Int = prefs.getInt("edge_panel_height", 100)
-    private fun getEffectiveHandleHeightDp(): Int {
-        val base = getEdgePanelHeight()
-        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        return if (isLandscape) {
-            val screenHDp = resources.configuration.screenHeightDp
-            (screenHDp * 0.14f).toInt().coerceIn(44, 68)
-        } else {
-            base
-        }
-    }
+    private fun getEffectiveHandleHeightDp(): Int = com.example.ui.dock.sideDockHandleHeightDp(
+        getEdgePanelHeight(), resources.configuration.screenHeightDp,
+        resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    )
     private fun getEdgePanelOpacity(): Float = prefs.getFloat("edge_panel_opacity", 0.7f)
     private fun getAnimPreset(): String = prefs.getString("edge_panel_anim_preset", "Smooth") ?: "Smooth"
     private fun getAnimStiffness(): Float = prefs.getFloat("edge_panel_anim_stiffness", 340f)
@@ -263,9 +257,11 @@ class CobaltSideDockService : Service() {
             return START_NOT_STICKY
         }
 
-        if (intent?.action == "com.example.ACTION_TOGGLE_PANEL") {
+        if (intent?.action == "com.example.ACTION_TOGGLE_PANEL" || intent?.action == ACTION_OPEN_PANEL) {
+            // An explicit test can cold-start the service; establish the real handle first.
+            if (handleContainerView == null) createHandleOverlay() else updateHandleLayoutAndStyle()
             mainHandler.post {
-                toggleDock()
+                if (intent.action == ACTION_OPEN_PANEL) openDock() else toggleDock()
             }
             return START_STICKY
         }
@@ -559,9 +555,10 @@ class CobaltSideDockService : Service() {
 
         val isRightSide = getEdgePanelSide() == "Right"
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        val cardWidthDp = if (isLandscape) 330 else 280
         val screenHDp = resources.configuration.screenHeightDp
-        val cardHeightDp = if (isLandscape) (screenHDp - 48).coerceAtMost(330) else 460
+        val cardGeometry = com.example.ui.dock.sideDockCardGeometry(screenHDp, isLandscape)
+        val cardWidthDp = cardGeometry.widthDp
+        val cardHeightDp = cardGeometry.heightDp
         val edgeMarginDp = 12
 
         val rawCenterYDp = exactHandleCenterYDp ?: (screenHDp * getEdgePanelYPercent())
@@ -817,13 +814,11 @@ class CobaltSideDockService : Service() {
         return (dp * resources.displayMetrics.density).toInt()
     }
 
-    private fun calculateYPosition(yPercent: Float, heightDp: Int = 100): Int {
-        val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        val insetDp = if (isLandscape) 80 else 160
-        val usableHeight = (resources.displayMetrics.heightPixels - dpToPx(insetDp)).coerceAtLeast(dpToPx(60))
-        val halfHeight = usableHeight / 2
-        return (yPercent.coerceIn(0f, 1f) * usableHeight - halfHeight).toInt()
-    }
+    private fun calculateYPosition(yPercent: Float, heightDp: Int = 100): Int =
+        com.example.ui.dock.sideDockHandleOffsetYPx(
+            yPercent, resources.displayMetrics.heightPixels, resources.displayMetrics.density,
+            resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        )
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -857,6 +852,7 @@ class CobaltSideDockService : Service() {
     }
 
     companion object {
+        const val ACTION_OPEN_PANEL = "com.example.ACTION_OPEN_PANEL"
         private const val NOTIFICATION_ID = 9283
         private const val CHANNEL_ID = "cobalt_sidedock_service_channel"
     }

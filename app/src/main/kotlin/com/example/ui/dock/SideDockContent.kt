@@ -46,6 +46,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -112,11 +113,7 @@ private enum class DockInputMode {
     LINK
 }
 
-/**
- * Modern Jetpack Compose UI for CobaltSideDock.
- * Fully GPU-accelerated via RenderThread graphicsLayer transforms,
- * providing 60fps/120fps fluid performance without resizing WindowManager window bounds.
- */
+/** Fixed-size overlay content; the shared morph surface animates its graphics layer. */
 @Composable
 fun SideDockContent(
     side: String,
@@ -150,42 +147,11 @@ fun SideDockContent(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val isRightSide = side == "Right"
 
-    // Animation Specs based on selected preset or custom spring physics
-    val (enterSpec, exitSpec) = remember(animPreset, animStiffness, animDamping) {
-        when (animPreset) {
-            "Bouncy" -> Pair(
-                spring<Float>(dampingRatio = 0.58f, stiffness = 320f),
-                spring<Float>(dampingRatio = 0.78f, stiffness = 420f)
-            )
-            "Snappy" -> Pair(
-                spring<Float>(dampingRatio = 0.85f, stiffness = 650f),
-                spring<Float>(dampingRatio = 0.95f, stiffness = 750f)
-            )
-            "Fluid" -> Pair(
-                // Oppo ColorOS Water-drop elastic spring
-                spring<Float>(dampingRatio = 0.68f, stiffness = 320f),
-                spring<Float>(dampingRatio = 0.82f, stiffness = 460f)
-            )
-            "Instant" -> Pair(
-                snap<Float>(),
-                snap<Float>()
-            )
-            "Custom" -> Pair(
-                spring<Float>(
-                    dampingRatio = animDamping.coerceIn(0.45f, 1.0f),
-                    stiffness = animStiffness.coerceIn(120f, 900f)
-                ),
-                spring<Float>(
-                    dampingRatio = (animDamping + 0.10f).coerceIn(0.55f, 1.0f),
-                    stiffness = (animStiffness + 60f).coerceIn(180f, 1000f)
-                )
-            )
-            else -> Pair( // "Smooth" (Default Oppo-like fluid water-drop physics)
-                spring<Float>(dampingRatio = 0.72f, stiffness = 340f),
-                spring<Float>(dampingRatio = 0.82f, stiffness = 380f)
-            )
-        }
+    val physics = remember(animPreset, animStiffness, animDamping) {
+        sideDockPhysics(animPreset, animStiffness, animDamping)
     }
+    val enterSpec = remember(physics) { physics.openingSpec() }
+    val exitSpec = remember(physics) { physics.closingSpec() }
 
     val animProgress = remember { Animatable(0f) }
     var isDismissing by remember { mutableStateOf(false) }
@@ -278,8 +244,9 @@ fun SideDockContent(
     // Geometry & Dynamic Morphing Bounds
     val screenWidth = configuration.screenWidthDp.dp
     val screenHeight = configuration.screenHeightDp.dp
-    val cardWidth = if (isLandscape) 330.dp else 280.dp
-    val cardHeight = if (isLandscape) (screenHeight - 48.dp).coerceAtMost(330.dp) else 460.dp
+    val cardGeometry = sideDockCardGeometry(configuration.screenHeightDp, isLandscape)
+    val cardWidth = cardGeometry.widthDp.dp
+    val cardHeight = cardGeometry.heightDp.dp
 
     // Dynamically compensate for any ComposeView window screen top offset (e.g. status bar insets)
     val view = LocalView.current
@@ -303,24 +270,14 @@ fun SideDockContent(
     // Exact handle center Y: measured directly from the physical handle View on screen,
     // converted into local Compose window coordinates
     val rawCenterYDp = handleCenterYDp ?: (screenHeight.value * yPercent)
-    val handleCenterY = rawCenterYDp.dp
-    val baseTop = handleCenterY - (cardHeight / 2)
-
-    val minTop = if (isLandscape) 12.dp else 36.dp
-    val maxTop = (screenHeight - cardHeight - (if (isLandscape) 12.dp else 36.dp)).coerceAtLeast(minTop)
-    val effectiveTop = baseTop.coerceIn(minTop, maxTop)
-
-    // Ergonomics & Thumb Reachability:
-    // If the dock sits in the upper half of the screen, user's thumb naturally reaches the bottom of the card.
-    // In that position, we put Quick Actions and Input Box at the BOTTOM, and Recents above them.
-    // If the dock sits in the lower half of the screen, the top of the card is already in thumb reach.
-    val isTopDock = (effectiveTop + cardHeight / 2) < (screenHeight / 2)
+    val placement = sideDockPlacement(screenHeight.value, cardGeometry, rawCenterYDp, isLandscape)
+    val effectiveTop = placement.topDp.dp
+    val isTopDock = placement.isTopDock
 
     // Animated morph parameters
-    val p = animProgress.value
-
-    LaunchedEffect(p) {
-        onProgressChanged(p)
+    val progressCallback by rememberUpdatedState(onProgressChanged)
+    LaunchedEffect(animProgress) {
+        snapshotFlow { animProgress.value }.collect { progressCallback(it) }
     }
 
     LaunchedEffect(Unit) {
@@ -332,80 +289,13 @@ fun SideDockContent(
         animProgress.animateTo(1f, animationSpec = enterSpec)
     }
 
-    // Relative vertical shift: starts at handle center, settles at 0 inside window
-    val startOffsetY = baseTop - effectiveTop
-
-    val pivotFractionX = if (isRightSide) 1.0f else 0.0f
-
-    // Min scale factors corresponding to the physical handle dimensions
-    val minScaleX = (handleThicknessDp.toFloat() / cardWidth.value).coerceIn(0.01f, 0.25f)
-    val minScaleY = (handleHeightDp.toFloat() / cardHeight.value).coerceIn(0.05f, 0.45f)
-
-    // Oppo ColorOS Aquamorphic Water-drop squash & stretch:
-    // Scale X leads with elastic spring tension, while Scale Y smoothly unfolds
-    val pClamped = p.coerceAtLeast(0f)
-    val backScale = 1f - (predictiveBackProgress * 0.12f)
-    val currentScaleX = ((minScaleX + (1f - minScaleX) * pClamped).coerceAtLeast(minScaleX)) * backScale
-    val currentScaleY = ((minScaleY + (1f - minScaleY) * pClamped).coerceAtLeast(minScaleY)) * backScale
-
-    // Edge translation: starts flush against the screen bezel (0dp), smoothly settles at 12dp margin
+    val morph: () -> SideDockMorph = { sideDockMorph(
+        progress = animProgress.value, card = cardGeometry,
+        handleHeightDp = handleHeightDp, handleThicknessDp = handleThicknessDp, side = side,
+        startOffsetYDp = placement.startOffsetYDp,
+        predictiveBackProgress = predictiveBackProgress, isDismissing = isDismissing
+    ) }
     val edgeMargin = 12.dp
-
-    // Morphing Corner Shape (starts as flush handle pill against bezel, blossoms into rounded 24.dp card)
-    val innerCornerRadius = lerp(8.dp, 24.dp, p.coerceIn(0f, 1f))
-    val outerCornerRadius = lerp(0.dp, 24.dp, p.coerceIn(0f, 1f))
-    val morphShape = if (isRightSide) {
-        RoundedCornerShape(
-            topStart = innerCornerRadius,
-            bottomStart = innerCornerRadius,
-            topEnd = outerCornerRadius,
-            bottomEnd = outerCornerRadius
-        )
-    } else {
-        RoundedCornerShape(
-            topEnd = innerCornerRadius,
-            bottomEnd = innerCornerRadius,
-            topStart = outerCornerRadius,
-            bottomStart = outerCornerRadius
-        )
-    }
-
-    // Container alpha for graceful exit handoff
-    val containerAlpha = if (isDismissing) (p / 0.04f).coerceIn(0f, 1f) else 1f
-
-    // Seamless Color Morphing:
-    // When blur is supported and active, we use a frosted-glass translucent surface tint
-    // so the hardware-blurred OS background shines through.
-    // If blur is unsupported by hardware or disabled by user settings, we use a 100% SOLID opaque
-    // Material 3 container (never transparent!) ensuring pristine contrast and zero visual artifacts.
-    val baseSurfaceColor = if (useBlur) {
-        MaterialTheme.colorScheme.surfaceContainerHigh.copy(
-            alpha = (blurOpacity + 0.35f).coerceIn(0.45f, 0.82f)
-        )
-    } else {
-        MaterialTheme.colorScheme.surfaceContainerHigh
-    }
-
-    val handleColor = if (useBlur) {
-        MaterialTheme.colorScheme.primary.copy(alpha = handleOpacity.coerceIn(0.6f, 1f))
-    } else {
-        MaterialTheme.colorScheme.primary
-    }
-
-    val dockSurfaceColor = lerp(
-        start = handleColor,
-        stop = baseSurfaceColor,
-        fraction = (p / 0.32f).coerceIn(0f, 1f)
-    )
-    val borderColor = lerp(
-        start = Color.Transparent,
-        stop = if (useBlur) {
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.50f)
-        } else {
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)
-        },
-        fraction = p.coerceIn(0f, 1f)
-    )
 
     fun saveDockNote(content: String) {
         if (dockSaving || content.isEmpty()) return
@@ -477,12 +367,10 @@ fun SideDockContent(
             .imePadding()
     ) {
         // 1. Outside Touch Interceptor within dock window margins to dismiss
-        val effectiveP = (p * (1f - predictiveBackProgress * 0.35f)).coerceIn(0f, 1f)
-        val scrimAlpha = (effectiveP * 0.12f).coerceIn(0f, 0.12f)
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = scrimAlpha))
+                .drawBehind { drawRect(Color.Black, alpha = morph().scrimAlpha) }
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() }
@@ -492,29 +380,21 @@ fun SideDockContent(
         )
 
         // 2. Hardware-accelerated Morphing SideDock Card
-        val directionMultiplier = if (isRightSide) 1f else -1f
-        val backTranslationX = cardWidth.value * density * 0.35f * predictiveBackProgress * directionMultiplier
-
-        Surface(
+        SideDockMorphSurface(
+            side = side,
+            card = cardGeometry,
+            morphState = morph,
+            useBlur = useBlur,
+            blurOpacity = blurOpacity,
+            handleOpacity = handleOpacity,
             modifier = Modifier
                 .align(if (isRightSide) Alignment.TopEnd else Alignment.TopStart)
                 .padding(
                     start = if (!isRightSide) edgeMargin else 0.dp,
                     end = if (isRightSide) edgeMargin else 0.dp,
                     top = effectiveTop
-                )
-                .width(cardWidth)
-                .height(cardHeight)
-                .graphicsLayer {
-                    transformOrigin = TransformOrigin(pivotFractionX, 0.5f)
-                    scaleX = currentScaleX
-                    scaleY = currentScaleY
-                    translationX = (directionMultiplier * (1f - p.coerceIn(0f, 1f)) * edgeMargin.toPx()) + backTranslationX
-                    translationY = (startOffsetY * (1f - p.coerceIn(0f, 1f))).toPx()
-                    alpha = containerAlpha
-                    shape = morphShape
-                    clip = true
-                }
+                ),
+            interactionModifier = Modifier
                 .pointerInput(isRightSide) {
                     detectHorizontalDragGestures { _, dragAmount ->
                         // Swipe toward the screen edge dismisses the dock
@@ -525,11 +405,6 @@ fun SideDockContent(
                         }
                     }
                 },
-            shape = morphShape,
-            color = dockSurfaceColor,
-            border = BorderStroke(1.dp, borderColor),
-            tonalElevation = if (useBlur) 0.dp else 4.dp,
-            shadowElevation = lerp(0.dp, if (useBlur) 12.dp else 6.dp, p.coerceIn(0f, 1f))
         ) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -541,10 +416,11 @@ fun SideDockContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(110.dp)
+                            .graphicsLayer { alpha = animProgress.value.coerceIn(0f, 1f) }
                             .background(
                                 Brush.verticalGradient(
                                     colors = listOf(
-                                        Color.White.copy(alpha = 0.05f * p.coerceIn(0f, 1f)),
+                                        Color.White.copy(alpha = 0.05f),
                                         Color.Transparent
                                     )
                                 )
@@ -553,14 +429,13 @@ fun SideDockContent(
                 }
 
                 // Fixed-dimension inner card content (reveals gracefully without awkward reflows)
-                val contentProgress = ((p - 0.38f) / 0.62f).coerceIn(0f, 1f)
-
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer {
-                            alpha = contentProgress
-                            translationX = directionMultiplier * (1f - contentProgress) * 16.dp.toPx()
+                            val frame = morph()
+                            alpha = frame.contentAlpha
+                            translationX = frame.contentTranslationXDp.dp.toPx()
                         }
                 ) {
                     Column(
