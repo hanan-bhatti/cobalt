@@ -18,79 +18,27 @@
 
 package com.example.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.text.style.TextDirection
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import com.example.R
 import com.example.data.model.CodeFontFamily
 import com.example.data.model.TextFontFamily
@@ -101,25 +49,21 @@ import com.example.ui.components.ExpressiveSettingsGroup
 import com.example.ui.components.ExpressiveSettingsSelectorItem
 import com.example.ui.components.ExpressiveSettingsSwitchItem
 import com.example.ui.components.ExpressiveTypographySliderItem
-import com.example.ui.components.SettingsSubsectionHeader
+import com.example.ui.components.SettingsChoice
+import com.example.ui.components.SettingsChoiceSheet
+import com.example.ui.components.SettingsGroupLabel
+import com.example.ui.components.SettingsIconBadge
 import com.example.ui.components.connectedPillShape
 import com.example.ui.components.rememberCollapsibleTopBarState
 import com.example.ui.theme.CobaltTypography
+import com.example.ui.theme.resolveCodeFontFamily
+import com.example.ui.theme.resolveTextFontFamily
 import com.example.ui.viewmodel.CobaltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-/**
- * Text & fonts Subpage inside Appearance settings.
- * Features:
- * - Pinned Live Preview card (updating on every drag frame with 0 jank)
- * - Two-pane responsive layout for wide displays / landscape
- * - Same bottom-sheet selectors and tokens as the rest of Settings
- * - Debounced persistence to SettingsRepository (150ms) to protect other screens
- * - Confirmation and Undo snackbar on Reset to defaults
- */
-@OptIn(ExperimentalMaterial3Api::class)
+/** A separate reading-settings route; NavHost owns predictive Back and its depth animation. */
 @Composable
 fun TextAndFontsSettingsScreen(
     viewModel: CobaltViewModel,
@@ -128,622 +72,302 @@ fun TextAndFontsSettingsScreen(
 ) {
     val storedPrefs by viewModel.typographyPrefs.collectAsState()
     var localPrefs by remember(storedPrefs) { mutableStateOf(storedPrefs) }
+    val latestPrefs by rememberUpdatedState(localPrefs)
+    val latestStoredPrefs by rememberUpdatedState(storedPrefs)
 
-    // Debounced persistence: changes apply to preview immediately, but
-    // persist to repository only after 150ms of quiet time.
+    // The preview updates immediately. Flush on leaving so a quick Back cannot lose the last edit.
     LaunchedEffect(localPrefs) {
         if (localPrefs != storedPrefs) {
             delay(150)
             viewModel.setTypographyPrefs(localPrefs)
         }
     }
-
-    val liveTypography = remember(localPrefs) {
-        CobaltTypography.fromPrefs(localPrefs)
+    DisposableEffect(viewModel) {
+        onDispose {
+            if (latestPrefs != latestStoredPrefs) viewModel.setTypographyPrefs(latestPrefs)
+        }
     }
 
-    val snackbarHostState = remember { SnackbarHostState() }
+    val liveTypography = remember(localPrefs) { CobaltTypography.fromPrefs(localPrefs) }
+    val snackbarHost = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var showResetDialog by remember { mutableStateOf(false) }
+    val resetMessage = stringResource(R.string.settings_reset_text_done)
+    val undoLabel = stringResource(R.string.reset_typography_undo_action)
+    val listState = rememberLazyListState()
+    val topBarState = rememberCollapsibleTopBarState(listState, maxHeight = 160.dp)
+    val topPadding = with(LocalDensity.current) { topBarState.heightPx.toDp() }
+    val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-    val lazyListState = rememberLazyListState()
-    val topBarState = rememberCollapsibleTopBarState(lazyListState, maxHeight = 160.dp)
-    val density = LocalDensity.current
+    val updatePrefs: (TypographyPrefs) -> Unit = { prefs ->
+        snackbarHost.currentSnackbarData?.dismiss()
+        localPrefs = prefs
+    }
+    val resetPrefs: () -> Unit = {
+        val beforeReset = localPrefs
+        localPrefs = TypographyPrefs.DEFAULT
+        viewModel.setTypographyPrefs(localPrefs)
+        scope.launch {
+            snackbarHost.currentSnackbarData?.dismiss()
+            if (snackbarHost.showSnackbar(resetMessage, undoLabel, duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) {
+                localPrefs = beforeReset
+                viewModel.setTypographyPrefs(beforeReset)
+            }
+        }
+    }
 
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        val isWideLayout = maxWidth >= 640.dp
-        val currentTopBarHeightDp = with(density) { topBarState.heightPx.toDp() }
-        val bottomNavPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-
-        if (isWideLayout) {
-            // Two-pane responsive layout for tablets / wide screens
-            Column(modifier = Modifier.fillMaxSize()) {
-                val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    BoxWithConstraints(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        if (maxWidth >= 640.dp) {
+            Column(Modifier.fillMaxSize()) {
                 CollapsibleCommonTopBar(
                     title = stringResource(R.string.text_fonts_title),
-                    subtitle = stringResource(R.string.text_fonts_subtitle),
+                    subtitle = stringResource(R.string.settings_fonts_subtitle),
                     collapseFraction = 0f,
-                    headerHeight = 90.dp + statusBarPadding,
+                    headerHeight = 90.dp + WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
                     onBackClick = onNavigateBack
                 )
-
                 Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(20.dp)
+                    Modifier.fillMaxSize().padding(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
-                    // Left Pane: Pinned Live Preview
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxSize()
-                    ) {
-                        TextFontsPreviewCard(
-                            typography = liveTypography,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    // Right Pane: Scrolling Settings Controls
                     LazyColumn(
-                        modifier = Modifier
-                            .weight(1.2f)
-                            .fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        contentPadding = PaddingValues(bottom = bottomNavPadding + 32.dp)
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(bottom = bottomPadding + 24.dp)
                     ) {
-                        textFontsSettingsItems(
-                            localPrefs = localPrefs,
-                            onUpdatePrefs = { localPrefs = it },
-                            onShowResetDialog = { showResetDialog = true }
-                        )
+                        item { TextFontsPreviewCard(liveTypography) }
+                    }
+                    LazyColumn(
+                        modifier = Modifier.weight(1.2f),
+                        contentPadding = PaddingValues(bottom = bottomPadding + 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(24.dp)
+                    ) {
+                        textFontsSettingsItems(localPrefs, updatePrefs, resetPrefs)
                     }
                 }
             }
         } else {
-            // Phone single-pane layout with Pinned Preview Card at top
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .nestedScroll(topBarState.nestedScrollConnection)
-            ) {
+            Box(Modifier.fillMaxSize().nestedScroll(topBarState.nestedScrollConnection)) {
                 LazyColumn(
-                    state = lazyListState,
-                    contentPadding = PaddingValues(
-                        top = currentTopBarHeightDp + 12.dp,
-                        start = 16.dp,
-                        end = 16.dp,
-                        bottom = bottomNavPadding + 48.dp
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.fillMaxSize()
+                    state = listState,
+                    contentPadding = PaddingValues(top = topPadding + 12.dp, start = 20.dp, end = 20.dp, bottom = bottomPadding + 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                    modifier = Modifier.fillMaxSize().testTag("text_fonts_settings_list")
                 ) {
-                    // Pinned Live Preview Item
-                    item(key = "live_preview_card") {
-                        TextFontsPreviewCard(
-                            typography = liveTypography,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    textFontsSettingsItems(
-                        localPrefs = localPrefs,
-                        onUpdatePrefs = { localPrefs = it },
-                        onShowResetDialog = { showResetDialog = true }
-                    )
+                    item(key = "reading_preview") { TextFontsPreviewCard(liveTypography) }
+                    textFontsSettingsItems(localPrefs, updatePrefs, resetPrefs)
                 }
-
                 CollapsibleCommonTopBar(
                     title = stringResource(R.string.text_fonts_title),
-                    subtitle = stringResource(R.string.text_fonts_subtitle),
+                    subtitle = stringResource(R.string.settings_fonts_subtitle),
                     collapseFraction = topBarState.collapseFraction,
-                    headerHeight = currentTopBarHeightDp,
+                    headerHeight = topPadding,
                     onBackClick = onNavigateBack
                 )
             }
         }
-
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = bottomNavPadding + 16.dp)
-                .zIndex(10f)
-        )
-    }
-
-    if (showResetDialog) {
-        AlertDialog(
-            onDismissRequest = { showResetDialog = false },
-            title = {
-                Text(
-                    text = stringResource(R.string.reset_typography_confirm_title),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Text(
-                    text = stringResource(R.string.reset_typography_confirm_message),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val previousSnapshot = localPrefs
-                        showResetDialog = false
-                        localPrefs = TypographyPrefs.DEFAULT
-                        viewModel.setTypographyPrefs(TypographyPrefs.DEFAULT)
-
-                        scope.launch {
-                            val result = snackbarHostState.showSnackbar(
-                                message = "Typography reset to defaults",
-                                actionLabel = "Undo",
-                                duration = SnackbarDuration.Short
-                            )
-                            if (result == SnackbarResult.ActionPerformed) {
-                                localPrefs = previousSnapshot
-                                viewModel.setTypographyPrefs(previousSnapshot)
-                            }
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Text(stringResource(R.string.reset_typography_confirm_action))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) {
-                    Text(stringResource(R.string.reset_typography_cancel_action))
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            shape = RoundedCornerShape(24.dp)
-        )
+        SnackbarHost(snackbarHost, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = bottomPadding))
     }
 }
 
-/**
- * Shared item builder for controls in phone and tablet layouts.
- */
-internal fun androidx.compose.foundation.lazy.LazyListScope.textFontsSettingsItems(
+internal fun LazyListScope.textFontsSettingsItems(
     localPrefs: TypographyPrefs,
     onUpdatePrefs: (TypographyPrefs) -> Unit,
-    onShowResetDialog: () -> Unit
+    onResetDefaults: () -> Unit
 ) {
-    // Subsection 1: Master Toggles
-    item(key = "master_toggles") {
-        SettingsSubsectionHeader(
-            title = "Font Activation",
-            description = "Control custom typography in notes and across Cobalt's interface.",
-            tooltipText = "When disabled, notes, reader and code render in Android's default system typeface."
-        )
-
+    item(key = "font_activation") {
+        SettingsGroupLabel(stringResource(R.string.settings_font_activation))
         ExpressiveSettingsGroup {
             ExpressiveSettingsSwitchItem(
-                title = "Use custom font",
-                subtitle = "Apply selected font family and metrics to notes, reader, and editor",
+                title = stringResource(R.string.settings_use_custom_font),
+                subtitle = stringResource(R.string.settings_use_custom_font_description),
                 checked = localPrefs.useCustomFont,
                 onCheckedChange = { onUpdatePrefs(localPrefs.copy(useCustomFont = it).validated()) },
-                shape = connectedPillShape(0, 2)
+                shape = connectedPillShape(0, 2),
+                compact = true
             )
-
             ExpressiveSettingsSwitchItem(
-                title = "Apply to app UI",
-                subtitle = "Extend the text font to all screens, buttons, and system dialogs",
+                title = stringResource(R.string.settings_apply_font_to_app),
+                subtitle = stringResource(R.string.settings_apply_font_to_app_description),
                 checked = localPrefs.applyToAppUi,
                 enabled = localPrefs.useCustomFont,
                 onCheckedChange = { onUpdatePrefs(localPrefs.copy(applyToAppUi = it).validated()) },
-                shape = connectedPillShape(1, 2)
+                shape = connectedPillShape(1, 2),
+                compact = true
             )
         }
     }
-
-    // Subsection 2: Font Families & Presets
     item(key = "font_families_and_presets") {
-        SettingsSubsectionHeader(
-            title = "Font Families & Presets",
-            description = "Select bundled font families and quick reading presets.",
-            tooltipText = "All fonts are bundled locally with SIL Open Font License. No network connection is used."
+        SettingsGroupLabel(stringResource(R.string.settings_font_families))
+        val presetOptions = TypographyPreset.entries.associate { it.key to it.displayName }
+        val presetDescriptions = listOf(
+            R.string.settings_preset_comfortable_description,
+            R.string.settings_preset_compact_description,
+            R.string.settings_preset_reading_description,
+            R.string.settings_preset_custom_description
         )
-
-        val presetOptions = mapOf(
-            "comfortable" to "Comfortable (Default)",
-            "compact" to "Compact",
-            "reading" to "Reading",
-            "custom" to "Custom"
-        )
-
-        val textFontOptions = TextFontFamily.entries.associate { it.key to it.displayName }
-        val codeFontOptions = CodeFontFamily.entries.associate { it.key to it.displayName }
-
+        val presetOrder = listOf(TypographyPreset.COMFORTABLE, TypographyPreset.COMPACT, TypographyPreset.READING, TypographyPreset.CUSTOM)
+        val presetChoices = presetOrder.mapIndexed { index, preset ->
+            SettingsChoice(preset.key, preset.displayName, stringResource(presetDescriptions[index]))
+        }
+        val fontSample = stringResource(R.string.settings_font_sample)
+        val textChoices = TextFontFamily.entries.map {
+            SettingsChoice(it.key, it.displayName, fontSample, fontFamily = resolveTextFontFamily(it, localPrefs.fontWeight))
+        }
+        val codeChoices = CodeFontFamily.entries.map {
+            SettingsChoice(
+                it.key, it.displayName,
+                if (it == CodeFontFamily.SYSTEM_MONOSPACE) stringResource(R.string.settings_system_monospace_description) else stringResource(R.string.settings_code_font_sample),
+                fontFamily = resolveCodeFontFamily(it)
+            )
+        }
         ExpressiveSettingsGroup {
+            val presetTitle = stringResource(R.string.settings_reading_preset)
+            val presetDescription = stringResource(R.string.settings_reading_preset_sheet_description)
+            val selectPreset: (String) -> Unit = { key ->
+                // Custom is the current set of slider values, rather than another canned preset.
+                if (key != TypographyPreset.CUSTOM.key) onUpdatePrefs(localPrefs.withPreset(TypographyPreset.fromKey(key)))
+            }
             ExpressiveSettingsSelectorItem(
-                title = "Reading Preset",
-                description = "Ergonomic presets for size, line height, and spacing",
+                title = presetTitle,
+                description = stringResource(R.string.settings_reading_preset_summary),
                 options = presetOptions,
                 selectedKey = localPrefs.preset.key,
-                onSelectionChanged = { key ->
-                    val chosen = TypographyPreset.fromKey(key)
-                    onUpdatePrefs(localPrefs.withPreset(chosen))
-                },
-                shape = connectedPillShape(0, 3)
+                onSelectionChanged = selectPreset,
+                leadingIcon = { SettingsIconBadge(R.drawable.ic_settings_reading) },
+                shape = connectedPillShape(0, 3),
+                compact = true,
+                selectedValueInDescription = true,
+                enabled = localPrefs.useCustomFont,
+                sheetContent = { dismiss -> SettingsChoiceSheet(presetTitle, presetDescription, presetChoices, localPrefs.preset.key, selectPreset, dismiss) }
             )
-
+            val textTitle = stringResource(R.string.settings_text_font)
+            val textDescription = stringResource(R.string.settings_text_font_sheet_description)
+            val selectTextFont: (String) -> Unit = { key -> onUpdatePrefs(localPrefs.copy(textFont = TextFontFamily.fromKey(key)).validated()) }
             ExpressiveSettingsSelectorItem(
-                title = "Text Font",
-                description = "Primary typeface for note bodies, markdown, and reader",
-                options = textFontOptions,
+                title = textTitle,
+                description = stringResource(R.string.settings_text_font_description),
+                options = TextFontFamily.entries.associate { it.key to it.displayName },
                 selectedKey = localPrefs.textFont.key,
-                onSelectionChanged = { key ->
-                    val chosen = TextFontFamily.fromKey(key)
-                    onUpdatePrefs(localPrefs.copy(textFont = chosen).validated())
-                },
-                shape = connectedPillShape(1, 3)
+                onSelectionChanged = selectTextFont,
+                leadingIcon = { SettingsIconBadge(R.drawable.ic_settings_font) },
+                shape = connectedPillShape(1, 3),
+                compact = true,
+                selectedValueInDescription = true,
+                enabled = localPrefs.useCustomFont,
+                sheetContent = { dismiss -> SettingsChoiceSheet(textTitle, textDescription, textChoices, localPrefs.textFont.key, selectTextFont, dismiss) }
             )
-
+            val codeTitle = stringResource(R.string.settings_code_font)
+            val codeDescription = stringResource(R.string.settings_code_font_sheet_description)
+            val selectCodeFont: (String) -> Unit = { key -> onUpdatePrefs(localPrefs.copy(codeFont = CodeFontFamily.fromKey(key)).validated()) }
             ExpressiveSettingsSelectorItem(
-                title = "Code Font",
-                description = "Monospace typeface for code blocks and inline tokens",
-                options = codeFontOptions,
+                title = codeTitle,
+                description = stringResource(R.string.settings_code_font_description),
+                options = CodeFontFamily.entries.associate { it.key to it.displayName },
                 selectedKey = localPrefs.codeFont.key,
-                onSelectionChanged = { key ->
-                    val chosen = CodeFontFamily.fromKey(key)
-                    onUpdatePrefs(localPrefs.copy(codeFont = chosen).validated())
-                },
-                shape = connectedPillShape(2, 3)
+                onSelectionChanged = selectCodeFont,
+                leadingIcon = { SettingsIconBadge(R.drawable.ic_settings_code) },
+                shape = connectedPillShape(2, 3),
+                compact = true,
+                selectedValueInDescription = true,
+                enabled = localPrefs.useCustomFont,
+                sheetContent = { dismiss -> SettingsChoiceSheet(codeTitle, codeDescription, codeChoices, localPrefs.codeFont.key, selectCodeFont, dismiss) }
             )
         }
     }
-
-    // Subsection 3: Metric Sliders
-    item(key = "metric_sliders") {
-        SettingsSubsectionHeader(
-            title = "Typography Metrics",
-            description = "Fine-tune font size, weight, line height, letter spacing, and paragraph spacing.",
-            tooltipText = "Adjusting any metric that deviates from a standard preset automatically flips preset to Custom."
-        )
-
-        val textFamily = localPrefs.textFont
-        val currentFontFamily = CobaltTypography.fromPrefs(localPrefs).textFontFamily
-        val totalSliders = 5
-        var sliderIdx = 0
-
+    item(key = "typography_metrics") {
+        SettingsGroupLabel(stringResource(R.string.settings_size_spacing))
         ExpressiveSettingsGroup {
-            // 1. Font Size (12..24 sp, step 1, default 16)
             ExpressiveTypographySliderItem(
-                title = "Font size",
-                subtitle = "Base body text size in scalable points",
+                title = stringResource(R.string.settings_font_size),
                 value = localPrefs.fontSize.toFloat(),
-                valueDisplay = "${localPrefs.fontSize} sp",
+                valueDisplay = stringResource(R.string.settings_font_size_value, localPrefs.fontSize),
                 valueRange = 12f..24f,
-                steps = 11, // 12 to 24 = 11 intermediate steps
-                onValueChange = { newVal ->
-                    val rounded = newVal.toInt()
-                    onUpdatePrefs(localPrefs.copy(fontSize = rounded).validated())
-                },
-                startHint = {
-                    Text("A", fontSize = 12.sp, fontFamily = currentFontFamily, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                },
-                endHint = {
-                    Text("A", fontSize = 22.sp, fontFamily = currentFontFamily, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                },
-                shape = connectedPillShape(sliderIdx++, totalSliders)
+                steps = 11,
+                onValueChange = { onUpdatePrefs(localPrefs.copy(fontSize = it.toInt()).validated()) },
+                leadingIcon = { Icon(painterResource(R.drawable.ic_settings_size), null, tint = MaterialTheme.colorScheme.onPrimaryContainer) },
+                shape = connectedPillShape(0, 5), compact = true, enabled = localPrefs.useCustomFont
             )
-
-            // 2. Font Weight (300..700, step 50, default 400)
-            val isWeightSupported = textFamily.isVariable
-            val weightDisplay = if (!isWeightSupported) {
-                if (localPrefs.fontWeight > 550) "700 (Bold)" else "400 (Regular)"
-            } else {
-                "${localPrefs.fontWeight}"
-            }
             ExpressiveTypographySliderItem(
-                title = "Font weight",
-                subtitle = "Stroke weight of body text glyphs",
+                title = stringResource(R.string.settings_font_weight),
                 value = localPrefs.fontWeight.toFloat(),
-                valueDisplay = weightDisplay,
-                valueRange = 300f..700f,
-                steps = 7, // 300, 350, 400, 450, 500, 550, 600, 650, 700 = 7 intermediate steps
-                enabled = true,
-                disabledHint = if (!isWeightSupported) "${textFamily.displayName} is static: snaps between 400 (Regular) and 700 (Bold)" else null,
-                onValueChange = { newVal ->
-                    val snapped = if (!isWeightSupported) {
-                        if (newVal > 550) 700 else 400
-                    } else {
-                        ((newVal + 25) / 50).toInt() * 50
-                    }
-                    onUpdatePrefs(localPrefs.copy(fontWeight = snapped).validated())
-                },
-                startHint = {
-                    Text("Aa", fontSize = 14.sp, fontWeight = FontWeight.W300, fontFamily = currentFontFamily, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                },
-                endHint = {
-                    Text("Aa", fontSize = 14.sp, fontWeight = FontWeight.W700, fontFamily = currentFontFamily, color = MaterialTheme.colorScheme.primary)
-                },
-                shape = connectedPillShape(sliderIdx++, totalSliders)
+                valueDisplay = localPrefs.fontWeight.toString(),
+                valueRange = if (localPrefs.textFont.isVariable) 300f..700f else 400f..700f,
+                steps = if (localPrefs.textFont.isVariable) 7 else 0,
+                onValueChange = { onUpdatePrefs(localPrefs.copy(fontWeight = it.toInt()).validated()) },
+                leadingIcon = { Icon(painterResource(R.drawable.ic_settings_weight), null, tint = MaterialTheme.colorScheme.onPrimaryContainer) },
+                shape = connectedPillShape(1, 5), compact = true, enabled = localPrefs.useCustomFont
             )
-
-            // 3. Line Height (1.2 to 2.0, step 0.05, default 1.5)
-            val formattedLineHeight = String.format(Locale.ROOT, "%.2fx", localPrefs.lineHeight)
             ExpressiveTypographySliderItem(
-                title = "Line height",
-                subtitle = "Vertical distance between baselines",
+                title = stringResource(R.string.settings_line_spacing),
                 value = localPrefs.lineHeight,
-                valueDisplay = formattedLineHeight,
-                valueRange = 1.20f..2.00f,
-                steps = 15, // (2.0 - 1.2) / 0.05 = 16 intervals -> 15 steps
-                onValueChange = { newVal ->
-                    val rounded = kotlin.math.round(newVal * 20f) / 20f
-                    onUpdatePrefs(localPrefs.copy(lineHeight = rounded).validated())
-                },
-                startHint = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                        Text("—", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("—", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                },
-                endHint = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("—", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary)
-                        Text("—", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary)
-                    }
-                },
-                shape = connectedPillShape(sliderIdx++, totalSliders)
+                valueDisplay = String.format(Locale.getDefault(), "%.2f×", localPrefs.lineHeight),
+                valueRange = 1.2f..2f,
+                steps = 15,
+                onValueChange = { onUpdatePrefs(localPrefs.copy(lineHeight = it).validated()) },
+                leadingIcon = { Icon(painterResource(R.drawable.ic_settings_line), null, tint = MaterialTheme.colorScheme.onPrimaryContainer) },
+                shape = connectedPillShape(2, 5), compact = true, enabled = localPrefs.useCustomFont
             )
-
-            // 4. Letter Spacing (-0.02 to +0.10 em, step 0.01, default 0)
-            val formattedLetterSpacing = String.format(Locale.ROOT, "%+.2f em", localPrefs.letterSpacing)
             ExpressiveTypographySliderItem(
-                title = "Letter spacing",
-                subtitle = "Tracking between individual glyphs",
+                title = stringResource(R.string.settings_letter_spacing),
                 value = localPrefs.letterSpacing,
-                valueDisplay = formattedLetterSpacing,
-                valueRange = -0.02f..0.10f,
-                steps = 11, // 12 intervals -> 11 steps
-                onValueChange = { newVal ->
-                    val rounded = kotlin.math.round(newVal * 100f) / 100f
-                    onUpdatePrefs(localPrefs.copy(letterSpacing = rounded).validated())
-                },
-                startHint = {
-                    Text("AV", fontSize = 13.sp, letterSpacing = (-0.02).sp, fontFamily = currentFontFamily, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                },
-                endHint = {
-                    Text("A V", fontSize = 13.sp, letterSpacing = 0.10.sp, fontFamily = currentFontFamily, color = MaterialTheme.colorScheme.primary)
-                },
-                shape = connectedPillShape(sliderIdx++, totalSliders)
+                valueDisplay = String.format(Locale.getDefault(), "%.2f em", localPrefs.letterSpacing),
+                valueRange = -0.02f..0.1f,
+                steps = 11,
+                onValueChange = { onUpdatePrefs(localPrefs.copy(letterSpacing = it).validated()) },
+                leadingIcon = { Icon(painterResource(R.drawable.ic_settings_letters), null, tint = MaterialTheme.colorScheme.onPrimaryContainer) },
+                shape = connectedPillShape(3, 5), compact = true, enabled = localPrefs.useCustomFont
             )
-
-            // 5. Paragraph Spacing (0 to 16 dp, step 2, default 8)
             ExpressiveTypographySliderItem(
-                title = "Paragraph spacing",
-                subtitle = "Vertical margin between separate blocks",
+                title = stringResource(R.string.settings_paragraph_spacing),
                 value = localPrefs.paragraphSpacing.toFloat(),
-                valueDisplay = "${localPrefs.paragraphSpacing} dp",
+                valueDisplay = stringResource(R.string.settings_dp_value, localPrefs.paragraphSpacing),
                 valueRange = 0f..16f,
-                steps = 7, // 8 intervals -> 7 steps
-                onValueChange = { newVal ->
-                    val rounded = (((newVal + 1) / 2).toInt() * 2).coerceIn(0, 16)
-                    onUpdatePrefs(localPrefs.copy(paragraphSpacing = rounded).validated())
-                },
-                startHint = {
-                    Text("¶", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                },
-                endHint = {
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("¶", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
-                        Text("¶", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
-                    }
-                },
-                shape = connectedPillShape(sliderIdx++, totalSliders)
+                steps = 7,
+                onValueChange = { onUpdatePrefs(localPrefs.copy(paragraphSpacing = it.toInt()).validated()) },
+                leadingIcon = { Icon(painterResource(R.drawable.ic_settings_paragraph), null, tint = MaterialTheme.colorScheme.onPrimaryContainer) },
+                shape = connectedPillShape(4, 5), compact = true, enabled = localPrefs.useCustomFont
             )
         }
     }
-
-    // Subsection 4: Reset Action
-    item(key = "reset_section") {
-        OutlinedButton(
-            onClick = onShowResetDialog,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            shape = RoundedCornerShape(18.dp)
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_custom_undo),
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Reset typography to defaults",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold
-            )
+    item(key = "reset_text_settings") {
+        TextButton(onClick = onResetDefaults, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+            Text(stringResource(R.string.settings_reset_text), style = MaterialTheme.typography.labelLarge)
         }
     }
 }
 
-/**
- * Pinned Live Preview Card demonstrating real-time typography styling across:
- * - Headings
- * - Rich paragraph formatting (bold, italic, strike, link)
- * - Inline code token
- * - Interactive checklist item
- * - Block quote with accent bar
- * - Fenced code block
- * - Right-to-Left Urdu line with platform fallback glyphs
- */
+/** A sample note, with the effective reading preferences applied to every note style. */
 @Composable
-fun TextFontsPreviewCard(
-    typography: CobaltTypography,
-    modifier: Modifier = Modifier
-) {
+fun TextFontsPreviewCard(typography: CobaltTypography, modifier: Modifier = Modifier) {
+    val prefs = typography.prefs
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
         shape = RoundedCornerShape(24.dp),
-        border = androidx.compose.foundation.BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-        ),
-        modifier = modifier
+        modifier = modifier.fillMaxWidth().testTag("reading_preview")
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(typography.paragraphSpacingDp)
-        ) {
-            // Live Preview Header Tag
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = "LIVE PREVIEW",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        letterSpacing = 1.sp,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                    )
-                }
-
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(typography.paragraphSpacingDp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(R.string.settings_reading_preview), style = typography.h2, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
                 Text(
-                    text = "${typography.prefs.textFont.displayName} • ${typography.prefs.fontSize}sp",
-                    style = MaterialTheme.typography.labelSmall,
+                    stringResource(R.string.settings_font_preview_label, if (prefs.useCustomFont) prefs.textFont.displayName else TextFontFamily.SYSTEM.displayName, if (prefs.useCustomFont) prefs.fontSize else 16),
+                    style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
+                    modifier = Modifier.widthIn(max = 160.dp)
                 )
             }
-
-            // 1. Heading
-            Text(
-                text = stringResource(R.string.preview_heading),
-                style = typography.h2,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            // 2. Paragraph with Bold, Italic, Strikethrough, Link, and Inline Code
-            val paragraphAnnotated = buildAnnotatedString {
-                append(stringResource(R.string.preview_paragraph_prefix))
-                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                    append(stringResource(R.string.preview_paragraph_bold))
-                }
-                append(stringResource(R.string.preview_paragraph_middle))
-                withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
-                    append(stringResource(R.string.preview_paragraph_italic))
-                }
-                append(", ")
-                withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) {
-                    append(stringResource(R.string.preview_paragraph_strike))
-                }
-                append(stringResource(R.string.preview_paragraph_and))
-                withStyle(
-                    SpanStyle(
-                        color = MaterialTheme.colorScheme.primary,
-                        textDecoration = TextDecoration.Underline
-                    )
-                ) {
-                    append(stringResource(R.string.preview_paragraph_link))
-                }
-                append(". Try inline code: ")
-                withStyle(
-                    SpanStyle(
-                        fontFamily = typography.codeFontFamily,
-                        fontSize = typography.inlineCode.fontSize,
-                        background = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    append(" " + stringResource(R.string.preview_inline_code) + " ")
-                }
+            Text(AnnotatedString.fromHtml(stringResource(R.string.settings_preview_paragraph)), style = typography.body, color = MaterialTheme.colorScheme.onSurface)
+            Text(stringResource(R.string.settings_preview_inline_code), style = typography.inlineCode, color = MaterialTheme.colorScheme.primary)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Checkbox(checked = true, onCheckedChange = null, modifier = Modifier.size(20.dp))
+                Text(stringResource(R.string.settings_preview_checklist), style = typography.checklist, color = MaterialTheme.colorScheme.onSurface)
             }
-
-            Text(
-                text = paragraphAnnotated,
-                style = typography.body,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            // 3. Checklist Item
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Checkbox(
-                    checked = true,
-                    onCheckedChange = null,
-                    colors = CheckboxDefaults.colors(
-                        checkedColor = MaterialTheme.colorScheme.primary,
-                        checkmarkColor = MaterialTheme.colorScheme.surface
-                    ),
-                    modifier = Modifier.size(20.dp)
-                )
-                Text(
-                    text = stringResource(R.string.preview_checklist),
-                    style = typography.checklist,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+            Text(stringResource(R.string.settings_preview_quote), style = typography.quote, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.settings_preview_code_block), style = typography.codeBlock, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(12.dp))
             }
-
-            // 4. Block Quote with Left Accent Bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 2.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .width(3.dp)
-                        .height(34.dp)
-                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(2.dp))
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = stringResource(R.string.preview_quote),
-                    style = typography.quote,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // 5. Fenced Code Block
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.6f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
-                    Text(
-                        text = stringResource(R.string.preview_code_block),
-                        style = typography.codeBlock,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-
-            // 6. Right-to-Left Urdu Line (System Font Fallback Verification)
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                Text(
-                    text = stringResource(R.string.preview_rtl_urdu),
-                    style = typography.body.copy(textDirection = TextDirection.Rtl),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Text(stringResource(R.string.settings_preview_urdu), style = typography.body.copy(textDirection = TextDirection.Rtl), color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.fillMaxWidth())
             }
+            Text(stringResource(R.string.settings_preview_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

@@ -22,12 +22,24 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
+import com.example.data.model.CodeFontFamily
 import com.example.data.model.TextFontFamily
 import com.example.data.model.TypographyPrefs
 import com.example.data.model.TypographyPreset
@@ -51,6 +63,31 @@ class TextAndFontsSettingsScreenTest {
     @get:Rule
     val composeTestRule = createComposeRule()
 
+    private var currentPrefs by mutableStateOf(TypographyPrefs.DEFAULT)
+    private var resetInvoked = false
+
+    private fun showControls(prefs: TypographyPrefs = TypographyPrefs.DEFAULT) {
+        currentPrefs = prefs
+        composeTestRule.setContent {
+            MaterialTheme {
+                LazyColumn(Modifier.testTag("font_controls")) {
+                    textFontsSettingsItems(
+                        localPrefs = currentPrefs,
+                        onUpdatePrefs = { currentPrefs = it },
+                        onResetDefaults = {
+                            resetInvoked = true
+                            currentPrefs = TypographyPrefs.DEFAULT
+                        }
+                    )
+                }
+            }
+        }
+    }
+
+    private fun showControl(label: String) {
+        composeTestRule.onNodeWithTag("font_controls").performScrollToNode(hasText(label))
+    }
+
     @Test
     fun previewCard_rendersContentWithCurrentTypography() {
         val testPrefs = TypographyPrefs(
@@ -66,33 +103,91 @@ class TextAndFontsSettingsScreenTest {
             }
         }
 
-        composeTestRule.onNodeWithText("LIVE PREVIEW").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Typography in Action").assertIsDisplayed()
-        composeTestRule.onNodeWithText("fun calculateMetrics(size: Int) = size * 1.5f").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Reading preview").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Inter · 16 sp").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Review a saved idea").assertIsDisplayed()
+        composeTestRule.onNodeWithText("val ideas = savedIdeas.filter { it.isFavorite }").assertIsDisplayed()
     }
 
     @Test
-    fun settingsControls_renderAndRespondToInteractions() {
-        var currentPrefs by mutableStateOf(TypographyPrefs.DEFAULT)
-        var resetDialogShown by mutableStateOf(false)
-
+    fun previewShowsEffectiveSystemFontWhenCustomFontsAreOff() {
+        val typography = CobaltTypography.fromPrefs(TypographyPrefs.DEFAULT.copy(useCustomFont = false, fontSize = 22))
         composeTestRule.setContent {
             MaterialTheme {
-                LazyColumn {
-                    textFontsSettingsItems(
-                        localPrefs = currentPrefs,
-                        onUpdatePrefs = { currentPrefs = it },
-                        onShowResetDialog = { resetDialogShown = true }
-                    )
-                }
+                TextFontsPreviewCard(typography)
             }
         }
+        composeTestRule.onNodeWithText("System · 16 sp").assertIsDisplayed()
+    }
 
-        // Verify top sections and items are displayed
-        composeTestRule.onNodeWithText("Use custom font").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Apply to app UI").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Reading Preset").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Text Font").assertIsDisplayed()
-        composeTestRule.onNodeWithText("Code Font").assertIsDisplayed()
+    @Test
+    fun switchingOffCustomFontsDisablesControlsAndPreservesChoices() {
+        val original = TypographyPrefs.DEFAULT.copy(textFont = TextFontFamily.LITERATA, fontSize = 20).validated()
+        showControls(original)
+        composeTestRule.onNodeWithText("Use custom fonts").performClick().assertIsOff()
+        composeTestRule.onNodeWithText("Use font for app text").assertIsNotEnabled()
+        showControl("Text font")
+        composeTestRule.onNodeWithText("Text font").assertIsNotEnabled()
+        composeTestRule.runOnIdle {
+            assertFalse(currentPrefs.useCustomFont)
+            assertEquals(original.textFont, currentPrefs.textFont)
+            assertEquals(original.fontSize, currentPrefs.fontSize)
+        }
+        showControl("Use custom fonts")
+        composeTestRule.onNodeWithText("Use custom fonts").performClick().assertIsOn()
+        composeTestRule.onNodeWithText("Use font for app text").performClick().assertIsOn()
+        composeTestRule.runOnIdle { assertTrue(currentPrefs.applyToAppUi) }
+    }
+
+    @Test
+    fun bottomSheetChoicesApplyReadingMetricsAndFontFamilies() {
+        showControls()
+        showControl("Reading preset")
+        composeTestRule.onNodeWithText("Reading preset").performClick()
+        composeTestRule.onNodeWithText("Reading").performClick()
+        composeTestRule.runOnIdle {
+            assertEquals(18, currentPrefs.fontSize)
+            assertEquals(1.7f, currentPrefs.lineHeight)
+            assertEquals(12, currentPrefs.paragraphSpacing)
+            assertEquals(TypographyPreset.READING, currentPrefs.preset)
+        }
+        showControl("Text font")
+        composeTestRule.onNodeWithText("Text font").performClick()
+        composeTestRule.onNodeWithText("Lexend").performClick()
+        composeTestRule.runOnIdle { assertEquals(TextFontFamily.LEXEND, currentPrefs.textFont) }
+        showControl("Code font")
+        composeTestRule.onNodeWithText("Code font").performClick()
+        composeTestRule.onNodeWithText("System monospace").performClick()
+        composeTestRule.runOnIdle { assertEquals(CodeFontFamily.SYSTEM_MONOSPACE, currentPrefs.codeFont) }
+    }
+
+    @Test
+    fun slidersUpdateValidatedMetricsAndResetCallsTheAction() {
+        showControls()
+        val values = listOf(
+            "Font size" to 22f,
+            "Font weight" to 600f,
+            "Line spacing" to 1.8f,
+            "Letter spacing" to 0.04f,
+            "Paragraph spacing" to 14f
+        )
+        values.forEach { (label, value) ->
+            composeTestRule.onNodeWithTag("font_controls").performScrollToNode(hasContentDescription(label))
+            composeTestRule.onNodeWithContentDescription(label).performSemanticsAction(SemanticsActions.SetProgress) { it(value) }
+        }
+        composeTestRule.runOnIdle {
+            assertEquals(22, currentPrefs.fontSize)
+            assertEquals(600, currentPrefs.fontWeight)
+            assertEquals(1.8f, currentPrefs.lineHeight)
+            assertEquals(0.04f, currentPrefs.letterSpacing)
+            assertEquals(14, currentPrefs.paragraphSpacing)
+            assertEquals(TypographyPreset.CUSTOM, currentPrefs.preset)
+        }
+        showControl("Reset text settings")
+        composeTestRule.onNodeWithText("Reset text settings").performClick()
+        composeTestRule.runOnIdle {
+            assertTrue(resetInvoked)
+            assertEquals(TypographyPrefs.DEFAULT, currentPrefs)
+        }
     }
 }
