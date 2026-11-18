@@ -1,0 +1,10 @@
+{
+  "apk": "build/Cobalt-widget-ui-20261112-debug.apk",
+  "sha256": "ca5f3cd4a099ef69de69f25446c704fcf1d2dc8ecb9af9b8fe07cf9382b581a2",
+  "hostTests": 23,
+  "androidTests": 5,
+  "preservationChecks": {
+    "cobalt_screening_widgets": true,
+    "cobalt_settings": true
+  }
+}
