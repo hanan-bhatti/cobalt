@@ -81,6 +81,7 @@ android {
     }
   }
   compileOptions {
+    isCoreLibraryDesugaringEnabled = true
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
   }
@@ -117,6 +118,7 @@ tasks.withType<KotlinCompile>().configureEach {
 
 
 dependencies {
+  coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
   // Native continuous document/IME/selection engine. LGPL-2.1-or-later; no language packs or network modules.
   implementation("io.github.rosemoe:editor:0.24.6") {
     // The Java editor core uses the app's existing Kotlin stdlib; do not upgrade the Kotlin toolchain.
@@ -136,8 +138,6 @@ dependencies {
   // implementation(libs.androidx.camera.core)
   // implementation(libs.androidx.camera.lifecycle)
   // implementation(libs.androidx.camera.view)
-  implementation(libs.androidx.compose.material.icons.core)
-  implementation(libs.androidx.compose.material.icons.extended)
   implementation(libs.androidx.compose.material3)
   implementation(libs.androidx.compose.ui)
   implementation(libs.androidx.compose.ui.graphics)
@@ -162,8 +162,6 @@ dependencies {
   implementation(libs.retrofit)
   implementation(libs.androidx.media3.exoplayer)
   implementation(libs.androidx.media3.ui)
-  implementation(libs.androidx.glance.appwidget)
-  implementation(libs.androidx.glance.material3)
   implementation("androidx.work:work-runtime-ktx:2.9.1")
   implementation("dev.chrisbanes.haze:haze:1.7.2")
   testImplementation(libs.androidx.compose.ui.test.junit4)
