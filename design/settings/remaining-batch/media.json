@@ -1,0 +1,751 @@
+{
+  "name": "Media & providers",
+  "description": "Search sources, account connection, outgoing changes and precise setup or recovery states.",
+  "sources": [
+    "MediaSettingsScreen.kt",
+    "TraktSyncSettingsScreen.kt",
+    "PendingTraktChangesScreen.kt",
+    "MovieApiKeyScreen.kt"
+  ],
+  "screens": [
+    {
+      "key": "media",
+      "title": "Media & providers",
+      "subtitle": "Search sources, metadata and account sync.",
+      "blocks": [
+        {
+          "type": "group",
+          "label": "Connections",
+          "rows": [
+            {
+              "title": "Trakt account & sync",
+              "sub": "Watch history, watchlist and personal ratings",
+              "icon": "trakt",
+              "target": "trakt",
+              "value": "Connected"
+            },
+            {
+              "title": "TMDB API key",
+              "sub": "Posters, trailers and movie or TV details",
+              "icon": "key",
+              "target": "tmdb",
+              "value": "Key saved"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Search sources",
+          "rows": [
+            {
+              "title": "Trakt",
+              "sub": "Movies and TV · Uses your connected account",
+              "on": true,
+              "icon": "trakt"
+            },
+            {
+              "title": "TMDB",
+              "sub": "Movies and TV · Uses your API key",
+              "on": true,
+              "icon": "movie"
+            },
+            {
+              "title": "Jikan",
+              "sub": "Anime and manga · No account required",
+              "on": true,
+              "icon": "reading"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Metadata",
+          "rows": [
+            {
+              "title": "Metadata priority",
+              "sub": "Source used first when both find a title",
+              "icon": "movie",
+              "target": "media_priority",
+              "value": "Trakt first"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Anime & manga",
+          "rows": [
+            {
+              "title": "Include manga",
+              "sub": "Save chapter, volume and publication details.",
+              "on": true,
+              "icon": "reading"
+            },
+            {
+              "title": "Jikan server",
+              "sub": "Public server or your own Jikan v4 instance",
+              "icon": "globe",
+              "target": "jikan",
+              "value": "Public"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Sync & local archive",
+          "rows": [
+            {
+              "title": "Pending Trakt changes",
+              "sub": "Queued changes, paused categories and retries",
+              "icon": "sync",
+              "target": "trakt_pending",
+              "value": "3 pending"
+            },
+            {
+              "title": "Ignored deleted titles",
+              "sub": "Prevent locally deleted titles from returning",
+              "icon": "trash",
+              "target": "media_ignored_reset",
+              "value": "4 titles"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "caption": "Media & providers · Dark",
+      "back": "settings"
+    },
+    {
+      "key": "media_light",
+      "title": "Media & providers",
+      "subtitle": "Search sources, metadata and account sync.",
+      "blocks": [
+        {
+          "type": "group",
+          "label": "Connections",
+          "rows": [
+            {
+              "title": "Trakt account & sync",
+              "sub": "Watch history, watchlist and personal ratings",
+              "icon": "trakt",
+              "target": "trakt",
+              "value": "Connected"
+            },
+            {
+              "title": "TMDB API key",
+              "sub": "Posters, trailers and movie or TV details",
+              "icon": "key",
+              "target": "tmdb",
+              "value": "Key saved"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Search sources",
+          "rows": [
+            {
+              "title": "Trakt",
+              "sub": "Movies and TV · Uses your connected account",
+              "on": true,
+              "icon": "trakt"
+            },
+            {
+              "title": "TMDB",
+              "sub": "Movies and TV · Uses your API key",
+              "on": true,
+              "icon": "movie"
+            },
+            {
+              "title": "Jikan",
+              "sub": "Anime and manga · No account required",
+              "on": true,
+              "icon": "reading"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Metadata",
+          "rows": [
+            {
+              "title": "Metadata priority",
+              "sub": "Source used first when both find a title",
+              "icon": "movie",
+              "target": "media_priority",
+              "value": "Trakt first"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Anime & manga",
+          "rows": [
+            {
+              "title": "Include manga",
+              "sub": "Save chapter, volume and publication details.",
+              "on": true,
+              "icon": "reading"
+            },
+            {
+              "title": "Jikan server",
+              "sub": "Public server or your own Jikan v4 instance",
+              "icon": "globe",
+              "target": "jikan",
+              "value": "Public"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Sync & local archive",
+          "rows": [
+            {
+              "title": "Pending Trakt changes",
+              "sub": "Queued changes, paused categories and retries",
+              "icon": "sync",
+              "target": "trakt_pending",
+              "value": "3 pending"
+            },
+            {
+              "title": "Ignored deleted titles",
+              "sub": "Prevent locally deleted titles from returning",
+              "icon": "trash",
+              "target": "media_ignored_reset",
+              "value": "4 titles"
+            }
+          ]
+        }
+      ],
+      "theme": "Light",
+      "caption": "Media & providers · Light",
+      "back": "settings"
+    },
+    {
+      "key": "trakt",
+      "title": "Trakt account",
+      "subtitle": "Watch history, watchlist and personal ratings.",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "trakt",
+          "title": "Connected to Trakt",
+          "sub": "@alex · Last synced today at 9:20 AM"
+        },
+        {
+          "type": "button",
+          "label": "Sync now",
+          "target": "trakt_syncing",
+          "kind": "primary",
+          "destructive": false
+        },
+        {
+          "type": "button",
+          "label": "Disconnect account",
+          "target": "trakt_disconnect",
+          "kind": "text",
+          "destructive": true
+        },
+        {
+          "type": "group",
+          "label": "Sync categories",
+          "rows": [
+            {
+              "title": "Movie history",
+              "sub": "Import and upload watched movie activity.",
+              "on": true,
+              "icon": "movie"
+            },
+            {
+              "title": "TV shows & seasons",
+              "sub": "Import and upload episode and season activity.",
+              "on": true,
+              "icon": "video"
+            },
+            {
+              "title": "Watchlist",
+              "sub": "Sync titles you plan to watch.",
+              "on": true,
+              "icon": "list"
+            },
+            {
+              "title": "Personal ratings",
+              "sub": "Sync ratings while keeping local changes.",
+              "on": true,
+              "icon": "star"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Advanced",
+          "rows": [
+            {
+              "title": "Client & server",
+              "sub": "Cobalt’s client or your own credentials and endpoint",
+              "icon": "key",
+              "target": "trakt_advanced",
+              "value": "Default"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Paused categories keep outgoing changes until you resume them.",
+          "role": "body-large"
+        }
+      ],
+      "theme": "Dark",
+      "caption": "Trakt account · Dark",
+      "back": "media"
+    },
+    {
+      "key": "trakt_disconnected",
+      "title": "Trakt account",
+      "subtitle": "Watch history, watchlist and personal ratings.",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "trakt",
+          "title": "Connect to Trakt",
+          "sub": "Sign in through your browser. Your password stays with Trakt."
+        },
+        {
+          "type": "button",
+          "label": "Connect account",
+          "target": "trakt_browser",
+          "kind": "primary",
+          "destructive": false
+        },
+        {
+          "type": "button",
+          "label": "Use a device code",
+          "target": "trakt_code",
+          "kind": "text",
+          "destructive": false
+        },
+        {
+          "type": "group",
+          "label": "Advanced",
+          "rows": [
+            {
+              "title": "Client & server",
+              "sub": "Use Cobalt’s client or your own endpoint",
+              "icon": "key",
+              "target": "trakt_advanced",
+              "value": "Default"
+            }
+          ]
+        }
+      ],
+      "theme": "Light",
+      "caption": "Trakt account · Not connected",
+      "back": "media"
+    },
+    {
+      "key": "trakt_syncing",
+      "title": "Trakt account",
+      "subtitle": "Watch history, watchlist and personal ratings.",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "sync",
+          "title": "Syncing with Trakt",
+          "sub": "Importing watch history…"
+        },
+        {
+          "type": "progress",
+          "value": 50,
+          "label": "50% · Sync in progress"
+        },
+        {
+          "type": "group",
+          "label": "Sync categories",
+          "rows": [
+            {
+              "title": "Movie history",
+              "sub": "Watched movie activity",
+              "on": true,
+              "icon": "movie"
+            },
+            {
+              "title": "TV shows & seasons",
+              "sub": "Episodes and seasons",
+              "on": true,
+              "icon": "video"
+            },
+            {
+              "title": "Watchlist",
+              "sub": "Planned titles",
+              "on": true,
+              "icon": "list"
+            },
+            {
+              "title": "Personal ratings",
+              "sub": "Your own ratings",
+              "on": true,
+              "icon": "star"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Outgoing changes stay saved on this device until Trakt accepts them.",
+          "role": "body-large"
+        }
+      ],
+      "theme": "Dark",
+      "caption": "Trakt account · Syncing",
+      "back": "media"
+    },
+    {
+      "key": "trakt_browser",
+      "title": "Finish signing in",
+      "subtitle": "Approve Cobalt in your browser to connect your account.",
+      "parent": "trakt_disconnected",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "globe",
+          "title": "Waiting for browser approval",
+          "sub": "Return to Cobalt after you approve access."
+        },
+        {
+          "type": "button",
+          "label": "Open browser",
+          "target": "trakt_code",
+          "kind": "primary",
+          "destructive": false
+        },
+        {
+          "type": "button",
+          "label": "Cancel sign-in",
+          "target": "trakt_disconnected",
+          "kind": "text",
+          "destructive": false
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Finish signing in · Bottom sheet"
+    },
+    {
+      "key": "trakt_code",
+      "title": "Connect with a device code",
+      "subtitle": "Enter this code at Trakt’s activation page.",
+      "parent": "trakt_disconnected",
+      "blocks": [
+        {
+          "type": "heading",
+          "text": "DK7P4Q2X"
+        },
+        {
+          "type": "button",
+          "label": "Copy code",
+          "target": "trakt_code",
+          "kind": "tonal",
+          "destructive": false
+        },
+        {
+          "type": "button",
+          "label": "Open Trakt",
+          "target": "url:https://trakt.tv/activate",
+          "kind": "primary",
+          "destructive": false
+        },
+        {
+          "type": "text",
+          "text": "Cobalt connects after you approve access. Keep this sheet open while you finish.",
+          "role": "body-large"
+        },
+        {
+          "type": "button",
+          "label": "Cancel sign-in",
+          "target": "trakt_disconnected",
+          "kind": "text",
+          "destructive": false
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Connect with a device code · Bottom sheet"
+    },
+    {
+      "key": "trakt_advanced",
+      "title": "Client & server",
+      "subtitle": "Leave fields empty to use Cobalt’s Trakt client.",
+      "parent": "trakt",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Client ID",
+          "placeholder": "Default Cobalt client"
+        },
+        {
+          "type": "field",
+          "label": "API address",
+          "value": "https://api.trakt.tv/",
+          "help": "Use the Trakt API address or your own proxy."
+        },
+        {
+          "type": "field",
+          "label": "Redirect URI",
+          "placeholder": "Default Cobalt redirect"
+        },
+        {
+          "type": "button",
+          "label": "Save connection settings",
+          "target": "trakt",
+          "kind": "primary",
+          "destructive": false
+        },
+        {
+          "type": "button",
+          "label": "Use Cobalt defaults",
+          "target": "trakt",
+          "kind": "text",
+          "destructive": false
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Client & server · Bottom sheet"
+    },
+    {
+      "key": "trakt_disconnect",
+      "title": "Disconnect Trakt?",
+      "message": "Remove the account session from Cobalt and attempt to revoke its token with Trakt? Movies and shows already saved in Cobalt stay.",
+      "parent": "trakt",
+      "confirm": "Disconnect",
+      "destructive": true,
+      "cancel": "Cancel",
+      "kind": "dialog",
+      "caption": "Disconnect Trakt? · Confirmation"
+    },
+    {
+      "key": "trakt_pending",
+      "title": "Pending Trakt changes",
+      "subtitle": "Outgoing movie and TV activity.",
+      "blocks": [
+        {
+          "type": "heading",
+          "text": "3 changes waiting"
+        },
+        {
+          "type": "text",
+          "text": "Changes stay on this device until Trakt accepts them. Paused categories wait until you enable them.",
+          "role": "body-large"
+        },
+        {
+          "type": "button",
+          "label": "Retry now",
+          "target": "trakt_pending",
+          "kind": "primary",
+          "destructive": false
+        },
+        {
+          "type": "button",
+          "label": "Manage sync categories",
+          "target": "trakt",
+          "kind": "text",
+          "destructive": false
+        },
+        {
+          "type": "group",
+          "label": "Queued changes",
+          "rows": [
+            {
+              "title": "Arrival",
+              "sub": "Personal rating · Waiting for a connection",
+              "icon": "movie"
+            },
+            {
+              "title": "Cowboy Bebop",
+              "sub": "Episode progress · Category paused",
+              "icon": "video"
+            },
+            {
+              "title": "Spirited Away",
+              "sub": "Watchlist change · Waiting for retry",
+              "icon": "movie"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "caption": "Pending Trakt changes · Dark",
+      "back": "media"
+    },
+    {
+      "key": "tmdb",
+      "title": "TMDB API key",
+      "subtitle": "Movie and TV artwork, trailers and details.",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "movie",
+          "title": "Key saved",
+          "sub": "Cobalt uses this key for TMDB requests."
+        },
+        {
+          "type": "field",
+          "label": "TMDB API key",
+          "value": "••••••••••••••••",
+          "secret": true,
+          "help": "Use a TMDB v3 API key."
+        },
+        {
+          "type": "button",
+          "label": "Save key",
+          "target": "tmdb",
+          "kind": "primary",
+          "destructive": false
+        },
+        {
+          "type": "button",
+          "label": "Get a TMDB API key",
+          "target": "url:https://www.themoviedb.org/settings/api",
+          "kind": "text",
+          "destructive": false
+        },
+        {
+          "type": "heading",
+          "text": "Media activity"
+        },
+        {
+          "type": "stats",
+          "rows": [
+            [
+              "Requests this week",
+              "32"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Activity shown here is recorded by Cobalt on this device.",
+          "role": "body-large"
+        }
+      ],
+      "theme": "Light",
+      "caption": "TMDB API key · Light",
+      "back": "media"
+    },
+    {
+      "key": "media_priority",
+      "title": "Metadata priority",
+      "subtitle": "Choose which source leads when both find the same title.",
+      "parent": "media",
+      "blocks": [
+        {
+          "type": "options",
+          "target": "media",
+          "options": [
+            {
+              "title": "Trakt first",
+              "sub": "Use Trakt’s result before TMDB.",
+              "selected": true,
+              "icon": "trakt",
+              "target": null
+            },
+            {
+              "title": "TMDB first",
+              "sub": "Use TMDB’s result before Trakt.",
+              "selected": false,
+              "icon": "movie",
+              "target": null
+            }
+          ]
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Metadata priority · Bottom sheet"
+    },
+    {
+      "key": "jikan",
+      "title": "Jikan server",
+      "subtitle": "The public server needs no key. You can also use your own Jikan v4 instance.",
+      "parent": "media",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "API address",
+          "value": "https://api.jikan.moe/v4/",
+          "help": "Include /v4/ in the server address."
+        },
+        {
+          "type": "button",
+          "label": "Save server",
+          "target": "media",
+          "kind": "primary",
+          "destructive": false
+        },
+        {
+          "type": "button",
+          "label": "Use public server",
+          "target": "media",
+          "kind": "text",
+          "destructive": false
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Jikan server · Bottom sheet"
+    },
+    {
+      "key": "media_ignored_reset",
+      "title": "Allow deleted titles to return?",
+      "message": "Reset the provider IDs Cobalt remembers for locally deleted titles? Trakt may import these titles again. Nothing is deleted from your Trakt account.",
+      "parent": "media",
+      "confirm": "Reset ignored titles",
+      "destructive": true,
+      "cancel": "Cancel",
+      "kind": "dialog",
+      "caption": "Allow deleted titles to return? · Confirmation"
+    },
+    {
+      "key": "trakt_error",
+      "title": "Trakt account",
+      "subtitle": "Watch history, watchlist and personal ratings.",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "warning",
+          "title": "Sync could not finish",
+          "sub": "Check your connection and try again. Outgoing changes are still saved on this device.",
+          "error": true
+        },
+        {
+          "type": "button",
+          "label": "Retry sync",
+          "target": "trakt_syncing",
+          "kind": "primary",
+          "destructive": false
+        },
+        {
+          "type": "button",
+          "label": "Review pending changes",
+          "target": "trakt_pending",
+          "kind": "tonal",
+          "destructive": false
+        },
+        {
+          "type": "group",
+          "label": "Account",
+          "rows": [
+            {
+              "title": "Client & server",
+              "sub": "Review your credentials and endpoint",
+              "icon": "key",
+              "target": "trakt_advanced"
+            },
+            {
+              "title": "Disconnect account",
+              "sub": "Keep locally saved movies and shows",
+              "icon": "trakt",
+              "target": "trakt_disconnect"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "caption": "Trakt account · Sync error",
+      "back": "media"
+    }
+  ]
+}

@@ -1,0 +1,755 @@
+{
+  "name": "Updates, About & legal",
+  "description": "Manual and optional startup checks, bundled and published release history, external download handoff and complete existing legal copy.",
+  "sources": [
+    "ReleaseUpdatesScreen.kt",
+    "UpdateAvailableBottomSheet.kt",
+    "LegalScreen.kt",
+    "LegalDocs.kt",
+    "CHANGELOG.md"
+  ],
+  "screens": [
+    {
+      "key": "updates",
+      "title": "Updates",
+      "subtitle": "Release checks and version history.",
+      "blocks": [
+        {
+          "type": "status",
+          "title": "Updates not checked",
+          "sub": "Check GitHub for published releases.",
+          "icon": "sync",
+          "error": false
+        },
+        {
+          "type": "button",
+          "label": "Check for updates",
+          "target": "updates_checking",
+          "kind": "primary"
+        },
+        {
+          "type": "stats",
+          "rows": [
+            [
+              "Installed version",
+              "2.3.0"
+            ]
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Release checks",
+          "rows": [
+            {
+              "title": "Check on startup",
+              "sub": "Check GitHub when Cobalt opens.",
+              "on": false,
+              "target": "updates_auto"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "Release history"
+        },
+        {
+          "type": "text",
+          "text": "Installed release notes. Refresh to load published releases.",
+          "role": "body-medium"
+        },
+        {
+          "type": "row",
+          "title": "2.3.0",
+          "sub": "Installed · 11 Nov 2026 · Bundled notes",
+          "icon": "history",
+          "target": "release_notes_230"
+        },
+        {
+          "type": "row",
+          "title": "2.2.2",
+          "sub": "27 Oct 2026 · Published release",
+          "icon": "history",
+          "target": "release_notes_222"
+        },
+        {
+          "type": "button",
+          "label": "Refresh history",
+          "target": "updates_history_error",
+          "kind": "text"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Updates · Not checked"
+    },
+    {
+      "key": "updates_checking",
+      "title": "Updates",
+      "subtitle": "Release checks and version history.",
+      "blocks": [
+        {
+          "type": "status",
+          "title": "Checking GitHub…",
+          "sub": "Looking for published releases.",
+          "icon": "sync",
+          "error": false
+        },
+        {
+          "type": "progress",
+          "value": 50,
+          "label": "Checking published releases"
+        },
+        {
+          "type": "stats",
+          "rows": [
+            [
+              "Installed version",
+              "2.3.0"
+            ]
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Release checks",
+          "rows": [
+            {
+              "title": "Check on startup",
+              "sub": "Check GitHub when Cobalt opens.",
+              "on": false,
+              "target": "updates_auto"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "Release history"
+        },
+        {
+          "type": "text",
+          "text": "Installed release notes. Refresh to load published releases.",
+          "role": "body-medium"
+        },
+        {
+          "type": "row",
+          "title": "2.3.0",
+          "sub": "Installed · 11 Nov 2026 · Bundled notes",
+          "icon": "history",
+          "target": "release_notes_230"
+        },
+        {
+          "type": "row",
+          "title": "2.2.2",
+          "sub": "27 Oct 2026 · Published release",
+          "icon": "history",
+          "target": "release_notes_222"
+        },
+        {
+          "type": "button",
+          "label": "Refresh history",
+          "target": "updates_history_error",
+          "kind": "text"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Updates · Checking"
+    },
+    {
+      "key": "updates_current",
+      "title": "Updates",
+      "subtitle": "Release checks and version history.",
+      "blocks": [
+        {
+          "type": "status",
+          "title": "You’re up to date",
+          "sub": "No newer published release was found.",
+          "icon": "check",
+          "error": false
+        },
+        {
+          "type": "button",
+          "label": "Check again",
+          "target": "updates_checking",
+          "kind": "tonal"
+        },
+        {
+          "type": "stats",
+          "rows": [
+            [
+              "Installed version",
+              "2.3.0"
+            ]
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Release checks",
+          "rows": [
+            {
+              "title": "Check on startup",
+              "sub": "Check GitHub when Cobalt opens.",
+              "on": false,
+              "target": "updates_auto"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "Release history"
+        },
+        {
+          "type": "text",
+          "text": "Installed release notes. Refresh to load published releases.",
+          "role": "body-medium"
+        },
+        {
+          "type": "row",
+          "title": "2.3.0",
+          "sub": "Installed · 11 Nov 2026 · Bundled notes",
+          "icon": "history",
+          "target": "release_notes_230"
+        },
+        {
+          "type": "row",
+          "title": "2.2.2",
+          "sub": "27 Oct 2026 · Published release",
+          "icon": "history",
+          "target": "release_notes_222"
+        },
+        {
+          "type": "button",
+          "label": "Refresh history",
+          "target": "updates_history_error",
+          "kind": "text"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Updates · Up to date · Example"
+    },
+    {
+      "key": "updates_error",
+      "title": "Updates",
+      "subtitle": "Release checks and version history.",
+      "blocks": [
+        {
+          "type": "status",
+          "title": "Couldn’t check for updates",
+          "sub": "Check your connection and try again.",
+          "icon": "wifi",
+          "error": true
+        },
+        {
+          "type": "button",
+          "label": "Try again",
+          "target": "updates_checking",
+          "kind": "primary"
+        },
+        {
+          "type": "stats",
+          "rows": [
+            [
+              "Installed version",
+              "2.3.0"
+            ]
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Release checks",
+          "rows": [
+            {
+              "title": "Check on startup",
+              "sub": "Check GitHub when Cobalt opens.",
+              "on": false,
+              "target": "updates_auto"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "Release history"
+        },
+        {
+          "type": "text",
+          "text": "Installed release notes. Refresh to load published releases.",
+          "role": "body-medium"
+        },
+        {
+          "type": "row",
+          "title": "2.3.0",
+          "sub": "Installed · 11 Nov 2026 · Bundled notes",
+          "icon": "history",
+          "target": "release_notes_230"
+        },
+        {
+          "type": "row",
+          "title": "2.2.2",
+          "sub": "27 Oct 2026 · Published release",
+          "icon": "history",
+          "target": "release_notes_222"
+        },
+        {
+          "type": "button",
+          "label": "Refresh history",
+          "target": "updates_history_error",
+          "kind": "text"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Updates · Connection error"
+    },
+    {
+      "key": "updates_auto",
+      "title": "Updates",
+      "subtitle": "Release checks and version history.",
+      "blocks": [
+        {
+          "type": "status",
+          "title": "Updates not checked",
+          "sub": "Check GitHub for published releases.",
+          "icon": "sync",
+          "error": false
+        },
+        {
+          "type": "button",
+          "label": "Check for updates",
+          "target": "updates_checking",
+          "kind": "primary"
+        },
+        {
+          "type": "stats",
+          "rows": [
+            [
+              "Installed version",
+              "2.3.0"
+            ]
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Release checks",
+          "rows": [
+            {
+              "title": "Check on startup",
+              "sub": "Check GitHub when Cobalt opens.",
+              "on": true,
+              "target": "updates"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "Release history"
+        },
+        {
+          "type": "text",
+          "text": "Installed release notes. Refresh to load published releases.",
+          "role": "body-medium"
+        },
+        {
+          "type": "row",
+          "title": "2.3.0",
+          "sub": "Installed · 11 Nov 2026 · Bundled notes",
+          "icon": "history",
+          "target": "release_notes_230"
+        },
+        {
+          "type": "row",
+          "title": "2.2.2",
+          "sub": "27 Oct 2026 · Published release",
+          "icon": "history",
+          "target": "release_notes_222"
+        },
+        {
+          "type": "button",
+          "label": "Refresh history",
+          "target": "updates_history_error",
+          "kind": "text"
+        }
+      ],
+      "theme": "Light",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Updates · Startup checks on"
+    },
+    {
+      "key": "updates_available",
+      "title": "Updates",
+      "subtitle": "Release checks and version history.",
+      "blocks": [
+        {
+          "type": "status",
+          "title": "An update is available",
+          "sub": "Cobalt 2.3.1 has a newer published release.",
+          "icon": "export",
+          "error": false
+        },
+        {
+          "type": "button",
+          "label": "View update",
+          "target": "update_available_sheet",
+          "kind": "primary"
+        },
+        {
+          "type": "stats",
+          "rows": [
+            [
+              "Installed version",
+              "2.3.0"
+            ]
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Release checks",
+          "rows": [
+            {
+              "title": "Check on startup",
+              "sub": "Check GitHub when Cobalt opens.",
+              "on": false,
+              "target": "updates_auto"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "Release history"
+        },
+        {
+          "type": "text",
+          "text": "Installed release notes. Refresh to load published releases.",
+          "role": "body-medium"
+        },
+        {
+          "type": "row",
+          "title": "2.3.0",
+          "sub": "Installed · 11 Nov 2026 · Bundled notes",
+          "icon": "history",
+          "target": "release_notes_230"
+        },
+        {
+          "type": "row",
+          "title": "2.2.2",
+          "sub": "27 Oct 2026 · Published release",
+          "icon": "history",
+          "target": "release_notes_222"
+        },
+        {
+          "type": "button",
+          "label": "Refresh history",
+          "target": "updates_history_error",
+          "kind": "text"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Updates · Available · Illustrative 2.3.1"
+    },
+    {
+      "key": "update_available_sheet",
+      "title": "Cobalt 2.3.1",
+      "parent": "updates_available",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Review the release notes and open GitHub to choose a download."
+        },
+        {
+          "type": "row",
+          "title": "Release notes",
+          "sub": "Read what changed in this release",
+          "icon": "history",
+          "target": "release_notes_example"
+        },
+        {
+          "type": "row",
+          "title": "Download options",
+          "sub": "Choose the APK for your device",
+          "icon": "export",
+          "target": "update_downloads"
+        },
+        {
+          "type": "button",
+          "label": "Open release on GitHub",
+          "target": "url:https://github.com/hanan-bhatti/cobalt/releases",
+          "kind": "primary"
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Updates · Available release sheet · Example"
+    },
+    {
+      "key": "update_downloads",
+      "title": "Download options",
+      "parent": "updates_available",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Downloads open in your browser. Android asks for permission before installation."
+        },
+        {
+          "type": "row",
+          "title": "Universal APK",
+          "sub": "Works across supported device architectures",
+          "icon": "export",
+          "target": "url:https://github.com/hanan-bhatti/cobalt/releases",
+          "external": true
+        },
+        {
+          "type": "row",
+          "title": "ARM64 APK",
+          "sub": "For compatible 64-bit ARM devices",
+          "icon": "export",
+          "target": "url:https://github.com/hanan-bhatti/cobalt/releases",
+          "external": true
+        },
+        {
+          "type": "button",
+          "label": "See all release files",
+          "target": "url:https://github.com/hanan-bhatti/cobalt/releases",
+          "kind": "text"
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Updates · APK options · Illustrative assets"
+    },
+    {
+      "key": "release_notes_230",
+      "title": "Cobalt 2.3.0",
+      "subtitle": "Installed release notes · 11 Nov 2026.",
+      "blocks": [
+        {
+          "type": "legal",
+          "doc": "release230"
+        },
+        {
+          "type": "button",
+          "label": "Open release history",
+          "target": "url:https://github.com/hanan-bhatti/cobalt/releases",
+          "kind": "tonal"
+        }
+      ],
+      "theme": "Dark",
+      "back": "updates",
+      "kind": "page",
+      "caption": "Release notes · Installed 2.3.0"
+    },
+    {
+      "key": "release_notes_222",
+      "title": "Cobalt 2.2.2",
+      "subtitle": "Published release · 27 Oct 2026.",
+      "blocks": [
+        {
+          "type": "legal",
+          "doc": "release222"
+        },
+        {
+          "type": "button",
+          "label": "Open release on GitHub",
+          "target": "url:https://github.com/hanan-bhatti/cobalt/releases/tag/v2.2.2",
+          "kind": "tonal"
+        }
+      ],
+      "theme": "Light",
+      "back": "updates",
+      "kind": "page",
+      "caption": "Release notes · Published 2.2.2"
+    },
+    {
+      "key": "release_notes_example",
+      "title": "Cobalt 2.3.1",
+      "subtitle": "Release notes.",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Release notes supplied by the published GitHub release will appear here."
+        },
+        {
+          "type": "button",
+          "label": "Open release on GitHub",
+          "target": "url:https://github.com/hanan-bhatti/cobalt/releases",
+          "kind": "tonal"
+        }
+      ],
+      "theme": "Dark",
+      "back": "updates_available",
+      "kind": "page",
+      "caption": "Release notes · Example content area"
+    },
+    {
+      "key": "updates_history_error",
+      "title": "Updates",
+      "subtitle": "Release checks and version history.",
+      "blocks": [
+        {
+          "type": "status",
+          "title": "Couldn’t refresh release history",
+          "sub": "The installed release notes are still available.",
+          "icon": "wifi",
+          "error": true
+        },
+        {
+          "type": "button",
+          "label": "Try again",
+          "target": "updates_checking",
+          "kind": "tonal"
+        },
+        {
+          "type": "group",
+          "label": "Release checks",
+          "rows": [
+            {
+              "title": "Check on startup",
+              "sub": "Check GitHub when Cobalt opens.",
+              "on": false,
+              "target": "updates_auto"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "Release history"
+        },
+        {
+          "type": "text",
+          "text": "Installed release notes. Refresh to load published releases.",
+          "role": "body-medium"
+        },
+        {
+          "type": "row",
+          "title": "2.3.0",
+          "sub": "Installed · 11 Nov 2026 · Bundled notes",
+          "icon": "history",
+          "target": "release_notes_230"
+        },
+        {
+          "type": "row",
+          "title": "2.2.2",
+          "sub": "27 Oct 2026 · Published release",
+          "icon": "history",
+          "target": "release_notes_222"
+        },
+        {
+          "type": "button",
+          "label": "Refresh history",
+          "target": "updates_history_error",
+          "kind": "text"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Updates · History refresh error"
+    },
+    {
+      "key": "about",
+      "title": "About",
+      "subtitle": "Cobalt · 2.3.0 (20).",
+      "blocks": [
+        {
+          "type": "legal",
+          "doc": "about"
+        },
+        {
+          "type": "group",
+          "label": "Project",
+          "rows": [
+            {
+              "title": "Source code",
+              "sub": "Read the code or contribute on GitHub",
+              "icon": "github",
+              "external": true,
+              "target": "url:https://github.com/hanan-bhatti/cobalt"
+            },
+            {
+              "title": "Send feedback",
+              "sub": "Report a problem or suggest an improvement",
+              "icon": "feedback",
+              "target": "feedback"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Legal",
+          "rows": [
+            {
+              "title": "Privacy policy",
+              "sub": "Local storage and optional services",
+              "icon": "privacy",
+              "target": "privacy"
+            },
+            {
+              "title": "Terms & conditions",
+              "sub": "Your rights and responsibilities",
+              "icon": "terms",
+              "target": "terms"
+            },
+            {
+              "title": "Open-source licenses",
+              "sub": "Fonts and libraries used in Cobalt",
+              "icon": "code",
+              "target": "licenses"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "About · Version and project"
+    },
+    {
+      "key": "privacy",
+      "title": "Privacy policy",
+      "subtitle": "Last updated · 3 November 2026.",
+      "blocks": [
+        {
+          "type": "legal",
+          "doc": "privacyPolicy"
+        }
+      ],
+      "theme": "Dark",
+      "back": "about",
+      "kind": "page",
+      "caption": "Privacy policy · Complete document"
+    },
+    {
+      "key": "terms",
+      "title": "Terms & conditions",
+      "subtitle": "Last updated · 3 November 2026.",
+      "blocks": [
+        {
+          "type": "legal",
+          "doc": "termsOfConditions"
+        }
+      ],
+      "theme": "Light",
+      "back": "about",
+      "kind": "page",
+      "caption": "Terms & conditions · Complete document"
+    },
+    {
+      "key": "licenses",
+      "title": "Open-source licenses",
+      "subtitle": "Fonts, libraries and their license terms.",
+      "blocks": [
+        {
+          "type": "legal",
+          "doc": "openSourceLicenses"
+        }
+      ],
+      "theme": "Dark",
+      "back": "about",
+      "kind": "page",
+      "caption": "Open-source licenses · Complete document"
+    }
+  ]
+}

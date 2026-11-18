@@ -1,0 +1,297 @@
+{
+  "name": "Web companion · Optional",
+  "description": "Feature-gated local companion, disabled in release builds. Sample address and PIN are illustrative; no server is started.",
+  "sources": [
+    "WebCompanionSettingsScreen.kt",
+    "WebCompanionManager.kt",
+    "WebCompanionSecurityManager.kt"
+  ],
+  "screens": [
+    {
+      "key": "web",
+      "title": "Web companion",
+      "subtitle": "Use Cobalt in a browser on your local network.",
+      "blocks": [
+        {
+          "type": "row",
+          "title": "Web companion",
+          "sub": "Start a local server on this device.",
+          "on": false,
+          "target": "web_running"
+        },
+        {
+          "type": "row",
+          "title": "Network port",
+          "sub": "Port used for the local browser address",
+          "icon": "globe",
+          "target": "web_port",
+          "value": "8080"
+        },
+        {
+          "type": "heading",
+          "text": "Connection protections"
+        },
+        {
+          "type": "row",
+          "title": "PIN required",
+          "sub": "Every browser session needs the current PIN.",
+          "icon": "lock"
+        },
+        {
+          "type": "row",
+          "title": "Failed sign-in limit",
+          "sub": "Five failed attempts block that IP address for 10 minutes.",
+          "icon": "privacy"
+        },
+        {
+          "type": "row",
+          "title": "Editor conflict protection",
+          "sub": "A note being edited in Cobalt cannot be overwritten from the browser.",
+          "icon": "text"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Optional Web companion · Stopped"
+    },
+    {
+      "key": "web_running",
+      "title": "Web companion",
+      "subtitle": "Use Cobalt in a browser on your local network.",
+      "blocks": [
+        {
+          "type": "row",
+          "title": "Web companion",
+          "sub": "Local server running",
+          "on": true,
+          "target": "web"
+        },
+        {
+          "type": "heading",
+          "text": "Browser address"
+        },
+        {
+          "type": "text",
+          "text": "http://192.168.1.23:8080",
+          "color": "ink"
+        },
+        {
+          "type": "button",
+          "label": "Copy address",
+          "target": "web_copied",
+          "kind": "text"
+        },
+        {
+          "type": "stats",
+          "rows": [
+            [
+              "Sign-in PIN",
+              "4826"
+            ]
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Change PIN",
+          "target": "web_rotate",
+          "kind": "tonal"
+        },
+        {
+          "type": "row",
+          "title": "Network port",
+          "sub": "Changing the port restarts the server.",
+          "icon": "globe",
+          "target": "web_port",
+          "value": "8080"
+        },
+        {
+          "type": "heading",
+          "text": "Connection protections"
+        },
+        {
+          "type": "row",
+          "title": "PIN required",
+          "sub": "Every browser session needs the current PIN.",
+          "icon": "lock"
+        },
+        {
+          "type": "row",
+          "title": "Failed sign-in limit",
+          "sub": "Five failed attempts block that IP address for 10 minutes.",
+          "icon": "privacy"
+        },
+        {
+          "type": "row",
+          "title": "Editor conflict protection",
+          "sub": "A note being edited in Cobalt cannot be overwritten from the browser.",
+          "icon": "text"
+        }
+      ],
+      "theme": "Light",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Optional Web companion · Running · Example"
+    },
+    {
+      "key": "web_port",
+      "title": "Network port",
+      "parent": "web_running",
+      "blocks": [
+        {
+          "type": "options",
+          "options": [
+            {
+              "title": "8080",
+              "selected": true,
+              "target": "web_running"
+            },
+            {
+              "title": "8888",
+              "selected": false,
+              "target": "web_running"
+            },
+            {
+              "title": "9090",
+              "selected": false,
+              "target": "web_running"
+            },
+            {
+              "title": "53317",
+              "selected": false,
+              "target": "web_running"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "If the server is running, changing the port stops it and starts it again with the new port."
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Optional Web companion · Port choice"
+    },
+    {
+      "key": "web_rotate",
+      "title": "Change sign-in PIN?",
+      "parent": "web_running",
+      "message": "Current browser sessions will be signed out. Use the new PIN to sign in again.",
+      "confirm": "Change PIN",
+      "confirmTarget": "web_pin_changed",
+      "kind": "dialog",
+      "caption": "Optional Web companion · PIN change confirmation"
+    },
+    {
+      "key": "web_pin_changed",
+      "title": "Web companion",
+      "subtitle": "Use Cobalt in a browser on your local network.",
+      "blocks": [
+        {
+          "type": "row",
+          "title": "Web companion",
+          "sub": "Local server running",
+          "on": true,
+          "target": "web"
+        },
+        {
+          "type": "text",
+          "text": "The PIN has changed. Sign in again in your browser.",
+          "color": "ink"
+        },
+        {
+          "type": "heading",
+          "text": "Browser address"
+        },
+        {
+          "type": "text",
+          "text": "http://192.168.1.23:8080"
+        },
+        {
+          "type": "stats",
+          "rows": [
+            [
+              "Sign-in PIN",
+              "7319"
+            ]
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Change PIN",
+          "target": "web_rotate",
+          "kind": "tonal"
+        },
+        {
+          "type": "row",
+          "title": "Network port",
+          "sub": "Changing the port restarts the server.",
+          "icon": "globe",
+          "target": "web_port",
+          "value": "8080"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Optional Web companion · New PIN · Example"
+    },
+    {
+      "key": "web_copied",
+      "title": "Address copied",
+      "parent": "web_running",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Open this address in a browser on a device connected to the same local network."
+        },
+        {
+          "type": "text",
+          "text": "http://192.168.1.23:8080",
+          "color": "ink"
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Optional Web companion · Address copied",
+      "footer": [
+        {
+          "type": "button",
+          "label": "Done",
+          "target": "web_running",
+          "kind": "primary"
+        }
+      ]
+    },
+    {
+      "key": "web_error",
+      "title": "Web companion",
+      "subtitle": "Use Cobalt in a browser on your local network.",
+      "blocks": [
+        {
+          "type": "status",
+          "title": "Couldn’t start the server",
+          "sub": "Check the local network connection or choose another port, then try again.",
+          "icon": "wifi",
+          "error": true
+        },
+        {
+          "type": "button",
+          "label": "Try again",
+          "target": "web_running",
+          "kind": "primary"
+        },
+        {
+          "type": "row",
+          "title": "Network port",
+          "sub": "Choose a different port if it is already in use.",
+          "icon": "globe",
+          "target": "web_port",
+          "value": "8080"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Optional Web companion · Start error"
+    }
+  ]
+}

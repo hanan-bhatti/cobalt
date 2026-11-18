@@ -1,0 +1,1519 @@
+{
+  "name": "Help",
+  "description": "Five help categories, readable inline answers, search recovery and direct links to the settings named in each answer.",
+  "sources": [
+    "SupportScreen.kt",
+    "current settings and widget routes"
+  ],
+  "screens": [
+    {
+      "key": "help",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "Search topics"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": true,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": false,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": false,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": false,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": false,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": false,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "Common questions"
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "How do I save content?",
+              "target": "help_answer_capture",
+              "actionTarget": "help_answer_capture"
+            },
+            {
+              "title": "How are saved items organized?",
+              "target": "help_answer_organize",
+              "actionTarget": "help_answer_organize"
+            },
+            {
+              "title": "How does screen OCR use Gemini?",
+              "target": "help_answer_ocr",
+              "actionTarget": "help_answer_ocr"
+            },
+            {
+              "title": "What works without a connection?",
+              "target": "help_answer_offline",
+              "actionTarget": "help_answer_offline"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Feedback",
+          "rows": [
+            {
+              "title": "Report a bug",
+              "sub": "Prepare a report for GitHub, email or a file",
+              "icon": "feedback",
+              "target": "feedback"
+            },
+            {
+              "title": "Suggest a feature",
+              "sub": "Describe a problem and an idea",
+              "icon": "ideas",
+              "target": "feedback_feature"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · Dark"
+    },
+    {
+      "key": "help_getting_started",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "Search topics"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": false,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": true,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": false,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": false,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": false,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": false,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "How do I save content?",
+              "target": "help_answer_capture",
+              "actionTarget": "help_answer_capture"
+            },
+            {
+              "title": "How are saved items organized?",
+              "target": "help_answer_organize",
+              "actionTarget": "help_answer_organize"
+            },
+            {
+              "title": "How does Side dock work?",
+              "target": "help_answer_dock",
+              "actionTarget": "help_answer_dock"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · Getting started"
+    },
+    {
+      "key": "help_gemini",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "Search topics"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": false,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": false,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": true,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": false,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": false,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": false,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "How does screen OCR use Gemini?",
+              "target": "help_answer_ocr",
+              "actionTarget": "help_answer_ocr"
+            },
+            {
+              "title": "Where do I choose Gemini models?",
+              "target": "help_answer_models",
+              "actionTarget": "help_answer_models"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · Gemini OCR"
+    },
+    {
+      "key": "help_storage_sync",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "Search topics"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": false,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": false,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": false,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": true,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": false,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": false,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "Where is saved content stored?",
+              "target": "help_answer_local",
+              "actionTarget": "help_answer_local"
+            },
+            {
+              "title": "What works without a connection?",
+              "target": "help_answer_offline",
+              "actionTarget": "help_answer_offline"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · Storage & sync"
+    },
+    {
+      "key": "help_audio_media",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "Search topics"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": false,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": false,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": false,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": false,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": true,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": false,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "Which sources does media search use?",
+              "target": "help_answer_media",
+              "actionTarget": "help_answer_media"
+            },
+            {
+              "title": "How does voice transcription work?",
+              "target": "help_answer_voice",
+              "actionTarget": "help_answer_voice"
+            },
+            {
+              "title": "What can I do with saved audio?",
+              "target": "help_answer_player",
+              "actionTarget": "help_answer_player"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · Audio & media"
+    },
+    {
+      "key": "help_widgets_themes",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "Search topics"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": false,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": false,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": false,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": false,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": false,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": true,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "How do I add a widget?",
+              "target": "help_answer_widgets",
+              "actionTarget": "help_answer_widgets"
+            },
+            {
+              "title": "How do I customize Cobalt?",
+              "target": "help_answer_customize",
+              "actionTarget": "help_answer_customize"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · Widgets & themes"
+    },
+    {
+      "key": "help_search",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "OCR",
+          "value": "OCR"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": true,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": false,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": false,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": false,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": false,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": false,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "Results for “OCR”"
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "How does Side dock work?",
+              "target": "help_answer_dock",
+              "actionTarget": "help_answer_dock"
+            },
+            {
+              "title": "How does screen OCR use Gemini?",
+              "target": "help_answer_ocr",
+              "actionTarget": "help_answer_ocr"
+            },
+            {
+              "title": "Where do I choose Gemini models?",
+              "target": "help_answer_models",
+              "actionTarget": "help_answer_models"
+            }
+          ]
+        }
+      ],
+      "theme": "Light",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · Search results"
+    },
+    {
+      "key": "help_no_results",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "OCR",
+          "value": "sync calendar"
+        },
+        {
+          "type": "status",
+          "icon": "search",
+          "title": "No answers for “sync calendar”",
+          "sub": "Try a shorter search or browse the help categories."
+        },
+        {
+          "type": "button",
+          "label": "Clear search",
+          "target": "help",
+          "kind": "tonal"
+        },
+        {
+          "type": "group",
+          "label": "Feedback",
+          "rows": [
+            {
+              "title": "Report a bug",
+              "sub": "Prepare a report for GitHub, email or a file",
+              "icon": "feedback",
+              "target": "feedback"
+            },
+            {
+              "title": "Suggest a feature",
+              "sub": "Describe a problem and an idea",
+              "icon": "ideas",
+              "target": "feedback_feature"
+            }
+          ]
+        }
+      ],
+      "theme": "Light",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · No search results"
+    },
+    {
+      "key": "help_answer_capture",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "Search topics"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": false,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": true,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": false,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": false,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": false,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": false,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "How do I save content?",
+              "answer": "Open the capture menu to create a note or recording. To save content from another app, choose Cobalt in Android’s Share menu. Enable Side dock for screen-edge capture.",
+              "target": "help_getting_started",
+              "actionTarget": "help_answer_capture"
+            },
+            {
+              "title": "How are saved items organized?",
+              "target": "help_answer_organize",
+              "actionTarget": "help_answer_organize"
+            },
+            {
+              "title": "How does Side dock work?",
+              "target": "help_answer_dock",
+              "actionTarget": "help_answer_dock"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · How do I save content?"
+    },
+    {
+      "key": "help_answer_organize",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "Search topics"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": false,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": true,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": false,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": false,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": false,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": false,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "How do I save content?",
+              "target": "help_answer_capture",
+              "actionTarget": "help_answer_capture"
+            },
+            {
+              "title": "How are saved items organized?",
+              "answer": "Category views separate notes, links, images, video, audio, code and media. Folders group saved items across those categories. You can give folders a color and pin the ones you use often.",
+              "target": "help_getting_started",
+              "actionTarget": "help_answer_organize"
+            },
+            {
+              "title": "How does Side dock work?",
+              "target": "help_answer_dock",
+              "actionTarget": "help_answer_dock"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · How are saved items organized?"
+    },
+    {
+      "key": "help_answer_dock",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "Search topics"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": false,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": true,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": false,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": false,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": false,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": false,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "How do I save content?",
+              "target": "help_answer_capture",
+              "actionTarget": "help_answer_capture"
+            },
+            {
+              "title": "How are saved items organized?",
+              "target": "help_answer_organize",
+              "actionTarget": "help_answer_organize"
+            },
+            {
+              "title": "How does Side dock work?",
+              "answer": "Enable Side dock and allow display over other apps. Swipe inward from its screen-edge handle to open capture tools and recent items. Handle controls and animation settings are in Side dock settings.",
+              "target": "help_getting_started",
+              "actionTarget": "help_answer_dock"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · How does Side dock work?"
+    },
+    {
+      "key": "help_answer_ocr",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "Search topics"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": false,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": false,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": true,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": false,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": false,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": false,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "How does screen OCR use Gemini?",
+              "answer": "Cobalt sends the selected image region to Gemini to extract text. This needs an internet connection and a saved Gemini API key. Review the extracted text, especially when the image is blurry or low contrast.",
+              "target": "help_gemini",
+              "actionTarget": "help_answer_ocr"
+            },
+            {
+              "title": "Where do I choose Gemini models?",
+              "target": "help_answer_models",
+              "actionTarget": "help_answer_models"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · How does screen OCR use Gemini?"
+    },
+    {
+      "key": "help_answer_models",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "Search topics"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": false,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": false,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": true,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": false,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": false,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": false,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "How does screen OCR use Gemini?",
+              "target": "help_answer_ocr",
+              "actionTarget": "help_answer_ocr"
+            },
+            {
+              "title": "Where do I choose Gemini models?",
+              "answer": "Gemini OCR settings has separate model choices for image OCR and voice transcription. You can also change extraction detail or replace the default OCR instructions with a custom prompt.",
+              "target": "help_gemini",
+              "actionTarget": "help_answer_models"
+            }
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Open Gemini settings",
+          "target": "gemini",
+          "kind": "tonal"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · Where do I choose Gemini models?"
+    },
+    {
+      "key": "help_answer_media",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "Search topics"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": false,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": false,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": false,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": false,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": true,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": false,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "Which sources does media search use?",
+              "answer": "Trakt and TMDB provide movie and TV results. Jikan provides anime and manga results. Available features depend on your enabled providers, account connection, saved keys and internet access.",
+              "target": "help_audio_media",
+              "actionTarget": "help_answer_media"
+            },
+            {
+              "title": "How does voice transcription work?",
+              "target": "help_answer_voice",
+              "actionTarget": "help_answer_voice"
+            },
+            {
+              "title": "What can I do with saved audio?",
+              "target": "help_answer_player",
+              "actionTarget": "help_answer_player"
+            }
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Open media providers",
+          "target": "media",
+          "kind": "tonal"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · Which sources does media search use?"
+    },
+    {
+      "key": "help_answer_local",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "Search topics"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": false,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": false,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": false,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": true,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": false,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": false,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "Where is saved content stored?",
+              "answer": "Saved notes, folders and attached files are kept on your device. Optional Gemini and media-provider features make network requests. Storage settings lets you inspect notes, recover drafts, restore Trash and review older versions.",
+              "target": "help_storage_sync",
+              "actionTarget": "help_answer_local"
+            },
+            {
+              "title": "What works without a connection?",
+              "target": "help_answer_offline",
+              "actionTarget": "help_answer_offline"
+            }
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Open storage settings",
+          "target": "storage",
+          "kind": "tonal"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · Where is saved content stored?"
+    },
+    {
+      "key": "help_answer_offline",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "Search topics"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": false,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": false,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": false,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": true,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": false,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": false,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "Where is saved content stored?",
+              "target": "help_answer_local",
+              "actionTarget": "help_answer_local"
+            },
+            {
+              "title": "What works without a connection?",
+              "answer": "You can read and edit saved notes, organize folders and play local recordings offline. Gemini, provider searches and Trakt sync need an internet connection.",
+              "target": "help_storage_sync",
+              "actionTarget": "help_answer_offline"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · What works without a connection?"
+    },
+    {
+      "key": "help_answer_voice",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "Search topics"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": false,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": false,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": false,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": false,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": true,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": false,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "Which sources does media search use?",
+              "target": "help_answer_media",
+              "actionTarget": "help_answer_media"
+            },
+            {
+              "title": "How does voice transcription work?",
+              "answer": "Voice recordings are saved on your device. Gemini transcription uses your saved API key and sends the recording to Gemini. Transcription needs an internet connection; local playback does not.",
+              "target": "help_audio_media",
+              "actionTarget": "help_answer_voice"
+            },
+            {
+              "title": "What can I do with saved audio?",
+              "target": "help_answer_player",
+              "actionTarget": "help_answer_player"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · How does voice transcription work?"
+    },
+    {
+      "key": "help_answer_player",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "Search topics"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": false,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": false,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": false,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": false,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": true,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": false,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "Which sources does media search use?",
+              "target": "help_answer_media",
+              "actionTarget": "help_answer_media"
+            },
+            {
+              "title": "How does voice transcription work?",
+              "target": "help_answer_voice",
+              "actionTarget": "help_answer_voice"
+            },
+            {
+              "title": "What can I do with saved audio?",
+              "answer": "Play, pause and seek through local recordings. You can also share audio files and copy or share available transcription text from the item’s actions.",
+              "target": "help_audio_media",
+              "actionTarget": "help_answer_player"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · What can I do with saved audio?"
+    },
+    {
+      "key": "help_answer_widgets",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "Search topics"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": false,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": false,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": false,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": false,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": false,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": true,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "How do I add a widget?",
+              "answer": "Pocket Folio and Screening Card are available. Choose Cobalt in your launcher’s widget picker, or use Add to home screen when your launcher supports it. Pocket Folio shows a folder; Screening Card shows a saved title.",
+              "target": "help_widgets_themes",
+              "actionTarget": "help_answer_widgets"
+            },
+            {
+              "title": "How do I customize Cobalt?",
+              "target": "help_answer_customize",
+              "actionTarget": "help_answer_customize"
+            }
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Open widgets",
+          "target": "widgets",
+          "kind": "tonal"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · How do I add a widget?"
+    },
+    {
+      "key": "help_answer_customize",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "Search topics"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": false,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": false,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": false,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": false,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": false,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": true,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "How do I add a widget?",
+              "target": "help_answer_widgets",
+              "actionTarget": "help_answer_widgets"
+            },
+            {
+              "title": "How do I customize Cobalt?",
+              "answer": "Appearance has System, Light and Dark themes, plus a separate wallpaper-color choice. Text & fonts controls reading typography. Side dock settings has handle controls and motion presets.",
+              "target": "help_widgets_themes",
+              "actionTarget": "help_answer_customize"
+            }
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Open Appearance",
+          "target": "appearance",
+          "kind": "tonal"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Help · How do I customize Cobalt?"
+    }
+  ],
+  "questions": [
+    {
+      "key": "capture",
+      "category": "getting_started",
+      "title": "How do I save content?",
+      "answer": "Open the capture menu to create a note or recording. To save content from another app, choose Cobalt in Android’s Share menu. Enable Side dock for screen-edge capture."
+    },
+    {
+      "key": "organize",
+      "category": "getting_started",
+      "title": "How are saved items organized?",
+      "answer": "Category views separate notes, links, images, video, audio, code and media. Folders group saved items across those categories. You can give folders a color and pin the ones you use often."
+    },
+    {
+      "key": "dock",
+      "category": "getting_started",
+      "title": "How does Side dock work?",
+      "answer": "Enable Side dock and allow display over other apps. Swipe inward from its screen-edge handle to open capture tools and recent items. Handle controls and animation settings are in Side dock settings."
+    },
+    {
+      "key": "ocr",
+      "category": "gemini",
+      "title": "How does screen OCR use Gemini?",
+      "answer": "Cobalt sends the selected image region to Gemini to extract text. This needs an internet connection and a saved Gemini API key. Review the extracted text, especially when the image is blurry or low contrast."
+    },
+    {
+      "key": "models",
+      "category": "gemini",
+      "title": "Where do I choose Gemini models?",
+      "answer": "Gemini OCR settings has separate model choices for image OCR and voice transcription. You can also change extraction detail or replace the default OCR instructions with a custom prompt.",
+      "action": "Open Gemini settings",
+      "destination": "gemini"
+    },
+    {
+      "key": "media",
+      "category": "audio_media",
+      "title": "Which sources does media search use?",
+      "answer": "Trakt and TMDB provide movie and TV results. Jikan provides anime and manga results. Available features depend on your enabled providers, account connection, saved keys and internet access.",
+      "action": "Open media providers",
+      "destination": "media"
+    },
+    {
+      "key": "local",
+      "category": "storage_sync",
+      "title": "Where is saved content stored?",
+      "answer": "Saved notes, folders and attached files are kept on your device. Optional Gemini and media-provider features make network requests. Storage settings lets you inspect notes, recover drafts, restore Trash and review older versions.",
+      "action": "Open storage settings",
+      "destination": "storage"
+    },
+    {
+      "key": "offline",
+      "category": "storage_sync",
+      "title": "What works without a connection?",
+      "answer": "You can read and edit saved notes, organize folders and play local recordings offline. Gemini, provider searches and Trakt sync need an internet connection."
+    },
+    {
+      "key": "voice",
+      "category": "audio_media",
+      "title": "How does voice transcription work?",
+      "answer": "Voice recordings are saved on your device. Gemini transcription uses your saved API key and sends the recording to Gemini. Transcription needs an internet connection; local playback does not."
+    },
+    {
+      "key": "player",
+      "category": "audio_media",
+      "title": "What can I do with saved audio?",
+      "answer": "Play, pause and seek through local recordings. You can also share audio files and copy or share available transcription text from the item’s actions."
+    },
+    {
+      "key": "widgets",
+      "category": "widgets_themes",
+      "title": "How do I add a widget?",
+      "answer": "Pocket Folio and Screening Card are available. Choose Cobalt in your launcher’s widget picker, or use Add to home screen when your launcher supports it. Pocket Folio shows a folder; Screening Card shows a saved title.",
+      "action": "Open widgets",
+      "destination": "widgets"
+    },
+    {
+      "key": "customize",
+      "category": "widgets_themes",
+      "title": "How do I customize Cobalt?",
+      "answer": "Appearance has System, Light and Dark themes, plus a separate wallpaper-color choice. Text & fonts controls reading typography. Side dock settings has handle controls and motion presets.",
+      "action": "Open Appearance",
+      "destination": "appearance"
+    }
+  ]
+}

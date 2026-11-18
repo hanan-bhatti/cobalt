@@ -1,0 +1,2606 @@
+{
+  "fileKey": "dJOugcd2V82nQUA1MjyINI",
+  "sessionId": "c92f457e-fac4-4dfb-a4d0-8293e8b176ca",
+  "pageId": "369:76",
+  "boardId": "600:40591",
+  "guideBoardId": "521:17409",
+  "overviewId": "576:38998",
+  "entryId": "576:39001",
+  "indexId": "521:17414",
+  "assetBoardId": "521:17415",
+  "boards": {
+    "gemini": "524:19775",
+    "reminders": "538:18528",
+    "media": "539:19417",
+    "storage": "544:20889",
+    "device": "548:23784",
+    "help": "550:23966",
+    "feedback": "562:26550",
+    "survey": "565:26760",
+    "releases": "566:31301",
+    "web": "568:32336",
+    "widgets": "570:32857",
+    "taste": "573:36912",
+    "compact": "577:39678",
+    "approved": "601:40590"
+  },
+  "screens": {
+    "settings": {
+      "id": "576:39001",
+      "title": "Settings",
+      "theme": "Dark",
+      "kind": "page",
+      "sourceId": "424:3105"
+    },
+    "gemini": {
+      "id": "524:19781",
+      "title": "Gemini OCR",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "gemini_light": {
+      "id": "524:19953",
+      "title": "Gemini OCR",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "gemini_key": {
+      "id": "524:20125",
+      "title": "Gemini API key",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "gemini",
+      "width": 448,
+      "height": 997
+    },
+    "gemini_ocr_model": {
+      "id": "528:17783",
+      "title": "OCR model",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "gemini",
+      "width": 448,
+      "height": 997
+    },
+    "gemini_audio_model": {
+      "id": "528:18052",
+      "title": "Audio model",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "gemini",
+      "width": 448,
+      "height": 997
+    },
+    "gemini_detail": {
+      "id": "528:18301",
+      "title": "Extraction detail",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "gemini",
+      "width": 448,
+      "height": 997
+    },
+    "gemini_prompt": {
+      "id": "528:18533",
+      "title": "Extraction instructions",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "gemini",
+      "width": 448,
+      "height": 997
+    },
+    "gemini_usage": {
+      "id": "529:18208",
+      "title": "Gemini usage",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "gemini_usage_empty": {
+      "id": "529:18305",
+      "title": "Gemini usage",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "gemini_usage_reset": {
+      "id": "529:18363",
+      "title": "Reset usage?",
+      "kind": "dialog",
+      "theme": "Dark",
+      "parent": "gemini_usage",
+      "width": 448,
+      "height": 997
+    },
+    "gemini_models_error": {
+      "id": "529:18495",
+      "title": "Models could not load",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "gemini",
+      "width": 448,
+      "height": 997
+    },
+    "reminders": {
+      "id": "538:18534",
+      "title": "Reminders",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "reminders_off": {
+      "id": "538:18742",
+      "title": "Reminders",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "reminders_permission": {
+      "id": "538:18829",
+      "title": "Reminders",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "reminders_time": {
+      "id": "538:18909",
+      "title": "Delivery time",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "reminders",
+      "width": 448,
+      "height": 997
+    },
+    "reminders_inactivity": {
+      "id": "538:19232",
+      "title": "Minimum inactivity",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "reminders",
+      "width": 448,
+      "height": 997
+    },
+    "reminders_reset": {
+      "id": "538:19502",
+      "title": "Reset learning history?",
+      "kind": "dialog",
+      "theme": "Dark",
+      "parent": "reminders",
+      "width": 448,
+      "height": 997
+    },
+    "media": {
+      "id": "539:19423",
+      "title": "Media & providers",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "media_light": {
+      "id": "539:19688",
+      "title": "Media & providers",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "trakt": {
+      "id": "539:19953",
+      "title": "Trakt account",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "trakt_disconnected": {
+      "id": "539:20141",
+      "title": "Trakt account",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "trakt_syncing": {
+      "id": "539:20220",
+      "title": "Trakt account",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "trakt_browser": {
+      "id": "540:19765",
+      "title": "Finish signing in",
+      "kind": "sheet",
+      "theme": "Light",
+      "parent": "trakt_disconnected",
+      "width": 448,
+      "height": 997
+    },
+    "trakt_code": {
+      "id": "540:19890",
+      "title": "Connect with a device code",
+      "kind": "sheet",
+      "theme": "Light",
+      "parent": "trakt_disconnected",
+      "width": 448,
+      "height": 997
+    },
+    "trakt_advanced": {
+      "id": "540:20012",
+      "title": "Client & server",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "trakt",
+      "width": 448,
+      "height": 997
+    },
+    "trakt_disconnect": {
+      "id": "540:20316",
+      "title": "Disconnect Trakt?",
+      "kind": "dialog",
+      "theme": "Dark",
+      "parent": "trakt",
+      "width": 448,
+      "height": 997
+    },
+    "trakt_pending": {
+      "id": "540:20529",
+      "title": "Pending Trakt changes",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "tmdb": {
+      "id": "540:20625",
+      "title": "TMDB API key",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "media_priority": {
+      "id": "540:20741",
+      "title": "Metadata priority",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "media",
+      "width": 448,
+      "height": 997
+    },
+    "jikan": {
+      "id": "540:21065",
+      "title": "Jikan server",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "media",
+      "width": 448,
+      "height": 997
+    },
+    "media_ignored_reset": {
+      "id": "540:21394",
+      "title": "Allow deleted titles to return?",
+      "kind": "dialog",
+      "theme": "Dark",
+      "parent": "media",
+      "width": 448,
+      "height": 997
+    },
+    "trakt_error": {
+      "id": "540:21685",
+      "title": "Trakt account",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage": {
+      "id": "544:20895",
+      "title": "Storage",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_light": {
+      "id": "544:21062",
+      "title": "Storage",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_notes": {
+      "id": "544:21228",
+      "title": "Saved notes",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_notes_large": {
+      "id": "544:21338",
+      "title": "Saved notes",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_note_plain": {
+      "id": "544:21430",
+      "title": "Plain text",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_note_options": {
+      "id": "544:21510",
+      "title": "Project outline",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "storage_notes",
+      "width": 448,
+      "height": 997
+    },
+    "storage_note_trash": {
+      "id": "544:21693",
+      "title": "Move this note to Trash?",
+      "kind": "dialog",
+      "theme": "Dark",
+      "parent": "storage_notes",
+      "width": 448,
+      "height": 997
+    },
+    "storage_drafts": {
+      "id": "544:21830",
+      "title": "Draft recovery",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_drafts_empty": {
+      "id": "544:21904",
+      "title": "Draft recovery",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_draft_actions": {
+      "id": "544:21961",
+      "title": "Project outline",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "storage_drafts",
+      "width": 448,
+      "height": 997
+    },
+    "storage_trash": {
+      "id": "546:21606",
+      "title": "Trash",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_trash_off": {
+      "id": "546:21739",
+      "title": "Trash",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_trash_empty": {
+      "id": "546:21850",
+      "title": "Trash",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_trash_actions": {
+      "id": "546:21934",
+      "title": "Workshop notes",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "storage_trash",
+      "width": 448,
+      "height": 997
+    },
+    "storage_trash_delete": {
+      "id": "546:22123",
+      "title": "Delete this item permanently?",
+      "kind": "dialog",
+      "theme": "Dark",
+      "parent": "storage_trash",
+      "width": 448,
+      "height": 997
+    },
+    "storage_trash_empty_confirm": {
+      "id": "546:22284",
+      "title": "Empty Trash?",
+      "kind": "dialog",
+      "theme": "Dark",
+      "parent": "storage_trash",
+      "width": 448,
+      "height": 997
+    },
+    "storage_trash_off_confirm": {
+      "id": "546:22441",
+      "title": "Turn off Trash?",
+      "kind": "dialog",
+      "theme": "Dark",
+      "parent": "storage_trash",
+      "width": 448,
+      "height": 997
+    },
+    "storage_history": {
+      "id": "546:22598",
+      "title": "Saved history",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_retention": {
+      "id": "546:22691",
+      "title": "Versions to keep",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "storage_history",
+      "width": 448,
+      "height": 997
+    },
+    "storage_versions": {
+      "id": "546:22877",
+      "title": "Saved versions",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_version_actions": {
+      "id": "547:22398",
+      "title": "Project outline",
+      "kind": "sheet",
+      "theme": "Light",
+      "parent": "storage_versions",
+      "width": 448,
+      "height": 997
+    },
+    "storage_version_restore": {
+      "id": "547:22540",
+      "title": "Restore this version?",
+      "kind": "dialog",
+      "theme": "Light",
+      "parent": "storage_versions",
+      "width": 448,
+      "height": 997
+    },
+    "storage_history_cleanup": {
+      "id": "547:22657",
+      "title": "Remove reviewed history?",
+      "kind": "dialog",
+      "theme": "Dark",
+      "parent": "storage_history",
+      "width": 448,
+      "height": 997
+    },
+    "storage_cache": {
+      "id": "547:22774",
+      "title": "Cache & database",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_database_confirm": {
+      "id": "547:22852",
+      "title": "Optimize the database?",
+      "kind": "dialog",
+      "theme": "Dark",
+      "parent": "storage_cache",
+      "width": 448,
+      "height": 997
+    },
+    "storage_disposable": {
+      "id": "547:22953",
+      "title": "Clear history & cache",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "storage_cache",
+      "width": 448,
+      "height": 997
+    },
+    "storage_disposable_holding": {
+      "id": "547:23077",
+      "title": "Clear history & cache",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "storage_cache",
+      "width": 448,
+      "height": 997
+    },
+    "storage_unlinked": {
+      "id": "547:23215",
+      "title": "Unlinked storage",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_unlinked_empty": {
+      "id": "547:23314",
+      "title": "Unlinked storage",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_unlinked_actions": {
+      "id": "547:23370",
+      "title": "Meeting extract",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "storage_unlinked",
+      "width": 448,
+      "height": 997
+    },
+    "storage_unlinked_media_actions": {
+      "id": "548:23030",
+      "title": "Reference image",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "storage_unlinked",
+      "width": 448,
+      "height": 997
+    },
+    "storage_unlinked_delete": {
+      "id": "548:23199",
+      "title": "Delete this retained file?",
+      "kind": "dialog",
+      "theme": "Dark",
+      "parent": "storage_unlinked",
+      "width": 448,
+      "height": 997
+    },
+    "storage_unlinked_cleanup": {
+      "id": "548:23327",
+      "title": "Remove unlinked files?",
+      "kind": "dialog",
+      "theme": "Dark",
+      "parent": "storage_unlinked",
+      "width": 448,
+      "height": 997
+    },
+    "storage_error": {
+      "id": "548:23451",
+      "title": "Storage",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_safe_mode": {
+      "id": "548:23510",
+      "title": "Safe mode",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_safe_exit": {
+      "id": "548:23637",
+      "title": "Leave safe mode?",
+      "kind": "dialog",
+      "theme": "Dark",
+      "parent": "storage_safe_mode",
+      "width": 448,
+      "height": 997
+    },
+    "storage_update": {
+      "id": "548:23790",
+      "title": "Storage update",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_update_confirm": {
+      "id": "548:23848",
+      "title": "Update note storage?",
+      "kind": "dialog",
+      "theme": "Dark",
+      "parent": "storage_update",
+      "width": 448,
+      "height": 997
+    },
+    "storage_update_running": {
+      "id": "548:23931",
+      "title": "Storage update",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_update_complete": {
+      "id": "548:24004",
+      "title": "Storage update",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_update_attention": {
+      "id": "548:24061",
+      "title": "Storage update",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "storage_update_interrupted": {
+      "id": "548:24123",
+      "title": "Storage update",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "note_storage_error": {
+      "id": "548:24181",
+      "title": "Note storage",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "background": {
+      "id": "548:24245",
+      "title": "Background activity",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "background_allowed": {
+      "id": "548:24310",
+      "title": "Background activity",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "background_coloros": {
+      "id": "548:24369",
+      "title": "Background activity",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help": {
+      "id": "550:23972",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help_getting_started": {
+      "id": "550:24122",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help_gemini": {
+      "id": "550:24232",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help_storage_sync": {
+      "id": "550:24336",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help_audio_media": {
+      "id": "550:24440",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help_widgets_themes": {
+      "id": "550:24551",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help_search": {
+      "id": "550:24655",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help_no_results": {
+      "id": "550:24766",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help_answer_capture": {
+      "id": "550:24877",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help_answer_organize": {
+      "id": "550:25008",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help_answer_dock": {
+      "id": "556:24730",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help_answer_ocr": {
+      "id": "556:24903",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help_answer_models": {
+      "id": "556:25048",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help_answer_media": {
+      "id": "556:25200",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help_answer_local": {
+      "id": "556:25374",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help_answer_offline": {
+      "id": "562:25063",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help_answer_voice": {
+      "id": "562:25213",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help_answer_player": {
+      "id": "562:25381",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help_answer_widgets": {
+      "id": "562:25549",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "help_answer_customize": {
+      "id": "562:25701",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "feedback": {
+      "id": "562:26556",
+      "title": "Feedback",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "feedback_feature": {
+      "id": "562:26747",
+      "title": "Feedback",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "feedback_bug_filled": {
+      "id": "562:26913",
+      "title": "Feedback",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "feedback_feature_filled": {
+      "id": "562:27106",
+      "title": "Feedback",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "feedback_bug_validation": {
+      "id": "564:26033",
+      "title": "Feedback",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "feedback_attached": {
+      "id": "564:26207",
+      "title": "Feedback",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "feedback_environment": {
+      "id": "564:26398",
+      "title": "Included details",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "feedback_bug_filled",
+      "width": 448,
+      "height": 997
+    },
+    "feedback_delivery": {
+      "id": "564:26455",
+      "title": "Prepare bug report",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "feedback_bug_filled",
+      "width": 448,
+      "height": 997
+    },
+    "feedback_feature_delivery": {
+      "id": "564:26883",
+      "title": "Prepare feature request",
+      "kind": "sheet",
+      "theme": "Light",
+      "parent": "feedback_feature_filled",
+      "width": 448,
+      "height": 997
+    },
+    "feedback_preview": {
+      "id": "564:26955",
+      "title": "Report preview",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "feedback_prepared": {
+      "id": "564:27004",
+      "title": "Feedback",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "feedback_email_error": {
+      "id": "564:27080",
+      "title": "Email app could not open",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "feedback_bug_filled",
+      "width": 448,
+      "height": 997
+    },
+    "survey": {
+      "id": "565:26766",
+      "title": "Cobalt survey",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "settings",
+      "width": 448,
+      "height": 997
+    },
+    "survey_answered": {
+      "id": "565:26901",
+      "title": "Cobalt survey",
+      "kind": "sheet",
+      "theme": "Light",
+      "parent": "settings",
+      "width": 448,
+      "height": 997
+    },
+    "survey_ideas": {
+      "id": "565:27042",
+      "title": "Cobalt survey",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "settings",
+      "width": 448,
+      "height": 997
+    },
+    "survey_ideas_answered": {
+      "id": "565:27200",
+      "title": "Cobalt survey",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "settings",
+      "width": 448,
+      "height": 997
+    },
+    "survey_details": {
+      "id": "565:27354",
+      "title": "Included details",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "settings",
+      "width": 448,
+      "height": 997
+    },
+    "survey_preview": {
+      "id": "565:29844",
+      "title": "Email preview",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "settings",
+      "width": 448,
+      "height": 997
+    },
+    "survey_email": {
+      "id": "565:29911",
+      "title": "Email app opened",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "settings",
+      "width": 448,
+      "height": 997
+    },
+    "survey_email_error": {
+      "id": "565:29981",
+      "title": "Couldn’t open an email app",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "settings",
+      "width": 448,
+      "height": 997
+    },
+    "survey_copied": {
+      "id": "565:30051",
+      "title": "Response copied",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "settings",
+      "width": 448,
+      "height": 997
+    },
+    "updates": {
+      "id": "566:31307",
+      "title": "Updates",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "updates_checking": {
+      "id": "566:31436",
+      "title": "Updates",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "updates_current": {
+      "id": "566:31566",
+      "title": "Updates",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "updates_error": {
+      "id": "566:31691",
+      "title": "Updates",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "updates_auto": {
+      "id": "566:31822",
+      "title": "Updates",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "updates_available": {
+      "id": "566:32069",
+      "title": "Updates",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "update_available_sheet": {
+      "id": "566:32195",
+      "title": "Cobalt 2.3.1",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "updates_available",
+      "width": 448,
+      "height": 997
+    },
+    "update_downloads": {
+      "id": "566:32262",
+      "title": "Download options",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "updates_available",
+      "width": 448,
+      "height": 997
+    },
+    "release_notes_230": {
+      "id": "567:31926",
+      "title": "Cobalt 2.3.0",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "release_notes_222": {
+      "id": "567:31996",
+      "title": "Cobalt 2.2.2",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "release_notes_example": {
+      "id": "567:32049",
+      "title": "Cobalt 2.3.1",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "updates_history_error": {
+      "id": "567:32098",
+      "title": "Updates",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "about": {
+      "id": "567:32226",
+      "title": "About",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "privacy": {
+      "id": "567:32435",
+      "title": "Privacy policy",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "terms": {
+      "id": "567:32509",
+      "title": "Terms & conditions",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "licenses": {
+      "id": "567:32567",
+      "title": "Open-source licenses",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "web": {
+      "id": "568:32342",
+      "title": "Web companion",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "web_running": {
+      "id": "568:32484",
+      "title": "Web companion",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "web_port": {
+      "id": "568:32646",
+      "title": "Network port",
+      "kind": "sheet",
+      "theme": "Light",
+      "parent": "web_running",
+      "width": 448,
+      "height": 997
+    },
+    "web_rotate": {
+      "id": "568:32696",
+      "title": "Change sign-in PIN?",
+      "kind": "dialog",
+      "theme": "Light",
+      "parent": "web_running",
+      "width": 448,
+      "height": 997
+    },
+    "web_pin_changed": {
+      "id": "568:32824",
+      "title": "Web companion",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "web_copied": {
+      "id": "568:32912",
+      "title": "Address copied",
+      "kind": "sheet",
+      "theme": "Light",
+      "parent": "web_running",
+      "width": 448,
+      "height": 997
+    },
+    "web_error": {
+      "id": "568:32956",
+      "title": "Web companion",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "widgets": {
+      "id": "570:32863",
+      "title": "Widgets",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "widgets_light": {
+      "id": "570:33122",
+      "title": "Widgets",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "folio": {
+      "id": "570:33323",
+      "title": "Pocket Folio",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "folio_new": {
+      "id": "570:33379",
+      "title": "Pocket Folio",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "folio_ready": {
+      "id": "570:33545",
+      "title": "Pocket Folio",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "folio_existing": {
+      "id": "570:33795",
+      "title": "Pocket Folio",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "folio_folders": {
+      "id": "570:33967",
+      "title": "Choose a folder",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "folio_ready",
+      "width": 448,
+      "height": 997
+    },
+    "folio_folders_empty": {
+      "id": "570:34095",
+      "title": "Choose a folder",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "folio_new",
+      "width": 448,
+      "height": 997
+    },
+    "folio_folders_no_match": {
+      "id": "570:34168",
+      "title": "Choose a folder",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "folio_ready",
+      "width": 448,
+      "height": 997
+    },
+    "folio_order": {
+      "id": "570:34241",
+      "title": "Item order",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "folio_ready",
+      "width": 448,
+      "height": 997
+    },
+    "folio_no_color": {
+      "id": "571:34222",
+      "title": "Pocket Folio",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "folio_color": {
+      "id": "571:34388",
+      "title": "Folio color",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "folio_no_color",
+      "width": 448,
+      "height": 997
+    },
+    "folio_placing": {
+      "id": "571:34595",
+      "title": "Pocket Folio",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "folio_launcher": {
+      "id": "571:34698",
+      "title": "Add from your home screen",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "folio_ready",
+      "width": 448,
+      "height": 997
+    },
+    "folio_remove": {
+      "id": "571:34739",
+      "title": "Remove saved Folio?",
+      "kind": "dialog",
+      "theme": "Light",
+      "parent": "folio_existing",
+      "width": 448,
+      "height": 997
+    },
+    "folio_configure": {
+      "id": "571:35143",
+      "title": "Pocket Folio",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "folio_folder_removed": {
+      "id": "571:35309",
+      "title": "Pocket Folio",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "screening": {
+      "id": "571:35427",
+      "title": "Screening Card",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "screening_new": {
+      "id": "571:35555",
+      "title": "Screening Card",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "screening_existing": {
+      "id": "571:35720",
+      "title": "Screening Card",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "screening_sources": {
+      "id": "571:35966",
+      "title": "Sources",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "screening_new",
+      "width": 448,
+      "height": 997
+    },
+    "screening_no_picks": {
+      "id": "571:36075",
+      "title": "Screening Card",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "screening_placing": {
+      "id": "571:36240",
+      "title": "Screening Card",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "screening_launcher": {
+      "id": "571:36320",
+      "title": "Add from your home screen",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "screening_new",
+      "width": 448,
+      "height": 997
+    },
+    "screening_remove": {
+      "id": "571:36361",
+      "title": "Remove saved card?",
+      "kind": "dialog",
+      "theme": "Light",
+      "parent": "screening_existing",
+      "width": 448,
+      "height": 997
+    },
+    "screening_configure": {
+      "id": "572:35933",
+      "title": "Screening Card",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "screening_load_error": {
+      "id": "572:36030",
+      "title": "Screening Card",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "screening_morning": {
+      "id": "572:36158",
+      "title": "Morning check-in",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "screening_morning_off": {
+      "id": "572:36277",
+      "title": "Morning check-in",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "screening_morning_permission": {
+      "id": "572:36352",
+      "title": "Morning check-in",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "screening_morning_weekdays": {
+      "id": "572:36514",
+      "title": "Morning check-in",
+      "kind": "page",
+      "theme": "Light",
+      "parent": null,
+      "width": 448,
+      "height": 997
+    },
+    "screening_morning_time": {
+      "id": "572:36633",
+      "title": "Morning time",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "screening_morning",
+      "width": 448,
+      "height": 997
+    },
+    "screening_morning_custom_time": {
+      "id": "572:36698",
+      "title": "Custom morning time",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "screening_morning",
+      "width": 448,
+      "height": 997
+    },
+    "screening_notification": {
+      "id": "572:36773",
+      "title": "Question preview",
+      "kind": "sheet",
+      "theme": "Dark",
+      "parent": "screening_morning",
+      "width": 448,
+      "height": 997
+    },
+    "screening_reset": {
+      "id": "572:36817",
+      "title": "Reset recommendation learning?",
+      "kind": "dialog",
+      "theme": "Dark",
+      "parent": "screening_morning",
+      "width": 448,
+      "height": 997
+    },
+    "screening_taste": {
+      "id": "573:36918",
+      "sourceId": "293:4386",
+      "title": "Your taste / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "screening_why_pick": {
+      "id": "573:36967",
+      "sourceId": "293:4543",
+      "title": "Why this pick / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "screening_feedback": {
+      "id": "573:37007",
+      "sourceId": "293:4639",
+      "title": "Your feedback / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_293_5942": {
+      "id": "573:37063",
+      "sourceId": "293:5942",
+      "title": "Saved titles / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_322_4952": {
+      "id": "573:37166",
+      "sourceId": "322:4952",
+      "title": "Other genres / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5081": {
+      "id": "573:38316",
+      "sourceId": "337:5081",
+      "title": "Details / How your taste works",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5105": {
+      "id": "573:38336",
+      "sourceId": "337:5105",
+      "title": "Details / Score breakdown / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5148": {
+      "id": "573:38375",
+      "sourceId": "337:5148",
+      "title": "Details / Recorded score breakdown / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5191": {
+      "id": "573:38414",
+      "sourceId": "337:5191",
+      "title": "Details / Last suggestion / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5218": {
+      "id": "573:38436",
+      "sourceId": "337:5218",
+      "title": "Details / Your feedback · Dark House / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5253": {
+      "id": "573:38526",
+      "sourceId": "337:5253",
+      "title": "Details / Learning details · Dark House / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5278": {
+      "id": "573:38541",
+      "sourceId": "337:5278",
+      "title": "Details / Your feedback · Late Shift / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5313": {
+      "id": "573:38568",
+      "sourceId": "337:5313",
+      "title": "Details / Learning details · Late Shift / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5338": {
+      "id": "573:38583",
+      "sourceId": "337:5338",
+      "title": "Details / Your feedback · Cold Case / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5373": {
+      "id": "573:38610",
+      "sourceId": "337:5373",
+      "title": "Details / Learning details · Cold Case / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5398": {
+      "id": "574:37571",
+      "sourceId": "337:5398",
+      "title": "Details / Your feedback · Star Road / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5433": {
+      "id": "574:37598",
+      "sourceId": "337:5433",
+      "title": "Details / Learning details · Star Road / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5458": {
+      "id": "574:37613",
+      "sourceId": "337:5458",
+      "title": "Details / Your feedback · Small Town / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5493": {
+      "id": "574:37640",
+      "sourceId": "337:5493",
+      "title": "Details / Learning details · Small Town / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5518": {
+      "id": "574:37655",
+      "sourceId": "337:5518",
+      "title": "Details / Your feedback · Sunday / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5553": {
+      "id": "574:37783",
+      "sourceId": "337:5553",
+      "title": "Details / Learning details · Sunday / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5578": {
+      "id": "574:37798",
+      "sourceId": "337:5578",
+      "title": "Details / Your feedback · Long Road / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5613": {
+      "id": "574:37824",
+      "sourceId": "337:5613",
+      "title": "Details / Learning details · Long Road / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5636": {
+      "id": "574:37839",
+      "sourceId": "337:5636",
+      "title": "Details / Your feedback · Thumb cleared / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5652": {
+      "id": "574:37851",
+      "sourceId": "337:5652",
+      "title": "Details / Thriller / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5703": {
+      "id": "574:37992",
+      "sourceId": "337:5703",
+      "title": "Details / Learning details · Thriller / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5723": {
+      "id": "574:38006",
+      "sourceId": "337:5723",
+      "title": "Details / Crime / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5756": {
+      "id": "574:38020",
+      "sourceId": "337:5756",
+      "title": "Details / Learning details · Crime / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5776": {
+      "id": "574:38034",
+      "sourceId": "337:5776",
+      "title": "Details / Science fiction / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5809": {
+      "id": "574:38048",
+      "sourceId": "337:5809",
+      "title": "Details / Learning details · Science fiction / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5829": {
+      "id": "574:38171",
+      "sourceId": "337:5829",
+      "title": "Details / Drama / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5898": {
+      "id": "574:38189",
+      "sourceId": "337:5898",
+      "title": "Details / Learning details · Drama / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5950": {
+      "id": "574:38203",
+      "sourceId": "337:5950",
+      "title": "Details / Learning details · Comedy / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_5970": {
+      "id": "574:38217",
+      "sourceId": "337:5970",
+      "title": "Details / Horror / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_6003": {
+      "id": "574:38231",
+      "sourceId": "337:6003",
+      "title": "Details / Learning details · Horror / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_6038": {
+      "id": "575:37823",
+      "sourceId": "337:6038",
+      "title": "Details / Learning details · Adventure / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_6058": {
+      "id": "575:37837",
+      "sourceId": "337:6058",
+      "title": "All feedback / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_6090": {
+      "id": "575:37895",
+      "sourceId": "337:6090",
+      "title": "Learning history / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_337_6122": {
+      "id": "575:37920",
+      "sourceId": "337:6122",
+      "title": "Hidden titles / Current",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_293_4782": {
+      "id": "575:37945",
+      "sourceId": "293:4782",
+      "title": "Your taste / No evidence",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_293_4820": {
+      "id": "575:38595",
+      "sourceId": "293:4820",
+      "title": "Your taste / Ignored",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_293_4975": {
+      "id": "575:38644",
+      "sourceId": "293:4975",
+      "title": "Why this pick / Ignored",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_293_5071": {
+      "id": "575:38682",
+      "sourceId": "293:5071",
+      "title": "Your feedback / Ignored",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_293_5214": {
+      "id": "575:38736",
+      "sourceId": "293:5214",
+      "title": "Your taste / Reset",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_293_5371": {
+      "id": "575:38785",
+      "sourceId": "293:5371",
+      "title": "Why this pick / Reset",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "approved_293_5467": {
+      "id": "575:40196",
+      "sourceId": "293:5467",
+      "title": "Your feedback / Reset",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "screening_review_pick": {
+      "id": "575:40241",
+      "sourceId": "293:6042",
+      "title": "Screening / review pick",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true
+    },
+    "appearance": {
+      "id": "601:40591",
+      "title": "Appearance",
+      "kind": "page",
+      "theme": "Dark",
+      "approvedReference": true,
+      "key": "appearance",
+      "originalId": "453:10244",
+      "reference": true
+    },
+    "fonts": {
+      "id": "601:40647",
+      "title": "Text & fonts",
+      "kind": "page",
+      "theme": "Dark",
+      "approvedReference": true,
+      "key": "fonts",
+      "originalId": "447:7811",
+      "reference": true
+    },
+    "notes_folders": {
+      "id": "601:40676",
+      "title": "Notes & folders",
+      "kind": "page",
+      "theme": "Dark",
+      "approvedReference": true,
+      "key": "notes_folders",
+      "originalId": "466:20305",
+      "reference": true
+    },
+    "sidedock": {
+      "id": "601:40745",
+      "title": "Side dock",
+      "kind": "page",
+      "theme": "Dark",
+      "approvedReference": true,
+      "key": "sidedock",
+      "originalId": "487:20785",
+      "reference": true
+    },
+    "help_compact": {
+      "id": "577:39684",
+      "title": "Help",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 320,
+      "height": 712
+    },
+    "feedback_compact": {
+      "id": "577:39907",
+      "title": "Feedback",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 320,
+      "height": 712
+    },
+    "widgets_compact": {
+      "id": "577:40094",
+      "title": "Widgets",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 320,
+      "height": 712
+    },
+    "screening_picks": {
+      "id": "575:40241",
+      "sourceId": "293:6042",
+      "title": "Screening / review pick",
+      "kind": "page",
+      "theme": "Dark",
+      "width": 448,
+      "height": 997,
+      "reusedApproved": true,
+      "aliasOf": "screening_review_pick"
+    },
+    "battery": {
+      "id": "548:24245",
+      "title": "Background activity",
+      "kind": "page",
+      "theme": "Dark",
+      "parent": null,
+      "width": 448,
+      "height": 997,
+      "aliasOf": "background"
+    }
+  },
+  "iconMap": {
+    "key": "521:17418",
+    "eyeOff": "521:17424",
+    "intelligence": "521:17433",
+    "reminder": "521:17436",
+    "movie": "521:17442",
+    "trakt": "521:17450",
+    "storage": "521:17453",
+    "history": "521:17458",
+    "draft": "521:17464",
+    "trash": "521:17470",
+    "folder": "521:17478",
+    "folderOpen": "521:17482",
+    "ideas": "521:17488",
+    "work": "521:17494",
+    "lock": "521:17501",
+    "info": "521:17509",
+    "feedback": "521:17515",
+    "mail": "521:17519",
+    "github": "522:17410",
+    "help": "522:17414",
+    "survey": "522:17421",
+    "globe": "522:17426",
+    "privacy": "522:17432",
+    "quote": "522:17441",
+    "checklist": "522:17448",
+    "sync": "522:17455",
+    "export": "522:17461",
+    "share": "522:17466",
+    "more": "522:17471",
+    "widgets": "522:17474",
+    "warning": "522:17478",
+    "terms": "522:17485",
+    "logo": "522:17490",
+    "helpful": "522:17496",
+    "unhelpful": "522:17502",
+    "left": "487:20670",
+    "right": "487:20675",
+    "replay": "487:20680",
+    "height": "487:20683",
+    "width": "487:20691",
+    "position": "487:20698",
+    "eye": "487:20703",
+    "play": "487:20708",
+    "chevron": "487:20720",
+    "close": "487:20723",
+    "plus": "487:20726",
+    "home": "487:20730",
+    "search": "487:20734",
+    "settings": "487:20750",
+    "text": "487:20755",
+    "link": "487:20765",
+    "ocr": "487:20770",
+    "check": "506:21500",
+    "image": "506:21504",
+    "voice": "506:21510",
+    "code": "506:21518",
+    "send": "506:21524",
+    "sidedock": "506:21529",
+    "font": "447:7527",
+    "size": "447:7536",
+    "weight": "447:7548",
+    "line": "447:7556",
+    "letters": "447:7567",
+    "paragraph": "447:7579",
+    "reading": "447:7590",
+    "theme": "447:7609",
+    "blur": "447:7620",
+    "scroll": "447:7631",
+    "sun": "447:7640",
+    "moon": "447:7648",
+    "system": "447:7655",
+    "wifi": "447:7665",
+    "battery": "447:7675",
+    "list": "522:17448",
+    "video": "527:17711",
+    "star": "527:17716",
+    "external": "527:17719",
+    "clock": "527:17722",
+    "chevronUp": "561:25139"
+  },
+  "roleIds": {
+    "bg": "VariableID:146:940",
+    "surface": "VariableID:146:969",
+    "high": "VariableID:146:967",
+    "ink": "VariableID:146:953",
+    "muted": "VariableID:146:954",
+    "primary": "VariableID:146:934",
+    "onPrimary": "VariableID:146:928",
+    "primaryContainer": "VariableID:146:935",
+    "onPrimaryContainer": "VariableID:146:929",
+    "outline": "VariableID:146:958",
+    "selected": "VariableID:146:937",
+    "onSelected": "VariableID:146:931",
+    "Ideas": "VariableID:146:990",
+    "IdeasBox": "VariableID:146:993",
+    "Work": "VariableID:146:1014",
+    "WorkBox": "VariableID:146:1017",
+    "Reading": "VariableID:146:996",
+    "ReadingBox": "VariableID:146:999",
+    "error": "VariableID:146:941",
+    "error-container": "VariableID:146:942",
+    "on-error-container": "VariableID:146:948"
+  },
+  "styleMap": {
+    "display-large": {
+      "id": "S:c1625bd017f438838981f876f061faf66fd273e3,",
+      "name": "Cobalt / App UI / display-large",
+      "key": "c1625bd017f438838981f876f061faf66fd273e3",
+      "font": {
+        "family": "Noto Serif",
+        "style": "SemiBold",
+        "variationSettings": {
+          "wght": 600,
+          "wdth": 100,
+          "CTGR": 0
+        }
+      },
+      "size": 34,
+      "lineHeight": {
+        "unit": "PIXELS",
+        "value": 40
+      }
+    },
+    "display-medium": {
+      "id": "S:267ece553fc069d7118b29af1f03a48837910ffa,",
+      "name": "Cobalt / App UI / display-medium",
+      "key": "267ece553fc069d7118b29af1f03a48837910ffa",
+      "font": {
+        "family": "Noto Serif",
+        "style": "SemiBold",
+        "variationSettings": {
+          "wght": 600,
+          "wdth": 100,
+          "CTGR": 0
+        }
+      },
+      "size": 28,
+      "lineHeight": {
+        "unit": "PIXELS",
+        "value": 34
+      }
+    },
+    "headline-large": {
+      "id": "S:82e37c7b7a34af13195a6c0747f9fc64eaa85f70,",
+      "name": "Cobalt / App UI / headline-large",
+      "key": "82e37c7b7a34af13195a6c0747f9fc64eaa85f70",
+      "font": {
+        "family": "Noto Serif",
+        "style": "SemiBold",
+        "variationSettings": {
+          "wght": 600,
+          "wdth": 100,
+          "CTGR": 0
+        }
+      },
+      "size": 24,
+      "lineHeight": {
+        "unit": "PIXELS",
+        "value": 30
+      }
+    },
+    "headline-medium": {
+      "id": "S:b789f8f351749a9798afe20b240d79c62ac89ac6,",
+      "name": "Cobalt / App UI / headline-medium",
+      "key": "b789f8f351749a9798afe20b240d79c62ac89ac6",
+      "font": {
+        "family": "Noto Serif",
+        "style": "SemiBold",
+        "variationSettings": {
+          "wght": 600,
+          "wdth": 100,
+          "CTGR": 0
+        }
+      },
+      "size": 20,
+      "lineHeight": {
+        "unit": "PIXELS",
+        "value": 26
+      }
+    },
+    "headline-small": {
+      "id": "S:c9a42764f2b42537786f7b7eba98ae9003939d12,",
+      "name": "Cobalt / App UI / headline-small",
+      "key": "c9a42764f2b42537786f7b7eba98ae9003939d12",
+      "font": {
+        "family": "Noto Serif",
+        "style": "SemiBold",
+        "variationSettings": {
+          "wght": 600,
+          "wdth": 100,
+          "CTGR": 0
+        }
+      },
+      "size": 18,
+      "lineHeight": {
+        "unit": "PIXELS",
+        "value": 24
+      }
+    },
+    "title-large": {
+      "id": "S:c3fcfbec0b88d439873a3c71807c7e77ebb80dc4,",
+      "name": "Cobalt / App UI / title-large",
+      "key": "c3fcfbec0b88d439873a3c71807c7e77ebb80dc4",
+      "font": {
+        "family": "Roboto",
+        "style": "Medium",
+        "variationSettings": {
+          "wght": 500,
+          "wdth": 100
+        }
+      },
+      "size": 16,
+      "lineHeight": {
+        "unit": "PIXELS",
+        "value": 22
+      }
+    },
+    "title-medium": {
+      "id": "S:30928ffa45e7b8fb085972fd8a75b0128a815cd2,",
+      "name": "Cobalt / App UI / title-medium",
+      "key": "30928ffa45e7b8fb085972fd8a75b0128a815cd2",
+      "font": {
+        "family": "Roboto",
+        "style": "Medium",
+        "variationSettings": {
+          "wght": 500,
+          "wdth": 100
+        }
+      },
+      "size": 14,
+      "lineHeight": {
+        "unit": "PIXELS",
+        "value": 20
+      }
+    },
+    "title-small": {
+      "id": "S:20d17cbdee87bfab3c8c92069c4b96e328856dd9,",
+      "name": "Cobalt / App UI / title-small",
+      "key": "20d17cbdee87bfab3c8c92069c4b96e328856dd9",
+      "font": {
+        "family": "Roboto",
+        "style": "Medium",
+        "variationSettings": {
+          "wght": 500,
+          "wdth": 100
+        }
+      },
+      "size": 13,
+      "lineHeight": {
+        "unit": "PIXELS",
+        "value": 18
+      }
+    },
+    "body-large": {
+      "id": "S:c072dff5e70d71deafe6487ac5199cad67d80776,",
+      "name": "Cobalt / App UI / body-large",
+      "key": "c072dff5e70d71deafe6487ac5199cad67d80776",
+      "font": {
+        "family": "Roboto",
+        "style": "Regular",
+        "variationSettings": {
+          "wght": 400,
+          "wdth": 100
+        }
+      },
+      "size": 15,
+      "lineHeight": {
+        "unit": "PIXELS",
+        "value": 22
+      }
+    },
+    "body-medium": {
+      "id": "S:c9adfd6bbdf766a732a9f168e954505b2b84cb43,",
+      "name": "Cobalt / App UI / body-medium",
+      "key": "c9adfd6bbdf766a732a9f168e954505b2b84cb43",
+      "font": {
+        "family": "Roboto",
+        "style": "Regular",
+        "variationSettings": {
+          "wght": 400,
+          "wdth": 100
+        }
+      },
+      "size": 13,
+      "lineHeight": {
+        "unit": "PIXELS",
+        "value": 19
+      }
+    },
+    "body-small": {
+      "id": "S:114498116c1e5c8b7eab0a96ad90458446ad7ce4,",
+      "name": "Cobalt / App UI / body-small",
+      "key": "114498116c1e5c8b7eab0a96ad90458446ad7ce4",
+      "font": {
+        "family": "Roboto",
+        "style": "Regular",
+        "variationSettings": {
+          "wght": 400,
+          "wdth": 100
+        }
+      },
+      "size": 11,
+      "lineHeight": {
+        "unit": "PIXELS",
+        "value": 15
+      }
+    },
+    "label-large": {
+      "id": "S:aa1cfa8ed351c7d7e1f21c926c2ed71f81b1c49c,",
+      "name": "Cobalt / App UI / label-large",
+      "key": "aa1cfa8ed351c7d7e1f21c926c2ed71f81b1c49c",
+      "font": {
+        "family": "Roboto",
+        "style": "Medium",
+        "variationSettings": {
+          "wght": 500,
+          "wdth": 100
+        }
+      },
+      "size": 13,
+      "lineHeight": {
+        "unit": "PIXELS",
+        "value": 18
+      }
+    },
+    "label-medium": {
+      "id": "S:c6055781c21798e601732558f81d5c2d9b9da96a,",
+      "name": "Cobalt / App UI / label-medium",
+      "key": "c6055781c21798e601732558f81d5c2d9b9da96a",
+      "font": {
+        "family": "Roboto",
+        "style": "Medium",
+        "variationSettings": {
+          "wght": 500,
+          "wdth": 100
+        }
+      },
+      "size": 11,
+      "lineHeight": {
+        "unit": "PIXELS",
+        "value": 15
+      }
+    },
+    "label-small": {
+      "id": "S:fc8e4057e613199f992cd1bc5db48fb92caa57b6,",
+      "name": "Cobalt / App UI / label-small",
+      "key": "fc8e4057e613199f992cd1bc5db48fb92caa57b6",
+      "font": {
+        "family": "Roboto",
+        "style": "Medium",
+        "variationSettings": {
+          "wght": 500,
+          "wdth": 100
+        }
+      },
+      "size": 10,
+      "lineHeight": {
+        "unit": "PIXELS",
+        "value": 14
+      }
+    },
+    "display-small": {
+      "id": "S:79107844008478aa13445519974adece3953cc0a,",
+      "name": "Cobalt / App UI / display-small",
+      "key": "79107844008478aa13445519974adece3953cc0a",
+      "font": {
+        "family": "Roboto",
+        "style": "Regular",
+        "variationSettings": {
+          "wght": 400,
+          "wdth": 100
+        }
+      },
+      "size": 36,
+      "lineHeight": {
+        "unit": "PIXELS",
+        "value": 44
+      }
+    },
+    "Collapsible title · Expanded": {
+      "id": "S:b211426da3e4b6bb3c115e6ba033933e6e34862a,",
+      "name": "Cobalt / App UI / Collapsible title · Expanded",
+      "key": "b211426da3e4b6bb3c115e6ba033933e6e34862a",
+      "font": {
+        "family": "Noto Serif",
+        "style": "Bold",
+        "variationSettings": {
+          "wght": 700,
+          "wdth": 100,
+          "CTGR": 0
+        }
+      },
+      "size": 31.719999313354492,
+      "lineHeight": {
+        "unit": "PIXELS",
+        "value": 44
+      }
+    },
+    "Collapsible title · Compact": {
+      "id": "S:89eadea5e4f715cca246df91080454514bbfb1ec,",
+      "name": "Cobalt / App UI / Collapsible title · Compact",
+      "key": "89eadea5e4f715cca246df91080454514bbfb1ec",
+      "font": {
+        "family": "Noto Serif",
+        "style": "Bold",
+        "variationSettings": {
+          "wght": 700,
+          "wdth": 100,
+          "CTGR": 0
+        }
+      },
+      "size": 21.31999969482422,
+      "lineHeight": {
+        "unit": "PIXELS",
+        "value": 30
+      }
+    }
+  }
+}

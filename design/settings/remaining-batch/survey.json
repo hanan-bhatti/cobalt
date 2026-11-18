@@ -1,0 +1,694 @@
+{
+  "name": "Survey",
+  "description": "Two optional steps, unanswered and selected states, pinned actions, included device details and honest email handoff.",
+  "sources": [
+    "SurveyBottomSheet.kt",
+    "SurveyResponse.kt",
+    "FeedbackSubmissionManager.kt"
+  ],
+  "screens": [
+    {
+      "key": "survey",
+      "title": "Cobalt survey",
+      "parent": "settings",
+      "blocks": [
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "Your experience",
+              "selected": true,
+              "target": "survey"
+            },
+            {
+              "title": "Your ideas",
+              "selected": false,
+              "target": "survey_ideas"
+            }
+          ]
+        },
+        {
+          "type": "slider",
+          "title": "How has Cobalt worked for you?",
+          "value": null,
+          "fraction": 0,
+          "ends": [
+            "1 · Very poorly",
+            "10 · Very well"
+          ],
+          "sub": "Optional · Drag to choose a score."
+        },
+        {
+          "type": "heading",
+          "text": "Which parts do you use?"
+        },
+        {
+          "type": "text",
+          "text": "Choose all that apply.",
+          "role": "body-medium"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "Notes",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Links",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Images & media",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Folders & search",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Movies & TV",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Sharing",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Saved history",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Dock & OCR",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Widgets",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Appearance",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Reminders",
+              "selected": false,
+              "target": "survey_answered"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "How was your last update?"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "No problems noticed",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Something changed",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Migration trouble",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Not sure",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "I haven’t upgraded",
+              "selected": false,
+              "target": "survey_answered"
+            }
+          ]
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Survey · Your experience · Unanswered",
+      "subtitle": "All questions are optional.",
+      "footer": [
+        {
+          "type": "button",
+          "label": "Continue",
+          "target": "survey_ideas",
+          "kind": "primary"
+        }
+      ]
+    },
+    {
+      "key": "survey_answered",
+      "title": "Cobalt survey",
+      "parent": "settings",
+      "blocks": [
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "Your experience",
+              "selected": true,
+              "target": "survey"
+            },
+            {
+              "title": "Your ideas",
+              "selected": false,
+              "target": "survey_ideas"
+            }
+          ]
+        },
+        {
+          "type": "slider",
+          "title": "How has Cobalt worked for you?",
+          "value": "8 / 10",
+          "fraction": 0.7777777777777778,
+          "ends": [
+            "1 · Very poorly",
+            "10 · Very well"
+          ],
+          "sub": "You can clear this answer."
+        },
+        {
+          "type": "heading",
+          "text": "Which parts do you use?"
+        },
+        {
+          "type": "text",
+          "text": "Choose all that apply.",
+          "role": "body-medium"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "Notes",
+              "selected": true,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Links",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Images & media",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Folders & search",
+              "selected": true,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Movies & TV",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Sharing",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Saved history",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Dock & OCR",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Widgets",
+              "selected": true,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Appearance",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Reminders",
+              "selected": false,
+              "target": "survey_answered"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "How was your last update?"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "No problems noticed",
+              "selected": true,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Something changed",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Migration trouble",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "Not sure",
+              "selected": false,
+              "target": "survey_answered"
+            },
+            {
+              "title": "I haven’t upgraded",
+              "selected": false,
+              "target": "survey_answered"
+            }
+          ]
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Survey · Your experience · Example answers",
+      "subtitle": "All questions are optional.",
+      "theme": "Light",
+      "footer": [
+        {
+          "type": "button",
+          "label": "Continue",
+          "target": "survey_ideas_answered",
+          "kind": "primary"
+        },
+        {
+          "type": "button",
+          "label": "Clear answers",
+          "target": "survey",
+          "kind": "text"
+        }
+      ]
+    },
+    {
+      "key": "survey_ideas",
+      "title": "Cobalt survey",
+      "parent": "settings",
+      "blocks": [
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "Your experience",
+              "selected": false,
+              "target": "survey"
+            },
+            {
+              "title": "Your ideas",
+              "selected": true,
+              "target": "survey_ideas"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "What should we improve?"
+        },
+        {
+          "type": "text",
+          "text": "Choose the area that matters most to you.",
+          "role": "body-medium"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "Editing & saving",
+              "selected": false,
+              "target": "survey_ideas_answered"
+            },
+            {
+              "title": "Finding things",
+              "selected": false,
+              "target": "survey_ideas_answered"
+            },
+            {
+              "title": "Movies & TV",
+              "selected": false,
+              "target": "survey_ideas_answered"
+            },
+            {
+              "title": "Sharing",
+              "selected": false,
+              "target": "survey_ideas_answered"
+            },
+            {
+              "title": "Storage & updates",
+              "selected": false,
+              "target": "survey_ideas_answered"
+            },
+            {
+              "title": "Look & readability",
+              "selected": false,
+              "target": "survey_ideas_answered"
+            },
+            {
+              "title": "Dock & OCR",
+              "selected": false,
+              "target": "survey_ideas_answered"
+            },
+            {
+              "title": "Speed & stability",
+              "selected": false,
+              "target": "survey_ideas_answered"
+            }
+          ]
+        },
+        {
+          "type": "field",
+          "label": "Tell us more",
+          "placeholder": "What would make this part work better for you?",
+          "multiline": true,
+          "height": 112,
+          "help": "Optional"
+        },
+        {
+          "type": "slider",
+          "title": "Would you recommend Cobalt?",
+          "value": null,
+          "fraction": 0,
+          "ends": [
+            "1 · Not likely",
+            "10 · Very likely"
+          ],
+          "sub": "Optional · Drag to choose a score."
+        },
+        {
+          "type": "row",
+          "title": "Included details",
+          "sub": "App version, device and Android version",
+          "icon": "info",
+          "target": "survey_details"
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Survey · Your ideas · Unanswered",
+      "subtitle": "All questions are optional.",
+      "footer": [
+        {
+          "type": "button",
+          "label": "Open email app",
+          "target": "survey_email",
+          "kind": "primary"
+        },
+        {
+          "type": "button",
+          "label": "Preview email",
+          "target": "survey_preview",
+          "kind": "text"
+        }
+      ]
+    },
+    {
+      "key": "survey_ideas_answered",
+      "title": "Cobalt survey",
+      "parent": "settings",
+      "blocks": [
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "Your experience",
+              "selected": false,
+              "target": "survey"
+            },
+            {
+              "title": "Your ideas",
+              "selected": true,
+              "target": "survey_ideas"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "What should we improve?"
+        },
+        {
+          "type": "text",
+          "text": "Choose the area that matters most to you.",
+          "role": "body-medium"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "Editing & saving",
+              "selected": false,
+              "target": "survey_ideas_answered"
+            },
+            {
+              "title": "Finding things",
+              "selected": true,
+              "target": "survey_ideas_answered"
+            },
+            {
+              "title": "Movies & TV",
+              "selected": false,
+              "target": "survey_ideas_answered"
+            },
+            {
+              "title": "Sharing",
+              "selected": false,
+              "target": "survey_ideas_answered"
+            },
+            {
+              "title": "Storage & updates",
+              "selected": false,
+              "target": "survey_ideas_answered"
+            },
+            {
+              "title": "Look & readability",
+              "selected": false,
+              "target": "survey_ideas_answered"
+            },
+            {
+              "title": "Dock & OCR",
+              "selected": false,
+              "target": "survey_ideas_answered"
+            },
+            {
+              "title": "Speed & stability",
+              "selected": false,
+              "target": "survey_ideas_answered"
+            }
+          ]
+        },
+        {
+          "type": "field",
+          "label": "Tell us more",
+          "placeholder": "What would make this part work better for you?",
+          "value": "Let me pin searches I use often.",
+          "multiline": true,
+          "height": 112,
+          "help": "Optional"
+        },
+        {
+          "type": "slider",
+          "title": "Would you recommend Cobalt?",
+          "value": "9 / 10",
+          "fraction": 0.8888888888888888,
+          "ends": [
+            "1 · Not likely",
+            "10 · Very likely"
+          ],
+          "sub": "You can clear this answer."
+        },
+        {
+          "type": "row",
+          "title": "Included details",
+          "sub": "App version, device and Android version",
+          "icon": "info",
+          "target": "survey_details"
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Survey · Your ideas · Example answers",
+      "subtitle": "All questions are optional.",
+      "footer": [
+        {
+          "type": "button",
+          "label": "Open email app",
+          "target": "survey_email",
+          "kind": "primary"
+        },
+        {
+          "type": "button",
+          "label": "Preview email",
+          "target": "survey_preview",
+          "kind": "text"
+        }
+      ]
+    },
+    {
+      "key": "survey_details",
+      "title": "Included details",
+      "parent": "settings",
+      "blocks": [
+        {
+          "type": "stats",
+          "valueWidth": 180,
+          "rows": [
+            [
+              "App",
+              "Cobalt 2.3.0 (20)"
+            ],
+            [
+              "Device",
+              "Pixel 10 Pro XL"
+            ],
+            [
+              "Android",
+              "17"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "These details help identify device-specific problems."
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Survey · Included details"
+    },
+    {
+      "key": "survey_preview",
+      "title": "Email preview",
+      "parent": "settings",
+      "blocks": [
+        {
+          "type": "legal",
+          "doc": "Cobalt survey · 2.3.0\n\nOverall experience: 8 / 10\nAreas used: Notes; Folders & search; Widgets\nLast update: No problems noticed\n\nImprovement area: Finding things\nDetails: Let me pin searches I use often.\nRecommendation: 9 / 10\n\nApp: Cobalt 2.3.0 (20)\nDevice: Pixel 10 Pro XL\nAndroid: 17"
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Survey · Email preview",
+      "subtitle": "Review your answers before opening an email app.",
+      "footer": [
+        {
+          "type": "button",
+          "label": "Open email app",
+          "target": "survey_email",
+          "kind": "primary"
+        },
+        {
+          "type": "button",
+          "label": "Copy response",
+          "target": "survey_copied",
+          "kind": "text"
+        }
+      ]
+    },
+    {
+      "key": "survey_email",
+      "title": "Email app opened",
+      "parent": "settings",
+      "blocks": [
+        {
+          "type": "status",
+          "title": "Finish sending in your email app",
+          "sub": "Your answers are prepared. Tap Send in your email app to send the survey.",
+          "icon": "mail"
+        },
+        {
+          "type": "button",
+          "label": "Copy response",
+          "target": "survey_copied",
+          "kind": "tonal"
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Survey · Prepared for email",
+      "footer": [
+        {
+          "type": "button",
+          "label": "Done",
+          "target": "settings",
+          "kind": "primary"
+        }
+      ]
+    },
+    {
+      "key": "survey_email_error",
+      "title": "Couldn’t open an email app",
+      "parent": "settings",
+      "blocks": [
+        {
+          "type": "status",
+          "title": "Your answers are still here",
+          "sub": "Install or enable an email app, then try again. You can also copy your response.",
+          "icon": "mail",
+          "error": true
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Survey · No email app",
+      "footer": [
+        {
+          "type": "button",
+          "label": "Try again",
+          "target": "survey_email",
+          "kind": "primary"
+        },
+        {
+          "type": "button",
+          "label": "Copy response",
+          "target": "survey_copied",
+          "kind": "text"
+        }
+      ]
+    },
+    {
+      "key": "survey_copied",
+      "title": "Response copied",
+      "parent": "settings",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Paste your response into an email to hannanbhatti2006@gmail.com."
+        },
+        {
+          "type": "text",
+          "text": "It has not been sent."
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Survey · Copy confirmation",
+      "footer": [
+        {
+          "type": "button",
+          "label": "Back to survey",
+          "target": "survey_ideas_answered",
+          "kind": "primary"
+        }
+      ]
+    }
+  ]
+}

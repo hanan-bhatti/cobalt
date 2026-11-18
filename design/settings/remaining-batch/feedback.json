@@ -1,0 +1,744 @@
+{
+  "name": "Feedback",
+  "description": "Clear bug and feature forms, optional screenshots and steps, included environment details and truthful report handoff states.",
+  "sources": [
+    "FeedbackScreen.kt",
+    "FeedbackSubmissionManager.kt"
+  ],
+  "screens": [
+    {
+      "key": "feedback",
+      "title": "Feedback",
+      "subtitle": "Report a problem or suggest an improvement.",
+      "blocks": [
+        {
+          "type": "tabs",
+          "labels": [
+            "Bug report",
+            "Feature request"
+          ],
+          "selected": 0,
+          "targets": [
+            "feedback",
+            "feedback_feature"
+          ]
+        },
+        {
+          "type": "field",
+          "label": "Title",
+          "placeholder": "Folder picker closes on rotation",
+          "help": "Required"
+        },
+        {
+          "type": "field",
+          "label": "Description",
+          "placeholder": "The folder picker closes when I rotate the device.",
+          "multiline": true,
+          "height": 144,
+          "help": "Required · Describe what happened and what you expected."
+        },
+        {
+          "type": "heading",
+          "text": "Steps to reproduce"
+        },
+        {
+          "type": "text",
+          "text": "Optional · Add each step separately.",
+          "role": "body-medium"
+        },
+        {
+          "type": "field",
+          "label": "Step 1",
+          "placeholder": "Open the folder picker",
+          "trailing": "close",
+          "trailingTarget": "feedback_bug_filled"
+        },
+        {
+          "type": "button",
+          "label": "Add a step",
+          "target": "feedback_bug_filled",
+          "kind": "text"
+        },
+        {
+          "type": "row",
+          "title": "Add a screenshot",
+          "sub": "Optional · Choose an image",
+          "icon": "image",
+          "target": "feedback_attached"
+        },
+        {
+          "type": "row",
+          "title": "Included details",
+          "sub": "App version, device and Android version",
+          "icon": "info",
+          "target": "feedback_environment"
+        },
+        {
+          "type": "button",
+          "label": "Prepare bug report",
+          "target": "feedback_bug_validation",
+          "kind": "primary"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Feedback · Bug report"
+    },
+    {
+      "key": "feedback_feature",
+      "title": "Feedback",
+      "subtitle": "Report a problem or suggest an improvement.",
+      "blocks": [
+        {
+          "type": "tabs",
+          "labels": [
+            "Bug report",
+            "Feature request"
+          ],
+          "selected": 1,
+          "targets": [
+            "feedback",
+            "feedback_feature"
+          ]
+        },
+        {
+          "type": "field",
+          "label": "Title",
+          "placeholder": "Pin saved searches",
+          "help": "Required"
+        },
+        {
+          "type": "field",
+          "label": "Problem",
+          "placeholder": "I repeat the same searches each week.",
+          "multiline": true,
+          "height": 104,
+          "help": "Required · Explain the problem you want to solve."
+        },
+        {
+          "type": "field",
+          "label": "Proposed solution",
+          "placeholder": "Let me pin a saved search on Home.",
+          "multiline": true,
+          "height": 104,
+          "help": "Required · Describe the behavior you have in mind."
+        },
+        {
+          "type": "heading",
+          "text": "Importance"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "Nice to have"
+            },
+            {
+              "title": "Important",
+              "selected": true
+            },
+            {
+              "title": "Essential"
+            }
+          ]
+        },
+        {
+          "type": "consent",
+          "text": "I agree to share this feature request.",
+          "on": true
+        },
+        {
+          "type": "row",
+          "title": "Included details",
+          "sub": "App version, device and Android version",
+          "icon": "info",
+          "target": "feedback_environment"
+        },
+        {
+          "type": "button",
+          "label": "Prepare feature request",
+          "target": "feedback_feature_filled",
+          "kind": "primary"
+        }
+      ],
+      "theme": "Light",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Feedback · Feature request"
+    },
+    {
+      "key": "feedback_bug_filled",
+      "title": "Feedback",
+      "subtitle": "Report a problem or suggest an improvement.",
+      "blocks": [
+        {
+          "type": "tabs",
+          "labels": [
+            "Bug report",
+            "Feature request"
+          ],
+          "selected": 0,
+          "targets": [
+            "feedback",
+            "feedback_feature"
+          ]
+        },
+        {
+          "type": "field",
+          "label": "Title",
+          "placeholder": "Folder picker closes on rotation",
+          "value": "Folder picker closes on rotation",
+          "help": "Required"
+        },
+        {
+          "type": "field",
+          "label": "Description",
+          "placeholder": "The folder picker closes when I rotate the device.",
+          "multiline": true,
+          "height": 144,
+          "value": "The folder picker closes when I rotate the device. I expected it to stay open so I could finish choosing a folder.",
+          "help": "Required · Describe what happened and what you expected."
+        },
+        {
+          "type": "heading",
+          "text": "Steps to reproduce"
+        },
+        {
+          "type": "text",
+          "text": "Optional · Add each step separately.",
+          "role": "body-medium"
+        },
+        {
+          "type": "field",
+          "label": "Step 1",
+          "placeholder": "Open the folder picker",
+          "value": "Open the folder picker.",
+          "trailing": "close",
+          "trailingTarget": "feedback_bug_filled"
+        },
+        {
+          "type": "field",
+          "label": "Step 2",
+          "placeholder": "Rotate the device",
+          "value": "Rotate the device.",
+          "trailing": "close",
+          "trailingTarget": "feedback_bug_filled"
+        },
+        {
+          "type": "button",
+          "label": "Add a step",
+          "target": "feedback_bug_filled",
+          "kind": "text"
+        },
+        {
+          "type": "row",
+          "title": "Add a screenshot",
+          "sub": "Optional · Choose an image",
+          "icon": "image",
+          "target": "feedback_attached"
+        },
+        {
+          "type": "row",
+          "title": "Included details",
+          "sub": "App version, device and Android version",
+          "icon": "info",
+          "target": "feedback_environment"
+        },
+        {
+          "type": "button",
+          "label": "Prepare bug report",
+          "target": "feedback_delivery",
+          "kind": "primary"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Bug report · Filled example"
+    },
+    {
+      "key": "feedback_feature_filled",
+      "title": "Feedback",
+      "subtitle": "Report a problem or suggest an improvement.",
+      "blocks": [
+        {
+          "type": "tabs",
+          "labels": [
+            "Bug report",
+            "Feature request"
+          ],
+          "selected": 1,
+          "targets": [
+            "feedback",
+            "feedback_feature"
+          ]
+        },
+        {
+          "type": "field",
+          "label": "Title",
+          "placeholder": "Pin saved searches",
+          "value": "Pin saved searches",
+          "help": "Required"
+        },
+        {
+          "type": "field",
+          "label": "Problem",
+          "placeholder": "I repeat the same searches each week.",
+          "multiline": true,
+          "height": 104,
+          "value": "I repeat the same searches each week and have to enter the query again.",
+          "help": "Required · Explain the problem you want to solve."
+        },
+        {
+          "type": "field",
+          "label": "Proposed solution",
+          "placeholder": "Let me pin a saved search on Home.",
+          "multiline": true,
+          "height": 104,
+          "value": "Let me save a search and pin it on Home for quick access.",
+          "help": "Required · Describe the behavior you have in mind."
+        },
+        {
+          "type": "heading",
+          "text": "Importance"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "Nice to have"
+            },
+            {
+              "title": "Important",
+              "selected": true
+            },
+            {
+              "title": "Essential"
+            }
+          ]
+        },
+        {
+          "type": "consent",
+          "text": "I agree to share this feature request.",
+          "on": true
+        },
+        {
+          "type": "row",
+          "title": "Included details",
+          "sub": "App version, device and Android version",
+          "icon": "info",
+          "target": "feedback_environment"
+        },
+        {
+          "type": "button",
+          "label": "Prepare feature request",
+          "target": "feedback_feature_delivery",
+          "kind": "primary"
+        }
+      ],
+      "theme": "Light",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Feature request · Filled example"
+    },
+    {
+      "key": "feedback_bug_validation",
+      "title": "Feedback",
+      "subtitle": "Report a problem or suggest an improvement.",
+      "blocks": [
+        {
+          "type": "tabs",
+          "labels": [
+            "Bug report",
+            "Feature request"
+          ],
+          "selected": 0,
+          "targets": [
+            "feedback",
+            "feedback_feature"
+          ]
+        },
+        {
+          "type": "field",
+          "label": "Title",
+          "placeholder": "Folder picker closes on rotation",
+          "error": "Enter a short title for this problem."
+        },
+        {
+          "type": "field",
+          "label": "Description",
+          "placeholder": "The folder picker closes when I rotate the device.",
+          "multiline": true,
+          "height": 144,
+          "help": "Required · Describe what happened and what you expected."
+        },
+        {
+          "type": "heading",
+          "text": "Steps to reproduce"
+        },
+        {
+          "type": "text",
+          "text": "Optional · Add each step separately.",
+          "role": "body-medium"
+        },
+        {
+          "type": "field",
+          "label": "Step 1",
+          "placeholder": "Open the folder picker",
+          "trailing": "close",
+          "trailingTarget": "feedback_bug_filled"
+        },
+        {
+          "type": "button",
+          "label": "Add a step",
+          "target": "feedback_bug_filled",
+          "kind": "text"
+        },
+        {
+          "type": "row",
+          "title": "Add a screenshot",
+          "sub": "Optional · Choose an image",
+          "icon": "image",
+          "target": "feedback_attached"
+        },
+        {
+          "type": "row",
+          "title": "Included details",
+          "sub": "App version, device and Android version",
+          "icon": "info",
+          "target": "feedback_environment"
+        },
+        {
+          "type": "button",
+          "label": "Prepare bug report",
+          "target": "feedback_bug_validation",
+          "kind": "primary"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Bug report · Required-field error"
+    },
+    {
+      "key": "feedback_attached",
+      "title": "Feedback",
+      "subtitle": "Report a problem or suggest an improvement.",
+      "blocks": [
+        {
+          "type": "tabs",
+          "labels": [
+            "Bug report",
+            "Feature request"
+          ],
+          "selected": 0,
+          "targets": [
+            "feedback",
+            "feedback_feature"
+          ]
+        },
+        {
+          "type": "field",
+          "label": "Title",
+          "placeholder": "Folder picker closes on rotation",
+          "value": "Folder picker closes on rotation",
+          "help": "Required"
+        },
+        {
+          "type": "field",
+          "label": "Description",
+          "placeholder": "The folder picker closes when I rotate the device.",
+          "multiline": true,
+          "height": 144,
+          "value": "The folder picker closes when I rotate the device. I expected it to stay open so I could finish choosing a folder.",
+          "help": "Required · Describe what happened and what you expected."
+        },
+        {
+          "type": "heading",
+          "text": "Steps to reproduce"
+        },
+        {
+          "type": "text",
+          "text": "Optional · Add each step separately.",
+          "role": "body-medium"
+        },
+        {
+          "type": "field",
+          "label": "Step 1",
+          "placeholder": "Open the folder picker",
+          "value": "Open the folder picker.",
+          "trailing": "close",
+          "trailingTarget": "feedback_bug_filled"
+        },
+        {
+          "type": "field",
+          "label": "Step 2",
+          "placeholder": "Rotate the device",
+          "value": "Rotate the device.",
+          "trailing": "close",
+          "trailingTarget": "feedback_bug_filled"
+        },
+        {
+          "type": "button",
+          "label": "Add a step",
+          "target": "feedback_bug_filled",
+          "kind": "text"
+        },
+        {
+          "type": "row",
+          "title": "folder-picker.png",
+          "sub": "Image attached · Optional",
+          "icon": "image",
+          "target": "feedback_attached"
+        },
+        {
+          "type": "button",
+          "label": "Remove screenshot",
+          "target": "feedback_bug_filled",
+          "kind": "text"
+        },
+        {
+          "type": "row",
+          "title": "Included details",
+          "sub": "App version, device and Android version",
+          "icon": "info",
+          "target": "feedback_environment"
+        },
+        {
+          "type": "button",
+          "label": "Prepare bug report",
+          "target": "feedback_delivery",
+          "kind": "primary"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Bug report · Screenshot attached"
+    },
+    {
+      "key": "feedback_environment",
+      "title": "Included details",
+      "subtitle": "These details are included in the prepared report.",
+      "parent": "feedback_bug_filled",
+      "blocks": [
+        {
+          "type": "stats",
+          "valueWidth": 180,
+          "rows": [
+            [
+              "App version",
+              "2.3.0"
+            ],
+            [
+              "Device",
+              "Google Pixel 10 Pro XL"
+            ],
+            [
+              "Android",
+              "API 37"
+            ],
+            [
+              "Reporter",
+              "Guest user"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Cobalt has no account sign-in for this report. Review the report text before sharing.",
+          "role": "body-large"
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Included details · Bottom sheet"
+    },
+    {
+      "key": "feedback_delivery",
+      "title": "Prepare bug report",
+      "subtitle": "Choose how to share this report.",
+      "parent": "feedback_bug_filled",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Folder picker closes on rotation",
+          "role": "title-large"
+        },
+        {
+          "type": "text",
+          "text": "Finish sending in the browser or email app. Sharing a file opens Android’s share options.",
+          "role": "body-large"
+        },
+        {
+          "type": "button",
+          "label": "Open GitHub issue",
+          "target": "feedback_prepared",
+          "kind": "primary"
+        },
+        {
+          "type": "button",
+          "label": "Open email draft",
+          "target": "feedback_prepared",
+          "kind": "tonal"
+        },
+        {
+          "type": "button",
+          "label": "Share or save Markdown",
+          "target": "feedback_prepared",
+          "kind": "tonal"
+        },
+        {
+          "type": "button",
+          "label": "Preview report text",
+          "target": "feedback_preview",
+          "kind": "text"
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Prepare bug report · Bottom sheet"
+    },
+    {
+      "key": "feedback_feature_delivery",
+      "title": "Prepare feature request",
+      "subtitle": "Choose how to share this request.",
+      "parent": "feedback_feature_filled",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Pin saved searches",
+          "role": "title-large"
+        },
+        {
+          "type": "text",
+          "text": "Finish sending in the browser or email app. Sharing a file opens Android’s share options.",
+          "role": "body-large"
+        },
+        {
+          "type": "button",
+          "label": "Open GitHub issue",
+          "target": "feedback_prepared",
+          "kind": "primary"
+        },
+        {
+          "type": "button",
+          "label": "Open email draft",
+          "target": "feedback_prepared",
+          "kind": "tonal"
+        },
+        {
+          "type": "button",
+          "label": "Share or save Markdown",
+          "target": "feedback_prepared",
+          "kind": "tonal"
+        },
+        {
+          "type": "button",
+          "label": "Preview report text",
+          "target": "feedback_preview",
+          "kind": "text"
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Prepare feature request · Bottom sheet"
+    },
+    {
+      "key": "feedback_preview",
+      "title": "Report preview",
+      "subtitle": "Review the text before sharing.",
+      "theme": "Light",
+      "back": "feedback_bug_filled",
+      "kind": "page",
+      "caption": "Feedback · Markdown preview",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "# Bug report\n\n## Folder picker closes on rotation\n\nThe folder picker closes when I rotate the device. I expected it to stay open so I could finish choosing a folder.\n\n## Steps to reproduce\n\n1. Open the folder picker.\n2. Rotate the device.\n\n## Environment\n\nApp: Cobalt 2.3.0\nDevice: Google Pixel 10 Pro XL\nAndroid: API 37\nReporter: Guest user",
+          "role": "body-large"
+        },
+        {
+          "type": "button",
+          "label": "Back to report",
+          "target": "feedback_delivery",
+          "kind": "tonal"
+        }
+      ]
+    },
+    {
+      "key": "feedback_prepared",
+      "title": "Feedback",
+      "subtitle": "Report a problem or suggest an improvement.",
+      "blocks": [
+        {
+          "type": "tabs",
+          "labels": [
+            "Bug report",
+            "Feature request"
+          ],
+          "selected": 0,
+          "targets": [
+            "feedback",
+            "feedback_feature"
+          ]
+        },
+        {
+          "type": "status",
+          "icon": "check",
+          "title": "Report prepared",
+          "sub": "Finish sending in GitHub or your email app, or use Android’s share options."
+        },
+        {
+          "type": "button",
+          "label": "Prepare another report",
+          "target": "feedback",
+          "kind": "primary"
+        },
+        {
+          "type": "button",
+          "label": "Back to settings",
+          "target": "settings",
+          "kind": "text"
+        }
+      ],
+      "theme": "Light",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Feedback · Prepared, not submitted"
+    },
+    {
+      "key": "feedback_email_error",
+      "title": "Email app could not open",
+      "subtitle": "The report text is still available.",
+      "parent": "feedback_bug_filled",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "mail",
+          "title": "Choose another way to share",
+          "sub": "Use GitHub, share a Markdown file, or copy the report text.",
+          "error": true
+        },
+        {
+          "type": "button",
+          "label": "Open GitHub issue",
+          "target": "feedback_prepared",
+          "kind": "primary"
+        },
+        {
+          "type": "button",
+          "label": "Share or save Markdown",
+          "target": "feedback_prepared",
+          "kind": "tonal"
+        },
+        {
+          "type": "button",
+          "label": "Copy report text",
+          "target": "feedback_preview",
+          "kind": "text"
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Email app could not open · Bottom sheet"
+    }
+  ]
+}

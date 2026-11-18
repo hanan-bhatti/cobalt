@@ -1,0 +1,115 @@
+{
+  "icons": [
+    {
+      "role": "font",
+      "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/type-paragraph-character/text-block_text-formatting-editing-content-typography-paragraph-temp.svg",
+      "target": "app/src/main/res/drawable/ic_settings_font.xml",
+      "rotation": 0,
+      "meaning": "Text font family"
+    },
+    {
+      "role": "size",
+      "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/type-paragraph-character/smallcaps_text-style-font-formatting-uppercase-lettering-temp.svg",
+      "target": "app/src/main/res/drawable/ic_settings_size.xml",
+      "rotation": 0,
+      "meaning": "Font size, shown by a large and a small T"
+    },
+    {
+      "role": "weight",
+      "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/type-paragraph-character/text-bold_typography-font-weight-emphasis-boldness-strong-text-styling-temp.svg",
+      "target": "app/src/main/res/drawable/ic_settings_weight.xml",
+      "rotation": 0,
+      "meaning": "Font weight, shown by B"
+    },
+    {
+      "role": "line",
+      "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/type-paragraph-character/paragraphspacing_paragraph-adjustment-line-spacing-text-formatting-indent-temp.svg",
+      "target": "app/src/main/res/drawable/ic_settings_line.xml",
+      "rotation": 0,
+      "meaning": "Vertical distance between text lines"
+    },
+    {
+      "role": "letters",
+      "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/type-paragraph-character/paragraphspacing_paragraph-adjustment-line-spacing-text-formatting-indent-temp.svg",
+      "target": "app/src/main/res/drawable/ic_settings_letters.xml",
+      "rotation": 90,
+      "meaning": "Horizontal spacing between letters"
+    },
+    {
+      "role": "paragraph",
+      "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/type-paragraph-character/firstline_text-highlight-emphasis-underline-importance-primacy-temp.svg",
+      "target": "app/src/main/res/drawable/ic_settings_paragraph.xml",
+      "rotation": 0,
+      "meaning": "Paragraph layout and spacing"
+    },
+    {
+      "role": "reading",
+      "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/school-learning/book-open_reading-knowledge-education-literature-pages-open-temp.svg",
+      "target": "app/src/main/res/drawable/ic_settings_reading.xml",
+      "rotation": 0,
+      "meaning": "Reading preset"
+    },
+    {
+      "role": "code",
+      "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/programming/scroll_navigation-scrolling-scrollbar-text-content-page-down-temp.svg",
+      "target": "app/src/main/res/drawable/ic_settings_code.xml",
+      "rotation": 0,
+      "meaning": "Code font, using the rounded code brackets glyph"
+    },
+    {
+      "role": "theme",
+      "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/design-tools/color-swatch_color-palette-paint-colors-selection-design-temp.svg",
+      "target": "app/src/main/res/drawable/ic_settings_theme.xml",
+      "rotation": 0,
+      "meaning": "Theme and palette choices"
+    },
+    {
+      "role": "blur",
+      "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/design-tools/blur_visual-soft-focus-image-background-effect-blurry-temp.svg",
+      "target": "app/src/main/res/drawable/ic_settings_blur.xml",
+      "rotation": 0,
+      "meaning": "Blur and surface tint"
+    },
+    {
+      "role": "scroll",
+      "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/hand/scrollfinger_scroll-scrollbar-finger-navigation-scrolling-interaction-temp.svg",
+      "target": "app/src/main/res/drawable/ic_settings_scroll.xml",
+      "rotation": 0,
+      "meaning": "Touch and drag to scroll"
+    },
+    {
+      "role": "sun",
+      "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/weather/sun_light-bright-warm-solar-energy-daytime-temp.svg",
+      "target": "app/src/main/res/drawable/ic_settings_sun.xml",
+      "rotation": 0,
+      "meaning": "Light theme"
+    },
+    {
+      "role": "moon",
+      "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/weather/moon_night-sky-phases-celestial-lunar-illumination-temp.svg",
+      "target": "app/src/main/res/drawable/ic_settings_moon.xml",
+      "rotation": 0,
+      "meaning": "Dark theme"
+    },
+    {
+      "role": "system",
+      "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/computers-devices-electronics/mobile_portable-communication-device-smartphone-wireless-connection-temp.svg",
+      "target": "app/src/main/res/drawable/ic_settings_system.xml",
+      "rotation": 0,
+      "meaning": "Follow device theme"
+    },
+    {
+      "role": "heatmap",
+      "source": "design/settings/icon-concepts/a-heatmap.svg",
+      "target": "app/src/main/res/drawable/ic_archive_heatmap.xml",
+      "meaning": "Approved Option A archive view icon"
+    },
+    {
+      "role": "categories",
+      "source": "design/settings/icon-concepts/a-categories.svg",
+      "target": "app/src/main/res/drawable/ic_archive_categories.xml",
+      "meaning": "Approved Option A archive view icon"
+    }
+  ],
+  "method": "Android vector import preserves SVG geometry, stroke properties, alpha and rotations; no substitute glyphs."
+}

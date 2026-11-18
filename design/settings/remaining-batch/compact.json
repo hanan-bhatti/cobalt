@@ -1,0 +1,258 @@
+{
+  "name": "Compact phone references",
+  "description": "320 dp references for wrapping Help topics, long report text and a stacked widget gallery.",
+  "sources": [
+    "Responsive references for this review batch"
+  ],
+  "screens": [
+    {
+      "key": "help_compact",
+      "title": "Help",
+      "subtitle": "Answers and ways to get in touch.",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search help",
+          "placeholder": "Search topics"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All",
+              "selected": true,
+              "target": "help"
+            },
+            {
+              "title": "Getting started",
+              "selected": false,
+              "target": "help_getting_started"
+            },
+            {
+              "title": "Gemini OCR",
+              "selected": false,
+              "target": "help_gemini"
+            },
+            {
+              "title": "Storage & sync",
+              "selected": false,
+              "target": "help_storage_sync"
+            },
+            {
+              "title": "Audio & media",
+              "selected": false,
+              "target": "help_audio_media"
+            },
+            {
+              "title": "Widgets & themes",
+              "selected": false,
+              "target": "help_widgets_themes"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "Common questions"
+        },
+        {
+          "type": "faq",
+          "questions": [
+            {
+              "title": "How do I save content?",
+              "target": "help_answer_capture",
+              "actionTarget": "help_answer_capture"
+            },
+            {
+              "title": "How are saved items organized?",
+              "target": "help_answer_organize",
+              "actionTarget": "help_answer_organize"
+            },
+            {
+              "title": "How does screen OCR use Gemini?",
+              "target": "help_answer_ocr",
+              "actionTarget": "help_answer_ocr"
+            },
+            {
+              "title": "What works without a connection?",
+              "target": "help_answer_offline",
+              "actionTarget": "help_answer_offline"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Feedback",
+          "rows": [
+            {
+              "title": "Report a bug",
+              "sub": "Prepare a report for GitHub, email or a file",
+              "icon": "feedback",
+              "target": "feedback"
+            },
+            {
+              "title": "Suggest a feature",
+              "sub": "Describe a problem and an idea",
+              "icon": "ideas",
+              "target": "feedback_feature"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Compact phone · Help · 320 dp",
+      "width": 320,
+      "height": 712,
+      "compact": true
+    },
+    {
+      "key": "feedback_compact",
+      "title": "Feedback",
+      "subtitle": "Report a problem or suggest an improvement.",
+      "blocks": [
+        {
+          "type": "tabs",
+          "labels": [
+            "Bug report",
+            "Feature request"
+          ],
+          "selected": 0,
+          "targets": [
+            "feedback",
+            "feedback_feature"
+          ]
+        },
+        {
+          "type": "field",
+          "label": "Title",
+          "placeholder": "Folder picker closes on rotation",
+          "value": "Folder picker closes on rotation",
+          "help": "Required"
+        },
+        {
+          "type": "field",
+          "label": "Description",
+          "placeholder": "The folder picker closes when I rotate the device.",
+          "multiline": true,
+          "height": 200,
+          "value": "The folder picker closes when I rotate the device. I expected it to stay open so I could finish choosing a folder.",
+          "help": "Required · Describe what happened and what you expected."
+        },
+        {
+          "type": "heading",
+          "text": "Steps to reproduce"
+        },
+        {
+          "type": "text",
+          "text": "Optional · Add each step separately.",
+          "role": "body-medium"
+        },
+        {
+          "type": "field",
+          "label": "Step 1",
+          "placeholder": "Open the folder picker",
+          "value": "Open the folder picker.",
+          "trailing": "close",
+          "trailingTarget": "feedback_bug_filled"
+        },
+        {
+          "type": "field",
+          "label": "Step 2",
+          "placeholder": "Rotate the device",
+          "value": "Rotate the device.",
+          "trailing": "close",
+          "trailingTarget": "feedback_bug_filled"
+        },
+        {
+          "type": "button",
+          "label": "Add a step",
+          "target": "feedback_bug_filled",
+          "kind": "text"
+        },
+        {
+          "type": "row",
+          "title": "Add a screenshot",
+          "sub": "Optional · Choose an image",
+          "icon": "image",
+          "target": "feedback_attached"
+        },
+        {
+          "type": "row",
+          "title": "Included details",
+          "sub": "App version, device and Android version",
+          "icon": "info",
+          "target": "feedback_environment"
+        },
+        {
+          "type": "button",
+          "label": "Prepare bug report",
+          "target": "feedback_delivery",
+          "kind": "primary"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Compact phone · Feedback · 320 dp",
+      "width": 320,
+      "height": 712,
+      "compact": true
+    },
+    {
+      "key": "widgets_compact",
+      "title": "Widgets",
+      "subtitle": "Choose what appears on your home screen.",
+      "blocks": [
+        {
+          "type": "widgetGrid",
+          "items": [
+            {
+              "title": "Pocket Folio",
+              "sub": "Two items from a folder · 4 × 3",
+              "widget": "folio",
+              "target": "folio",
+              "label": "Set up Folio"
+            },
+            {
+              "title": "Screening Card",
+              "sub": "A saved title · 4 × 3",
+              "widget": "screening",
+              "target": "screening",
+              "label": "Set up card"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "More widgets"
+        },
+        {
+          "type": "row",
+          "title": "Capture Ticket",
+          "sub": "Not available yet · 4 × 2",
+          "icon": "text"
+        },
+        {
+          "type": "row",
+          "title": "Archive Window",
+          "sub": "Not available yet · 4 × 3",
+          "icon": "quote"
+        },
+        {
+          "type": "row",
+          "title": "Focus Page",
+          "sub": "Not available yet · 2 × 3",
+          "icon": "checklist"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Compact phone · Widgets · 320 dp",
+      "width": 320,
+      "height": 712,
+      "compact": true
+    }
+  ]
+}

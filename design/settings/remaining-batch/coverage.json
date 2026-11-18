@@ -1,0 +1,327 @@
+{
+  "newViews": 180,
+  "reusedApprovedScreeningViews": 47,
+  "acceptedReferenceClones": 4,
+  "reviewEntry": 1,
+  "uniquePhoneRoots": 232,
+  "modules": [
+    {
+      "name": "Gemini OCR",
+      "views": 11,
+      "sources": [
+        "ProfileSettings.kt:575–908",
+        "GeminiUsageScreen.kt",
+        "CobaltRepository.kt:861–900"
+      ],
+      "screenKeys": [
+        "gemini",
+        "gemini_light",
+        "gemini_key",
+        "gemini_ocr_model",
+        "gemini_audio_model",
+        "gemini_detail",
+        "gemini_prompt",
+        "gemini_usage",
+        "gemini_usage_empty",
+        "gemini_usage_reset",
+        "gemini_models_error"
+      ]
+    },
+    {
+      "name": "Reminders",
+      "views": 6,
+      "sources": [
+        "AdaptiveRemindersSettingsScreen.kt"
+      ],
+      "screenKeys": [
+        "reminders",
+        "reminders_off",
+        "reminders_permission",
+        "reminders_time",
+        "reminders_inactivity",
+        "reminders_reset"
+      ]
+    },
+    {
+      "name": "Media & providers",
+      "views": 15,
+      "sources": [
+        "MediaSettingsScreen.kt",
+        "TraktSyncSettingsScreen.kt",
+        "PendingTraktChangesScreen.kt",
+        "MovieApiKeyScreen.kt"
+      ],
+      "screenKeys": [
+        "media",
+        "media_light",
+        "trakt",
+        "trakt_disconnected",
+        "trakt_syncing",
+        "trakt_browser",
+        "trakt_code",
+        "trakt_advanced",
+        "trakt_disconnect",
+        "trakt_pending",
+        "tmdb",
+        "media_priority",
+        "jikan",
+        "media_ignored_reset",
+        "trakt_error"
+      ]
+    },
+    {
+      "name": "Storage & recovery",
+      "views": 36,
+      "sources": [
+        "NoteStorageManagementScreen.kt",
+        "NoteRecoveryScreen.kt",
+        "CaptureDraftRecoveryScreen.kt",
+        "NoteTrashScreen.kt",
+        "NoteOlderCopiesScreen.kt",
+        "NoteUnlinkedFilesScreen.kt",
+        "ClearDisposableStorageBottomSheet.kt"
+      ],
+      "screenKeys": [
+        "storage",
+        "storage_light",
+        "storage_notes",
+        "storage_notes_large",
+        "storage_note_plain",
+        "storage_note_options",
+        "storage_note_trash",
+        "storage_drafts",
+        "storage_drafts_empty",
+        "storage_draft_actions",
+        "storage_trash",
+        "storage_trash_off",
+        "storage_trash_empty",
+        "storage_trash_actions",
+        "storage_trash_delete",
+        "storage_trash_empty_confirm",
+        "storage_trash_off_confirm",
+        "storage_history",
+        "storage_retention",
+        "storage_versions",
+        "storage_version_actions",
+        "storage_version_restore",
+        "storage_history_cleanup",
+        "storage_cache",
+        "storage_database_confirm",
+        "storage_disposable",
+        "storage_disposable_holding",
+        "storage_unlinked",
+        "storage_unlinked_empty",
+        "storage_unlinked_actions",
+        "storage_unlinked_media_actions",
+        "storage_unlinked_delete",
+        "storage_unlinked_cleanup",
+        "storage_error",
+        "storage_safe_mode",
+        "storage_safe_exit"
+      ]
+    },
+    {
+      "name": "Storage update & background",
+      "views": 10,
+      "sources": [
+        "NoteMigrationScreen.kt",
+        "ProfileSettings.kt",
+        "BatteryOptimizationHelper.kt"
+      ],
+      "screenKeys": [
+        "storage_update",
+        "storage_update_confirm",
+        "storage_update_running",
+        "storage_update_complete",
+        "storage_update_attention",
+        "storage_update_interrupted",
+        "note_storage_error",
+        "background",
+        "background_allowed",
+        "background_coloros"
+      ]
+    },
+    {
+      "name": "Help",
+      "views": 20,
+      "sources": [
+        "SupportScreen.kt",
+        "current settings and widget routes"
+      ],
+      "screenKeys": [
+        "help",
+        "help_getting_started",
+        "help_gemini",
+        "help_storage_sync",
+        "help_audio_media",
+        "help_widgets_themes",
+        "help_search",
+        "help_no_results",
+        "help_answer_capture",
+        "help_answer_organize",
+        "help_answer_dock",
+        "help_answer_ocr",
+        "help_answer_models",
+        "help_answer_media",
+        "help_answer_local",
+        "help_answer_offline",
+        "help_answer_voice",
+        "help_answer_player",
+        "help_answer_widgets",
+        "help_answer_customize"
+      ]
+    },
+    {
+      "name": "Feedback",
+      "views": 12,
+      "sources": [
+        "FeedbackScreen.kt",
+        "FeedbackSubmissionManager.kt"
+      ],
+      "screenKeys": [
+        "feedback",
+        "feedback_feature",
+        "feedback_bug_filled",
+        "feedback_feature_filled",
+        "feedback_bug_validation",
+        "feedback_attached",
+        "feedback_environment",
+        "feedback_delivery",
+        "feedback_feature_delivery",
+        "feedback_preview",
+        "feedback_prepared",
+        "feedback_email_error"
+      ]
+    },
+    {
+      "name": "Survey",
+      "views": 9,
+      "sources": [
+        "SurveyBottomSheet.kt",
+        "SurveyResponse.kt",
+        "FeedbackSubmissionManager.kt"
+      ],
+      "screenKeys": [
+        "survey",
+        "survey_answered",
+        "survey_ideas",
+        "survey_ideas_answered",
+        "survey_details",
+        "survey_preview",
+        "survey_email",
+        "survey_email_error",
+        "survey_copied"
+      ]
+    },
+    {
+      "name": "Updates, About & legal",
+      "views": 16,
+      "sources": [
+        "ReleaseUpdatesScreen.kt",
+        "UpdateAvailableBottomSheet.kt",
+        "LegalScreen.kt",
+        "LegalDocs.kt",
+        "CHANGELOG.md"
+      ],
+      "screenKeys": [
+        "updates",
+        "updates_checking",
+        "updates_current",
+        "updates_error",
+        "updates_auto",
+        "updates_available",
+        "update_available_sheet",
+        "update_downloads",
+        "release_notes_230",
+        "release_notes_222",
+        "release_notes_example",
+        "updates_history_error",
+        "about",
+        "privacy",
+        "terms",
+        "licenses"
+      ]
+    },
+    {
+      "name": "Web companion · Optional",
+      "views": 7,
+      "sources": [
+        "WebCompanionSettingsScreen.kt",
+        "WebCompanionManager.kt",
+        "WebCompanionSecurityManager.kt"
+      ],
+      "screenKeys": [
+        "web",
+        "web_running",
+        "web_port",
+        "web_rotate",
+        "web_pin_changed",
+        "web_copied",
+        "web_error"
+      ]
+    },
+    {
+      "name": "Widgets",
+      "views": 35,
+      "sources": [
+        "WidgetSettingsScreen.kt",
+        "ScreeningWidgetSettingsScreen.kt",
+        "ScreeningMorningSettingsScreen.kt",
+        "FolioModel.kt",
+        "ScreeningWidgetModel.kt",
+        "FolioConfigurationActivity.kt",
+        "ScreeningConfigurationActivity.kt"
+      ],
+      "screenKeys": [
+        "widgets",
+        "widgets_light",
+        "folio",
+        "folio_new",
+        "folio_ready",
+        "folio_existing",
+        "folio_folders",
+        "folio_folders_empty",
+        "folio_folders_no_match",
+        "folio_order",
+        "folio_no_color",
+        "folio_color",
+        "folio_placing",
+        "folio_launcher",
+        "folio_remove",
+        "folio_configure",
+        "folio_folder_removed",
+        "screening",
+        "screening_new",
+        "screening_existing",
+        "screening_sources",
+        "screening_no_picks",
+        "screening_placing",
+        "screening_launcher",
+        "screening_remove",
+        "screening_configure",
+        "screening_load_error",
+        "screening_morning",
+        "screening_morning_off",
+        "screening_morning_permission",
+        "screening_morning_weekdays",
+        "screening_morning_time",
+        "screening_morning_custom_time",
+        "screening_notification",
+        "screening_reset"
+      ]
+    },
+    {
+      "name": "Compact phone references",
+      "views": 3,
+      "sources": [
+        "Responsive references for this review batch"
+      ],
+      "screenKeys": [
+        "help_compact",
+        "feedback_compact",
+        "widgets_compact"
+      ]
+    }
+  ],
+  "scope": "Figma design review only; source implementation waits for user feedback."
+}

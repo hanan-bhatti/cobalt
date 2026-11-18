@@ -1,0 +1,1325 @@
+{
+  "name": "Storage & recovery",
+  "description": "Saved notes, drafts, Trash, retained versions and reviewed cleanup, with clear consequences and protected content.",
+  "sources": [
+    "NoteStorageManagementScreen.kt",
+    "NoteRecoveryScreen.kt",
+    "CaptureDraftRecoveryScreen.kt",
+    "NoteTrashScreen.kt",
+    "NoteOlderCopiesScreen.kt",
+    "NoteUnlinkedFilesScreen.kt",
+    "ClearDisposableStorageBottomSheet.kt"
+  ],
+  "screens": [
+    {
+      "key": "storage",
+      "title": "Storage",
+      "subtitle": "Saved content and space used on this device.",
+      "blocks": [
+        {
+          "type": "stats",
+          "rows": [
+            [
+              "Notes & media",
+              "312 MB"
+            ],
+            [
+              "Saved history",
+              "24.1 MB"
+            ],
+            [
+              "Trash",
+              "8.2 MB"
+            ],
+            [
+              "Cache & system",
+              "10.4 MB"
+            ]
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Saved content",
+          "rows": [
+            {
+              "title": "Saved notes",
+              "sub": "Read, export or delete saved notes",
+              "icon": "text",
+              "target": "storage_notes"
+            },
+            {
+              "title": "Draft recovery",
+              "sub": "Recover unsaved writing as a new note",
+              "icon": "draft",
+              "target": "storage_drafts",
+              "value": "2 drafts"
+            },
+            {
+              "title": "Trash",
+              "sub": "Restore deleted items within 30 days",
+              "icon": "trash",
+              "target": "storage_trash",
+              "value": "3 items"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "History",
+          "rows": [
+            {
+              "title": "Saved history",
+              "sub": "Browse, restore and manage older versions",
+              "icon": "history",
+              "target": "storage_history",
+              "value": "24.1 MB"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Maintenance",
+          "rows": [
+            {
+              "title": "Cache & database",
+              "sub": "Preview cache and database optimization",
+              "icon": "storage",
+              "target": "storage_cache"
+            },
+            {
+              "title": "Unlinked storage",
+              "sub": "Files with no matching note record",
+              "icon": "link",
+              "target": "storage_unlinked",
+              "value": "5 files"
+            }
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Refresh storage sizes",
+          "target": "storage",
+          "kind": "text",
+          "destructive": false
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Storage · Dark"
+    },
+    {
+      "key": "storage_light",
+      "title": "Storage",
+      "subtitle": "Saved content and space used on this device.",
+      "blocks": [
+        {
+          "type": "stats",
+          "rows": [
+            [
+              "Notes & media",
+              "312 MB"
+            ],
+            [
+              "Saved history",
+              "24.1 MB"
+            ],
+            [
+              "Trash",
+              "8.2 MB"
+            ],
+            [
+              "Cache & system",
+              "10.4 MB"
+            ]
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Saved content",
+          "rows": [
+            {
+              "title": "Saved notes",
+              "sub": "Read, export or delete saved notes",
+              "icon": "text",
+              "target": "storage_notes"
+            },
+            {
+              "title": "Draft recovery",
+              "sub": "Recover unsaved writing as a new note",
+              "icon": "draft",
+              "target": "storage_drafts",
+              "value": "2 drafts"
+            },
+            {
+              "title": "Trash",
+              "sub": "Restore deleted items within 30 days",
+              "icon": "trash",
+              "target": "storage_trash",
+              "value": "3 items"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "History",
+          "rows": [
+            {
+              "title": "Saved history",
+              "sub": "Browse, restore and manage older versions",
+              "icon": "history",
+              "target": "storage_history",
+              "value": "24.1 MB"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Maintenance",
+          "rows": [
+            {
+              "title": "Cache & database",
+              "sub": "Preview cache and database optimization",
+              "icon": "storage",
+              "target": "storage_cache"
+            },
+            {
+              "title": "Unlinked storage",
+              "sub": "Files with no matching note record",
+              "icon": "link",
+              "target": "storage_unlinked",
+              "value": "5 files"
+            }
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Refresh storage sizes",
+          "target": "storage",
+          "kind": "text",
+          "destructive": false
+        }
+      ],
+      "theme": "Light",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Storage · Light"
+    },
+    {
+      "key": "storage_notes",
+      "title": "Saved notes",
+      "subtitle": "Read, export or delete notes on this device.",
+      "blocks": [
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All (38)",
+              "selected": true,
+              "target": "storage_notes"
+            },
+            {
+              "title": "Large (2)",
+              "target": "storage_notes_large"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Saved notes",
+          "rows": [
+            {
+              "title": "Project outline",
+              "sub": "24 KB · Saved today",
+              "icon": "text",
+              "target": "storage_note_plain"
+            },
+            {
+              "title": "Reading notes",
+              "sub": "68 KB · Saved yesterday",
+              "icon": "reading",
+              "target": "storage_note_options"
+            },
+            {
+              "title": "Research log",
+              "sub": "1.4 MB · Saved 12 Nov",
+              "icon": "text",
+              "target": "storage_note_options"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "storage",
+      "kind": "page",
+      "caption": "Saved notes · Dark"
+    },
+    {
+      "key": "storage_notes_large",
+      "title": "Saved notes",
+      "subtitle": "Read, export or delete notes on this device.",
+      "blocks": [
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All (38)",
+              "target": "storage_notes"
+            },
+            {
+              "title": "Large (2)",
+              "selected": true,
+              "target": "storage_notes_large"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Large notes",
+          "rows": [
+            {
+              "title": "Research log",
+              "sub": "1.4 MB · Saved 12 Nov",
+              "icon": "text",
+              "target": "storage_note_options"
+            },
+            {
+              "title": "Interview archive",
+              "sub": "2.8 MB · Saved 8 Nov",
+              "icon": "text",
+              "target": "storage_note_options"
+            }
+          ]
+        }
+      ],
+      "theme": "Light",
+      "back": "storage",
+      "kind": "page",
+      "caption": "Saved notes · Light"
+    },
+    {
+      "key": "storage_note_plain",
+      "title": "Plain text",
+      "subtitle": "Project outline · 24 KB",
+      "blocks": [
+        {
+          "type": "button",
+          "label": "Note options",
+          "target": "storage_note_options",
+          "kind": "text",
+          "destructive": false
+        },
+        {
+          "type": "text",
+          "text": "# Project outline\n\n## Research\n\n- Compare the existing capture flows.\n- Keep the folder structure simple.\n- Review the next prototype together.\n\n## Next steps\n\nCollect the open questions before the next review.",
+          "role": "body-large"
+        },
+        {
+          "type": "text",
+          "text": "This view shows the note’s raw text and Markdown.",
+          "role": "body-medium"
+        }
+      ],
+      "theme": "Dark",
+      "back": "storage_notes",
+      "kind": "page",
+      "caption": "Plain text · Saved-note inspector",
+      "compact": true
+    },
+    {
+      "key": "storage_note_options",
+      "title": "Project outline",
+      "subtitle": "Saved note · 24 KB",
+      "parent": "storage_notes",
+      "blocks": [
+        {
+          "type": "group",
+          "label": "Note actions",
+          "rows": [
+            {
+              "title": "Read plain text",
+              "sub": "Open the complete saved text",
+              "icon": "text",
+              "target": "storage_note_plain"
+            },
+            {
+              "title": "Export Markdown",
+              "sub": "Choose where to save a .md copy",
+              "icon": "export",
+              "target": "storage_notes"
+            },
+            {
+              "title": "Move to Trash",
+              "sub": "Keep this note recoverable for 30 days",
+              "icon": "trash",
+              "target": "storage_note_trash",
+              "destructive": true
+            }
+          ]
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Project outline · Bottom sheet"
+    },
+    {
+      "key": "storage_note_trash",
+      "title": "Move this note to Trash?",
+      "message": "Keep this note in Trash for 30 days before permanent removal? You can restore it from Trash.",
+      "parent": "storage_notes",
+      "confirm": "Move to Trash",
+      "confirmTarget": "storage_notes",
+      "destructive": true,
+      "cancel": "Cancel",
+      "kind": "dialog",
+      "caption": "Move this note to Trash? · Confirmation"
+    },
+    {
+      "key": "storage_drafts",
+      "title": "Draft recovery",
+      "subtitle": "Unsaved writing from interrupted edits.",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Recovering a draft creates a new note. Only writing captured in a saved draft is available here.",
+          "role": "body-large"
+        },
+        {
+          "type": "group",
+          "label": "Available drafts",
+          "rows": [
+            {
+              "title": "Project outline",
+              "sub": "Interrupted edit · Today at 9:42 AM · 26 KB",
+              "icon": "draft",
+              "target": "storage_draft_actions"
+            },
+            {
+              "title": "Untitled capture",
+              "sub": "Unsaved capture · Yesterday · 8 KB",
+              "icon": "draft",
+              "target": "storage_draft_actions"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "storage",
+      "kind": "page",
+      "caption": "Draft recovery · Dark"
+    },
+    {
+      "key": "storage_drafts_empty",
+      "title": "Draft recovery",
+      "subtitle": "Unsaved writing from interrupted edits.",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "draft",
+          "title": "No drafts to recover",
+          "sub": "Saved recovery drafts appear here when an editing session is interrupted."
+        },
+        {
+          "type": "button",
+          "label": "Refresh drafts",
+          "target": "storage_drafts_empty",
+          "kind": "text",
+          "destructive": false
+        }
+      ],
+      "theme": "Light",
+      "back": "storage",
+      "kind": "page",
+      "caption": "Draft recovery · Light"
+    },
+    {
+      "key": "storage_draft_actions",
+      "title": "Project outline",
+      "subtitle": "Recovery draft · 26 KB",
+      "parent": "storage_drafts",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Recover a complete copy as a new note, or export it as Markdown. The original saved note is kept.",
+          "role": "body-large"
+        },
+        {
+          "type": "group",
+          "label": "Draft actions",
+          "rows": [
+            {
+              "title": "Recover copy",
+              "sub": "Create a new note from this draft",
+              "icon": "history",
+              "target": "storage_drafts"
+            },
+            {
+              "title": "Export Markdown",
+              "sub": "Choose where to save a .md copy",
+              "icon": "export",
+              "target": "storage_drafts"
+            }
+          ]
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Project outline · Bottom sheet"
+    },
+    {
+      "key": "storage_trash",
+      "title": "Trash",
+      "subtitle": "Deleted items remain recoverable for 30 days.",
+      "blocks": [
+        {
+          "type": "group",
+          "label": "Deletion preference",
+          "rows": [
+            {
+              "title": "Use Trash",
+              "sub": "Keep new deletions for 30 days.",
+              "icon": "trash",
+              "target": "storage_trash_off_confirm",
+              "on": true
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Deleted items",
+          "rows": [
+            {
+              "title": "Workshop notes",
+              "sub": "4 days left · 12 KB",
+              "icon": "text",
+              "target": "storage_trash_actions"
+            },
+            {
+              "title": "Saved article",
+              "sub": "18 days left · 48 KB",
+              "icon": "link",
+              "target": "storage_trash_actions"
+            },
+            {
+              "title": "Old reading list",
+              "sub": "28 days left · 6 KB",
+              "icon": "reading",
+              "target": "storage_trash_actions"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Android may remove expired items later. Empty Trash removes the reviewed items now.",
+          "role": "body-medium"
+        },
+        {
+          "type": "button",
+          "label": "Empty Trash",
+          "target": "storage_trash_empty_confirm",
+          "kind": "text",
+          "destructive": true
+        }
+      ],
+      "theme": "Dark",
+      "back": "storage",
+      "kind": "page",
+      "caption": "Trash · Dark"
+    },
+    {
+      "key": "storage_trash_off",
+      "title": "Trash",
+      "subtitle": "Trash is off for new deletions.",
+      "blocks": [
+        {
+          "type": "group",
+          "label": "Deletion preference",
+          "rows": [
+            {
+              "title": "Use Trash",
+              "sub": "New deletions have a 30-second Undo window, then are removed permanently.",
+              "icon": "trash",
+              "target": "storage_trash",
+              "on": false
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Items already in Trash keep their existing removal deadline.",
+          "role": "body-large"
+        },
+        {
+          "type": "group",
+          "label": "Deleted items",
+          "rows": [
+            {
+              "title": "Workshop notes",
+              "sub": "4 days left · 12 KB",
+              "icon": "text",
+              "target": "storage_trash_actions"
+            },
+            {
+              "title": "Saved article",
+              "sub": "18 days left · 48 KB",
+              "icon": "link",
+              "target": "storage_trash_actions"
+            }
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Empty Trash",
+          "target": "storage_trash_empty_confirm",
+          "kind": "text",
+          "destructive": true
+        }
+      ],
+      "theme": "Light",
+      "back": "storage",
+      "kind": "page",
+      "caption": "Trash · Light"
+    },
+    {
+      "key": "storage_trash_empty",
+      "title": "Trash",
+      "subtitle": "Deleted items remain recoverable for 30 days.",
+      "blocks": [
+        {
+          "type": "group",
+          "label": "Deletion preference",
+          "rows": [
+            {
+              "title": "Use Trash",
+              "sub": "Keep new deletions for 30 days.",
+              "icon": "trash",
+              "target": "storage_trash_off_confirm",
+              "on": true
+            }
+          ]
+        },
+        {
+          "type": "status",
+          "icon": "trash",
+          "title": "Trash is empty",
+          "sub": "Deleted items appear here while they can still be restored."
+        }
+      ],
+      "theme": "Light",
+      "back": "storage",
+      "kind": "page",
+      "caption": "Trash · Light"
+    },
+    {
+      "key": "storage_trash_actions",
+      "title": "Workshop notes",
+      "subtitle": "4 days left in Trash · 12 KB",
+      "parent": "storage_trash",
+      "blocks": [
+        {
+          "type": "group",
+          "label": "Item actions",
+          "rows": [
+            {
+              "title": "Restore item",
+              "sub": "Return this item to saved content",
+              "icon": "history",
+              "target": "storage_trash"
+            },
+            {
+              "title": "Delete permanently",
+              "sub": "Remove this item and its retained versions",
+              "icon": "trash",
+              "target": "storage_trash_delete",
+              "destructive": true
+            }
+          ]
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Workshop notes · Bottom sheet"
+    },
+    {
+      "key": "storage_trash_delete",
+      "title": "Delete this item permanently?",
+      "message": "Remove Workshop notes, all its saved versions and recovery files? This cannot be undone.",
+      "parent": "storage_trash",
+      "confirm": "Delete permanently",
+      "confirmTarget": "storage_trash",
+      "destructive": true,
+      "cancel": "Cancel",
+      "kind": "dialog",
+      "caption": "Delete this item permanently? · Confirmation"
+    },
+    {
+      "key": "storage_trash_empty_confirm",
+      "title": "Empty Trash?",
+      "message": "Permanently remove 3 reviewed items, their saved versions and recovery files? This cannot be undone.",
+      "parent": "storage_trash",
+      "confirm": "Empty Trash",
+      "confirmTarget": "storage_trash_empty",
+      "destructive": true,
+      "cancel": "Cancel",
+      "kind": "dialog",
+      "caption": "Empty Trash? · Confirmation"
+    },
+    {
+      "key": "storage_trash_off_confirm",
+      "title": "Turn off Trash?",
+      "message": "New deletions will have only a 30-second Undo window before permanent removal. Items already in Trash keep their existing deadline.",
+      "parent": "storage_trash",
+      "confirm": "Turn off Trash",
+      "confirmTarget": "storage_trash_off",
+      "destructive": true,
+      "cancel": "Cancel",
+      "kind": "dialog",
+      "caption": "Turn off Trash? · Confirmation"
+    },
+    {
+      "key": "storage_history",
+      "title": "Saved history",
+      "subtitle": "Earlier note versions retained on this device.",
+      "blocks": [
+        {
+          "type": "stats",
+          "rows": [
+            [
+              "Saved history",
+              "24.1 MB"
+            ],
+            [
+              "Eligible for cleanup",
+              "8.4 MB"
+            ]
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Retention",
+          "rows": [
+            {
+              "title": "Versions to keep",
+              "sub": "Preference used when you clean up history",
+              "icon": "history",
+              "target": "storage_retention",
+              "value": "5 extra"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Versions needed by active Undo remain protected.",
+          "role": "body-medium"
+        },
+        {
+          "type": "group",
+          "label": "Manage versions",
+          "rows": [
+            {
+              "title": "Browse saved versions",
+              "sub": "Restore or export an earlier version",
+              "icon": "history",
+              "target": "storage_versions"
+            }
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Review history cleanup",
+          "target": "storage_history_cleanup",
+          "kind": "tonal",
+          "destructive": false
+        }
+      ],
+      "theme": "Dark",
+      "back": "storage",
+      "kind": "page",
+      "caption": "Saved history · Dark"
+    },
+    {
+      "key": "storage_retention",
+      "title": "Versions to keep",
+      "subtitle": "Choose how many extra snapshots to retain per note during cleanup.",
+      "parent": "storage_history",
+      "blocks": [
+        {
+          "type": "options",
+          "target": "storage_history",
+          "options": [
+            {
+              "title": "No extra versions"
+            },
+            {
+              "title": "1 extra version"
+            },
+            {
+              "title": "5 extra versions",
+              "selected": true
+            },
+            {
+              "title": "10 extra versions"
+            },
+            {
+              "title": "20 extra versions"
+            },
+            {
+              "title": "All versions"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Current notes and versions needed by active Undo are protected.",
+          "role": "body-medium"
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Versions to keep · Bottom sheet"
+    },
+    {
+      "key": "storage_versions",
+      "title": "Saved versions",
+      "subtitle": "Restore or export an earlier version.",
+      "blocks": [
+        {
+          "type": "group",
+          "label": "Recent snapshots",
+          "rows": [
+            {
+              "title": "Project outline",
+              "sub": "Today at 8:15 AM · 22 KB",
+              "icon": "history",
+              "target": "storage_version_actions"
+            },
+            {
+              "title": "Project outline",
+              "sub": "Yesterday at 6:34 PM · 20 KB",
+              "icon": "history",
+              "target": "storage_version_actions"
+            },
+            {
+              "title": "Reading notes",
+              "sub": "12 Nov at 2:18 PM · 64 KB",
+              "icon": "history",
+              "target": "storage_version_actions"
+            }
+          ]
+        }
+      ],
+      "theme": "Light",
+      "back": "storage_history",
+      "kind": "page",
+      "caption": "Saved versions · Light"
+    },
+    {
+      "key": "storage_version_actions",
+      "title": "Project outline",
+      "subtitle": "Saved version · Today at 8:15 AM · 22 KB",
+      "parent": "storage_versions",
+      "blocks": [
+        {
+          "type": "group",
+          "label": "Version actions",
+          "rows": [
+            {
+              "title": "Restore this version",
+              "sub": "Replace the saved text with this version",
+              "icon": "history",
+              "target": "storage_version_restore"
+            },
+            {
+              "title": "Export Markdown",
+              "sub": "Save this version as a .md copy",
+              "icon": "export",
+              "target": "storage_versions"
+            }
+          ]
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Project outline · Bottom sheet"
+    },
+    {
+      "key": "storage_version_restore",
+      "title": "Restore this version?",
+      "message": "Restore this 22 KB version? Your current version remains in history until you explicitly clear it. Finish any recovery draft first.",
+      "parent": "storage_versions",
+      "confirm": "Restore version",
+      "confirmTarget": "storage_versions",
+      "destructive": false,
+      "cancel": "Cancel",
+      "kind": "dialog",
+      "caption": "Restore this version? · Confirmation"
+    },
+    {
+      "key": "storage_history_cleanup",
+      "title": "Remove reviewed history?",
+      "message": "Remove up to 8.4 MB of reviewed older versions and completed recovery logs? Current notes and active drafts are kept. Removed versions cannot be restored.",
+      "parent": "storage_history",
+      "confirm": "Remove versions",
+      "confirmTarget": "storage_history",
+      "destructive": true,
+      "cancel": "Cancel",
+      "kind": "dialog",
+      "caption": "Remove reviewed history? · Confirmation"
+    },
+    {
+      "key": "storage_cache",
+      "title": "Cache & database",
+      "subtitle": "Temporary files and database maintenance.",
+      "blocks": [
+        {
+          "type": "heading",
+          "text": "Preview cache"
+        },
+        {
+          "type": "stats",
+          "rows": [
+            [
+              "Eligible cache",
+              "6.8 MB"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Rebuildable thumbnails and temporary exports. Saved note content and referenced media are excluded.",
+          "role": "body-large"
+        },
+        {
+          "type": "button",
+          "label": "Clear preview cache",
+          "target": "storage_cache",
+          "kind": "tonal",
+          "destructive": false
+        },
+        {
+          "type": "heading",
+          "text": "Database"
+        },
+        {
+          "type": "stats",
+          "rows": [
+            [
+              "SQLite database",
+              "4.2 MB"
+            ],
+            [
+              "Unused space",
+              "1.1 MB"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Compact the database to reclaim unused space. Notes and preferences are kept.",
+          "role": "body-large"
+        },
+        {
+          "type": "button",
+          "label": "Optimize database",
+          "target": "storage_database_confirm",
+          "kind": "tonal",
+          "destructive": false
+        },
+        {
+          "type": "heading",
+          "text": "History & cache cleanup"
+        },
+        {
+          "type": "text",
+          "text": "Review older versions and eligible cache before removing them. This also resets saved Undo and Redo history.",
+          "role": "body-large"
+        },
+        {
+          "type": "button",
+          "label": "Review history & cache",
+          "target": "storage_disposable",
+          "kind": "text",
+          "destructive": true
+        }
+      ],
+      "theme": "Dark",
+      "back": "storage",
+      "kind": "page",
+      "caption": "Cache & database · Dark"
+    },
+    {
+      "key": "storage_database_confirm",
+      "title": "Optimize the database?",
+      "message": "Rebuild SQLite to reclaim unused space? Keep Cobalt open while it runs. Temporary free space is required; notes and settings are kept.",
+      "parent": "storage_cache",
+      "confirm": "Optimize database",
+      "confirmTarget": "storage_cache",
+      "destructive": false,
+      "cancel": "Cancel",
+      "kind": "dialog",
+      "caption": "Optimize the database? · Confirmation"
+    },
+    {
+      "key": "storage_disposable",
+      "title": "Clear history & cache",
+      "subtitle": "Review the content selected for removal.",
+      "parent": "storage_cache",
+      "blocks": [
+        {
+          "type": "stats",
+          "rows": [
+            [
+              "Older note versions",
+              "8.4 MB"
+            ],
+            [
+              "Preview cache",
+              "6.8 MB"
+            ],
+            [
+              "Reviewed total",
+              "15.2 MB"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Removed versions cannot be restored. Saved Undo and Redo history will reset.",
+          "role": "body-large",
+          "color": "error"
+        },
+        {
+          "type": "text",
+          "text": "Current notes, saved media, folders, settings and recovery drafts are kept.",
+          "role": "body-large"
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Clear history & cache · Bottom sheet",
+      "footer": [
+        {
+          "type": "button",
+          "label": "Hold for 5 seconds to clear",
+          "target": "storage_disposable_holding",
+          "kind": "primary",
+          "destructive": true
+        },
+        {
+          "type": "button",
+          "label": "Cancel cleanup",
+          "target": "storage_cache",
+          "kind": "text",
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "key": "storage_disposable_holding",
+      "title": "Clear history & cache",
+      "subtitle": "Keep holding to confirm this cleanup.",
+      "parent": "storage_cache",
+      "blocks": [
+        {
+          "type": "stats",
+          "rows": [
+            [
+              "Reviewed total",
+              "15.2 MB"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "text": "This removes reviewed older versions and resets saved Undo and Redo history.",
+          "role": "body-large",
+          "color": "error"
+        },
+        {
+          "type": "progress",
+          "value": 50,
+          "label": "2.5 seconds remaining"
+        },
+        {
+          "type": "text",
+          "text": "Release the button to cancel.",
+          "role": "body-medium"
+        }
+      ],
+      "kind": "sheet",
+      "caption": "History & cache cleanup · Holding state",
+      "footer": [
+        {
+          "type": "button",
+          "label": "Keep holding · 2.5 seconds",
+          "target": "storage_disposable",
+          "kind": "primary",
+          "destructive": true
+        },
+        {
+          "type": "button",
+          "label": "Cancel cleanup",
+          "target": "storage_cache",
+          "kind": "text",
+          "destructive": false
+        }
+      ]
+    },
+    {
+      "key": "storage_unlinked",
+      "title": "Unlinked storage",
+      "subtitle": "Files with no matching note record.",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Review retained files before removing them. Some files can be recovered as notes or saved items.",
+          "role": "body-large"
+        },
+        {
+          "type": "group",
+          "label": "Retained files",
+          "rows": [
+            {
+              "title": "Meeting extract",
+              "sub": "Recoverable note · 16 KB",
+              "icon": "text",
+              "target": "storage_unlinked_actions"
+            },
+            {
+              "title": "Reference image",
+              "sub": "Image file · 1.8 MB",
+              "icon": "image",
+              "target": "storage_unlinked_media_actions"
+            },
+            {
+              "title": "Interrupted import",
+              "sub": "Retained file · 42 KB",
+              "icon": "draft",
+              "target": "storage_unlinked_actions"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The list shows up to 200 files. Cleanup reviews all eligible files.",
+          "role": "body-medium"
+        },
+        {
+          "type": "button",
+          "label": "Review unlinked cleanup",
+          "target": "storage_unlinked_cleanup",
+          "kind": "text",
+          "destructive": true
+        }
+      ],
+      "theme": "Dark",
+      "back": "storage",
+      "kind": "page",
+      "caption": "Unlinked storage · Dark"
+    },
+    {
+      "key": "storage_unlinked_empty",
+      "title": "Unlinked storage",
+      "subtitle": "Files with no matching note record.",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "link",
+          "title": "No unlinked files",
+          "sub": "Retained files without a matching note record appear here."
+        },
+        {
+          "type": "button",
+          "label": "Refresh files",
+          "target": "storage_unlinked_empty",
+          "kind": "text",
+          "destructive": false
+        }
+      ],
+      "theme": "Light",
+      "back": "storage",
+      "kind": "page",
+      "caption": "Unlinked storage · Light"
+    },
+    {
+      "key": "storage_unlinked_actions",
+      "title": "Meeting extract",
+      "subtitle": "Retained note file · 16 KB",
+      "parent": "storage_unlinked",
+      "blocks": [
+        {
+          "type": "group",
+          "label": "File actions",
+          "rows": [
+            {
+              "title": "Recover as note",
+              "sub": "Create a note from this retained content",
+              "icon": "history",
+              "target": "storage_unlinked"
+            },
+            {
+              "title": "Export Markdown",
+              "sub": "Save a .md copy before cleanup",
+              "icon": "export",
+              "target": "storage_unlinked"
+            },
+            {
+              "title": "Delete permanently",
+              "sub": "Remove the retained file without using Trash",
+              "icon": "trash",
+              "target": "storage_unlinked_delete",
+              "destructive": true
+            }
+          ]
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Meeting extract · Bottom sheet"
+    },
+    {
+      "key": "storage_unlinked_media_actions",
+      "title": "Reference image",
+      "subtitle": "Retained image file · 1.8 MB",
+      "parent": "storage_unlinked",
+      "blocks": [
+        {
+          "type": "group",
+          "label": "File actions",
+          "rows": [
+            {
+              "title": "Recover item",
+              "sub": "Create a saved item from this file",
+              "icon": "history",
+              "target": "storage_unlinked"
+            },
+            {
+              "title": "Export file",
+              "sub": "Choose where to save a copy",
+              "icon": "export",
+              "target": "storage_unlinked"
+            },
+            {
+              "title": "Delete permanently",
+              "sub": "Remove the retained file without using Trash",
+              "icon": "trash",
+              "target": "storage_unlinked_delete",
+              "destructive": true
+            }
+          ]
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Reference image · Bottom sheet"
+    },
+    {
+      "key": "storage_unlinked_delete",
+      "title": "Delete this retained file?",
+      "message": "Permanently remove the file with no matching note record? It cannot be moved to Trash. Export it first if you need a copy.",
+      "parent": "storage_unlinked",
+      "confirm": "Delete permanently",
+      "confirmTarget": "storage_unlinked",
+      "destructive": true,
+      "cancel": "Cancel",
+      "kind": "dialog",
+      "caption": "Delete this retained file? · Confirmation"
+    },
+    {
+      "key": "storage_unlinked_cleanup",
+      "title": "Remove unlinked files?",
+      "message": "Remove 5 reviewed files, up to 2.1 MB? Current notes, Trash and protected drafts are kept. Removed files cannot be recovered.",
+      "parent": "storage_unlinked",
+      "confirm": "Remove files",
+      "confirmTarget": "storage_unlinked_empty",
+      "destructive": true,
+      "cancel": "Cancel",
+      "kind": "dialog",
+      "caption": "Remove unlinked files? · Confirmation"
+    },
+    {
+      "key": "storage_error",
+      "title": "Storage",
+      "subtitle": "Saved content and space used on this device.",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "warning",
+          "title": "Storage details could not load",
+          "sub": "Refresh to scan this device again.",
+          "error": true,
+          "action": "Refresh storage sizes",
+          "target": "storage"
+        }
+      ],
+      "theme": "Light",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Storage · Light"
+    },
+    {
+      "key": "storage_safe_mode",
+      "title": "Safe mode",
+      "subtitle": "Read or export notes before restarting.",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "warning",
+          "title": "Background activity is paused",
+          "sub": "Recover or export the writing you need before leaving safe mode."
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "All notes",
+              "selected": true
+            },
+            {
+              "title": "Large notes"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Saved notes",
+          "rows": [
+            {
+              "title": "Project outline",
+              "sub": "24 KB · Saved today",
+              "icon": "text",
+              "target": "storage_note_plain"
+            },
+            {
+              "title": "Reading notes",
+              "sub": "68 KB · Saved yesterday",
+              "icon": "reading",
+              "target": "storage_note_options"
+            },
+            {
+              "title": "Research log",
+              "sub": "1.4 MB · Saved 12 Nov",
+              "icon": "text",
+              "target": "storage_note_options"
+            }
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Leave safe mode",
+          "target": "storage_safe_exit",
+          "kind": "tonal",
+          "destructive": false
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Safe mode · Dark"
+    },
+    {
+      "key": "storage_safe_exit",
+      "title": "Leave safe mode?",
+      "message": "Allow background features to run again? Your notes stay on this device.",
+      "parent": "storage_safe_mode",
+      "confirm": "Continue",
+      "confirmTarget": "storage",
+      "destructive": false,
+      "cancel": "Cancel",
+      "kind": "dialog",
+      "caption": "Leave safe mode? · Confirmation"
+    }
+  ]
+}

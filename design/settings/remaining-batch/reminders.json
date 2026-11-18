@@ -1,0 +1,257 @@
+{
+  "name": "Reminders",
+  "description": "A quiet schedule, clear notification access and direct on/off preferences.",
+  "sources": [
+    "AdaptiveRemindersSettingsScreen.kt"
+  ],
+  "screens": [
+    {
+      "key": "reminders",
+      "title": "Reminders",
+      "subtitle": "Bring overlooked notes and links back into view.",
+      "blocks": [
+        {
+          "type": "group",
+          "label": "Review reminders",
+          "rows": [
+            {
+              "title": "Use reminders",
+              "sub": "Resurface notes and links you haven’t opened recently.",
+              "on": true,
+              "icon": "reminder",
+              "target": "reminders_off"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Schedule",
+          "rows": [
+            {
+              "title": "Delivery time",
+              "sub": "Local time · Android may deliver later",
+              "icon": "clock",
+              "target": "reminders_time",
+              "value": "9:00 AM"
+            },
+            {
+              "title": "Minimum inactivity",
+              "sub": "Consider items unopened for at least this long",
+              "icon": "history",
+              "target": "reminders_inactivity",
+              "value": "7 days"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Preferences",
+          "rows": [
+            {
+              "title": "Prioritize active folders",
+              "sub": "Favor overlooked notes in folders you worked in recently.",
+              "on": true,
+              "icon": "folder"
+            },
+            {
+              "title": "Include weekends",
+              "sub": "Allow reminders on Saturdays and Sundays.",
+              "on": false,
+              "icon": "reminder"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Check & reset",
+          "rows": [
+            {
+              "title": "Send test reminder",
+              "sub": "Send a sample notification now",
+              "icon": "reminder",
+              "target": "reminders"
+            },
+            {
+              "title": "Reset learning history",
+              "sub": "Clear local review activity and response history",
+              "icon": "history",
+              "target": "reminders_reset"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Movies & shows",
+          "rows": [
+            {
+              "title": "Screening picks",
+              "sub": "Recommendations and optional morning questions",
+              "icon": "movie",
+              "target": "screening_picks"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "caption": "Reminders · Dark",
+      "back": "settings"
+    },
+    {
+      "key": "reminders_off",
+      "title": "Reminders",
+      "subtitle": "Bring overlooked notes and links back into view.",
+      "blocks": [
+        {
+          "type": "group",
+          "label": "Review reminders",
+          "rows": [
+            {
+              "title": "Use reminders",
+              "sub": "Resurface notes and links you haven’t opened recently.",
+              "on": false,
+              "icon": "reminder",
+              "target": "reminders"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Movies & shows",
+          "rows": [
+            {
+              "title": "Screening picks",
+              "sub": "Recommendations and optional morning questions",
+              "icon": "movie",
+              "target": "screening_picks"
+            }
+          ]
+        }
+      ],
+      "theme": "Light",
+      "caption": "Reminders · Off",
+      "back": "settings"
+    },
+    {
+      "key": "reminders_permission",
+      "title": "Reminders",
+      "subtitle": "Bring overlooked notes and links back into view.",
+      "blocks": [
+        {
+          "type": "group",
+          "label": "Notification access",
+          "rows": [
+            {
+              "title": "Allow notifications",
+              "sub": "Open Android settings to enable reminders",
+              "icon": "reminder",
+              "target": "reminders",
+              "value": "Permission needed"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Movies & shows",
+          "rows": [
+            {
+              "title": "Screening picks",
+              "sub": "Review saved picks independently of note reminders",
+              "icon": "movie",
+              "target": "screening_picks"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "caption": "Reminders · Permission needed",
+      "back": "settings"
+    },
+    {
+      "key": "reminders_time",
+      "title": "Delivery time",
+      "subtitle": "Choose a preset or enter a local time.",
+      "parent": "reminders",
+      "blocks": [
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "9:00 AM",
+              "selected": true,
+              "target": "reminders"
+            },
+            {
+              "title": "2:00 PM",
+              "target": "reminders"
+            },
+            {
+              "title": "8:00 PM",
+              "target": "reminders"
+            }
+          ]
+        },
+        {
+          "type": "time",
+          "hour": "09",
+          "minute": "00",
+          "target": "reminders"
+        },
+        {
+          "type": "text",
+          "text": "Android may deliver the reminder later than the selected time.",
+          "role": "body-large"
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Delivery time · Bottom sheet"
+    },
+    {
+      "key": "reminders_inactivity",
+      "title": "Minimum inactivity",
+      "subtitle": "Only consider notes and links you haven’t opened during this period.",
+      "parent": "reminders",
+      "blocks": [
+        {
+          "type": "options",
+          "target": "reminders",
+          "options": [
+            {
+              "title": "3 days",
+              "sub": "Include recently overlooked items.",
+              "selected": false,
+              "icon": null,
+              "target": null
+            },
+            {
+              "title": "7 days",
+              "sub": "Give items a week before resurfacing.",
+              "selected": true,
+              "icon": null,
+              "target": null
+            },
+            {
+              "title": "14 days",
+              "sub": "Focus on items you left for longer.",
+              "selected": false,
+              "icon": null,
+              "target": null
+            }
+          ]
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Minimum inactivity · Bottom sheet"
+    },
+    {
+      "key": "reminders_reset",
+      "title": "Reset learning history?",
+      "message": "Clear local review activity and reminder response history? Reminders will start learning again. Your saved notes and links stay.",
+      "parent": "reminders",
+      "confirm": "Reset history",
+      "destructive": true,
+      "cancel": "Cancel",
+      "kind": "dialog",
+      "caption": "Reset learning history? · Confirmation"
+    }
+  ]
+}

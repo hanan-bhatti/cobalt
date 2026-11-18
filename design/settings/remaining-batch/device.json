@@ -1,0 +1,317 @@
+{
+  "name": "Storage update & background",
+  "description": "The actual note-format update and verification states, plus Android battery access without invented health scores or reliability promises.",
+  "sources": [
+    "NoteMigrationScreen.kt",
+    "ProfileSettings.kt",
+    "BatteryOptimizationHelper.kt"
+  ],
+  "screens": [
+    {
+      "key": "storage_update",
+      "title": "Storage update",
+      "subtitle": "Update Markdown storage and verify saved notes.",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "sync",
+          "title": "Ready to update note storage",
+          "sub": "38 notes on this device"
+        },
+        {
+          "type": "text",
+          "text": "Cobalt checks each note after updating its storage format. Original content is kept until the updated note is verified.",
+          "role": "body-large"
+        },
+        {
+          "type": "button",
+          "label": "Update notes",
+          "target": "storage_update_running",
+          "kind": "primary",
+          "destructive": false
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Storage update · Dark"
+    },
+    {
+      "key": "storage_update_confirm",
+      "title": "Update note storage?",
+      "message": "Update Markdown note storage on this device and verify each note? Original content is kept until verification. Close for now to return home and continue later.",
+      "parent": "storage_update",
+      "confirm": "Update notes",
+      "cancel": "Close for now",
+      "confirmTarget": "storage_update_running",
+      "destructive": false,
+      "kind": "dialog",
+      "caption": "Storage update · Startup confirmation"
+    },
+    {
+      "key": "storage_update_running",
+      "title": "Storage update",
+      "subtitle": "Update Markdown storage and verify saved notes.",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "sync",
+          "title": "Updating and verifying notes",
+          "sub": "19 of 38 notes verified"
+        },
+        {
+          "type": "progress",
+          "value": 50,
+          "label": "50% · 19 notes verified"
+        },
+        {
+          "type": "text",
+          "text": "Original content is kept until the updated note is verified.",
+          "role": "body-large"
+        },
+        {
+          "type": "text",
+          "text": "8.4 MB processed in this run",
+          "role": "body-medium"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Storage update · In progress"
+    },
+    {
+      "key": "storage_update_complete",
+      "title": "Storage update",
+      "subtitle": "Update Markdown storage and verify saved notes.",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "check",
+          "title": "All notes verified",
+          "sub": "38 of 38 notes verified"
+        },
+        {
+          "type": "text",
+          "text": "Notes are stored on this device. You can continue using Cobalt.",
+          "role": "body-large"
+        },
+        {
+          "type": "text",
+          "text": "Last checked today at 9:20 AM",
+          "role": "body-medium"
+        },
+        {
+          "type": "button",
+          "label": "Check notes again",
+          "target": "storage_update_running",
+          "kind": "tonal",
+          "destructive": false
+        }
+      ],
+      "theme": "Light",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Storage update · Complete"
+    },
+    {
+      "key": "storage_update_attention",
+      "title": "Storage update",
+      "subtitle": "Update Markdown storage and verify saved notes.",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "warning",
+          "title": "2 notes need attention",
+          "sub": "36 of 38 notes verified",
+          "error": true
+        },
+        {
+          "type": "text",
+          "text": "Unfinished notes and their original content are kept. Retry the update when you’re ready.",
+          "role": "body-large"
+        },
+        {
+          "type": "heading",
+          "text": "Could not verify"
+        },
+        {
+          "type": "text",
+          "text": "Research log\nInterview archive",
+          "role": "body-large",
+          "color": "error"
+        },
+        {
+          "type": "button",
+          "label": "Retry unfinished notes",
+          "target": "storage_update_running",
+          "kind": "primary",
+          "destructive": false
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Storage update · Needs attention"
+    },
+    {
+      "key": "storage_update_interrupted",
+      "title": "Storage update",
+      "subtitle": "Update Markdown storage and verify saved notes.",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "sync",
+          "title": "Ready to resume",
+          "sub": "19 of 38 notes verified"
+        },
+        {
+          "type": "text",
+          "text": "Continue from the last verified note. Original content for unfinished notes is kept.",
+          "role": "body-large"
+        },
+        {
+          "type": "button",
+          "label": "Resume update",
+          "target": "storage_update_running",
+          "kind": "primary",
+          "destructive": false
+        }
+      ],
+      "theme": "Light",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Storage update · Interrupted"
+    },
+    {
+      "key": "note_storage_error",
+      "title": "Note storage",
+      "subtitle": "Get back to saved notes.",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "warning",
+          "title": "Note storage could not be prepared",
+          "sub": "Notes have not been deleted. Retry, or open recovery to read and export saved text.",
+          "error": true
+        },
+        {
+          "type": "button",
+          "label": "Try again",
+          "target": "storage_update",
+          "kind": "primary",
+          "destructive": false
+        },
+        {
+          "type": "button",
+          "label": "Open note recovery",
+          "target": "storage_safe_mode",
+          "kind": "tonal",
+          "destructive": false
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Note storage · Recovery fallback"
+    },
+    {
+      "key": "background",
+      "title": "Background activity",
+      "subtitle": "Review Android’s battery restrictions.",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "battery",
+          "title": "Battery optimization is on",
+          "sub": "Android may delay widget updates and other background work."
+        },
+        {
+          "type": "button",
+          "label": "Allow background activity",
+          "target": "background_allowed",
+          "kind": "primary",
+          "destructive": false
+        },
+        {
+          "type": "heading",
+          "text": "When Cobalt runs in the background"
+        },
+        {
+          "type": "text",
+          "text": "Widget updates, enabled reminders and Trakt sync can use background work. The enabled Side dock also runs as a service.",
+          "role": "body-large"
+        },
+        {
+          "type": "text",
+          "text": "Android and device-specific battery settings can still affect delivery.",
+          "role": "body-medium"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Background activity · Dark"
+    },
+    {
+      "key": "background_allowed",
+      "title": "Background activity",
+      "subtitle": "Review Android’s battery restrictions.",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "battery",
+          "title": "Battery exemption allowed",
+          "sub": "Cobalt is exempt from Android’s standard battery optimization."
+        },
+        {
+          "type": "text",
+          "text": "Android and device-specific battery settings can still delay background work.",
+          "role": "body-large"
+        },
+        {
+          "type": "heading",
+          "text": "When Cobalt runs in the background"
+        },
+        {
+          "type": "text",
+          "text": "Widget updates, enabled reminders and Trakt sync can use background work. The enabled Side dock also runs as a service.",
+          "role": "body-large"
+        }
+      ],
+      "theme": "Light",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Background activity · Exemption allowed"
+    },
+    {
+      "key": "background_coloros",
+      "title": "Background activity",
+      "subtitle": "Review Android’s battery restrictions.",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "battery",
+          "title": "Battery restrictions may pause Cobalt",
+          "sub": "Oppo, Realme and ColorOS devices can apply additional restrictions."
+        },
+        {
+          "type": "button",
+          "label": "Review battery access",
+          "target": "background_allowed",
+          "kind": "primary",
+          "destructive": false
+        },
+        {
+          "type": "text",
+          "text": "Use Android’s battery settings to review Cobalt’s access. Allowing background activity can reduce interruptions; it does not guarantee delivery.",
+          "role": "body-large"
+        }
+      ],
+      "theme": "Light",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Background activity · ColorOS guidance"
+    }
+  ]
+}

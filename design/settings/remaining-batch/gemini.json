@@ -1,0 +1,522 @@
+{
+  "name": "Gemini OCR",
+  "description": "Key setup, model choices, extraction instructions and usage recorded on this device.",
+  "sources": [
+    "ProfileSettings.kt:575–908",
+    "GeminiUsageScreen.kt",
+    "CobaltRepository.kt:861–900"
+  ],
+  "screens": [
+    {
+      "key": "gemini",
+      "title": "Gemini OCR",
+      "subtitle": "Text extraction, voice transcription and usage.",
+      "blocks": [
+        {
+          "type": "group",
+          "label": "Gemini account",
+          "rows": [
+            {
+              "title": "API key",
+              "sub": "Used for OCR and voice transcription",
+              "icon": "key",
+              "target": "gemini_key",
+              "value": "Key saved"
+            },
+            {
+              "title": "Get an API key",
+              "sub": "Google AI Studio",
+              "icon": "globe",
+              "target": "url:https://aistudio.google.com/apikey",
+              "external": true
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Image text extraction",
+          "rows": [
+            {
+              "title": "OCR model",
+              "sub": "Model used for screenshots and images",
+              "icon": "ocr",
+              "target": "gemini_ocr_model",
+              "value": "Flash"
+            },
+            {
+              "title": "Extraction detail",
+              "sub": "Instructions for large or faint text",
+              "icon": "intelligence",
+              "target": "gemini_detail",
+              "value": "Medium"
+            },
+            {
+              "title": "Extraction instructions",
+              "sub": "Use the default prompt or write your own",
+              "icon": "text",
+              "target": "gemini_prompt",
+              "value": "Default"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Voice transcription",
+          "rows": [
+            {
+              "title": "Audio model",
+              "sub": "Model used for voice memos",
+              "icon": "voice",
+              "target": "gemini_audio_model",
+              "value": "Flash"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Activity",
+          "rows": [
+            {
+              "title": "Usage on this device",
+              "sub": "Recorded tokens and OCR or audio requests",
+              "icon": "history",
+              "target": "gemini_usage",
+              "value": "52 requests"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "caption": "Gemini OCR · Dark",
+      "back": "settings"
+    },
+    {
+      "key": "gemini_light",
+      "title": "Gemini OCR",
+      "subtitle": "Text extraction, voice transcription and usage.",
+      "blocks": [
+        {
+          "type": "group",
+          "label": "Gemini account",
+          "rows": [
+            {
+              "title": "API key",
+              "sub": "Used for OCR and voice transcription",
+              "icon": "key",
+              "target": "gemini_key",
+              "value": "Not set"
+            },
+            {
+              "title": "Get an API key",
+              "sub": "Google AI Studio",
+              "icon": "globe",
+              "target": "url:https://aistudio.google.com/apikey",
+              "external": true
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Image text extraction",
+          "rows": [
+            {
+              "title": "OCR model",
+              "sub": "Model used for screenshots and images",
+              "icon": "ocr",
+              "target": "gemini_ocr_model",
+              "value": "Flash"
+            },
+            {
+              "title": "Extraction detail",
+              "sub": "Instructions for large or faint text",
+              "icon": "intelligence",
+              "target": "gemini_detail",
+              "value": "Medium"
+            },
+            {
+              "title": "Extraction instructions",
+              "sub": "Use the default prompt or write your own",
+              "icon": "text",
+              "target": "gemini_prompt",
+              "value": "Default"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Voice transcription",
+          "rows": [
+            {
+              "title": "Audio model",
+              "sub": "Model used for voice memos",
+              "icon": "voice",
+              "target": "gemini_audio_model",
+              "value": "Flash"
+            }
+          ]
+        },
+        {
+          "type": "group",
+          "label": "Activity",
+          "rows": [
+            {
+              "title": "Usage on this device",
+              "sub": "Recorded tokens and OCR or audio requests",
+              "icon": "history",
+              "target": "gemini_usage",
+              "value": "0 requests"
+            }
+          ]
+        }
+      ],
+      "theme": "Light",
+      "caption": "Gemini OCR · Not set up",
+      "back": "settings"
+    },
+    {
+      "key": "gemini_key",
+      "title": "Gemini API key",
+      "subtitle": "Images and voice recordings are sent to Gemini when you use these features.",
+      "parent": "gemini",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "API key",
+          "placeholder": "AIza…",
+          "secret": true,
+          "help": "Saved on this device for your Gemini requests."
+        },
+        {
+          "type": "button",
+          "label": "Save key",
+          "target": "gemini",
+          "kind": "primary",
+          "destructive": false
+        },
+        {
+          "type": "button",
+          "label": "Open Google AI Studio",
+          "target": "url:https://aistudio.google.com/apikey",
+          "kind": "text",
+          "destructive": false
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Gemini API key · Bottom sheet"
+    },
+    {
+      "key": "gemini_ocr_model",
+      "title": "OCR model",
+      "subtitle": "Choose a model for extracting text from images.",
+      "parent": "gemini",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search models",
+          "placeholder": "Search by name"
+        },
+        {
+          "type": "options",
+          "target": "gemini",
+          "options": [
+            {
+              "title": "Gemini 2.5 Flash",
+              "sub": "Current selection",
+              "selected": true,
+              "icon": null,
+              "target": null
+            },
+            {
+              "title": "Gemini 2.5 Flash-Lite",
+              "sub": "Another available model",
+              "selected": false,
+              "icon": null,
+              "target": null
+            },
+            {
+              "title": "Gemini 2.5 Pro",
+              "sub": "Another available model",
+              "selected": false,
+              "icon": null,
+              "target": null
+            }
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Refresh models",
+          "target": "gemini_ocr_model",
+          "kind": "text",
+          "destructive": false
+        }
+      ],
+      "kind": "sheet",
+      "caption": "OCR model · Bottom sheet"
+    },
+    {
+      "key": "gemini_audio_model",
+      "title": "Audio model",
+      "subtitle": "Choose a model for transcribing voice memos.",
+      "parent": "gemini",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search models",
+          "placeholder": "Search by name"
+        },
+        {
+          "type": "options",
+          "target": "gemini",
+          "options": [
+            {
+              "title": "Gemini 2.5 Flash",
+              "sub": "Current selection",
+              "selected": true,
+              "icon": null,
+              "target": null
+            },
+            {
+              "title": "Gemini 2.5 Pro",
+              "sub": "Another available model",
+              "selected": false,
+              "icon": null,
+              "target": null
+            }
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Refresh models",
+          "target": "gemini_audio_model",
+          "kind": "text",
+          "destructive": false
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Audio model · Bottom sheet"
+    },
+    {
+      "key": "gemini_detail",
+      "title": "Extraction detail",
+      "subtitle": "This changes the instructions sent to Gemini, rather than a detection threshold.",
+      "parent": "gemini",
+      "blocks": [
+        {
+          "type": "options",
+          "target": "gemini",
+          "options": [
+            {
+              "title": "Low",
+              "sub": "Focus on prominent, large text.",
+              "selected": false,
+              "icon": null,
+              "target": null
+            },
+            {
+              "title": "Medium",
+              "sub": "Use the default extraction instructions.",
+              "selected": true,
+              "icon": null,
+              "target": null
+            },
+            {
+              "title": "High",
+              "sub": "Include small or faint text. Gemini may infer unclear characters.",
+              "selected": false,
+              "icon": null,
+              "target": null
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "Review extracted text when the image is blurry or low contrast.",
+          "role": "body-large"
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Extraction detail · Bottom sheet"
+    },
+    {
+      "key": "gemini_prompt",
+      "title": "Extraction instructions",
+      "subtitle": "A custom prompt replaces Cobalt’s default OCR instructions.",
+      "parent": "gemini",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Custom prompt",
+          "placeholder": "Extract text and preserve line breaks.",
+          "multiline": true,
+          "height": 180,
+          "help": "Extraction detail instructions are still included.",
+          "value": "Extract the text as Markdown.\nKeep headings and lists.\nDo not add a summary."
+        },
+        {
+          "type": "button",
+          "label": "Save instructions",
+          "target": "gemini",
+          "kind": "primary",
+          "destructive": false
+        },
+        {
+          "type": "button",
+          "label": "Use default instructions",
+          "target": "gemini",
+          "kind": "text",
+          "destructive": false
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Extraction instructions · Bottom sheet"
+    },
+    {
+      "key": "gemini_usage",
+      "title": "Gemini usage",
+      "subtitle": "Requests and tokens recorded on this device.",
+      "blocks": [
+        {
+          "type": "heading",
+          "text": "Tokens"
+        },
+        {
+          "type": "stats",
+          "rows": [
+            [
+              "Input tokens",
+              "11,970"
+            ],
+            [
+              "Output tokens",
+              "2,295"
+            ],
+            [
+              "Total tokens",
+              "14,265"
+            ]
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "Requests"
+        },
+        {
+          "type": "stats",
+          "rows": [
+            [
+              "Image OCR",
+              "43"
+            ],
+            [
+              "Voice transcription",
+              "9"
+            ],
+            [
+              "Total requests",
+              "52"
+            ]
+          ]
+        },
+        {
+          "type": "chart",
+          "title": "Past 7 days",
+          "labels": [
+            "Wed",
+            "Thu",
+            "Fri",
+            "Sat",
+            "Sun",
+            "Mon",
+            "Tue"
+          ],
+          "values": [
+            820,
+            1750,
+            2060,
+            1140,
+            2420,
+            3975,
+            2100
+          ],
+          "selected": 6,
+          "note": "Today · 2,100 tokens"
+        },
+        {
+          "type": "text",
+          "text": "These counters are local records, not Gemini billing or account quota.",
+          "role": "body-large"
+        },
+        {
+          "type": "button",
+          "label": "Reset usage",
+          "target": "gemini_usage_reset",
+          "kind": "text",
+          "destructive": true
+        }
+      ],
+      "theme": "Dark",
+      "caption": "Gemini usage · Dark",
+      "back": "gemini"
+    },
+    {
+      "key": "gemini_usage_empty",
+      "title": "Gemini usage",
+      "subtitle": "Requests and tokens recorded on this device.",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "history",
+          "title": "No requests recorded yet",
+          "sub": "OCR and voice transcription activity will appear here after you use Gemini.",
+          "action": "Open Gemini settings",
+          "target": "gemini"
+        }
+      ],
+      "theme": "Light",
+      "caption": "Gemini usage · Empty",
+      "back": "gemini"
+    },
+    {
+      "key": "gemini_usage_reset",
+      "title": "Reset usage?",
+      "message": "Clear the token counters and request history recorded on this device? This does not reset usage in your Gemini account.",
+      "parent": "gemini_usage",
+      "confirm": "Reset usage",
+      "destructive": true,
+      "cancel": "Cancel",
+      "kind": "dialog",
+      "caption": "Reset usage? · Confirmation"
+    },
+    {
+      "key": "gemini_models_error",
+      "title": "Models could not load",
+      "subtitle": "Check your connection and saved API key, then try again.",
+      "parent": "gemini",
+      "blocks": [
+        {
+          "type": "status",
+          "icon": "warning",
+          "title": "Unable to refresh models",
+          "sub": "Your current model selection is kept.",
+          "error": true
+        },
+        {
+          "type": "button",
+          "label": "Try again",
+          "target": "gemini_ocr_model",
+          "kind": "primary",
+          "destructive": false
+        },
+        {
+          "type": "button",
+          "label": "Check API key",
+          "target": "gemini_key",
+          "kind": "text",
+          "destructive": false
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Models could not load · Bottom sheet"
+    }
+  ]
+}

@@ -1,0 +1,354 @@
+[
+  {
+    "name": "settings",
+    "path": ".impeccable/review/remaining-settings/phone-settings.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "576:39001",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=576-39001"
+  },
+  {
+    "name": "folio_ready",
+    "path": ".impeccable/review/remaining-settings/phone-folio_ready.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "570:33545",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=570-33545"
+  },
+  {
+    "name": "widgets",
+    "path": ".impeccable/review/remaining-settings/phone-widgets.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "570:32863",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=570-32863"
+  },
+  {
+    "name": "screening_new",
+    "path": ".impeccable/review/remaining-settings/phone-screening_new.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "571:35555",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=571-35555"
+  },
+  {
+    "name": "gemini",
+    "path": ".impeccable/review/remaining-settings/phone-gemini.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "524:19781",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=524-19781"
+  },
+  {
+    "name": "reminders",
+    "path": ".impeccable/review/remaining-settings/phone-reminders.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "538:18534",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=538-18534"
+  },
+  {
+    "name": "media",
+    "path": ".impeccable/review/remaining-settings/phone-media.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "539:19423",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=539-19423"
+  },
+  {
+    "name": "storage",
+    "path": ".impeccable/review/remaining-settings/phone-storage.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "544:20895",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=544-20895"
+  },
+  {
+    "name": "storage_update",
+    "path": ".impeccable/review/remaining-settings/phone-storage_update.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "548:23790",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=548-23790"
+  },
+  {
+    "name": "background",
+    "path": ".impeccable/review/remaining-settings/phone-background.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "548:24245",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=548-24245"
+  },
+  {
+    "name": "help",
+    "path": ".impeccable/review/remaining-settings/phone-help.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "550:23972",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=550-23972"
+  },
+  {
+    "name": "feedback",
+    "path": ".impeccable/review/remaining-settings/phone-feedback.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "562:26556",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=562-26556"
+  },
+  {
+    "name": "feedback_feature",
+    "path": ".impeccable/review/remaining-settings/phone-feedback_feature.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "562:26747",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=562-26747"
+  },
+  {
+    "name": "survey",
+    "path": ".impeccable/review/remaining-settings/phone-survey.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "565:26766",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=565-26766"
+  },
+  {
+    "name": "survey_answered",
+    "path": ".impeccable/review/remaining-settings/phone-survey_answered.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "565:26901",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=565-26901"
+  },
+  {
+    "name": "updates",
+    "path": ".impeccable/review/remaining-settings/phone-updates.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "566:31307",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=566-31307"
+  },
+  {
+    "name": "about",
+    "path": ".impeccable/review/remaining-settings/phone-about.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "567:32226",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=567-32226"
+  },
+  {
+    "name": "web",
+    "path": ".impeccable/review/remaining-settings/phone-web.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "568:32342",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=568-32342"
+  },
+  {
+    "name": "gemini_light",
+    "path": ".impeccable/review/remaining-settings/phone-gemini_light.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "524:19953",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=524-19953"
+  },
+  {
+    "name": "media_light",
+    "path": ".impeccable/review/remaining-settings/phone-media_light.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "539:19688",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=539-19688"
+  },
+  {
+    "name": "storage_light",
+    "path": ".impeccable/review/remaining-settings/phone-storage_light.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "544:21062",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=544-21062"
+  },
+  {
+    "name": "widgets_light",
+    "path": ".impeccable/review/remaining-settings/phone-widgets_light.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "570:33122",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=570-33122"
+  },
+  {
+    "name": "gemini_ocr_model",
+    "path": ".impeccable/review/remaining-settings/phone-gemini_ocr_model.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "528:17783",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=528-17783"
+  },
+  {
+    "name": "storage_trash_empty_confirm",
+    "path": ".impeccable/review/remaining-settings/phone-storage_trash_empty_confirm.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "546:22284",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=546-22284"
+  },
+  {
+    "name": "storage_version_restore",
+    "path": ".impeccable/review/remaining-settings/phone-storage_version_restore.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "547:22540",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=547-22540"
+  },
+  {
+    "name": "feedback_delivery",
+    "path": ".impeccable/review/remaining-settings/phone-feedback_delivery.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "564:26455",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=564-26455"
+  },
+  {
+    "name": "update_available_sheet",
+    "path": ".impeccable/review/remaining-settings/phone-update_available_sheet.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "566:32195",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=566-32195"
+  },
+  {
+    "name": "web_rotate",
+    "path": ".impeccable/review/remaining-settings/phone-web_rotate.png",
+    "dimensions": [
+      448,
+      997
+    ],
+    "nodeId": "568:32696",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=568-32696"
+  },
+  {
+    "name": "help_compact",
+    "path": ".impeccable/review/remaining-settings/compact-help_compact.png",
+    "dimensions": [
+      320,
+      712
+    ],
+    "nodeId": "577:39684",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=577-39684"
+  },
+  {
+    "name": "feedback_compact",
+    "path": ".impeccable/review/remaining-settings/compact-feedback_compact.png",
+    "dimensions": [
+      320,
+      712
+    ],
+    "nodeId": "577:39907",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=577-39907"
+  },
+  {
+    "name": "widgets_compact",
+    "path": ".impeccable/review/remaining-settings/compact-widgets_compact.png",
+    "dimensions": [
+      320,
+      712
+    ],
+    "nodeId": "577:40094",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=577-40094"
+  },
+  {
+    "name": "review_index",
+    "path": ".impeccable/review/remaining-settings/review-index.png",
+    "dimensions": [
+      1200,
+      518
+    ],
+    "nodeId": "576:38998",
+    "round": 3,
+    "origin": "https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=576-38998"
+  }
+]

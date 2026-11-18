@@ -1,0 +1,4874 @@
+{
+  "counts": {
+    "checked": 1041,
+    "selfDestinations": 88,
+    "missing": 20,
+    "nodeActions": 994,
+    "urlActions": 47
+  },
+  "mismatchCount": 0,
+  "mismatch": [],
+  "additionalAcceptedReferenceBackLinks": 4,
+  "activeTotal": 1045,
+  "verification": "1041 existing prototype links read back successfully, plus four accepted-reference Back links verified individually. No node IDs used by links changed in subsequent paint/layout fixes.",
+  "links": [
+    {
+      "id": "524:19822",
+      "target": "gemini_key"
+    },
+    {
+      "id": "524:19838",
+      "target": "url:https://aistudio.google.com/apikey"
+    },
+    {
+      "id": "524:19857",
+      "target": "gemini_ocr_model"
+    },
+    {
+      "id": "524:19876",
+      "target": "gemini_detail"
+    },
+    {
+      "id": "524:19889",
+      "target": "gemini_prompt"
+    },
+    {
+      "id": "524:19912",
+      "target": "gemini_audio_model"
+    },
+    {
+      "id": "524:19933",
+      "target": "gemini_usage"
+    },
+    {
+      "id": "524:19994",
+      "target": "gemini_key"
+    },
+    {
+      "id": "524:20010",
+      "target": "url:https://aistudio.google.com/apikey"
+    },
+    {
+      "id": "524:20029",
+      "target": "gemini_ocr_model"
+    },
+    {
+      "id": "524:20048",
+      "target": "gemini_detail"
+    },
+    {
+      "id": "524:20061",
+      "target": "gemini_prompt"
+    },
+    {
+      "id": "524:20084",
+      "target": "gemini_audio_model"
+    },
+    {
+      "id": "524:20105",
+      "target": "gemini_usage"
+    },
+    {
+      "id": "524:20295",
+      "target": "gemini"
+    },
+    {
+      "id": "524:20312",
+      "target": "gemini"
+    },
+    {
+      "id": "524:20365",
+      "target": "gemini"
+    },
+    {
+      "id": "524:20372",
+      "target": "url:https://aistudio.google.com/apikey"
+    },
+    {
+      "id": "528:17951",
+      "target": "gemini"
+    },
+    {
+      "id": "528:17968",
+      "target": "gemini"
+    },
+    {
+      "id": "528:18004",
+      "target": "gemini"
+    },
+    {
+      "id": "528:18014",
+      "target": "gemini"
+    },
+    {
+      "id": "528:18028",
+      "target": "gemini"
+    },
+    {
+      "id": "528:18041",
+      "target": "gemini_ocr_model"
+    },
+    {
+      "id": "528:18220",
+      "target": "gemini"
+    },
+    {
+      "id": "528:18237",
+      "target": "gemini"
+    },
+    {
+      "id": "528:18269",
+      "target": "gemini"
+    },
+    {
+      "id": "528:18278",
+      "target": "gemini"
+    },
+    {
+      "id": "528:18291",
+      "target": "gemini_audio_model"
+    },
+    {
+      "id": "528:18469",
+      "target": "gemini"
+    },
+    {
+      "id": "528:18486",
+      "target": "gemini"
+    },
+    {
+      "id": "528:18493",
+      "target": "gemini"
+    },
+    {
+      "id": "528:18506",
+      "target": "gemini"
+    },
+    {
+      "id": "528:18515",
+      "target": "gemini"
+    },
+    {
+      "id": "528:18701",
+      "target": "gemini"
+    },
+    {
+      "id": "528:18718",
+      "target": "gemini"
+    },
+    {
+      "id": "528:18749",
+      "target": "gemini"
+    },
+    {
+      "id": "528:18756",
+      "target": "gemini"
+    },
+    {
+      "id": "529:18294",
+      "target": "gemini_usage_reset"
+    },
+    {
+      "id": "529:18352",
+      "target": "gemini"
+    },
+    {
+      "id": "529:18456",
+      "target": "gemini_usage"
+    },
+    {
+      "id": "529:18457",
+      "target": "gemini_usage"
+    },
+    {
+      "id": "529:18663",
+      "target": "gemini"
+    },
+    {
+      "id": "529:18680",
+      "target": "gemini"
+    },
+    {
+      "id": "529:18696",
+      "target": "gemini_ocr_model"
+    },
+    {
+      "id": "529:18702",
+      "target": "gemini_key"
+    },
+    {
+      "id": "I538:18535;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "538:18586",
+      "target": "reminders_off"
+    },
+    {
+      "id": "538:18575",
+      "target": "reminders_off"
+    },
+    {
+      "id": "538:18604",
+      "target": "reminders_time"
+    },
+    {
+      "id": "538:18622",
+      "target": "reminders_inactivity"
+    },
+    {
+      "id": "538:18691",
+      "target": "reminders"
+    },
+    {
+      "id": "538:18705",
+      "target": "reminders_reset"
+    },
+    {
+      "id": "538:18722",
+      "target": "screening_picks"
+    },
+    {
+      "id": "I538:18743;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "538:18794",
+      "target": "reminders"
+    },
+    {
+      "id": "538:18783",
+      "target": "reminders"
+    },
+    {
+      "id": "538:18809",
+      "target": "screening_picks"
+    },
+    {
+      "id": "I538:18830;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "538:18870",
+      "target": "reminders"
+    },
+    {
+      "id": "538:18889",
+      "target": "screening_picks"
+    },
+    {
+      "id": "538:19115",
+      "target": "reminders"
+    },
+    {
+      "id": "538:19132",
+      "target": "reminders"
+    },
+    {
+      "id": "538:19139",
+      "target": "reminders"
+    },
+    {
+      "id": "538:19147",
+      "target": "reminders"
+    },
+    {
+      "id": "538:19150",
+      "target": "reminders"
+    },
+    {
+      "id": "538:19153",
+      "target": "reminders"
+    },
+    {
+      "id": "538:19438",
+      "target": "reminders"
+    },
+    {
+      "id": "538:19455",
+      "target": "reminders"
+    },
+    {
+      "id": "538:19462",
+      "target": "reminders"
+    },
+    {
+      "id": "538:19475",
+      "target": "reminders"
+    },
+    {
+      "id": "538:19484",
+      "target": "reminders"
+    },
+    {
+      "id": "538:19708",
+      "target": "reminders"
+    },
+    {
+      "id": "538:19709",
+      "target": "reminders"
+    },
+    {
+      "id": "I539:19424;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "539:19464",
+      "target": "trakt"
+    },
+    {
+      "id": "539:19477",
+      "target": "tmdb"
+    },
+    {
+      "id": "539:19580",
+      "target": "media_priority"
+    },
+    {
+      "id": "539:19631",
+      "target": "jikan"
+    },
+    {
+      "id": "539:19650",
+      "target": "trakt_pending"
+    },
+    {
+      "id": "539:19666",
+      "target": "media_ignored_reset"
+    },
+    {
+      "id": "I539:19689;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "539:19729",
+      "target": "trakt"
+    },
+    {
+      "id": "539:19742",
+      "target": "tmdb"
+    },
+    {
+      "id": "539:19845",
+      "target": "media_priority"
+    },
+    {
+      "id": "539:19896",
+      "target": "jikan"
+    },
+    {
+      "id": "539:19915",
+      "target": "trakt_pending"
+    },
+    {
+      "id": "539:19931",
+      "target": "media_ignored_reset"
+    },
+    {
+      "id": "I539:19954;447:7716",
+      "target": "media"
+    },
+    {
+      "id": "539:19997",
+      "target": "trakt_syncing"
+    },
+    {
+      "id": "539:20004",
+      "target": "trakt_disconnect"
+    },
+    {
+      "id": "539:20120",
+      "target": "trakt_advanced"
+    },
+    {
+      "id": "I539:20142;447:7716",
+      "target": "media"
+    },
+    {
+      "id": "539:20185",
+      "target": "trakt_browser"
+    },
+    {
+      "id": "539:20191",
+      "target": "trakt_code"
+    },
+    {
+      "id": "539:20200",
+      "target": "trakt_advanced"
+    },
+    {
+      "id": "I539:20221;447:7716",
+      "target": "media"
+    },
+    {
+      "id": "540:19840",
+      "target": "trakt_disconnected"
+    },
+    {
+      "id": "540:19857",
+      "target": "trakt_disconnected"
+    },
+    {
+      "id": "540:19872",
+      "target": "trakt_code"
+    },
+    {
+      "id": "540:19879",
+      "target": "trakt_disconnected"
+    },
+    {
+      "id": "540:19965",
+      "target": "trakt_disconnected"
+    },
+    {
+      "id": "540:19982",
+      "target": "trakt_disconnected"
+    },
+    {
+      "id": "540:19989",
+      "target": "trakt_code"
+    },
+    {
+      "id": "540:19995",
+      "target": "url:https://trakt.tv/activate"
+    },
+    {
+      "id": "540:20002",
+      "target": "trakt_disconnected"
+    },
+    {
+      "id": "540:20194",
+      "target": "trakt"
+    },
+    {
+      "id": "540:20211",
+      "target": "trakt"
+    },
+    {
+      "id": "540:20300",
+      "target": "trakt"
+    },
+    {
+      "id": "540:20306",
+      "target": "trakt"
+    },
+    {
+      "id": "540:20498",
+      "target": "trakt"
+    },
+    {
+      "id": "540:20499",
+      "target": "trakt"
+    },
+    {
+      "id": "I540:20530;447:7716",
+      "target": "media"
+    },
+    {
+      "id": "540:20569",
+      "target": "trakt_pending"
+    },
+    {
+      "id": "540:20575",
+      "target": "trakt"
+    },
+    {
+      "id": "I540:20626;447:7716",
+      "target": "media"
+    },
+    {
+      "id": "540:20719",
+      "target": "tmdb"
+    },
+    {
+      "id": "540:20725",
+      "target": "url:https://www.themoviedb.org/settings/api"
+    },
+    {
+      "id": "540:21004",
+      "target": "media"
+    },
+    {
+      "id": "540:21021",
+      "target": "media"
+    },
+    {
+      "id": "540:21028",
+      "target": "media"
+    },
+    {
+      "id": "540:21040",
+      "target": "media"
+    },
+    {
+      "id": "540:21328",
+      "target": "media"
+    },
+    {
+      "id": "540:21345",
+      "target": "media"
+    },
+    {
+      "id": "540:21378",
+      "target": "media"
+    },
+    {
+      "id": "540:21384",
+      "target": "media"
+    },
+    {
+      "id": "540:21657",
+      "target": "media"
+    },
+    {
+      "id": "540:21658",
+      "target": "media"
+    },
+    {
+      "id": "I540:21686;447:7716",
+      "target": "media"
+    },
+    {
+      "id": "540:21733",
+      "target": "trakt_syncing"
+    },
+    {
+      "id": "540:21739",
+      "target": "trakt_pending"
+    },
+    {
+      "id": "540:21748",
+      "target": "trakt_advanced"
+    },
+    {
+      "id": "540:21762",
+      "target": "trakt_disconnect"
+    },
+    {
+      "id": "I544:20896;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "544:20949",
+      "target": "storage_notes"
+    },
+    {
+      "id": "544:20967",
+      "target": "storage_drafts"
+    },
+    {
+      "id": "544:20983",
+      "target": "storage_trash"
+    },
+    {
+      "id": "544:21004",
+      "target": "storage_history"
+    },
+    {
+      "id": "544:21023",
+      "target": "storage_cache"
+    },
+    {
+      "id": "544:21036",
+      "target": "storage_unlinked"
+    },
+    {
+      "id": "544:21051",
+      "target": "storage"
+    },
+    {
+      "id": "I544:21063;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "544:21116",
+      "target": "storage_notes"
+    },
+    {
+      "id": "544:21134",
+      "target": "storage_drafts"
+    },
+    {
+      "id": "544:21150",
+      "target": "storage_trash"
+    },
+    {
+      "id": "544:21171",
+      "target": "storage_history"
+    },
+    {
+      "id": "544:21190",
+      "target": "storage_cache"
+    },
+    {
+      "id": "544:21203",
+      "target": "storage_unlinked"
+    },
+    {
+      "id": "544:21218",
+      "target": "storage"
+    },
+    {
+      "id": "I544:21229;447:7716",
+      "target": "storage"
+    },
+    {
+      "id": "544:21267",
+      "target": "storage_notes"
+    },
+    {
+      "id": "544:21274",
+      "target": "storage_notes_large"
+    },
+    {
+      "id": "544:21280",
+      "target": "storage_note_plain"
+    },
+    {
+      "id": "544:21298",
+      "target": "storage_note_options"
+    },
+    {
+      "id": "544:21316",
+      "target": "storage_note_options"
+    },
+    {
+      "id": "I544:21339;447:7716",
+      "target": "storage"
+    },
+    {
+      "id": "544:21377",
+      "target": "storage_notes"
+    },
+    {
+      "id": "544:21380",
+      "target": "storage_notes_large"
+    },
+    {
+      "id": "544:21390",
+      "target": "storage_note_options"
+    },
+    {
+      "id": "544:21408",
+      "target": "storage_note_options"
+    },
+    {
+      "id": "I544:21431;447:7750",
+      "target": "storage_notes"
+    },
+    {
+      "id": "544:21468",
+      "target": "storage_note_options"
+    },
+    {
+      "id": "544:21616",
+      "target": "storage_notes"
+    },
+    {
+      "id": "544:21633",
+      "target": "storage_notes"
+    },
+    {
+      "id": "544:21642",
+      "target": "storage_note_plain"
+    },
+    {
+      "id": "544:21660",
+      "target": "storage_notes"
+    },
+    {
+      "id": "544:21673",
+      "target": "storage_note_trash"
+    },
+    {
+      "id": "544:21799",
+      "target": "storage_notes"
+    },
+    {
+      "id": "I544:21800;50723:10962;58650:8822",
+      "target": "storage_notes"
+    },
+    {
+      "id": "I544:21800;50723:10963;58650:8822",
+      "target": "storage_notes"
+    },
+    {
+      "id": "I544:21831;447:7716",
+      "target": "storage"
+    },
+    {
+      "id": "544:21872",
+      "target": "storage_draft_actions"
+    },
+    {
+      "id": "544:21886",
+      "target": "storage_draft_actions"
+    },
+    {
+      "id": "I544:21905;447:7716",
+      "target": "storage"
+    },
+    {
+      "id": "544:21951",
+      "target": "storage_drafts_empty"
+    },
+    {
+      "id": "544:22033",
+      "target": "storage_drafts"
+    },
+    {
+      "id": "544:22050",
+      "target": "storage_drafts"
+    },
+    {
+      "id": "544:22060",
+      "target": "storage_drafts"
+    },
+    {
+      "id": "544:22074",
+      "target": "storage_drafts"
+    },
+    {
+      "id": "I546:21607;447:7716",
+      "target": "storage"
+    },
+    {
+      "id": "546:21660",
+      "target": "storage_trash_off_confirm"
+    },
+    {
+      "id": "546:21647",
+      "target": "storage_trash_off_confirm"
+    },
+    {
+      "id": "546:21678",
+      "target": "storage_trash_actions"
+    },
+    {
+      "id": "546:21696",
+      "target": "storage_trash_actions"
+    },
+    {
+      "id": "546:21709",
+      "target": "storage_trash_actions"
+    },
+    {
+      "id": "546:21728",
+      "target": "storage_trash_empty_confirm"
+    },
+    {
+      "id": "I546:21740;447:7716",
+      "target": "storage"
+    },
+    {
+      "id": "546:21793",
+      "target": "storage_trash"
+    },
+    {
+      "id": "546:21780",
+      "target": "storage_trash"
+    },
+    {
+      "id": "546:21809",
+      "target": "storage_trash_actions"
+    },
+    {
+      "id": "546:21827",
+      "target": "storage_trash_actions"
+    },
+    {
+      "id": "546:21840",
+      "target": "storage_trash_empty_confirm"
+    },
+    {
+      "id": "I546:21851;447:7716",
+      "target": "storage"
+    },
+    {
+      "id": "546:21904",
+      "target": "storage_trash_off_confirm"
+    },
+    {
+      "id": "546:21891",
+      "target": "storage_trash_off_confirm"
+    },
+    {
+      "id": "546:22063",
+      "target": "storage_trash"
+    },
+    {
+      "id": "546:22080",
+      "target": "storage_trash"
+    },
+    {
+      "id": "546:22089",
+      "target": "storage_trash"
+    },
+    {
+      "id": "546:22103",
+      "target": "storage_trash_delete"
+    },
+    {
+      "id": "546:22252",
+      "target": "storage_trash"
+    },
+    {
+      "id": "I546:22253;50723:10962;58650:8822",
+      "target": "storage_trash"
+    },
+    {
+      "id": "I546:22253;50723:10963;58650:8822",
+      "target": "storage_trash"
+    },
+    {
+      "id": "546:22413",
+      "target": "storage_trash"
+    },
+    {
+      "id": "I546:22414;50723:10962;58650:8822",
+      "target": "storage_trash"
+    },
+    {
+      "id": "I546:22414;50723:10963;58650:8822",
+      "target": "storage_trash_empty"
+    },
+    {
+      "id": "546:22570",
+      "target": "storage_trash"
+    },
+    {
+      "id": "I546:22571;50723:10962;58650:8822",
+      "target": "storage_trash"
+    },
+    {
+      "id": "I546:22571;50723:10963;58650:8822",
+      "target": "storage_trash_off"
+    },
+    {
+      "id": "I546:22599;447:7716",
+      "target": "storage"
+    },
+    {
+      "id": "546:22646",
+      "target": "storage_retention"
+    },
+    {
+      "id": "546:22666",
+      "target": "storage_versions"
+    },
+    {
+      "id": "546:22680",
+      "target": "storage_history_cleanup"
+    },
+    {
+      "id": "546:22780",
+      "target": "storage_history"
+    },
+    {
+      "id": "546:22797",
+      "target": "storage_history"
+    },
+    {
+      "id": "546:22804",
+      "target": "storage_history"
+    },
+    {
+      "id": "546:22816",
+      "target": "storage_history"
+    },
+    {
+      "id": "546:22828",
+      "target": "storage_history"
+    },
+    {
+      "id": "546:22836",
+      "target": "storage_history"
+    },
+    {
+      "id": "546:22848",
+      "target": "storage_history"
+    },
+    {
+      "id": "546:22860",
+      "target": "storage_history"
+    },
+    {
+      "id": "I546:22878;447:7716",
+      "target": "storage_history"
+    },
+    {
+      "id": "546:22918",
+      "target": "storage_version_actions"
+    },
+    {
+      "id": "546:22932",
+      "target": "storage_version_actions"
+    },
+    {
+      "id": "546:22946",
+      "target": "storage_version_actions"
+    },
+    {
+      "id": "547:22483",
+      "target": "storage_versions"
+    },
+    {
+      "id": "547:22500",
+      "target": "storage_versions"
+    },
+    {
+      "id": "547:22509",
+      "target": "storage_version_restore"
+    },
+    {
+      "id": "547:22523",
+      "target": "storage_versions"
+    },
+    {
+      "id": "547:22625",
+      "target": "storage_versions"
+    },
+    {
+      "id": "I547:22626;50723:10962;58650:8822",
+      "target": "storage_versions"
+    },
+    {
+      "id": "I547:22626;50723:10963;58650:8822",
+      "target": "storage_versions"
+    },
+    {
+      "id": "547:22746",
+      "target": "storage_history"
+    },
+    {
+      "id": "I547:22747;50723:10962;58650:8822",
+      "target": "storage_history"
+    },
+    {
+      "id": "I547:22747;50723:10963;58650:8822",
+      "target": "storage_history"
+    },
+    {
+      "id": "I547:22775;447:7716",
+      "target": "storage"
+    },
+    {
+      "id": "547:22818",
+      "target": "storage_cache"
+    },
+    {
+      "id": "547:22834",
+      "target": "storage_database_confirm"
+    },
+    {
+      "id": "547:22842",
+      "target": "storage_disposable"
+    },
+    {
+      "id": "547:22924",
+      "target": "storage_cache"
+    },
+    {
+      "id": "I547:22925;50723:10962;58650:8822",
+      "target": "storage_cache"
+    },
+    {
+      "id": "I547:22925;50723:10963;58650:8822",
+      "target": "storage_cache"
+    },
+    {
+      "id": "547:23025",
+      "target": "storage_cache"
+    },
+    {
+      "id": "547:23042",
+      "target": "storage_cache"
+    },
+    {
+      "id": "547:23061",
+      "target": "storage_disposable_holding"
+    },
+    {
+      "id": "547:23067",
+      "target": "storage_cache"
+    },
+    {
+      "id": "547:23149",
+      "target": "storage_cache"
+    },
+    {
+      "id": "547:23166",
+      "target": "storage_cache"
+    },
+    {
+      "id": "547:23199",
+      "target": "storage_disposable"
+    },
+    {
+      "id": "547:23205",
+      "target": "storage_cache"
+    },
+    {
+      "id": "I547:23216;447:7716",
+      "target": "storage"
+    },
+    {
+      "id": "547:23257",
+      "target": "storage_unlinked_actions"
+    },
+    {
+      "id": "547:23275",
+      "target": "storage_unlinked_media_actions"
+    },
+    {
+      "id": "547:23289",
+      "target": "storage_unlinked_actions"
+    },
+    {
+      "id": "547:23304",
+      "target": "storage_unlinked_cleanup"
+    },
+    {
+      "id": "I547:23315;447:7716",
+      "target": "storage"
+    },
+    {
+      "id": "547:23360",
+      "target": "storage_unlinked_empty"
+    },
+    {
+      "id": "547:23466",
+      "target": "storage_unlinked"
+    },
+    {
+      "id": "547:23483",
+      "target": "storage_unlinked"
+    },
+    {
+      "id": "547:23492",
+      "target": "storage_unlinked"
+    },
+    {
+      "id": "547:23506",
+      "target": "storage_unlinked"
+    },
+    {
+      "id": "547:23519",
+      "target": "storage_unlinked_delete"
+    },
+    {
+      "id": "548:23126",
+      "target": "storage_unlinked"
+    },
+    {
+      "id": "548:23143",
+      "target": "storage_unlinked"
+    },
+    {
+      "id": "548:23152",
+      "target": "storage_unlinked"
+    },
+    {
+      "id": "548:23166",
+      "target": "storage_unlinked"
+    },
+    {
+      "id": "548:23179",
+      "target": "storage_unlinked_delete"
+    },
+    {
+      "id": "548:23295",
+      "target": "storage_unlinked"
+    },
+    {
+      "id": "I548:23296;50723:10962;58650:8822",
+      "target": "storage_unlinked"
+    },
+    {
+      "id": "I548:23296;50723:10963;58650:8822",
+      "target": "storage_unlinked"
+    },
+    {
+      "id": "548:23423",
+      "target": "storage_unlinked"
+    },
+    {
+      "id": "I548:23424;50723:10962;58650:8822",
+      "target": "storage_unlinked"
+    },
+    {
+      "id": "I548:23424;50723:10963;58650:8822",
+      "target": "storage_unlinked_empty"
+    },
+    {
+      "id": "I548:23452;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "548:23499",
+      "target": "storage"
+    },
+    {
+      "id": "I548:23511;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "548:23572",
+      "target": "storage_note_plain"
+    },
+    {
+      "id": "548:23590",
+      "target": "storage_note_options"
+    },
+    {
+      "id": "548:23608",
+      "target": "storage_note_options"
+    },
+    {
+      "id": "548:23626",
+      "target": "storage_safe_exit"
+    },
+    {
+      "id": "548:23758",
+      "target": "storage_safe_mode"
+    },
+    {
+      "id": "I548:23759;50723:10962;58650:8822",
+      "target": "storage_safe_mode"
+    },
+    {
+      "id": "I548:23759;50723:10963;58650:8822",
+      "target": "storage"
+    },
+    {
+      "id": "I548:23791;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "548:23838",
+      "target": "storage_update_running"
+    },
+    {
+      "id": "548:23903",
+      "target": "storage_update"
+    },
+    {
+      "id": "I548:23904;50723:10962;58650:8822",
+      "target": "storage_update"
+    },
+    {
+      "id": "I548:23904;50723:10963;58650:8822",
+      "target": "storage_update_running"
+    },
+    {
+      "id": "I548:23932;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I548:24005;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "548:24051",
+      "target": "storage_update_running"
+    },
+    {
+      "id": "I548:24062;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "548:24112",
+      "target": "storage_update_running"
+    },
+    {
+      "id": "I548:24124;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "548:24171",
+      "target": "storage_update_running"
+    },
+    {
+      "id": "I548:24182;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "548:24229",
+      "target": "storage_update"
+    },
+    {
+      "id": "548:24235",
+      "target": "storage_safe_mode"
+    },
+    {
+      "id": "I548:24246;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "548:24297",
+      "target": "background_allowed"
+    },
+    {
+      "id": "I548:24311;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I548:24370;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "548:24421",
+      "target": "background_allowed"
+    },
+    {
+      "id": "I550:23973;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "550:24041",
+      "target": "help"
+    },
+    {
+      "id": "550:24048",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "550:24051",
+      "target": "help_gemini"
+    },
+    {
+      "id": "550:24054",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "550:24057",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "550:24060",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "550:24066",
+      "target": "help_answer_capture"
+    },
+    {
+      "id": "550:24072",
+      "target": "help_answer_organize"
+    },
+    {
+      "id": "550:24078",
+      "target": "help_answer_ocr"
+    },
+    {
+      "id": "550:24084",
+      "target": "help_answer_offline"
+    },
+    {
+      "id": "550:24092",
+      "target": "feedback"
+    },
+    {
+      "id": "550:24104",
+      "target": "feedback_feature"
+    },
+    {
+      "id": "I550:24123;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "550:24187",
+      "target": "help"
+    },
+    {
+      "id": "550:24190",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "550:24197",
+      "target": "help_gemini"
+    },
+    {
+      "id": "550:24200",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "550:24203",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "550:24206",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "550:24211",
+      "target": "help_answer_capture"
+    },
+    {
+      "id": "550:24217",
+      "target": "help_answer_organize"
+    },
+    {
+      "id": "550:24223",
+      "target": "help_answer_dock"
+    },
+    {
+      "id": "I550:24233;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "550:24297",
+      "target": "help"
+    },
+    {
+      "id": "550:24300",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "550:24303",
+      "target": "help_gemini"
+    },
+    {
+      "id": "550:24310",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "550:24313",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "550:24316",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "550:24321",
+      "target": "help_answer_ocr"
+    },
+    {
+      "id": "550:24327",
+      "target": "help_answer_models"
+    },
+    {
+      "id": "I550:24337;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "550:24401",
+      "target": "help"
+    },
+    {
+      "id": "550:24404",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "550:24407",
+      "target": "help_gemini"
+    },
+    {
+      "id": "550:24410",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "550:24417",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "550:24420",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "550:24425",
+      "target": "help_answer_local"
+    },
+    {
+      "id": "550:24431",
+      "target": "help_answer_offline"
+    },
+    {
+      "id": "I550:24441;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "550:24505",
+      "target": "help"
+    },
+    {
+      "id": "550:24508",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "550:24511",
+      "target": "help_gemini"
+    },
+    {
+      "id": "550:24514",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "550:24517",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "550:24524",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "550:24529",
+      "target": "help_answer_media"
+    },
+    {
+      "id": "550:24535",
+      "target": "help_answer_voice"
+    },
+    {
+      "id": "550:24541",
+      "target": "help_answer_player"
+    },
+    {
+      "id": "I550:24552;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "550:24616",
+      "target": "help"
+    },
+    {
+      "id": "550:24619",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "550:24622",
+      "target": "help_gemini"
+    },
+    {
+      "id": "550:24625",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "550:24628",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "550:24631",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "550:24640",
+      "target": "help_answer_widgets"
+    },
+    {
+      "id": "550:24646",
+      "target": "help_answer_customize"
+    },
+    {
+      "id": "I550:24656;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "550:24720",
+      "target": "help"
+    },
+    {
+      "id": "550:24727",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "550:24730",
+      "target": "help_gemini"
+    },
+    {
+      "id": "550:24733",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "550:24736",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "550:24739",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "550:24745",
+      "target": "help_answer_dock"
+    },
+    {
+      "id": "550:24751",
+      "target": "help_answer_ocr"
+    },
+    {
+      "id": "550:24757",
+      "target": "help_answer_models"
+    },
+    {
+      "id": "I550:24767;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "550:24837",
+      "target": "help"
+    },
+    {
+      "id": "550:24847",
+      "target": "feedback"
+    },
+    {
+      "id": "550:24859",
+      "target": "feedback_feature"
+    },
+    {
+      "id": "I550:24878;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "550:24942",
+      "target": "help"
+    },
+    {
+      "id": "550:24945",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "550:24952",
+      "target": "help_gemini"
+    },
+    {
+      "id": "550:24955",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "550:24958",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "550:24961",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "550:24966",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "550:24973",
+      "target": "help_answer_capture"
+    },
+    {
+      "id": "550:24980",
+      "target": "help_answer_capture"
+    },
+    {
+      "id": "550:24986",
+      "target": "help_answer_capture"
+    },
+    {
+      "id": "550:24993",
+      "target": "help_answer_organize"
+    },
+    {
+      "id": "550:24999",
+      "target": "help_answer_dock"
+    },
+    {
+      "id": "I550:25009;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "550:25073",
+      "target": "help"
+    },
+    {
+      "id": "550:25076",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "550:25083",
+      "target": "help_gemini"
+    },
+    {
+      "id": "550:25086",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "550:25089",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "550:25092",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "550:25097",
+      "target": "help_answer_capture"
+    },
+    {
+      "id": "550:25103",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "550:25110",
+      "target": "help_answer_organize"
+    },
+    {
+      "id": "550:25116",
+      "target": "help_answer_organize"
+    },
+    {
+      "id": "550:25122",
+      "target": "help_answer_organize"
+    },
+    {
+      "id": "550:25129",
+      "target": "help_answer_dock"
+    },
+    {
+      "id": "554:24878",
+      "target": "help"
+    },
+    {
+      "id": "554:24881",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "554:24884",
+      "target": "help_gemini"
+    },
+    {
+      "id": "554:24887",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "554:24890",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "554:24893",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "554:24898",
+      "target": "help_answer_capture"
+    },
+    {
+      "id": "554:24921",
+      "target": "help_answer_organize"
+    },
+    {
+      "id": "554:24944",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "554:24968",
+      "target": "help_answer_dock"
+    },
+    {
+      "id": "554:24974",
+      "target": "help_answer_dock"
+    },
+    {
+      "id": "554:24980",
+      "target": "help_answer_dock"
+    },
+    {
+      "id": "556:24790",
+      "target": "help"
+    },
+    {
+      "id": "556:24793",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "556:24796",
+      "target": "help_gemini"
+    },
+    {
+      "id": "556:24799",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "556:24802",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "556:24805",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "556:24810",
+      "target": "help_answer_capture"
+    },
+    {
+      "id": "556:24833",
+      "target": "help_answer_organize"
+    },
+    {
+      "id": "556:24856",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "556:24880",
+      "target": "help_answer_dock"
+    },
+    {
+      "id": "556:24887",
+      "target": "help_answer_dock"
+    },
+    {
+      "id": "556:24893",
+      "target": "help_answer_dock"
+    },
+    {
+      "id": "556:24959",
+      "target": "help"
+    },
+    {
+      "id": "556:24962",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "556:24965",
+      "target": "help_gemini"
+    },
+    {
+      "id": "556:24968",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "556:24971",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "556:24974",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "556:24979",
+      "target": "help_gemini"
+    },
+    {
+      "id": "556:25003",
+      "target": "help_answer_ocr"
+    },
+    {
+      "id": "556:25009",
+      "target": "help_answer_ocr"
+    },
+    {
+      "id": "556:25015",
+      "target": "help_answer_ocr"
+    },
+    {
+      "id": "556:25022",
+      "target": "help_answer_models"
+    },
+    {
+      "id": "556:25104",
+      "target": "help"
+    },
+    {
+      "id": "556:25107",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "556:25110",
+      "target": "help_gemini"
+    },
+    {
+      "id": "556:25113",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "556:25116",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "556:25119",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "556:25124",
+      "target": "help_answer_ocr"
+    },
+    {
+      "id": "556:25147",
+      "target": "help_gemini"
+    },
+    {
+      "id": "556:25171",
+      "target": "help_answer_models"
+    },
+    {
+      "id": "556:25177",
+      "target": "help_answer_models"
+    },
+    {
+      "id": "556:25183",
+      "target": "help_answer_models"
+    },
+    {
+      "id": "556:25189",
+      "target": "gemini"
+    },
+    {
+      "id": "556:25256",
+      "target": "help"
+    },
+    {
+      "id": "556:25259",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "556:25262",
+      "target": "help_gemini"
+    },
+    {
+      "id": "556:25265",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "556:25268",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "556:25271",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "556:25276",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "556:25300",
+      "target": "help_answer_media"
+    },
+    {
+      "id": "556:25306",
+      "target": "help_answer_media"
+    },
+    {
+      "id": "556:25312",
+      "target": "help_answer_media"
+    },
+    {
+      "id": "556:25319",
+      "target": "help_answer_voice"
+    },
+    {
+      "id": "556:25342",
+      "target": "help_answer_player"
+    },
+    {
+      "id": "556:25364",
+      "target": "media"
+    },
+    {
+      "id": "556:25430",
+      "target": "help"
+    },
+    {
+      "id": "556:25433",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "556:25436",
+      "target": "help_gemini"
+    },
+    {
+      "id": "556:25439",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "556:25442",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "556:25445",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "556:25450",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "556:25474",
+      "target": "help_answer_local"
+    },
+    {
+      "id": "556:25480",
+      "target": "help_answer_local"
+    },
+    {
+      "id": "556:25486",
+      "target": "help_answer_local"
+    },
+    {
+      "id": "556:25493",
+      "target": "help_answer_offline"
+    },
+    {
+      "id": "556:25515",
+      "target": "storage"
+    },
+    {
+      "id": "I556:24731;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I556:24904;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I556:25049;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I556:25201;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I556:25375;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "562:25123",
+      "target": "help"
+    },
+    {
+      "id": "562:25126",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "562:25129",
+      "target": "help_gemini"
+    },
+    {
+      "id": "562:25132",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "562:25135",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "562:25138",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "562:25143",
+      "target": "help_answer_local"
+    },
+    {
+      "id": "562:25166",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "562:25190",
+      "target": "help_answer_offline"
+    },
+    {
+      "id": "562:25197",
+      "target": "help_answer_offline"
+    },
+    {
+      "id": "562:25203",
+      "target": "help_answer_offline"
+    },
+    {
+      "id": "562:25269",
+      "target": "help"
+    },
+    {
+      "id": "562:25272",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "562:25275",
+      "target": "help_gemini"
+    },
+    {
+      "id": "562:25278",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "562:25281",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "562:25284",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "562:25289",
+      "target": "help_answer_media"
+    },
+    {
+      "id": "562:25312",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "562:25336",
+      "target": "help_answer_voice"
+    },
+    {
+      "id": "562:25342",
+      "target": "help_answer_voice"
+    },
+    {
+      "id": "562:25348",
+      "target": "help_answer_voice"
+    },
+    {
+      "id": "562:25355",
+      "target": "help_answer_player"
+    },
+    {
+      "id": "562:25437",
+      "target": "help"
+    },
+    {
+      "id": "562:25440",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "562:25443",
+      "target": "help_gemini"
+    },
+    {
+      "id": "562:25446",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "562:25449",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "562:25452",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "562:25457",
+      "target": "help_answer_media"
+    },
+    {
+      "id": "562:25480",
+      "target": "help_answer_voice"
+    },
+    {
+      "id": "562:25503",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "562:25527",
+      "target": "help_answer_player"
+    },
+    {
+      "id": "562:25533",
+      "target": "help_answer_player"
+    },
+    {
+      "id": "562:25539",
+      "target": "help_answer_player"
+    },
+    {
+      "id": "562:25605",
+      "target": "help"
+    },
+    {
+      "id": "562:25608",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "562:25611",
+      "target": "help_gemini"
+    },
+    {
+      "id": "562:25614",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "562:25617",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "562:25620",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "562:25625",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "562:25649",
+      "target": "help_answer_widgets"
+    },
+    {
+      "id": "562:25655",
+      "target": "help_answer_widgets"
+    },
+    {
+      "id": "562:25661",
+      "target": "help_answer_widgets"
+    },
+    {
+      "id": "562:25668",
+      "target": "help_answer_customize"
+    },
+    {
+      "id": "562:25690",
+      "target": "widgets"
+    },
+    {
+      "id": "562:25757",
+      "target": "help"
+    },
+    {
+      "id": "562:25760",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "562:25763",
+      "target": "help_gemini"
+    },
+    {
+      "id": "562:25766",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "562:25769",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "562:25772",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "562:25777",
+      "target": "help_answer_widgets"
+    },
+    {
+      "id": "562:25800",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "562:25824",
+      "target": "help_answer_customize"
+    },
+    {
+      "id": "562:25830",
+      "target": "help_answer_customize"
+    },
+    {
+      "id": "562:25836",
+      "target": "help_answer_customize"
+    },
+    {
+      "id": "562:25842",
+      "target": "appearance"
+    },
+    {
+      "id": "I562:25064;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I562:25214;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I562:25382;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I562:25550;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I562:25702;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "562:26687",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "562:26693",
+      "target": "feedback_attached"
+    },
+    {
+      "id": "562:26715",
+      "target": "feedback_environment"
+    },
+    {
+      "id": "562:26737",
+      "target": "feedback_bug_validation"
+    },
+    {
+      "id": "562:26881",
+      "target": "feedback_environment"
+    },
+    {
+      "id": "562:26903",
+      "target": "feedback_feature_filled"
+    },
+    {
+      "id": "562:27046",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "562:27052",
+      "target": "feedback_attached"
+    },
+    {
+      "id": "562:27074",
+      "target": "feedback_environment"
+    },
+    {
+      "id": "562:27096",
+      "target": "feedback_delivery"
+    },
+    {
+      "id": "562:27239",
+      "target": "feedback_environment"
+    },
+    {
+      "id": "562:27261",
+      "target": "feedback_feature_delivery"
+    },
+    {
+      "id": "I562:26557;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I562:26594;54563:40118;54563:40293",
+      "target": "feedback"
+    },
+    {
+      "id": "I562:26594;54563:40119;54563:40316",
+      "target": "feedback_feature"
+    },
+    {
+      "id": "I562:26671;52798:24878",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "I562:26748;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I562:26785;54563:40118;54563:40293",
+      "target": "feedback"
+    },
+    {
+      "id": "I562:26785;54563:40119;54563:40316",
+      "target": "feedback_feature"
+    },
+    {
+      "id": "I562:26914;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I562:26951;54563:40118;54563:40293",
+      "target": "feedback"
+    },
+    {
+      "id": "I562:26951;54563:40119;54563:40316",
+      "target": "feedback_feature"
+    },
+    {
+      "id": "I562:27013;52798:24394",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "I562:27030;52798:24394",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "I562:27107;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I562:27144;54563:40118;54563:40293",
+      "target": "feedback"
+    },
+    {
+      "id": "I562:27144;54563:40119;54563:40316",
+      "target": "feedback_feature"
+    },
+    {
+      "id": "564:25972",
+      "target": "feedback"
+    },
+    {
+      "id": "564:25979",
+      "target": "feedback_feature"
+    },
+    {
+      "id": "564:25987",
+      "target": "feedback"
+    },
+    {
+      "id": "564:25992",
+      "target": "feedback_feature"
+    },
+    {
+      "id": "564:26002",
+      "target": "feedback"
+    },
+    {
+      "id": "564:26009",
+      "target": "feedback_feature"
+    },
+    {
+      "id": "564:26017",
+      "target": "feedback"
+    },
+    {
+      "id": "564:26022",
+      "target": "feedback_feature"
+    },
+    {
+      "id": "564:26073",
+      "target": "feedback"
+    },
+    {
+      "id": "564:26080",
+      "target": "feedback_feature"
+    },
+    {
+      "id": "564:26145",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "564:26152",
+      "target": "feedback_attached"
+    },
+    {
+      "id": "564:26174",
+      "target": "feedback_environment"
+    },
+    {
+      "id": "564:26196",
+      "target": "feedback_bug_validation"
+    },
+    {
+      "id": "564:26247",
+      "target": "feedback"
+    },
+    {
+      "id": "564:26254",
+      "target": "feedback_feature"
+    },
+    {
+      "id": "564:26332",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "564:26338",
+      "target": "feedback_attached"
+    },
+    {
+      "id": "564:26360",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "564:26366",
+      "target": "feedback_environment"
+    },
+    {
+      "id": "564:26388",
+      "target": "feedback_delivery"
+    },
+    {
+      "id": "564:26425",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "564:26431",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "564:26482",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "564:26488",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "564:26496",
+      "target": "feedback_prepared"
+    },
+    {
+      "id": "564:26502",
+      "target": "feedback_prepared"
+    },
+    {
+      "id": "564:26508",
+      "target": "feedback_prepared"
+    },
+    {
+      "id": "564:26514",
+      "target": "feedback_preview"
+    },
+    {
+      "id": "I564:26034;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I564:26129;52798:24878",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "I564:26208;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I564:26299;52798:24394",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "I564:26316;52798:24394",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "564:26913",
+      "target": "feedback_feature_filled"
+    },
+    {
+      "id": "564:26919",
+      "target": "feedback_feature_filled"
+    },
+    {
+      "id": "564:26927",
+      "target": "feedback_prepared"
+    },
+    {
+      "id": "564:26933",
+      "target": "feedback_prepared"
+    },
+    {
+      "id": "564:26939",
+      "target": "feedback_prepared"
+    },
+    {
+      "id": "564:26945",
+      "target": "feedback_preview"
+    },
+    {
+      "id": "564:26994",
+      "target": "feedback_delivery"
+    },
+    {
+      "id": "564:27044",
+      "target": "feedback"
+    },
+    {
+      "id": "564:27051",
+      "target": "feedback_feature"
+    },
+    {
+      "id": "564:27064",
+      "target": "feedback"
+    },
+    {
+      "id": "564:27070",
+      "target": "settings"
+    },
+    {
+      "id": "564:27107",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "564:27113",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "564:27127",
+      "target": "feedback_prepared"
+    },
+    {
+      "id": "564:27133",
+      "target": "feedback_prepared"
+    },
+    {
+      "id": "564:27139",
+      "target": "feedback_preview"
+    },
+    {
+      "id": "I564:26956;447:7716",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "I564:27005;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "565:26800",
+      "target": "settings"
+    },
+    {
+      "id": "565:26806",
+      "target": "settings"
+    },
+    {
+      "id": "565:26813",
+      "target": "survey"
+    },
+    {
+      "id": "565:26816",
+      "target": "survey_ideas"
+    },
+    {
+      "id": "565:26839",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26842",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26845",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26848",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26851",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26854",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26857",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26860",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26863",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26866",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26869",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26874",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26877",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26880",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26883",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26886",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26890",
+      "target": "survey_ideas"
+    },
+    {
+      "id": "565:26935",
+      "target": "settings"
+    },
+    {
+      "id": "565:26941",
+      "target": "settings"
+    },
+    {
+      "id": "565:26948",
+      "target": "survey"
+    },
+    {
+      "id": "565:26951",
+      "target": "survey_ideas"
+    },
+    {
+      "id": "565:26974",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26977",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26980",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26983",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26986",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26989",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26992",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26995",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:26998",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:27001",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:27004",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:27009",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:27012",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:27015",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:27018",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:27021",
+      "target": "survey_answered"
+    },
+    {
+      "id": "565:27025",
+      "target": "survey_ideas_answered"
+    },
+    {
+      "id": "565:27031",
+      "target": "survey"
+    },
+    {
+      "id": "565:27076",
+      "target": "settings"
+    },
+    {
+      "id": "565:27082",
+      "target": "settings"
+    },
+    {
+      "id": "565:27089",
+      "target": "survey"
+    },
+    {
+      "id": "565:27092",
+      "target": "survey_ideas"
+    },
+    {
+      "id": "565:27098",
+      "target": "survey_ideas_answered"
+    },
+    {
+      "id": "565:27101",
+      "target": "survey_ideas_answered"
+    },
+    {
+      "id": "565:27104",
+      "target": "survey_ideas_answered"
+    },
+    {
+      "id": "565:27107",
+      "target": "survey_ideas_answered"
+    },
+    {
+      "id": "565:27110",
+      "target": "survey_ideas_answered"
+    },
+    {
+      "id": "565:27113",
+      "target": "survey_ideas_answered"
+    },
+    {
+      "id": "565:27116",
+      "target": "survey_ideas_answered"
+    },
+    {
+      "id": "565:27119",
+      "target": "survey_ideas_answered"
+    },
+    {
+      "id": "565:27161",
+      "target": "survey_details"
+    },
+    {
+      "id": "565:27184",
+      "target": "survey_email"
+    },
+    {
+      "id": "565:27190",
+      "target": "survey_preview"
+    },
+    {
+      "id": "565:27234",
+      "target": "settings"
+    },
+    {
+      "id": "565:27240",
+      "target": "settings"
+    },
+    {
+      "id": "565:27247",
+      "target": "survey"
+    },
+    {
+      "id": "565:27250",
+      "target": "survey_ideas"
+    },
+    {
+      "id": "565:27256",
+      "target": "survey_ideas_answered"
+    },
+    {
+      "id": "565:27259",
+      "target": "survey_ideas_answered"
+    },
+    {
+      "id": "565:27262",
+      "target": "survey_ideas_answered"
+    },
+    {
+      "id": "565:27265",
+      "target": "survey_ideas_answered"
+    },
+    {
+      "id": "565:27268",
+      "target": "survey_ideas_answered"
+    },
+    {
+      "id": "565:27271",
+      "target": "survey_ideas_answered"
+    },
+    {
+      "id": "565:27274",
+      "target": "survey_ideas_answered"
+    },
+    {
+      "id": "565:27277",
+      "target": "survey_ideas_answered"
+    },
+    {
+      "id": "565:27315",
+      "target": "survey_details"
+    },
+    {
+      "id": "565:27338",
+      "target": "survey_email"
+    },
+    {
+      "id": "565:27344",
+      "target": "survey_preview"
+    },
+    {
+      "id": "565:27388",
+      "target": "settings"
+    },
+    {
+      "id": "565:27394",
+      "target": "settings"
+    },
+    {
+      "id": "565:29878",
+      "target": "settings"
+    },
+    {
+      "id": "565:29884",
+      "target": "settings"
+    },
+    {
+      "id": "565:29895",
+      "target": "survey_email"
+    },
+    {
+      "id": "565:29901",
+      "target": "survey_copied"
+    },
+    {
+      "id": "565:29945",
+      "target": "settings"
+    },
+    {
+      "id": "565:29951",
+      "target": "settings"
+    },
+    {
+      "id": "565:29964",
+      "target": "survey_copied"
+    },
+    {
+      "id": "565:29971",
+      "target": "settings"
+    },
+    {
+      "id": "565:30015",
+      "target": "settings"
+    },
+    {
+      "id": "565:30021",
+      "target": "settings"
+    },
+    {
+      "id": "565:30035",
+      "target": "survey_email"
+    },
+    {
+      "id": "565:30041",
+      "target": "survey_copied"
+    },
+    {
+      "id": "565:30085",
+      "target": "settings"
+    },
+    {
+      "id": "565:30091",
+      "target": "settings"
+    },
+    {
+      "id": "565:30099",
+      "target": "survey_ideas_answered"
+    },
+    {
+      "id": "566:31354",
+      "target": "updates_checking"
+    },
+    {
+      "id": "566:31368",
+      "target": "updates_auto"
+    },
+    {
+      "id": "566:31381",
+      "target": "release_notes_230"
+    },
+    {
+      "id": "566:31403",
+      "target": "release_notes_222"
+    },
+    {
+      "id": "566:31425",
+      "target": "updates_history_error"
+    },
+    {
+      "id": "566:31499",
+      "target": "updates_auto"
+    },
+    {
+      "id": "566:31512",
+      "target": "release_notes_230"
+    },
+    {
+      "id": "566:31534",
+      "target": "release_notes_222"
+    },
+    {
+      "id": "566:31556",
+      "target": "updates_history_error"
+    },
+    {
+      "id": "566:31611",
+      "target": "updates_checking"
+    },
+    {
+      "id": "566:31624",
+      "target": "updates_auto"
+    },
+    {
+      "id": "566:31637",
+      "target": "release_notes_230"
+    },
+    {
+      "id": "566:31659",
+      "target": "release_notes_222"
+    },
+    {
+      "id": "566:31681",
+      "target": "updates_history_error"
+    },
+    {
+      "id": "566:31742",
+      "target": "updates_checking"
+    },
+    {
+      "id": "566:31755",
+      "target": "updates_auto"
+    },
+    {
+      "id": "566:31768",
+      "target": "release_notes_230"
+    },
+    {
+      "id": "566:31790",
+      "target": "release_notes_222"
+    },
+    {
+      "id": "566:31812",
+      "target": "updates_history_error"
+    },
+    {
+      "id": "566:31869",
+      "target": "updates_checking"
+    },
+    {
+      "id": "566:31882",
+      "target": "updates"
+    },
+    {
+      "id": "566:31895",
+      "target": "release_notes_230"
+    },
+    {
+      "id": "566:31917",
+      "target": "release_notes_222"
+    },
+    {
+      "id": "566:31939",
+      "target": "updates_history_error"
+    },
+    {
+      "id": "I566:31308;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I566:31437;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I566:31567;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I566:31692;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I566:31823;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "566:32115",
+      "target": "update_available_sheet"
+    },
+    {
+      "id": "566:32128",
+      "target": "updates_auto"
+    },
+    {
+      "id": "566:32141",
+      "target": "release_notes_230"
+    },
+    {
+      "id": "566:32163",
+      "target": "release_notes_222"
+    },
+    {
+      "id": "566:32185",
+      "target": "updates_history_error"
+    },
+    {
+      "id": "566:32196",
+      "target": "updates_available"
+    },
+    {
+      "id": "566:32202",
+      "target": "updates_available"
+    },
+    {
+      "id": "566:32208",
+      "target": "release_notes_example"
+    },
+    {
+      "id": "566:32230",
+      "target": "update_downloads"
+    },
+    {
+      "id": "566:32252",
+      "target": "url:https://github.com/hanan-bhatti/cobalt/releases"
+    },
+    {
+      "id": "566:32263",
+      "target": "updates_available"
+    },
+    {
+      "id": "566:32269",
+      "target": "updates_available"
+    },
+    {
+      "id": "566:32275",
+      "target": "url:https://github.com/hanan-bhatti/cobalt/releases"
+    },
+    {
+      "id": "566:32297",
+      "target": "url:https://github.com/hanan-bhatti/cobalt/releases"
+    },
+    {
+      "id": "566:32319",
+      "target": "url:https://github.com/hanan-bhatti/cobalt/releases"
+    },
+    {
+      "id": "I566:32070;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "567:31984",
+      "target": "url:https://github.com/hanan-bhatti/cobalt/releases"
+    },
+    {
+      "id": "I567:31927;447:7716",
+      "target": "updates"
+    },
+    {
+      "id": "567:32038",
+      "target": "url:https://github.com/hanan-bhatti/cobalt/releases/tag/v2.2.2"
+    },
+    {
+      "id": "I567:31997;447:7716",
+      "target": "updates"
+    },
+    {
+      "id": "567:32088",
+      "target": "url:https://github.com/hanan-bhatti/cobalt/releases"
+    },
+    {
+      "id": "567:32149",
+      "target": "updates_checking"
+    },
+    {
+      "id": "567:32158",
+      "target": "updates_auto"
+    },
+    {
+      "id": "567:32171",
+      "target": "release_notes_230"
+    },
+    {
+      "id": "567:32193",
+      "target": "release_notes_222"
+    },
+    {
+      "id": "567:32215",
+      "target": "updates_history_error"
+    },
+    {
+      "id": "567:32273",
+      "target": "url:https://github.com/hanan-bhatti/cobalt"
+    },
+    {
+      "id": "567:32295",
+      "target": "feedback"
+    },
+    {
+      "id": "567:32320",
+      "target": "privacy"
+    },
+    {
+      "id": "567:32342",
+      "target": "terms"
+    },
+    {
+      "id": "567:32364",
+      "target": "licenses"
+    },
+    {
+      "id": "I567:32050;447:7716",
+      "target": "updates_available"
+    },
+    {
+      "id": "I567:32099;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I567:32227;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I567:32436;447:7716",
+      "target": "about"
+    },
+    {
+      "id": "I567:32510;447:7716",
+      "target": "about"
+    },
+    {
+      "id": "I567:32568;447:7716",
+      "target": "about"
+    },
+    {
+      "id": "568:32380",
+      "target": "web_running"
+    },
+    {
+      "id": "568:32391",
+      "target": "web_port"
+    },
+    {
+      "id": "568:32522",
+      "target": "web"
+    },
+    {
+      "id": "568:32535",
+      "target": "web_copied"
+    },
+    {
+      "id": "568:32546",
+      "target": "web_rotate"
+    },
+    {
+      "id": "568:32553",
+      "target": "web_port"
+    },
+    {
+      "id": "568:32647",
+      "target": "web_running"
+    },
+    {
+      "id": "568:32653",
+      "target": "web_running"
+    },
+    {
+      "id": "568:32659",
+      "target": "web_running"
+    },
+    {
+      "id": "568:32667",
+      "target": "web_running"
+    },
+    {
+      "id": "568:32675",
+      "target": "web_running"
+    },
+    {
+      "id": "568:32683",
+      "target": "web_running"
+    },
+    {
+      "id": "568:32697",
+      "target": "web_running"
+    },
+    {
+      "id": "I568:32343;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I568:32485;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I568:32698;50723:10962;58650:8822",
+      "target": "web_running"
+    },
+    {
+      "id": "I568:32698;50723:10963;58650:8822",
+      "target": "web_pin_changed"
+    },
+    {
+      "id": "568:32862",
+      "target": "web"
+    },
+    {
+      "id": "568:32880",
+      "target": "web_rotate"
+    },
+    {
+      "id": "568:32886",
+      "target": "web_port"
+    },
+    {
+      "id": "568:32932",
+      "target": "web_running"
+    },
+    {
+      "id": "568:32938",
+      "target": "web_running"
+    },
+    {
+      "id": "568:32946",
+      "target": "web_running"
+    },
+    {
+      "id": "568:33007",
+      "target": "web_running"
+    },
+    {
+      "id": "568:33013",
+      "target": "web_port"
+    },
+    {
+      "id": "I568:32825;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I568:32957;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "570:32982",
+      "target": "folio"
+    },
+    {
+      "id": "570:33045",
+      "target": "screening"
+    },
+    {
+      "id": "570:33212",
+      "target": "folio"
+    },
+    {
+      "id": "570:33246",
+      "target": "screening"
+    },
+    {
+      "id": "570:33369",
+      "target": "folio_new"
+    },
+    {
+      "id": "570:33469",
+      "target": "folio_folders"
+    },
+    {
+      "id": "570:33491",
+      "target": "folio_color"
+    },
+    {
+      "id": "570:33513",
+      "target": "folio_order"
+    },
+    {
+      "id": "570:33535",
+      "target": "folio_folders"
+    },
+    {
+      "id": "570:33635",
+      "target": "folio_folders"
+    },
+    {
+      "id": "570:33679",
+      "target": "folio_order"
+    },
+    {
+      "id": "570:33701",
+      "target": "folio_placing"
+    },
+    {
+      "id": "570:33707",
+      "target": "folio"
+    },
+    {
+      "id": "I570:32864;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I570:33123;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I570:33324;447:7716",
+      "target": "widgets"
+    },
+    {
+      "id": "I570:33380;447:7716",
+      "target": "widgets"
+    },
+    {
+      "id": "I570:33546;447:7716",
+      "target": "widgets"
+    },
+    {
+      "id": "570:33885",
+      "target": "folio_folders"
+    },
+    {
+      "id": "570:33929",
+      "target": "folio_order"
+    },
+    {
+      "id": "570:33951",
+      "target": "folio_new"
+    },
+    {
+      "id": "570:33957",
+      "target": "folio_remove"
+    },
+    {
+      "id": "570:33984",
+      "target": "folio_ready"
+    },
+    {
+      "id": "570:33990",
+      "target": "folio_ready"
+    },
+    {
+      "id": "570:34017",
+      "target": "folio_ready"
+    },
+    {
+      "id": "570:34032",
+      "target": "folio_ready"
+    },
+    {
+      "id": "570:34048",
+      "target": "folio_ready"
+    },
+    {
+      "id": "570:34085",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "570:34111",
+      "target": "folio_new"
+    },
+    {
+      "id": "570:34117",
+      "target": "folio_new"
+    },
+    {
+      "id": "570:34158",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "570:34185",
+      "target": "folio_ready"
+    },
+    {
+      "id": "570:34191",
+      "target": "folio_ready"
+    },
+    {
+      "id": "570:34231",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "570:34258",
+      "target": "folio_ready"
+    },
+    {
+      "id": "570:34264",
+      "target": "folio_ready"
+    },
+    {
+      "id": "570:34270",
+      "target": "folio_ready"
+    },
+    {
+      "id": "570:34279",
+      "target": "folio_ready"
+    },
+    {
+      "id": "570:34288",
+      "target": "folio_ready"
+    },
+    {
+      "id": "I570:33796;447:7716",
+      "target": "widgets"
+    },
+    {
+      "id": "571:34311",
+      "target": "folio_folders"
+    },
+    {
+      "id": "571:34333",
+      "target": "folio_color"
+    },
+    {
+      "id": "571:34355",
+      "target": "folio_order"
+    },
+    {
+      "id": "571:34377",
+      "target": "folio_placing"
+    },
+    {
+      "id": "571:34389",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34395",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34402",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34411",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34420",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34429",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34438",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34447",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34456",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34465",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34474",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34483",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34492",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34501",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34510",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34519",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34528",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34537",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34546",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34555",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34564",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34573",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34582",
+      "target": "folio_no_color"
+    },
+    {
+      "id": "571:34688",
+      "target": "folio_launcher"
+    },
+    {
+      "id": "571:34715",
+      "target": "folio_ready"
+    },
+    {
+      "id": "571:34721",
+      "target": "folio_ready"
+    },
+    {
+      "id": "571:34729",
+      "target": "folio_ready"
+    },
+    {
+      "id": "571:34756",
+      "target": "folio_existing"
+    },
+    {
+      "id": "I571:34223;447:7716",
+      "target": "widgets"
+    },
+    {
+      "id": "I571:34596;447:7716",
+      "target": "widgets"
+    },
+    {
+      "id": "I571:34757;50723:10962;58650:8822",
+      "target": "folio_existing"
+    },
+    {
+      "id": "I571:34757;50723:10963;58650:8822",
+      "target": "folio"
+    },
+    {
+      "id": "571:35232",
+      "target": "folio_folders"
+    },
+    {
+      "id": "571:35276",
+      "target": "folio_order"
+    },
+    {
+      "id": "571:35298",
+      "target": "folio_existing"
+    },
+    {
+      "id": "571:35395",
+      "target": "folio_folders"
+    },
+    {
+      "id": "571:35417",
+      "target": "folio_folders"
+    },
+    {
+      "id": "571:35476",
+      "target": "screening_new"
+    },
+    {
+      "id": "571:35485",
+      "target": "screening_review_pick"
+    },
+    {
+      "id": "571:35507",
+      "target": "screening_taste"
+    },
+    {
+      "id": "571:35529",
+      "target": "screening_morning"
+    },
+    {
+      "id": "571:35619",
+      "target": "screening_sources"
+    },
+    {
+      "id": "571:35641",
+      "target": "screening_placing"
+    },
+    {
+      "id": "571:35650",
+      "target": "screening_review_pick"
+    },
+    {
+      "id": "571:35672",
+      "target": "screening_taste"
+    },
+    {
+      "id": "571:35694",
+      "target": "screening_morning"
+    },
+    {
+      "id": "571:35784",
+      "target": "screening_sources"
+    },
+    {
+      "id": "571:35806",
+      "target": "screening_new"
+    },
+    {
+      "id": "571:35812",
+      "target": "screening_remove"
+    },
+    {
+      "id": "571:35821",
+      "target": "screening_review_pick"
+    },
+    {
+      "id": "571:35843",
+      "target": "screening_taste"
+    },
+    {
+      "id": "571:35865",
+      "target": "screening_morning"
+    },
+    {
+      "id": "I571:35144;447:7716",
+      "target": "widgets"
+    },
+    {
+      "id": "I571:35310;447:7716",
+      "target": "widgets"
+    },
+    {
+      "id": "I571:35428;447:7716",
+      "target": "widgets"
+    },
+    {
+      "id": "I571:35556;447:7716",
+      "target": "widgets"
+    },
+    {
+      "id": "I571:35721;447:7716",
+      "target": "widgets"
+    },
+    {
+      "id": "571:35983",
+      "target": "screening_new"
+    },
+    {
+      "id": "571:35989",
+      "target": "screening_new"
+    },
+    {
+      "id": "571:35995",
+      "target": "screening_new"
+    },
+    {
+      "id": "571:36004",
+      "target": "screening_new"
+    },
+    {
+      "id": "571:36021",
+      "target": "screening_new"
+    },
+    {
+      "id": "571:36035",
+      "target": "screening_new"
+    },
+    {
+      "id": "571:36052",
+      "target": "screening_new"
+    },
+    {
+      "id": "571:36139",
+      "target": "screening_sources"
+    },
+    {
+      "id": "571:36161",
+      "target": "screening_placing"
+    },
+    {
+      "id": "571:36170",
+      "target": "screening_review_pick"
+    },
+    {
+      "id": "571:36192",
+      "target": "screening_taste"
+    },
+    {
+      "id": "571:36214",
+      "target": "screening_morning"
+    },
+    {
+      "id": "571:36310",
+      "target": "screening_launcher"
+    },
+    {
+      "id": "571:36337",
+      "target": "screening_new"
+    },
+    {
+      "id": "571:36343",
+      "target": "screening_new"
+    },
+    {
+      "id": "571:36351",
+      "target": "screening_new"
+    },
+    {
+      "id": "571:36379",
+      "target": "screening_existing"
+    },
+    {
+      "id": "I571:36076;447:7716",
+      "target": "widgets"
+    },
+    {
+      "id": "I571:36241;447:7716",
+      "target": "widgets"
+    },
+    {
+      "id": "I571:36380;50723:10962;58650:8822",
+      "target": "screening_existing"
+    },
+    {
+      "id": "I571:36380;50723:10963;58650:8822",
+      "target": "screening"
+    },
+    {
+      "id": "572:35996",
+      "target": "screening_sources"
+    },
+    {
+      "id": "572:36018",
+      "target": "screening_existing"
+    },
+    {
+      "id": "572:36079",
+      "target": "screening_new"
+    },
+    {
+      "id": "572:36088",
+      "target": "screening_review_pick"
+    },
+    {
+      "id": "572:36110",
+      "target": "screening_taste"
+    },
+    {
+      "id": "572:36132",
+      "target": "screening_morning"
+    },
+    {
+      "id": "572:36199",
+      "target": "screening_morning_off"
+    },
+    {
+      "id": "572:36210",
+      "target": "screening_morning_time"
+    },
+    {
+      "id": "572:36232",
+      "target": "screening_morning_weekdays"
+    },
+    {
+      "id": "572:36244",
+      "target": "screening_notification"
+    },
+    {
+      "id": "572:36251",
+      "target": "screening_reset"
+    },
+    {
+      "id": "572:36315",
+      "target": "screening_morning"
+    },
+    {
+      "id": "572:36326",
+      "target": "screening_reset"
+    },
+    {
+      "id": "572:36399",
+      "target": "screening_morning"
+    },
+    {
+      "id": "572:36405",
+      "target": "screening_reset"
+    },
+    {
+      "id": "I572:35934;447:7716",
+      "target": "widgets"
+    },
+    {
+      "id": "I572:36031;447:7716",
+      "target": "widgets"
+    },
+    {
+      "id": "I572:36159;447:7716",
+      "target": "screening_existing"
+    },
+    {
+      "id": "I572:36278;447:7716",
+      "target": "screening_existing"
+    },
+    {
+      "id": "I572:36353;447:7716",
+      "target": "screening_existing"
+    },
+    {
+      "id": "572:36555",
+      "target": "screening_morning_off"
+    },
+    {
+      "id": "572:36566",
+      "target": "screening_morning_time"
+    },
+    {
+      "id": "572:36588",
+      "target": "screening_morning"
+    },
+    {
+      "id": "572:36600",
+      "target": "screening_notification"
+    },
+    {
+      "id": "572:36607",
+      "target": "screening_reset"
+    },
+    {
+      "id": "572:36649",
+      "target": "screening_morning"
+    },
+    {
+      "id": "572:36655",
+      "target": "screening_morning"
+    },
+    {
+      "id": "572:36661",
+      "target": "screening_morning"
+    },
+    {
+      "id": "572:36669",
+      "target": "screening_morning"
+    },
+    {
+      "id": "572:36677",
+      "target": "screening_morning"
+    },
+    {
+      "id": "572:36685",
+      "target": "screening_morning_custom_time"
+    },
+    {
+      "id": "572:36714",
+      "target": "screening_morning"
+    },
+    {
+      "id": "572:36720",
+      "target": "screening_morning"
+    },
+    {
+      "id": "572:36725",
+      "target": "screening_morning"
+    },
+    {
+      "id": "572:36789",
+      "target": "screening_morning"
+    },
+    {
+      "id": "572:36795",
+      "target": "screening_morning"
+    },
+    {
+      "id": "572:36803",
+      "target": "screening_morning"
+    },
+    {
+      "id": "572:36806",
+      "target": "screening_morning"
+    },
+    {
+      "id": "572:36809",
+      "target": "screening_morning"
+    },
+    {
+      "id": "572:36833",
+      "target": "screening_morning"
+    },
+    {
+      "id": "I572:36515;447:7716",
+      "target": "screening_existing"
+    },
+    {
+      "id": "I572:36834;50723:10962;58650:8822",
+      "target": "screening_morning"
+    },
+    {
+      "id": "I572:36834;50723:10963;58650:8822",
+      "target": "screening_morning"
+    },
+    {
+      "id": "576:39040",
+      "target": "gemini"
+    },
+    {
+      "id": "576:39173",
+      "target": "reminders"
+    },
+    {
+      "id": "576:39062",
+      "target": "media"
+    },
+    {
+      "id": "576:39195",
+      "target": "storage"
+    },
+    {
+      "id": "576:39084",
+      "target": "storage_update"
+    },
+    {
+      "id": "576:39217",
+      "target": "help"
+    },
+    {
+      "id": "576:39106",
+      "target": "feedback"
+    },
+    {
+      "id": "576:39239",
+      "target": "survey"
+    },
+    {
+      "id": "576:39128",
+      "target": "updates"
+    },
+    {
+      "id": "576:39261",
+      "target": "web"
+    },
+    {
+      "id": "576:39150",
+      "target": "widgets"
+    },
+    {
+      "id": "576:39285",
+      "target": "appearance"
+    },
+    {
+      "id": "576:39307",
+      "target": "fonts"
+    },
+    {
+      "id": "576:39329",
+      "target": "notes_folders"
+    },
+    {
+      "id": "576:39351",
+      "target": "sidedock"
+    },
+    {
+      "id": "577:39744",
+      "target": "help"
+    },
+    {
+      "id": "577:39747",
+      "target": "help_getting_started"
+    },
+    {
+      "id": "577:39750",
+      "target": "help_gemini"
+    },
+    {
+      "id": "577:39753",
+      "target": "help_storage_sync"
+    },
+    {
+      "id": "577:39756",
+      "target": "help_audio_media"
+    },
+    {
+      "id": "577:39759",
+      "target": "help_widgets_themes"
+    },
+    {
+      "id": "577:39765",
+      "target": "help_answer_capture"
+    },
+    {
+      "id": "577:39788",
+      "target": "help_answer_organize"
+    },
+    {
+      "id": "577:39811",
+      "target": "help_answer_ocr"
+    },
+    {
+      "id": "577:39834",
+      "target": "help_answer_offline"
+    },
+    {
+      "id": "577:39859",
+      "target": "feedback"
+    },
+    {
+      "id": "577:39881",
+      "target": "feedback_feature"
+    },
+    {
+      "id": "577:39947",
+      "target": "feedback"
+    },
+    {
+      "id": "577:39954",
+      "target": "feedback_feature"
+    },
+    {
+      "id": "577:40032",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "577:40039",
+      "target": "feedback_attached"
+    },
+    {
+      "id": "577:40061",
+      "target": "feedback_environment"
+    },
+    {
+      "id": "577:40083",
+      "target": "feedback_delivery"
+    },
+    {
+      "id": "577:40184",
+      "target": "folio"
+    },
+    {
+      "id": "577:40218",
+      "target": "screening"
+    },
+    {
+      "id": "I577:39685;447:7750",
+      "target": "settings"
+    },
+    {
+      "id": "I577:39908;447:7750",
+      "target": "settings"
+    },
+    {
+      "id": "I577:39999;52798:24394",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "I577:40016;52798:24394",
+      "target": "feedback_bug_filled"
+    },
+    {
+      "id": "I577:40095;447:7750",
+      "target": "settings"
+    },
+    {
+      "id": "576:39010",
+      "target": "appearance"
+    },
+    {
+      "id": "576:39011",
+      "target": "notes_folders"
+    },
+    {
+      "id": "576:39012",
+      "target": "widgets"
+    },
+    {
+      "id": "576:39016",
+      "target": "sidedock"
+    },
+    {
+      "id": "576:39017",
+      "target": "gemini"
+    },
+    {
+      "id": "576:39018",
+      "target": "reminders"
+    },
+    {
+      "id": "576:39022",
+      "target": "media"
+    },
+    {
+      "id": "576:39023",
+      "target": "storage"
+    },
+    {
+      "id": "576:39025",
+      "target": "battery"
+    },
+    {
+      "id": "576:39029",
+      "target": "help"
+    },
+    {
+      "id": "576:39030",
+      "target": "feedback"
+    },
+    {
+      "id": "576:39031",
+      "target": "updates"
+    },
+    {
+      "id": "576:39032",
+      "target": "about"
+    },
+    {
+      "id": "579:40063",
+      "target": "fonts"
+    },
+    {
+      "id": "579:40085",
+      "target": "survey"
+    },
+    {
+      "id": "580:40051",
+      "target": "storage_update"
+    },
+    {
+      "id": "573:36927",
+      "targetSourceId": "337:5081",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5081"
+    },
+    {
+      "id": "573:36940",
+      "targetSourceId": "322:4952",
+      "sourceNavigation": "NAVIGATE",
+      "target": "approved_322_4952"
+    },
+    {
+      "id": "573:36950",
+      "targetSourceId": "293:4543",
+      "sourceNavigation": "NAVIGATE",
+      "target": "screening_why_pick"
+    },
+    {
+      "id": "573:36954",
+      "targetSourceId": "337:5218",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5218"
+    },
+    {
+      "id": "573:36956",
+      "targetSourceId": "337:5278",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5278"
+    },
+    {
+      "id": "573:36958",
+      "targetSourceId": "337:5338",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5338"
+    },
+    {
+      "id": "573:36959",
+      "targetSourceId": "293:4639",
+      "sourceNavigation": "NAVIGATE",
+      "target": "screening_feedback"
+    },
+    {
+      "id": "573:36974",
+      "targetSourceId": "293:4386",
+      "sourceNavigation": "NAVIGATE",
+      "target": "screening_taste"
+    },
+    {
+      "id": "573:36976",
+      "targetSourceId": "337:5081",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5081"
+    },
+    {
+      "id": "573:36994",
+      "targetSourceId": "337:5105",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5105"
+    },
+    {
+      "id": "573:36995",
+      "targetSourceId": "337:5191",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5191"
+    },
+    {
+      "id": "573:36999",
+      "targetSourceId": "293:5942",
+      "sourceNavigation": "NAVIGATE",
+      "target": "approved_293_5942"
+    },
+    {
+      "id": "573:37014",
+      "targetSourceId": "293:4386",
+      "sourceNavigation": "NAVIGATE",
+      "target": "screening_taste"
+    },
+    {
+      "id": "573:37016",
+      "targetSourceId": "337:5081",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5081"
+    },
+    {
+      "id": "573:37028",
+      "targetSourceId": "337:6058",
+      "sourceNavigation": "NAVIGATE",
+      "target": "approved_337_6058"
+    },
+    {
+      "id": "573:37031",
+      "targetSourceId": "337:5218",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5218"
+    },
+    {
+      "id": "573:37033",
+      "targetSourceId": "337:5278",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5278"
+    },
+    {
+      "id": "573:37035",
+      "targetSourceId": "337:5338",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5338"
+    },
+    {
+      "id": "573:37037",
+      "targetSourceId": "337:5398",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5398"
+    },
+    {
+      "id": "573:37039",
+      "targetSourceId": "337:5458",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5458"
+    },
+    {
+      "id": "573:37041",
+      "targetSourceId": "337:5518",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5518"
+    },
+    {
+      "id": "573:37043",
+      "targetSourceId": "337:5578",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5578"
+    },
+    {
+      "id": "573:37044",
+      "targetSourceId": "337:6122",
+      "sourceNavigation": "NAVIGATE",
+      "target": "approved_337_6122"
+    },
+    {
+      "id": "573:37051",
+      "targetSourceId": "337:6090",
+      "sourceNavigation": "NAVIGATE",
+      "target": "approved_337_6090"
+    },
+    {
+      "id": "573:37055",
+      "targetSourceId": "293:5926",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=293-5926"
+    },
+    {
+      "id": "573:37070",
+      "targetSourceId": "293:4543",
+      "sourceNavigation": "NAVIGATE",
+      "target": "screening_why_pick"
+    },
+    {
+      "id": "573:37093",
+      "targetSourceId": "293:4543",
+      "sourceNavigation": "NAVIGATE",
+      "target": "screening_why_pick"
+    },
+    {
+      "id": "573:37113",
+      "targetSourceId": "337:6122",
+      "sourceNavigation": "NAVIGATE",
+      "target": "approved_337_6122"
+    },
+    {
+      "id": "573:37173",
+      "targetSourceId": "293:4386",
+      "sourceNavigation": "NAVIGATE",
+      "target": "screening_taste"
+    },
+    {
+      "id": "573:37175",
+      "targetSourceId": "337:5081",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5081"
+    },
+    {
+      "id": "573:38433",
+      "targetSourceId": "337:5148",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5148"
+    },
+    {
+      "id": "573:38458",
+      "targetSourceId": "337:5253",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5253"
+    },
+    {
+      "id": "573:38563",
+      "targetSourceId": "337:5313",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5313"
+    },
+    {
+      "id": "573:38605",
+      "targetSourceId": "337:5373",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5373"
+    },
+    {
+      "id": "573:38606",
+      "targetSourceId": "293:5071",
+      "sourceNavigation": "NAVIGATE",
+      "target": "approved_293_5071"
+    },
+    {
+      "id": "574:37593",
+      "targetSourceId": "337:5433",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5433"
+    },
+    {
+      "id": "574:37635",
+      "targetSourceId": "337:5493",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5493"
+    },
+    {
+      "id": "574:37677",
+      "targetSourceId": "337:5553",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5553"
+    },
+    {
+      "id": "574:37820",
+      "targetSourceId": "337:5613",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5613"
+    },
+    {
+      "id": "574:37861",
+      "targetSourceId": "337:5278",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5278"
+    },
+    {
+      "id": "574:37863",
+      "targetSourceId": "337:5338",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5338"
+    },
+    {
+      "id": "574:37864",
+      "targetSourceId": "337:5703",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5703"
+    },
+    {
+      "id": "574:38016",
+      "targetSourceId": "337:5338",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5338"
+    },
+    {
+      "id": "574:38017",
+      "targetSourceId": "337:5756",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5756"
+    },
+    {
+      "id": "574:38044",
+      "targetSourceId": "337:5398",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5398"
+    },
+    {
+      "id": "574:38045",
+      "targetSourceId": "337:5809",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5809"
+    },
+    {
+      "id": "574:38181",
+      "targetSourceId": "337:5398",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5398"
+    },
+    {
+      "id": "574:38183",
+      "targetSourceId": "337:5458",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5458"
+    },
+    {
+      "id": "574:38185",
+      "targetSourceId": "337:5578",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5578"
+    },
+    {
+      "id": "574:38186",
+      "targetSourceId": "337:5898",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5898"
+    },
+    {
+      "id": "574:38227",
+      "targetSourceId": "337:5218",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_5218"
+    },
+    {
+      "id": "574:38228",
+      "targetSourceId": "337:6003",
+      "sourceNavigation": "SWAP",
+      "target": "approved_337_6003"
+    },
+    {
+      "id": "575:37844",
+      "targetSourceId": "293:4386",
+      "sourceNavigation": "NAVIGATE",
+      "target": "screening_taste"
+    },
+    {
+      "id": "575:37846",
+      "targetSourceId": "337:5081",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5081"
+    },
+    {
+      "id": "575:37856",
+      "targetSourceId": "293:4639",
+      "sourceNavigation": "NAVIGATE",
+      "target": "screening_feedback"
+    },
+    {
+      "id": "575:37861",
+      "targetSourceId": "337:5218",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5218"
+    },
+    {
+      "id": "575:37863",
+      "targetSourceId": "337:5278",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5278"
+    },
+    {
+      "id": "575:37865",
+      "targetSourceId": "337:5338",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5338"
+    },
+    {
+      "id": "575:37867",
+      "targetSourceId": "337:5398",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5398"
+    },
+    {
+      "id": "575:37869",
+      "targetSourceId": "337:5458",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5458"
+    },
+    {
+      "id": "575:37871",
+      "targetSourceId": "337:5518",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5518"
+    },
+    {
+      "id": "575:37873",
+      "targetSourceId": "337:5578",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5578"
+    },
+    {
+      "id": "575:37875",
+      "targetSourceId": "337:5636",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5636"
+    },
+    {
+      "id": "575:37876",
+      "targetSourceId": "337:6122",
+      "sourceNavigation": "NAVIGATE",
+      "target": "approved_337_6122"
+    },
+    {
+      "id": "575:37883",
+      "targetSourceId": "337:6090",
+      "sourceNavigation": "NAVIGATE",
+      "target": "approved_337_6090"
+    },
+    {
+      "id": "575:37887",
+      "targetSourceId": "293:5926",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=293-5926"
+    },
+    {
+      "id": "575:37902",
+      "targetSourceId": "293:4639",
+      "sourceNavigation": "NAVIGATE",
+      "target": "screening_feedback"
+    },
+    {
+      "id": "575:37904",
+      "targetSourceId": "337:5081",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5081"
+    },
+    {
+      "id": "575:37914",
+      "targetSourceId": "337:5338",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5338"
+    },
+    {
+      "id": "575:37915",
+      "targetSourceId": "337:5218",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5218"
+    },
+    {
+      "id": "575:37927",
+      "targetSourceId": "293:4639",
+      "sourceNavigation": "NAVIGATE",
+      "target": "screening_feedback"
+    },
+    {
+      "id": "575:37929",
+      "targetSourceId": "337:5081",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5081"
+    },
+    {
+      "id": "575:37939",
+      "targetSourceId": "337:5218",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5218"
+    },
+    {
+      "id": "575:37954",
+      "targetSourceId": "337:5081",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5081"
+    },
+    {
+      "id": "575:37969",
+      "targetSourceId": "293:5942",
+      "sourceNavigation": "NAVIGATE",
+      "target": "approved_293_5942"
+    },
+    {
+      "id": "575:37973",
+      "targetSourceId": "293:4543",
+      "sourceNavigation": "NAVIGATE",
+      "target": "screening_why_pick"
+    },
+    {
+      "id": "575:37974",
+      "targetSourceId": "293:4639",
+      "sourceNavigation": "NAVIGATE",
+      "target": "screening_feedback"
+    },
+    {
+      "id": "575:38604",
+      "targetSourceId": "337:5081",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5081"
+    },
+    {
+      "id": "575:38617",
+      "targetSourceId": "322:5119",
+      "sourceNavigation": "NAVIGATE",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=322-5119"
+    },
+    {
+      "id": "575:38627",
+      "targetSourceId": "293:4975",
+      "sourceNavigation": "NAVIGATE",
+      "target": "approved_293_4975"
+    },
+    {
+      "id": "575:38631",
+      "targetSourceId": "338:5804",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=338-5804"
+    },
+    {
+      "id": "575:38633",
+      "targetSourceId": "338:5864",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=338-5864"
+    },
+    {
+      "id": "575:38635",
+      "targetSourceId": "338:5984",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=338-5984"
+    },
+    {
+      "id": "575:38636",
+      "targetSourceId": "293:5071",
+      "sourceNavigation": "NAVIGATE",
+      "target": "approved_293_5071"
+    },
+    {
+      "id": "575:38651",
+      "targetSourceId": "293:4820",
+      "sourceNavigation": "NAVIGATE",
+      "target": "approved_293_4820"
+    },
+    {
+      "id": "575:38653",
+      "targetSourceId": "337:5081",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5081"
+    },
+    {
+      "id": "575:38669",
+      "targetSourceId": "338:5691",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=338-5691"
+    },
+    {
+      "id": "575:38670",
+      "targetSourceId": "338:5777",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=338-5777"
+    },
+    {
+      "id": "575:38674",
+      "targetSourceId": "293:5949",
+      "sourceNavigation": "NAVIGATE",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=293-5949"
+    },
+    {
+      "id": "575:38689",
+      "targetSourceId": "293:4820",
+      "sourceNavigation": "NAVIGATE",
+      "target": "approved_293_4820"
+    },
+    {
+      "id": "575:38691",
+      "targetSourceId": "337:5081",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5081"
+    },
+    {
+      "id": "575:38703",
+      "targetSourceId": "338:6644",
+      "sourceNavigation": "NAVIGATE",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=338-6644"
+    },
+    {
+      "id": "575:38706",
+      "targetSourceId": "338:5804",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=338-5804"
+    },
+    {
+      "id": "575:38708",
+      "targetSourceId": "338:5864",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=338-5864"
+    },
+    {
+      "id": "575:38710",
+      "targetSourceId": "338:5984",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=338-5984"
+    },
+    {
+      "id": "575:38712",
+      "targetSourceId": "338:6044",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=338-6044"
+    },
+    {
+      "id": "575:38714",
+      "targetSourceId": "338:6104",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=338-6104"
+    },
+    {
+      "id": "575:38716",
+      "targetSourceId": "338:6164",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=338-6164"
+    },
+    {
+      "id": "575:38717",
+      "targetSourceId": "338:6708",
+      "sourceNavigation": "NAVIGATE",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=338-6708"
+    },
+    {
+      "id": "575:38724",
+      "targetSourceId": "338:6676",
+      "sourceNavigation": "NAVIGATE",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=338-6676"
+    },
+    {
+      "id": "575:38728",
+      "targetSourceId": "293:5926",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=293-5926"
+    },
+    {
+      "id": "575:38745",
+      "targetSourceId": "337:5081",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5081"
+    },
+    {
+      "id": "575:38758",
+      "targetSourceId": "322:5284",
+      "sourceNavigation": "NAVIGATE",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=322-5284"
+    },
+    {
+      "id": "575:38768",
+      "targetSourceId": "293:5371",
+      "sourceNavigation": "NAVIGATE",
+      "target": "approved_293_5371"
+    },
+    {
+      "id": "575:38772",
+      "targetSourceId": "339:6387",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=339-6387"
+    },
+    {
+      "id": "575:38774",
+      "targetSourceId": "339:6447",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=339-6447"
+    },
+    {
+      "id": "575:38776",
+      "targetSourceId": "339:6507",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=339-6507"
+    },
+    {
+      "id": "575:38777",
+      "targetSourceId": "293:5467",
+      "sourceNavigation": "NAVIGATE",
+      "target": "approved_293_5467"
+    },
+    {
+      "id": "575:38792",
+      "targetSourceId": "293:5214",
+      "sourceNavigation": "NAVIGATE",
+      "target": "approved_293_5214"
+    },
+    {
+      "id": "575:38794",
+      "targetSourceId": "337:5081",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5081"
+    },
+    {
+      "id": "575:38812",
+      "targetSourceId": "339:6274",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=339-6274"
+    },
+    {
+      "id": "575:38813",
+      "targetSourceId": "339:6360",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=339-6360"
+    },
+    {
+      "id": "575:38817",
+      "targetSourceId": "293:5956",
+      "sourceNavigation": "NAVIGATE",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=293-5956"
+    },
+    {
+      "id": "575:40203",
+      "targetSourceId": "293:5214",
+      "sourceNavigation": "NAVIGATE",
+      "target": "approved_293_5214"
+    },
+    {
+      "id": "575:40205",
+      "targetSourceId": "337:5081",
+      "sourceNavigation": "OVERLAY",
+      "target": "approved_337_5081"
+    },
+    {
+      "id": "575:40217",
+      "targetSourceId": "339:7072",
+      "sourceNavigation": "NAVIGATE",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=339-7072"
+    },
+    {
+      "id": "575:40220",
+      "targetSourceId": "339:6387",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=339-6387"
+    },
+    {
+      "id": "575:40222",
+      "targetSourceId": "339:6447",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=339-6447"
+    },
+    {
+      "id": "575:40224",
+      "targetSourceId": "339:6507",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=339-6507"
+    },
+    {
+      "id": "575:40226",
+      "targetSourceId": "339:6567",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=339-6567"
+    },
+    {
+      "id": "575:40228",
+      "targetSourceId": "339:6627",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=339-6627"
+    },
+    {
+      "id": "575:40229",
+      "targetSourceId": "339:7104",
+      "sourceNavigation": "NAVIGATE",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=339-7104"
+    },
+    {
+      "id": "575:40233",
+      "targetSourceId": "293:5926",
+      "sourceNavigation": "OVERLAY",
+      "target": "url:https://www.figma.com/design/dJOugcd2V82nQUA1MjyINI?node-id=293-5926"
+    },
+    {
+      "id": "I601:40592;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I601:40648;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I601:40677;447:7716",
+      "target": "settings"
+    },
+    {
+      "id": "I601:40746;447:7716",
+      "target": "settings"
+    }
+  ]
+}

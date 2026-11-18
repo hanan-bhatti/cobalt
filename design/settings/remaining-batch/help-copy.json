@@ -1,0 +1,62 @@
+[
+  [
+    "getting_started",
+    "How do I capture content into Cobalt?",
+    "You can save items in three ways: tap the floating action button (+), share text, links, or images from any app directly via the Android system Share sheet, or swipe inward on the screen edge to open the Cobalt Side Dock."
+  ],
+  [
+    "getting_started",
+    "How does Cobalt organize my items?",
+    "Items are automatically categorized into Notes, Links, Images, Videos, Audio, Code, and Media. You can also create custom color-coded Folders, assign items across multiple folders, and pin favorite folders to the top of your Folders tab."
+  ],
+  [
+    "getting_started",
+    "What is the Floating Side Dock?",
+    "The Side Dock is a screen-edge handle that stays accessible over any app. Swiping it open allows you to quickly jot notes, inspect recent items, launch screen OCR, or bookmark links without leaving your current application."
+  ],
+  [
+    "ai_ocr",
+    "How does Gemini AI Vision OCR work?",
+    "When you select a region using the OCR tool, the cropped visual is sent to the Google Gemini API to extract text, Markdown structure, and hyperlinks. This requires an active internet connection and a free API key from Google AI Studio."
+  ],
+  [
+    "ai_ocr",
+    "How do I configure my Gemini API Key and models?",
+    "Open Settings -> Intelligence & Gemini AI, and paste your API key from Google AI Studio (aistudio.google.com). You can independently choose your preferred model for Vision OCR and Voice Memo transcription (such as Gemini 2.5 Flash, 2.0 Flash, or 1.5 Flash), or define a custom OCR system prompt."
+  ],
+  [
+    "ai_ocr",
+    "How does Media Hub search work?",
+    "The Media tab searches TMDb and the Jikan Anime API to automatically populate posters, ratings, release dates, streaming providers, and overviews. You can use Cobalt's built-in search or enter a personal TMDb API key in Settings -> Media API Keys."
+  ],
+  [
+    "sync",
+    "Is my data stored locally or on a remote server?",
+    "Cobalt is offline-first. All your notes, folders, and extracted content are stored locally in an SQLite Room database on your device. Cobalt collects zero telemetry or analytics. Optional user-configured integrations are documented in NETWORK.md."
+  ],
+  [
+    "sync",
+    "Can I use Cobalt completely offline without an API key?",
+    "Yes! You can create rich text notes, bookmark URLs, organize custom folders, attach images/videos, and listen to voice recordings entirely offline without any external accounts or API keys."
+  ],
+  [
+    "voice",
+    "How do voice recordings and audio transcription work?",
+    "You can record voice memos using the microphone action in the capture menu. Audio files are saved locally on your device. When a Gemini API key is configured, Cobalt can transcribe your speech into structured Markdown notes."
+  ],
+  [
+    "voice",
+    "What audio player controls are available?",
+    "The built-in media player supports playback, pausing, scrubbing through recordings, and one-tap sharing or copying of transcribed notes."
+  ],
+  [
+    "widgets",
+    "How do I add home screen widgets?",
+    "Long-press on your Android home screen, select Widgets, find Cobalt, and place either the Quick Capture widget (for instant 1-tap note entry) or the Recent Items widget."
+  ],
+  [
+    "widgets",
+    "Can I customize animations, haptic feedback, and themes?",
+    "Yes! In Settings, you can choose System Default, Light, Dark, or dynamic Material You themes. You can also tune high-precision haptic feedback, or customize Side Dock spring physics (stiffness and damping) with a live Canvas preview."
+  ]
+]

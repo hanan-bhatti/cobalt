@@ -1,0 +1,1475 @@
+{
+  "name": "Widgets",
+  "description": "Pocket Folio and Screening Card with approved editable widgets, per-widget setup, real folder colors and icons, source choices, launcher handoff and morning questions. Approved taste pages are reused.",
+  "sources": [
+    "WidgetSettingsScreen.kt",
+    "ScreeningWidgetSettingsScreen.kt",
+    "ScreeningMorningSettingsScreen.kt",
+    "FolioModel.kt",
+    "ScreeningWidgetModel.kt",
+    "FolioConfigurationActivity.kt",
+    "ScreeningConfigurationActivity.kt"
+  ],
+  "screens": [
+    {
+      "key": "widgets",
+      "title": "Widgets",
+      "subtitle": "Choose what appears on your home screen.",
+      "blocks": [
+        {
+          "type": "widgetGrid",
+          "items": [
+            {
+              "title": "Pocket Folio",
+              "sub": "Two items from a folder · 4 × 3",
+              "widget": "folio",
+              "target": "folio",
+              "label": "Set up Folio"
+            },
+            {
+              "title": "Screening Card",
+              "sub": "A saved title · 4 × 3",
+              "widget": "screening",
+              "target": "screening",
+              "label": "Set up card"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "More widgets"
+        },
+        {
+          "type": "row",
+          "title": "Capture Ticket",
+          "sub": "Not available yet · 4 × 2",
+          "icon": "text"
+        },
+        {
+          "type": "row",
+          "title": "Archive Window",
+          "sub": "Not available yet · 4 × 3",
+          "icon": "quote"
+        },
+        {
+          "type": "row",
+          "title": "Focus Page",
+          "sub": "Not available yet · 2 × 3",
+          "icon": "checklist"
+        }
+      ],
+      "theme": "Dark",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Widgets · Available gallery"
+    },
+    {
+      "key": "widgets_light",
+      "title": "Widgets",
+      "subtitle": "Choose what appears on your home screen.",
+      "blocks": [
+        {
+          "type": "widgetGrid",
+          "items": [
+            {
+              "title": "Pocket Folio",
+              "sub": "Two items from a folder · 4 × 3",
+              "widget": "folio",
+              "target": "folio",
+              "label": "Set up Folio"
+            },
+            {
+              "title": "Screening Card",
+              "sub": "A saved title · 4 × 3",
+              "widget": "screening",
+              "target": "screening",
+              "label": "Set up card"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "More widgets"
+        },
+        {
+          "type": "row",
+          "title": "Capture Ticket",
+          "sub": "Not available yet · 4 × 2",
+          "icon": "text"
+        },
+        {
+          "type": "row",
+          "title": "Archive Window",
+          "sub": "Not available yet · 4 × 3",
+          "icon": "quote"
+        },
+        {
+          "type": "row",
+          "title": "Focus Page",
+          "sub": "Not available yet · 2 × 3",
+          "icon": "checklist"
+        }
+      ],
+      "theme": "Light",
+      "back": "settings",
+      "kind": "page",
+      "caption": "Widgets · Light gallery"
+    },
+    {
+      "key": "folio",
+      "title": "Pocket Folio",
+      "subtitle": "A folder within reach on your home screen.",
+      "blocks": [
+        {
+          "type": "status",
+          "title": "Your home screen Folios",
+          "sub": "Create a Folio and choose the folder it shows.",
+          "icon": "folderOpen"
+        },
+        {
+          "type": "button",
+          "label": "Create a Folio",
+          "target": "folio_new",
+          "kind": "primary"
+        }
+      ],
+      "theme": "Dark",
+      "back": "widgets",
+      "kind": "page",
+      "caption": "Pocket Folio · No widgets"
+    },
+    {
+      "key": "folio_new",
+      "title": "Pocket Folio",
+      "subtitle": "Choose the folder this widget shows.",
+      "blocks": [
+        {
+          "type": "widget",
+          "widget": "folio",
+          "state": "empty",
+          "caption": "Preview · not added"
+        },
+        {
+          "type": "group",
+          "label": "Customize this Folio",
+          "rows": [
+            {
+              "title": "Folder",
+              "sub": "Choose the folder to show",
+              "icon": "folderOpen",
+              "target": "folio_folders",
+              "value": "Choose"
+            },
+            {
+              "title": "Folio color",
+              "sub": "For this Folio when the folder has no color.",
+              "icon": "theme",
+              "target": "folio_color",
+              "value": "Folio gold"
+            },
+            {
+              "title": "Item order",
+              "sub": "Choose which two items appear first.",
+              "icon": "list",
+              "target": "folio_order",
+              "value": "Recently updated"
+            }
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Choose a folder",
+          "target": "folio_folders",
+          "kind": "primary"
+        }
+      ],
+      "theme": "Dark",
+      "back": "widgets",
+      "kind": "page",
+      "caption": "Pocket Folio · New setup · Folder needed"
+    },
+    {
+      "key": "folio_ready",
+      "title": "Pocket Folio",
+      "subtitle": "Choose the folder this widget shows.",
+      "blocks": [
+        {
+          "type": "widget",
+          "widget": "folio",
+          "caption": "Preview · not added"
+        },
+        {
+          "type": "group",
+          "label": "Customize this Folio",
+          "rows": [
+            {
+              "title": "Folder",
+              "sub": "Two items from Ideas",
+              "icon": "ideas",
+              "target": "folio_folders",
+              "color": "IdeasBox",
+              "value": "Ideas"
+            },
+            {
+              "title": "Folder color",
+              "sub": "Uses the color you chose for Ideas.",
+              "icon": "folder",
+              "color": "IdeasBox"
+            },
+            {
+              "title": "Item order",
+              "sub": "Choose which two items appear first.",
+              "icon": "list",
+              "target": "folio_order",
+              "value": "Recently updated"
+            }
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Add to home screen",
+          "target": "folio_placing",
+          "kind": "primary"
+        },
+        {
+          "type": "button",
+          "label": "Close preview",
+          "target": "folio",
+          "kind": "text"
+        }
+      ],
+      "theme": "Dark",
+      "back": "widgets",
+      "kind": "page",
+      "caption": "Pocket Folio · Ready to place"
+    },
+    {
+      "key": "folio_existing",
+      "title": "Pocket Folio",
+      "subtitle": "Customize this home screen widget.",
+      "blocks": [
+        {
+          "type": "widget",
+          "widget": "folio"
+        },
+        {
+          "type": "text",
+          "text": "Folio 1 of 2"
+        },
+        {
+          "type": "group",
+          "label": "Customize this Folio",
+          "rows": [
+            {
+              "title": "Folder",
+              "sub": "Two items from Ideas",
+              "icon": "ideas",
+              "target": "folio_folders",
+              "color": "IdeasBox",
+              "value": "Ideas"
+            },
+            {
+              "title": "Folder color",
+              "sub": "Uses the color you chose for Ideas.",
+              "icon": "folder",
+              "color": "IdeasBox"
+            },
+            {
+              "title": "Item order",
+              "sub": "Choose which two items appear first.",
+              "icon": "list",
+              "target": "folio_order",
+              "value": "Recently updated"
+            }
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Add another Folio",
+          "target": "folio_new",
+          "kind": "primary"
+        },
+        {
+          "type": "button",
+          "label": "Remove from Cobalt",
+          "target": "folio_remove",
+          "kind": "text"
+        }
+      ],
+      "theme": "Light",
+      "back": "widgets",
+      "kind": "page",
+      "caption": "Pocket Folio · Existing widget"
+    },
+    {
+      "key": "folio_folders",
+      "title": "Choose a folder",
+      "parent": "folio_ready",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search folders",
+          "placeholder": "Search by folder name"
+        },
+        {
+          "type": "options",
+          "options": [
+            {
+              "title": "Ideas",
+              "sub": "12 saved items",
+              "icon": "ideas",
+              "color": "Ideas",
+              "selected": true,
+              "target": "folio_ready"
+            },
+            {
+              "title": "Work",
+              "sub": "24 saved items",
+              "icon": "work",
+              "color": "Work",
+              "target": "folio_ready"
+            },
+            {
+              "title": "Reading",
+              "sub": "8 saved items",
+              "icon": "reading",
+              "color": "Reading",
+              "target": "folio_ready"
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "text": "Create a folder"
+        },
+        {
+          "type": "field",
+          "label": "Folder name",
+          "placeholder": "Projects"
+        },
+        {
+          "type": "button",
+          "label": "Create folder",
+          "target": "folio_no_color",
+          "kind": "primary"
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Pocket Folio · Folder picker and inline creation"
+    },
+    {
+      "key": "folio_folders_empty",
+      "title": "Choose a folder",
+      "parent": "folio_new",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search folders",
+          "placeholder": "Search by folder name"
+        },
+        {
+          "type": "text",
+          "text": "You don’t have any folders yet."
+        },
+        {
+          "type": "heading",
+          "text": "Create a folder"
+        },
+        {
+          "type": "field",
+          "label": "Folder name",
+          "placeholder": "Projects"
+        },
+        {
+          "type": "button",
+          "label": "Create folder",
+          "target": "folio_no_color",
+          "kind": "primary"
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Pocket Folio · No folders"
+    },
+    {
+      "key": "folio_folders_no_match",
+      "title": "Choose a folder",
+      "parent": "folio_ready",
+      "blocks": [
+        {
+          "type": "field",
+          "label": "Search folders",
+          "placeholder": "Search by folder name",
+          "value": "Travel"
+        },
+        {
+          "type": "text",
+          "text": "No folders match “Travel”. Change your search or create a folder."
+        },
+        {
+          "type": "field",
+          "label": "Folder name",
+          "value": "Travel"
+        },
+        {
+          "type": "button",
+          "label": "Create folder",
+          "target": "folio_no_color",
+          "kind": "primary"
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Pocket Folio · Folder search empty"
+    },
+    {
+      "key": "folio_order",
+      "title": "Item order",
+      "parent": "folio_ready",
+      "blocks": [
+        {
+          "type": "options",
+          "options": [
+            {
+              "title": "Recently updated",
+              "sub": "Items you edited most recently",
+              "selected": true,
+              "target": "folio_ready"
+            },
+            {
+              "title": "Newest saved",
+              "sub": "Items you saved most recently",
+              "target": "folio_ready"
+            },
+            {
+              "title": "Oldest saved",
+              "sub": "Your earliest saved items",
+              "target": "folio_ready"
+            }
+          ]
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Pocket Folio · Item order"
+    },
+    {
+      "key": "folio_no_color",
+      "title": "Pocket Folio",
+      "subtitle": "Choose the folder this widget shows.",
+      "blocks": [
+        {
+          "type": "widget",
+          "widget": "folio",
+          "designState": {
+            "folderName": "Projects",
+            "itemCount": 0,
+            "itemRows": [],
+            "empty": true,
+            "appliedDirectlyInFigma": true
+          }
+        },
+        {
+          "type": "group",
+          "label": "Customize this Folio",
+          "rows": [
+            {
+              "title": "Folder",
+              "sub": "Projects",
+              "icon": "folderOpen",
+              "target": "folio_folders"
+            },
+            {
+              "title": "Folio color",
+              "sub": "This folder has no color. Choose an accent for this widget.",
+              "icon": "theme",
+              "value": "Folio gold",
+              "target": "folio_color"
+            },
+            {
+              "title": "Item order",
+              "icon": "list",
+              "value": "Recently updated",
+              "target": "folio_order"
+            }
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Add to home screen",
+          "target": "folio_placing",
+          "kind": "primary"
+        }
+      ],
+      "theme": "Dark",
+      "back": "widgets",
+      "kind": "page",
+      "caption": "Pocket Folio · Folder without a color"
+    },
+    {
+      "key": "folio_color",
+      "title": "Folio color",
+      "parent": "folio_no_color",
+      "blocks": [
+        {
+          "type": "options",
+          "options": [
+            {
+              "title": "Folio gold",
+              "swatch": "#F3D986",
+              "selected": true,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Coral Rose",
+              "swatch": "#FF6B6B",
+              "selected": false,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Peach Sun",
+              "swatch": "#FF8E53",
+              "selected": false,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Soft Gold",
+              "swatch": "#FFA800",
+              "selected": false,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Emerald Sage",
+              "swatch": "#4CAF50",
+              "selected": false,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Minty Teal",
+              "swatch": "#00BFA5",
+              "selected": false,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Ice Blue",
+              "swatch": "#29B6F6",
+              "selected": false,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Royal Indigo",
+              "swatch": "#5C6BC0",
+              "selected": false,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Lavender Dream",
+              "swatch": "#BA68C8",
+              "selected": false,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Crimson Berry",
+              "swatch": "#D81B60",
+              "selected": false,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Slate Silver",
+              "swatch": "#78909C",
+              "selected": false,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Flamingo Pink",
+              "swatch": "#F06292",
+              "selected": false,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Terra Cotta",
+              "swatch": "#FF8A65",
+              "selected": false,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Golden Silk",
+              "swatch": "#FFD54F",
+              "selected": false,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Matcha Green",
+              "swatch": "#AED581",
+              "selected": false,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Ocean Mist",
+              "swatch": "#4DB6AC",
+              "selected": false,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Crystal Cyan",
+              "swatch": "#4DD0E1",
+              "selected": false,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Twilight Blue",
+              "swatch": "#7986CB",
+              "selected": false,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Periwinkle Sky",
+              "swatch": "#9FA8DA",
+              "selected": false,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Cocoa Bean",
+              "swatch": "#8D6E63",
+              "selected": false,
+              "target": "folio_no_color"
+            },
+            {
+              "title": "Desert Sand",
+              "swatch": "#BCAAA4",
+              "selected": false,
+              "target": "folio_no_color"
+            }
+          ]
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Pocket Folio · Full existing color palette",
+      "subtitle": "For this widget only. Available when its folder has no color."
+    },
+    {
+      "key": "folio_placing",
+      "title": "Pocket Folio",
+      "subtitle": "Choose the folder this widget shows.",
+      "blocks": [
+        {
+          "type": "widget",
+          "widget": "folio"
+        },
+        {
+          "type": "status",
+          "title": "Confirm placement in your launcher",
+          "sub": "Use your launcher’s dialog to add the widget. Return here if you need to try again.",
+          "icon": "home"
+        },
+        {
+          "type": "button",
+          "label": "Launcher help",
+          "target": "folio_launcher",
+          "kind": "tonal"
+        }
+      ],
+      "theme": "Dark",
+      "back": "widgets",
+      "kind": "page",
+      "caption": "Pocket Folio · Launcher handoff"
+    },
+    {
+      "key": "folio_launcher",
+      "title": "Add from your home screen",
+      "parent": "folio_ready",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Long-press an empty space on your home screen, open Widgets, and choose Cobalt → Pocket Folio."
+        },
+        {
+          "type": "text",
+          "text": "Choose its folder before placing it."
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Pocket Folio · Launcher help",
+      "footer": [
+        {
+          "type": "button",
+          "label": "Got it",
+          "target": "folio_ready",
+          "kind": "primary"
+        }
+      ]
+    },
+    {
+      "key": "folio_remove",
+      "title": "Remove saved Folio?",
+      "parent": "folio_existing",
+      "message": "Remove the widget from your home screen first. This clears its saved widget settings. Your folder and notes stay.",
+      "confirm": "Remove Folio",
+      "confirmTarget": "folio",
+      "kind": "dialog",
+      "caption": "Pocket Folio · Remove saved setup",
+      "cancel": "Keep Folio",
+      "destructive": true
+    },
+    {
+      "key": "folio_configure",
+      "title": "Pocket Folio",
+      "subtitle": "Choose the folder this widget shows.",
+      "blocks": [
+        {
+          "type": "widget",
+          "widget": "folio"
+        },
+        {
+          "type": "group",
+          "label": "Customize this Folio",
+          "rows": [
+            {
+              "title": "Folder",
+              "sub": "Two items from Ideas",
+              "icon": "ideas",
+              "target": "folio_folders",
+              "color": "IdeasBox",
+              "value": "Ideas"
+            },
+            {
+              "title": "Folder color",
+              "sub": "Uses the color you chose for Ideas.",
+              "icon": "folder",
+              "color": "IdeasBox"
+            },
+            {
+              "title": "Item order",
+              "sub": "Choose which two items appear first.",
+              "icon": "list",
+              "target": "folio_order",
+              "value": "Recently updated"
+            }
+          ]
+        },
+        {
+          "type": "button",
+          "label": "Save widget",
+          "target": "folio_existing",
+          "kind": "primary"
+        },
+        {
+          "type": "text",
+          "text": "Back keeps the current widget settings."
+        }
+      ],
+      "theme": "Dark",
+      "back": "widgets",
+      "kind": "page",
+      "caption": "Pocket Folio · Launcher configuration"
+    },
+    {
+      "key": "folio_folder_removed",
+      "title": "Pocket Folio",
+      "subtitle": "Customize this home screen widget.",
+      "blocks": [
+        {
+          "type": "widget",
+          "widget": "folio",
+          "state": "empty"
+        },
+        {
+          "type": "row",
+          "title": "Folder removed",
+          "sub": "Work was removed. Choose another folder.",
+          "icon": "folderOpen",
+          "target": "folio_folders"
+        },
+        {
+          "type": "button",
+          "label": "Choose a folder",
+          "target": "folio_folders",
+          "kind": "primary"
+        }
+      ],
+      "theme": "Dark",
+      "back": "widgets",
+      "kind": "page",
+      "caption": "Pocket Folio · Selected folder removed"
+    },
+    {
+      "key": "screening",
+      "title": "Screening Card",
+      "subtitle": "A saved title for your next watch or read.",
+      "blocks": [
+        {
+          "type": "status",
+          "title": "Your home screen cards",
+          "sub": "Create a card and choose the titles it recommends.",
+          "icon": "movie"
+        },
+        {
+          "type": "button",
+          "label": "Create a card",
+          "target": "screening_new",
+          "kind": "primary"
+        },
+        {
+          "type": "group",
+          "label": "Recommendations",
+          "rows": [
+            {
+              "title": "Review a pick",
+              "sub": "See why a saved title was suggested",
+              "icon": "movie",
+              "target": "screening_review_pick"
+            },
+            {
+              "title": "Your taste",
+              "sub": "Preferences learned from your feedback",
+              "icon": "star",
+              "target": "screening_taste"
+            },
+            {
+              "title": "Morning check-in",
+              "sub": "Optional questions about your picks",
+              "icon": "reminder",
+              "target": "screening_morning"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "widgets",
+      "kind": "page",
+      "caption": "Screening Card · No widgets"
+    },
+    {
+      "key": "screening_new",
+      "title": "Screening Card",
+      "subtitle": "Choose what this widget recommends.",
+      "blocks": [
+        {
+          "type": "widget",
+          "widget": "screening",
+          "caption": "Preview · not added"
+        },
+        {
+          "type": "row",
+          "title": "Sources",
+          "sub": "Choose the saved titles this card recommends.",
+          "icon": "movie",
+          "target": "screening_sources",
+          "value": "Everything"
+        },
+        {
+          "type": "button",
+          "label": "Add to home screen",
+          "target": "screening_placing",
+          "kind": "primary"
+        },
+        {
+          "type": "group",
+          "label": "Recommendations",
+          "rows": [
+            {
+              "title": "Review a pick",
+              "sub": "See why a saved title was suggested",
+              "icon": "movie",
+              "target": "screening_review_pick"
+            },
+            {
+              "title": "Your taste",
+              "sub": "Preferences learned from your feedback",
+              "icon": "star",
+              "target": "screening_taste"
+            },
+            {
+              "title": "Morning check-in",
+              "sub": "Optional questions about your picks",
+              "icon": "reminder",
+              "target": "screening_morning"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "widgets",
+      "kind": "page",
+      "caption": "Screening Card · New setup"
+    },
+    {
+      "key": "screening_existing",
+      "title": "Screening Card",
+      "subtitle": "Customize this home screen widget.",
+      "blocks": [
+        {
+          "type": "widget",
+          "widget": "screening"
+        },
+        {
+          "type": "text",
+          "text": "Card 1 of 2"
+        },
+        {
+          "type": "row",
+          "title": "Sources",
+          "sub": "Choose the saved titles this card recommends.",
+          "icon": "movie",
+          "target": "screening_sources",
+          "value": "Everything"
+        },
+        {
+          "type": "button",
+          "label": "Add another card",
+          "target": "screening_new",
+          "kind": "primary"
+        },
+        {
+          "type": "button",
+          "label": "Remove from Cobalt",
+          "target": "screening_remove",
+          "kind": "text"
+        },
+        {
+          "type": "group",
+          "label": "Recommendations",
+          "rows": [
+            {
+              "title": "Review a pick",
+              "sub": "See why a saved title was suggested",
+              "icon": "movie",
+              "target": "screening_review_pick"
+            },
+            {
+              "title": "Your taste",
+              "sub": "Preferences learned from your feedback",
+              "icon": "star",
+              "target": "screening_taste"
+            },
+            {
+              "title": "Morning check-in",
+              "sub": "Optional questions about your picks",
+              "icon": "reminder",
+              "target": "screening_morning"
+            }
+          ]
+        }
+      ],
+      "theme": "Light",
+      "back": "widgets",
+      "kind": "page",
+      "caption": "Screening Card · Existing widget"
+    },
+    {
+      "key": "screening_sources",
+      "title": "Sources",
+      "parent": "screening_new",
+      "blocks": [
+        {
+          "type": "options",
+          "options": [
+            {
+              "title": "Everything",
+              "sub": "Movies, TV shows, anime and manga",
+              "selected": true,
+              "target": "screening_new"
+            },
+            {
+              "title": "Movies",
+              "sub": "Saved films",
+              "icon": "movie",
+              "target": "screening_new"
+            },
+            {
+              "title": "TV shows",
+              "sub": "Live-action series",
+              "icon": "video",
+              "target": "screening_new"
+            },
+            {
+              "title": "Anime",
+              "sub": "Anime series and films",
+              "icon": "movie",
+              "target": "screening_new"
+            },
+            {
+              "title": "Manga",
+              "sub": "Saved reading list",
+              "icon": "reading",
+              "target": "screening_new"
+            }
+          ]
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Screening Card · Sources"
+    },
+    {
+      "key": "screening_no_picks",
+      "title": "Screening Card",
+      "subtitle": "Choose what this widget recommends.",
+      "blocks": [
+        {
+          "type": "widget",
+          "widget": "screening",
+          "state": "empty"
+        },
+        {
+          "type": "text",
+          "text": "No eligible picks for this source. Choose another source or update your saved titles in Media."
+        },
+        {
+          "type": "row",
+          "title": "Sources",
+          "sub": "Choose the saved titles this card recommends.",
+          "icon": "movie",
+          "target": "screening_sources",
+          "value": "Everything"
+        },
+        {
+          "type": "button",
+          "label": "Add to home screen",
+          "target": "screening_placing",
+          "kind": "primary"
+        },
+        {
+          "type": "group",
+          "label": "Recommendations",
+          "rows": [
+            {
+              "title": "Review a pick",
+              "sub": "See why a saved title was suggested",
+              "icon": "movie",
+              "target": "screening_review_pick"
+            },
+            {
+              "title": "Your taste",
+              "sub": "Preferences learned from your feedback",
+              "icon": "star",
+              "target": "screening_taste"
+            },
+            {
+              "title": "Morning check-in",
+              "sub": "Optional questions about your picks",
+              "icon": "reminder",
+              "target": "screening_morning"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "widgets",
+      "kind": "page",
+      "caption": "Screening Card · No eligible titles"
+    },
+    {
+      "key": "screening_placing",
+      "title": "Screening Card",
+      "subtitle": "Choose what this widget recommends.",
+      "blocks": [
+        {
+          "type": "widget",
+          "widget": "screening"
+        },
+        {
+          "type": "status",
+          "title": "Confirm placement in your launcher",
+          "sub": "Use your launcher’s dialog to add the card. Return here if you need to try again.",
+          "icon": "home"
+        },
+        {
+          "type": "button",
+          "label": "Launcher help",
+          "target": "screening_launcher",
+          "kind": "tonal"
+        }
+      ],
+      "theme": "Dark",
+      "back": "widgets",
+      "kind": "page",
+      "caption": "Screening Card · Launcher handoff"
+    },
+    {
+      "key": "screening_launcher",
+      "title": "Add from your home screen",
+      "parent": "screening_new",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "Long-press an empty space on your home screen, open Widgets, and choose Cobalt → Screening Card."
+        },
+        {
+          "type": "text",
+          "text": "Choose the card’s source before placing it."
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Screening Card · Launcher help",
+      "footer": [
+        {
+          "type": "button",
+          "label": "Got it",
+          "target": "screening_new",
+          "kind": "primary"
+        }
+      ]
+    },
+    {
+      "key": "screening_remove",
+      "title": "Remove saved card?",
+      "parent": "screening_existing",
+      "message": "Remove the widget from your home screen first. This clears its saved card settings. Your saved titles and feedback stay.",
+      "confirm": "Remove card",
+      "confirmTarget": "screening",
+      "kind": "dialog",
+      "caption": "Screening Card · Remove saved setup",
+      "cancel": "Keep card",
+      "destructive": true
+    },
+    {
+      "key": "screening_configure",
+      "title": "Screening Card",
+      "subtitle": "Choose what this widget recommends.",
+      "blocks": [
+        {
+          "type": "widget",
+          "widget": "screening"
+        },
+        {
+          "type": "row",
+          "title": "Sources",
+          "sub": "Choose the saved titles this card recommends.",
+          "icon": "movie",
+          "target": "screening_sources",
+          "value": "Everything"
+        },
+        {
+          "type": "button",
+          "label": "Save widget",
+          "target": "screening_existing",
+          "kind": "primary"
+        },
+        {
+          "type": "text",
+          "text": "Back keeps the current widget settings."
+        }
+      ],
+      "theme": "Dark",
+      "back": "widgets",
+      "kind": "page",
+      "caption": "Screening Card · Launcher configuration"
+    },
+    {
+      "key": "screening_load_error",
+      "title": "Screening Card",
+      "subtitle": "A saved title for your next watch or read.",
+      "blocks": [
+        {
+          "type": "status",
+          "title": "Couldn’t load recommendations",
+          "sub": "Your saved titles are still available. Try loading the picks again.",
+          "icon": "movie",
+          "error": true
+        },
+        {
+          "type": "button",
+          "label": "Try again",
+          "target": "screening_new",
+          "kind": "primary"
+        },
+        {
+          "type": "group",
+          "label": "Recommendations",
+          "rows": [
+            {
+              "title": "Review a pick",
+              "sub": "See why a saved title was suggested",
+              "icon": "movie",
+              "target": "screening_review_pick"
+            },
+            {
+              "title": "Your taste",
+              "sub": "Preferences learned from your feedback",
+              "icon": "star",
+              "target": "screening_taste"
+            },
+            {
+              "title": "Morning check-in",
+              "sub": "Optional questions about your picks",
+              "icon": "reminder",
+              "target": "screening_morning"
+            }
+          ]
+        }
+      ],
+      "theme": "Dark",
+      "back": "widgets",
+      "kind": "page",
+      "caption": "Screening Card · Recommendation error"
+    },
+    {
+      "key": "screening_morning",
+      "title": "Morning check-in",
+      "subtitle": "Optional questions about your picks.",
+      "blocks": [
+        {
+          "type": "group",
+          "label": "Check-in",
+          "rows": [
+            {
+              "title": "Morning questions",
+              "sub": "Allow an occasional question about a pick.",
+              "on": true,
+              "target": "screening_morning_off"
+            },
+            {
+              "title": "Morning time",
+              "sub": "Android may delay scheduled delivery.",
+              "icon": "clock",
+              "value": "8:30 AM",
+              "target": "screening_morning_time"
+            },
+            {
+              "title": "Include weekends",
+              "sub": "Allow questions on Saturdays and Sundays.",
+              "on": true,
+              "target": "screening_morning_weekdays"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "At most one automatic question per day. Unanswered questions reduce how often you’re asked."
+        },
+        {
+          "type": "button",
+          "label": "Preview a question",
+          "target": "screening_notification",
+          "kind": "tonal"
+        },
+        {
+          "type": "text",
+          "text": "Opening or ignoring a question does not mark a title watched or read."
+        },
+        {
+          "type": "row",
+          "title": "Reset recommendation learning",
+          "sub": "Keeps your saved titles and progress",
+          "icon": "history",
+          "target": "screening_reset"
+        }
+      ],
+      "theme": "Dark",
+      "back": "screening_existing",
+      "kind": "page",
+      "caption": "Morning check-in · Enabled"
+    },
+    {
+      "key": "screening_morning_off",
+      "title": "Morning check-in",
+      "subtitle": "Optional questions about your picks.",
+      "blocks": [
+        {
+          "type": "row",
+          "title": "Morning questions",
+          "sub": "Turn on to allow occasional questions.",
+          "on": false,
+          "target": "screening_morning"
+        },
+        {
+          "type": "row",
+          "title": "Reset recommendation learning",
+          "sub": "Keeps your saved titles and progress",
+          "icon": "history",
+          "target": "screening_reset"
+        }
+      ],
+      "theme": "Dark",
+      "back": "screening_existing",
+      "kind": "page",
+      "caption": "Morning check-in · Off"
+    },
+    {
+      "key": "screening_morning_permission",
+      "title": "Morning check-in",
+      "subtitle": "Optional questions about your picks.",
+      "blocks": [
+        {
+          "type": "status",
+          "title": "Allow Screening notifications",
+          "sub": "Morning questions need notification permission.",
+          "icon": "reminder"
+        },
+        {
+          "type": "button",
+          "label": "Open notification settings",
+          "target": "screening_morning",
+          "kind": "primary"
+        },
+        {
+          "type": "row",
+          "title": "Reset recommendation learning",
+          "sub": "Keeps your saved titles and progress",
+          "icon": "history",
+          "target": "screening_reset"
+        }
+      ],
+      "theme": "Dark",
+      "back": "screening_existing",
+      "kind": "page",
+      "caption": "Morning check-in · Permission needed"
+    },
+    {
+      "key": "screening_morning_weekdays",
+      "title": "Morning check-in",
+      "subtitle": "Optional questions about your picks.",
+      "blocks": [
+        {
+          "type": "group",
+          "label": "Check-in",
+          "rows": [
+            {
+              "title": "Morning questions",
+              "sub": "Allow an occasional question about a pick.",
+              "on": true,
+              "target": "screening_morning_off"
+            },
+            {
+              "title": "Morning time",
+              "sub": "Android may delay scheduled delivery.",
+              "icon": "clock",
+              "value": "8:30 AM",
+              "target": "screening_morning_time"
+            },
+            {
+              "title": "Include weekends",
+              "sub": "Allow questions on Saturdays and Sundays.",
+              "on": false,
+              "target": "screening_morning"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "At most one automatic question per day. Unanswered questions reduce how often you’re asked."
+        },
+        {
+          "type": "button",
+          "label": "Preview a question",
+          "target": "screening_notification",
+          "kind": "tonal"
+        },
+        {
+          "type": "text",
+          "text": "Opening or ignoring a question does not mark a title watched or read."
+        },
+        {
+          "type": "row",
+          "title": "Reset recommendation learning",
+          "sub": "Keeps your saved titles and progress",
+          "icon": "history",
+          "target": "screening_reset"
+        }
+      ],
+      "theme": "Light",
+      "back": "screening_existing",
+      "kind": "page",
+      "caption": "Morning check-in · Weekdays"
+    },
+    {
+      "key": "screening_morning_time",
+      "title": "Morning time",
+      "parent": "screening_morning",
+      "blocks": [
+        {
+          "type": "options",
+          "options": [
+            {
+              "title": "7:00 AM",
+              "target": "screening_morning"
+            },
+            {
+              "title": "8:30 AM",
+              "selected": true,
+              "target": "screening_morning"
+            },
+            {
+              "title": "10:00 AM",
+              "target": "screening_morning"
+            },
+            {
+              "title": "Custom time",
+              "sub": "Choose from 5:00 to 11:59 AM",
+              "target": "screening_morning_custom_time"
+            }
+          ]
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Morning check-in · Time choices"
+    },
+    {
+      "key": "screening_morning_custom_time",
+      "title": "Custom morning time",
+      "parent": "screening_morning",
+      "blocks": [
+        {
+          "type": "time",
+          "label": "Morning time",
+          "hour": "08",
+          "minute": "30",
+          "target": "screening_morning"
+        },
+        {
+          "type": "text",
+          "text": "Morning check-ins can be scheduled from 5:00 to 11:59 AM."
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Morning check-in · Native time picker"
+    },
+    {
+      "key": "screening_notification",
+      "title": "Question preview",
+      "parent": "screening_morning",
+      "blocks": [
+        {
+          "type": "heading",
+          "text": "Cobalt · Screening"
+        },
+        {
+          "type": "text",
+          "text": "Did you watch Your Name.?"
+        },
+        {
+          "type": "chips",
+          "options": [
+            {
+              "title": "Watched",
+              "target": "screening_morning"
+            },
+            {
+              "title": "Not yet",
+              "target": "screening_morning"
+            },
+            {
+              "title": "Skip",
+              "target": "screening_morning"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "text": "The preview is a question. It does not change progress until you answer."
+        }
+      ],
+      "kind": "sheet",
+      "caption": "Morning check-in · Notification example"
+    },
+    {
+      "key": "screening_reset",
+      "title": "Reset recommendation learning?",
+      "parent": "screening_morning",
+      "message": "Clear your local recommendation learning and pending questions. Your saved titles and progress stay.",
+      "confirm": "Reset learning",
+      "confirmTarget": "screening_morning",
+      "kind": "dialog",
+      "caption": "Screening · Reset local learning",
+      "destructive": true,
+      "cancel": "Keep learning"
+    }
+  ]
+}

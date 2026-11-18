@@ -1,0 +1,1176 @@
+{
+  "audit_date": "2026-11-15",
+  "report_completed": "2026-11-16",
+  "observations": [
+    {
+      "observation": "01-home",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/01-home/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/01-home/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "c8c7cd377652dd411582d8e4a14c7fef7c4c88e246f71b7deaf918be4f7575cd",
+      "hierarchy_sha256": "52948f5033ff0bc9df4d7e07dd1243dd55b9b728b2c2f04622a6c1074c15f9d1",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "02-settings-entry",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/02-settings-entry/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/02-settings-entry/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "7aba92cb2fdf3422635b3476ad759653245ec1768d8ad7eef0fe02d05f6aa98a",
+      "hierarchy_sha256": "ef213b12f0cec732fb34e5b14350670e443244066317e02f5b31c72e4d48a5e4",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "03-settings-root",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/03-settings-root/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/03-settings-root/window.xml",
+      "preserved_screenshot": "03-settings-root.png",
+      "screenshot_sha256": "ccc08dfc7341a8e407015423e23869b24efdc17a85c17a9cef021b37b260bad9",
+      "hierarchy_sha256": "ef213b12f0cec732fb34e5b14350670e443244066317e02f5b31c72e4d48a5e4",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "04-preferences-index",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/04-preferences-index/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/04-preferences-index/window.xml",
+      "preserved_screenshot": "04-preferences-index.png",
+      "screenshot_sha256": "973471f953d98bd24ff13d3fad638872d6a61c9e507b0fa2a2b7e8ce82d23669",
+      "hierarchy_sha256": "4ae0d73aced6232c6463d478be113bc4134810b82e666e9a0fa7185f45710d97",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "05-appearance-top",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/05-appearance-top/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/05-appearance-top/window.xml",
+      "preserved_screenshot": "05-appearance-top.png",
+      "screenshot_sha256": "9c8d6c4dcd8dd3cb23fa4211d4ccf5daae5d9d4a690394dde639ef44c81b4733",
+      "hierarchy_sha256": "70d31e698111aae88fa468e525cda0f78976d38d50a507cccc81ee0014c2652a",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "06-appearance-help",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/06-appearance-help/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/06-appearance-help/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "eee5f45d63df2b43c6a4b4d135249219bf5716f15a816bf299fc3618b28d9d80",
+      "hierarchy_sha256": "87d009a703e28e028d886112d22004a38cc416f92c9ff7f5bd0e4a9264d2fe97",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "07-text-fonts-top",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/07-text-fonts-top/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/07-text-fonts-top/window.xml",
+      "preserved_screenshot": "07-text-fonts-top.png",
+      "screenshot_sha256": "0ef762fbaa474231e114211e59571273f6e7bd63cdce50d2a7ca68d1eb30ffcf",
+      "hierarchy_sha256": "ed1b3deea09b6f174c157367c458e25310c970026a4c668c4b3834fc91459bcf",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "08-text-fonts-families",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/08-text-fonts-families/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/08-text-fonts-families/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "82f8a4ea7d61f3d634f6d0e1977b03de62c4325b93b0754a19501cdf9371b8fb",
+      "hierarchy_sha256": "c8f587dbe37749b32a9e5d8167faeb2020dd6db6a7322e693eebb90c90e70e18",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "09-text-fonts-metrics",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/09-text-fonts-metrics/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/09-text-fonts-metrics/window.xml",
+      "preserved_screenshot": "09-text-fonts-metrics.png",
+      "screenshot_sha256": "da8a47eaa03883df0cf0914eaaffac5c72cc115f7bad36a5d48fd85ebb429d34",
+      "hierarchy_sha256": "d2a5917658561f40edb03e27adcca23d11f26f397d5229d61a0ebef85dddcf35",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "10-code-font-picker",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/10-code-font-picker/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/10-code-font-picker/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "4073bec55879226a5c859ff730f5808f51f490c65f41fe5c3ff500dd3b278b59",
+      "hierarchy_sha256": "334641e77933f5ece83fac812826ae9804a1e16642bc854074edb3ac4eb978b1",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "11-appearance-blur",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/11-appearance-blur/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/11-appearance-blur/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "bf2372f813d60f66f7e0e0490cb4e9502dbce826eceaa5bb8fd0c8c8c3107783",
+      "hierarchy_sha256": "48c08a130f5f6d9924a94952b00230148dc1022fbbb9b19d709b01e67b41793a",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "12-scrollbar-settings",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/12-scrollbar-settings/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/12-scrollbar-settings/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "83050b49746b6f7566b63302ca1236f917918e790b58e67cbb33c7cf92c1e038",
+      "hierarchy_sha256": "666fa1e7d56b393e8c3442c9ad17629fb9422e58f37fc916b48db3b38663c88d",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "13-preferences-index-lower",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/13-preferences-index-lower/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/13-preferences-index-lower/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "cfc5568b92be31578ce37153cff64e978d8ece8fa7656e3d57f34a02765ebeb0",
+      "hierarchy_sha256": "4ae0d73aced6232c6463d478be113bc4134810b82e666e9a0fa7185f45710d97",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "14-preferences-index-bottom",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/14-preferences-index-bottom/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/14-preferences-index-bottom/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "2a86763679f937b83b959a88d821017838f2e3fb61fa077bee5236d0af2f1533",
+      "hierarchy_sha256": "82fe2bae94599e2af9d9a50127ff1d230067d478fe3bddafd1992aa1fa261480",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "15-organization-top",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/15-organization-top/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/15-organization-top/window.xml",
+      "preserved_screenshot": "15-organization-top.png",
+      "screenshot_sha256": "23efba116d8742b459f647e6c4066691c70a29f9f5b699dc5becd5a66907de54",
+      "hierarchy_sha256": "5ec97c29e7aee5d4c1db737afc0602a8b0afe5ebe2710b700b8c7407c323cd65",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "16-archive-style-picker",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/16-archive-style-picker/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/16-archive-style-picker/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "7979bc7e87a5d73e520fe128f9547610f44847cc286e09da5e6ff624f74f8bfa",
+      "hierarchy_sha256": "1f7e9846e63f915f4a8d456ba6786fdc7235015092e4244a5cf684948ec476a9",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "17-reminders-top",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/17-reminders-top/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/17-reminders-top/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "7d888d917ca31cd5b73c11d82fce7646233a8f4a5c2c08cb14ce47662904b806",
+      "hierarchy_sha256": "70d31e698111aae88fa468e525cda0f78976d38d50a507cccc81ee0014c2652a",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "18-preferences-return-position",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/18-preferences-return-position/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/18-preferences-return-position/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "5dffa11b24690fcf0a0575418bd515c4c1d6118d4eae91b5e1753f56a43edef3",
+      "hierarchy_sha256": "82fe2bae94599e2af9d9a50127ff1d230067d478fe3bddafd1992aa1fa261480",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "19-reminders-top",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/19-reminders-top/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/19-reminders-top/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "1929498c3c9a8b577979ef58799b7ca692046b4ec45ac11f9be10a253cf65994",
+      "hierarchy_sha256": "73efe95c80c974b4d48168cf9e272c4b84b82aafe560cda2f046df41b0589b5e",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "20-reminders-enabled-top",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/20-reminders-enabled-top/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/20-reminders-enabled-top/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "57ea39124796b4e6d4d18de282884863ddac3b50a61dfd140132a7303dee70dc",
+      "hierarchy_sha256": "73efe95c80c974b4d48168cf9e272c4b84b82aafe560cda2f046df41b0589b5e",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "21-reminders-expanded",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/21-reminders-expanded/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/21-reminders-expanded/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "1ee3dab2f31033a7b0696ee33f11469fca747e0fe92b6e1a7dcf2296672eb915",
+      "hierarchy_sha256": "267cf4c15134055aa8b4acdffd62e9110660cc641fdbb46ae780687545c3a9e0",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "22-reminders-details",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/22-reminders-details/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/22-reminders-details/window.xml",
+      "preserved_screenshot": "22-reminders-details.png",
+      "screenshot_sha256": "4c04948cfeb1ebaeb11dcdf0f312032d0d89a2406232382f8687f1aa32285418",
+      "hierarchy_sha256": "cf9dd0657f55c4885fa03338d8d7f35912c842193aff458c8da4454f778c78ff",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "23-reminders-restored",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/23-reminders-restored/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/23-reminders-restored/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "377dea8939b838ea10619547c2ee67336f382f7a929c2f6f4eb385e8d57aacd1",
+      "hierarchy_sha256": "73efe95c80c974b4d48168cf9e272c4b84b82aafe560cda2f046df41b0589b5e",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "24-screening-picks",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/24-screening-picks/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/24-screening-picks/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "9d1760fc5a05aac4afde71223d704b5d86dfdfa4ad7d01a26259e98d4c295591",
+      "hierarchy_sha256": "e90cbb0e4659f7b150fbb22dbcda9c7c455939f9d948f107ec96a906a1b27480",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "25-screening-explanation",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/25-screening-explanation/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/25-screening-explanation/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "d31e1b77084f2b8d43026fb5251849d7ffdf8569b2675c33b4141cf06265af87",
+      "hierarchy_sha256": "c9297760771b4a07ee894f7fe99266d6cd4a966d1df3008ea8948132676c32ab",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "26-gemini-top",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/26-gemini-top/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/26-gemini-top/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "037b5de744e24289f54c7d450ac104648a39b426563738dff96648cd0910426d",
+      "hierarchy_sha256": "ff4fb5764d0c597e107451f49d1601e7672cd9e6fb8000284ee89a8213da16ed",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "27-gemini-models",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/27-gemini-models/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/27-gemini-models/window.xml",
+      "preserved_screenshot": "27-gemini-models.png",
+      "screenshot_sha256": "a86b3fc09fc2bbd07cba40022a2859fa2e344ece0a8411342e07b4ac66d1a3b2",
+      "hierarchy_sha256": "9047fc0806916cf9d9b3a8c1c237b12febfe738458a54d69c9644c02f8a780d2",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "28-gemini-audio-usage",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/28-gemini-audio-usage/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/28-gemini-audio-usage/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "a32d537f49b457918cc29acaaab06b683f2014f2bd3d56e7f1f835af094a03ce",
+      "hierarchy_sha256": "15782edd0a5bb63e9337f4aaa92767ee7704624be6f2cad6585dbb453c8244f8",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "29-gemini-usage-top",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/29-gemini-usage-top/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/29-gemini-usage-top/window.xml",
+      "preserved_screenshot": "29-gemini-usage-top.png",
+      "screenshot_sha256": "f9b8e2fa5f7d46eaad02d508515e24f8953aaf691aee984e3d9de8fd49787b84",
+      "hierarchy_sha256": "f634e7121e66c9c1136e64493c7b626527801ee2dadc26ed8f04dcbbcf127e68",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "30-gemini-usage-lower",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/30-gemini-usage-lower/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/30-gemini-usage-lower/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "5d781108f2a04afeb95c79931f11222ed561465fb32c8d469a66f17d59559c02",
+      "hierarchy_sha256": "1fd85249b7b1de63656905edc4e411170a1e654cf4d92ae957f91057611a1933",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "31-dock-top",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/31-dock-top/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/31-dock-top/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "368caedb5da02f33581c2ae3ec8ae948cd515f0fc2f6d0a901580dd7edfb4d6d",
+      "hierarchy_sha256": "65d8e46fa6920f0157b329f12015a56f4fb2f9f51a3c9cd6250395e9ef898824",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "32-dock-android-permission",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/32-dock-android-permission/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/32-dock-android-permission/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "c293ca5a8bf786360aaa897d6ef4726bfb45b3282118bf71a91851d4b8a7fc46",
+      "hierarchy_sha256": "b48e95ef9b7353903311a99bbad029a953a54f811fe06a42f170605b9f219169",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "33-dock-permission-toggle",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/33-dock-permission-toggle/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/33-dock-permission-toggle/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "1ad4cfd90be09a85f8dc03ad5288fb62a203e88ca52d56dbd7a44bb874e3e252",
+      "hierarchy_sha256": "6985ace5687af714c6ae62abb9667b2d128376716edb4796195e50972044580f",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "34-dock-permission-enabled",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/34-dock-permission-enabled/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/34-dock-permission-enabled/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "a4cef7e791328fd4a3b736ba78f4cd437de0bb0338d87deb57157d13f706ad8a",
+      "hierarchy_sha256": "5fbb8449cf05634f589e8011bb3436b37258a7dbde0e6283512f05b7ee2609ae",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "35-dock-expanded",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/35-dock-expanded/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/35-dock-expanded/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "c73f03337f83d7f99a4b55c52d38b7783aed38bb9110183de85db9578933d6d5",
+      "hierarchy_sha256": "288f97b763275e4bfc5e99b64f4ba50f3c5036e88f07f15851da756c8c2748f9",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "36-dock-position",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/36-dock-position/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/36-dock-position/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "15ea06d3e06010596b4a0da4e134f6fdec6bc2822d17431dfc9d2fdd50d44c42",
+      "hierarchy_sha256": "1fad32cdd15fe4a2bf30fffcaa3664e4af324cb40ae3e9f68524d6b330ea6087",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "37-dock-position-lower",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/37-dock-position-lower/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/37-dock-position-lower/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "a4fcffc7589fc733bf597107601db168c0d40e95739bb458e5bdad3bdc0878ee",
+      "hierarchy_sha256": "1247715621480650720352703cac8fd797872dd2183180f594e434c54589e4cc",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "38-dock-return",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/38-dock-return/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/38-dock-return/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "fc61a8497927ccf08ef922576dd3a241e12580e4e7a7c613d713e3517459de8a",
+      "hierarchy_sha256": "288f97b763275e4bfc5e99b64f4ba50f3c5036e88f07f15851da756c8c2748f9",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "39-dock-motion",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/39-dock-motion/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/39-dock-motion/window.xml",
+      "preserved_screenshot": "39-dock-motion.png",
+      "screenshot_sha256": "34fd6baa710b76630b59fce20f911a536fd5926e6c9a08ea52a823304ee41fb6",
+      "hierarchy_sha256": "c90965749969b9bfb622198595238efec90a97f73fecbf869e4e0a2131035bf5",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "40-dock-motion-help",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/40-dock-motion-help/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/40-dock-motion-help/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "e6b16dfab3a4195d66d13d795a3d8ed8ee740517abfa1cc6c5d48d45fbc52a49",
+      "hierarchy_sha256": "a19375cd7b1f68c2938e226901610579d1243b65de069432a990ac0ae78afa3d",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "41-dock-motion-lower",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/41-dock-motion-lower/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/41-dock-motion-lower/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "08ce02c4ac7417cef76498f1b93bfe277a686c9d08f5a02876311df5fc5b330b",
+      "hierarchy_sha256": "9e844ac450e77bc0f6a54e18984297cf6af41a3cd581684b8f5339a37e4b8493",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "42-dock-preview",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/42-dock-preview/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/42-dock-preview/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "01c2a72fa1a58efcb7bd16e1c0b58f9dcdd7aa7df36bd04b06a8d00fcfb3bf78",
+      "hierarchy_sha256": "eb66622e02b63bd02b574a94f06a383de1fda473765291500b4489607ad64b3f",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "43-dock-restored",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/43-dock-restored/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/43-dock-restored/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "2f702500418ebc857e0d304292b4c0158748a2515372c8cd4fa4032d81c95770",
+      "hierarchy_sha256": "5fbb8449cf05634f589e8011bb3436b37258a7dbde0e6283512f05b7ee2609ae",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "44-preferences-after-dock",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/44-preferences-after-dock/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/44-preferences-after-dock/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "91d4a4aa502975b8d62015a6e3315943920b796696a4b3dccf4bbed9b8c5eae7",
+      "hierarchy_sha256": "82fe2bae94599e2af9d9a50127ff1d230067d478fe3bddafd1992aa1fa261480",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "45-widgets-index",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/45-widgets-index/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/45-widgets-index/window.xml",
+      "preserved_screenshot": "45-widgets-index.png",
+      "screenshot_sha256": "7eda89eed698f3db82fa1cab5a86bd915f738c699800619222a10aba284c9281",
+      "hierarchy_sha256": "87d85f4720480c3185cdeca62335da1e355eb0027e81732ec39177d981c1e14b",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "46-pocket-folio-top",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/46-pocket-folio-top/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/46-pocket-folio-top/window.xml",
+      "preserved_screenshot": "46-pocket-folio-top.png",
+      "screenshot_sha256": "f09fd46f7f6a4c6c526e99d4cd5108fd89f78c4ed70306c34defe9690d8938ff",
+      "hierarchy_sha256": "82ad40a735e2e2f14a2413d858229534744091c56d5db7b84ecfae67e70b1243",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "47-pocket-folio-lower",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/47-pocket-folio-lower/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/47-pocket-folio-lower/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "9eb358a95f25de3e7c44e9f8435c6747afd0aa390e6f2d1e4cffae1b822bed1d",
+      "hierarchy_sha256": "c5c8cffd9e699f3d0c29718a91f0c87b30f415cbbb553ee6ff6f80d900111dcd",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "48-folio-folder-picker",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/48-folio-folder-picker/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/48-folio-folder-picker/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "c9c3e908605dcb5b1e85cb6c5cc15bf67d1ac72c30438cb8cd4a23aac935e38e",
+      "hierarchy_sha256": "455cf33b4f4e2b9bb45494fb23fbadc596b1e29098b07fbe8168e5ed84e2b000",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "49-folio-order-picker",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/49-folio-order-picker/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/49-folio-order-picker/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "4fdcf14a7c24d91e755d002e7d572bc99618cbe315a668149ec402ff8c1a6c36",
+      "hierarchy_sha256": "a528719f073a47f0a774173aa8a68aebfffea21ef4e44bbe6d607fcde933f2af",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "50-folio-color-picker",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/50-folio-color-picker/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/50-folio-color-picker/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "11f3dfefdbcd2fb9488838dfc60d7479e44fe1a0a45de350e222722dcb9c27e1",
+      "hierarchy_sha256": "cd51e4b02fbe20365f1e16ad79741ad6388cc3ababa3c58fa0ee3ad32dd90b2e",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "51-screening-widget-top",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/51-screening-widget-top/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/51-screening-widget-top/window.xml",
+      "preserved_screenshot": "51-screening-widget-top.png",
+      "screenshot_sha256": "25d8fa7cca579fd605c408a609263e26c27fb1600f9b43626c5c0f6029cc0cbd",
+      "hierarchy_sha256": "766f7d85d6f4439d7d923e1f43732d9eabb43708f4e26196eb76001b87b5ee12",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "52-screening-widget-lower",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/52-screening-widget-lower/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/52-screening-widget-lower/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "e7ea12c1589a26384968f93cc290b03d8a9bbaab83887ab7e588641a336ffeca",
+      "hierarchy_sha256": "43e085d93f915d5e035148afdeefc519053177701a891c9b3973ab2a760293b7",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "53-screening-type-picker",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/53-screening-type-picker/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/53-screening-type-picker/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "6379e212a07ac9007073f225762bfbf36ada1eccc0077809626e7153cb8125ef",
+      "hierarchy_sha256": "dd35cc08fa8f380561a5e89e5626982245dfab67f45084705d696119627967a8",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "54-screening-taste",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/54-screening-taste/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/54-screening-taste/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "ade0157165d64e32182c5f250123a67c4daa26099db7e5dc05aeac4279b1d536",
+      "hierarchy_sha256": "495e3a07aba607e375c7b3be41a9a160e8cb744ef858c5231eb4fc7065966351",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "55-screening-feedback-history",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/55-screening-feedback-history/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/55-screening-feedback-history/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "15cc36e35e3cc2b52c50ac127b6f944042a0e55ac4f08e88cc4937436f211c8d",
+      "hierarchy_sha256": "6d9fa0154bf8ebf2af99bf88909688dd4d8fb0df8957436c35c0f5cedfdfd309",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "56-screening-morning",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/56-screening-morning/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/56-screening-morning/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "e7ffaa843baf336fe183d04c33a0b1754d3a2038ed6d492040398d9c34aa0cf0",
+      "hierarchy_sha256": "c378185a6660ca957d280031151eedcbb271e22c131226b3e937d3ead99b4320",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "57-storage-top",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/57-storage-top/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/57-storage-top/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "78cced47422d768117c4281a168acc2c0cbd7e9289af61eb1e4ba2cc94b828ec",
+      "hierarchy_sha256": "c257d2c4d0156721064f7c51da2d188f18066f590cb47bae9b1469f749f8d727",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "58-storage-settled",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/58-storage-settled/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/58-storage-settled/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "0d6bd7858445cdaf83efcf2f53098f13c19dc72732553bc8a900e0e03b4e74bd",
+      "hierarchy_sha256": "b94693f4f7fdb128a3681b836ae1b20ca5e3252cba8cd1f5bc1bf21f9c17f45d",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "59-saved-notes",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/59-saved-notes/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/59-saved-notes/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "aa6cf2ca1f0092ce7ee4516ca27673836722817d544e93417069eec2ef376851",
+      "hierarchy_sha256": "bafc62dc9922b7b90a804301a8b3f43da553dd6a04afa13970e48fdfa02aa190",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "60-saved-notes-lower",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/60-saved-notes-lower/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/60-saved-notes-lower/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "0bcf55a2c786918ea961147161e842a24d78b6ed23aff2ee268b08ff32f27a00",
+      "hierarchy_sha256": "df291cd148d4d9009c3d1918960c9338b8f256ddea5643f59053c02136c35281",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "61-saved-note-actions",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/61-saved-note-actions/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/61-saved-note-actions/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "7f8e7d6b6a9eae204a730d4a42e4cb4ece94fa912a563e05eab2a15bb419cc65",
+      "hierarchy_sha256": "df291cd148d4d9009c3d1918960c9338b8f256ddea5643f59053c02136c35281",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "63-storage-return",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/63-storage-return/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/63-storage-return/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "42a1d0b6508778dd89b46d80c2e0f4c9da02437617caa24a78ced83f08e9143b",
+      "hierarchy_sha256": "b94693f4f7fdb128a3681b836ae1b20ca5e3252cba8cd1f5bc1bf21f9c17f45d",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "64-draft-recovery",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/64-draft-recovery/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/64-draft-recovery/window.xml",
+      "preserved_screenshot": "64-draft-recovery.png",
+      "screenshot_sha256": "1f157e8b5e2ae060f84940d3970d4e87fe77acac35253ff3843e851f3891ec8b",
+      "hierarchy_sha256": "1911bb3cc74b38b1904e0c4bb79141886c5967a748992dce272bbf5a004dccf9",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "65-trash",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/65-trash/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/65-trash/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "4480273fb3fabe3fed76023e51ac88aa9388e44fe65d040c79c72c4d8328d968",
+      "hierarchy_sha256": "68fe8a8a82ea435cae12c2a9f2349436a13ed362eda9e043b2a1637d22ca460c",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "66-saved-history",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/66-saved-history/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/66-saved-history/window.xml",
+      "preserved_screenshot": "66-saved-history.png",
+      "screenshot_sha256": "7395ed8fb6127f60fea4983b09372dac6868045a7be2e6e9a27d90778b55d1f7",
+      "hierarchy_sha256": "c01100e85bfba21777cd0d32d8d712ea63200d3045cc84485ee34c3a3a31a7db",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "67-cache-storage",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/67-cache-storage/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/67-cache-storage/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "57e32783202c69d496f8d14cb8d4839e3cc6b070ea3902ef2713d80266c73e3d",
+      "hierarchy_sha256": "31b2a88beb409f79a57e0aba3e41a7ed03f0639753d67be966f7a0bc2896deac",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "68-cache-storage-lower",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/68-cache-storage-lower/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/68-cache-storage-lower/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "e669adffae2396ae512b5bba8f3dc41b1f5a0507c4484c7e9dd9e0db0075c05b",
+      "hierarchy_sha256": "95eb348363c79aca78921fa4369a05ed074d8a26161bbbc1930a6b9ec62be70b",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "69-saved-versions",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/69-saved-versions/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/69-saved-versions/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "24a60bff3d343160968f00c4d3508a61c1b123b28a6bc8861b0e4f5ebe37546c",
+      "hierarchy_sha256": "e92ca1bdbcf9c6fd0ec79e2a851ed752b99a39a0e596563099fa6babdccd55df",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "70-saved-version-actions",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/70-saved-version-actions/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/70-saved-version-actions/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "d4099403d63ce8d90221c935b3ed42c45ec8ae170d7175b64fa8fd954c997c30",
+      "hierarchy_sha256": "7f8e08455dc8c000bd63aac03ddfd86d36a67de6f2e572b2dc3b4b38d0a1fbe9",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "71-unlinked-storage",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/71-unlinked-storage/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/71-unlinked-storage/window.xml",
+      "preserved_screenshot": "71-unlinked-storage.png",
+      "screenshot_sha256": "ad651f905c6892156effe71058ad289cb43b75bf480b2f69949c6d7e1b037c02",
+      "hierarchy_sha256": "17a35a7f87192077647d998d55159707dce94d77dc97660649714f1d75915ea5",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "72-data-migration",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/72-data-migration/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/72-data-migration/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "4cad7774eb54033d47ce76bffaabe6e885697b7b259b9332d296e60619f40fe2",
+      "hierarchy_sha256": "637b3ddba0dad4a58d5d6bef2d8ea19371b262ff11bde6711d714840f8bfe4ac",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "73-background-health",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/73-background-health/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/73-background-health/window.xml",
+      "preserved_screenshot": "73-background-health.png",
+      "screenshot_sha256": "e97460223df2706c4cb59c67ec7ed9833cac1a5b92ed302fe8d161e343d26451",
+      "hierarchy_sha256": "bfda10db445994925961a36b3332b0b5469662184f588d60cd6cd344cdeb04dd",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "74-android-battery-dialog",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/74-android-battery-dialog/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/74-android-battery-dialog/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "390ace0bdb6c94699d2fb9c6f3a1b6840d3b9364357dd8450aaffa270d0a2fcd",
+      "hierarchy_sha256": "c9e50719cc7f9854ebac1da50a2370599ade57b9386e340df19bc6cf8b48dc13",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "75-main-settings-return",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/75-main-settings-return/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/75-main-settings-return/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "43ac80c4190d5b587e7fd2fcba5982edc8ad1178a0e6172905c32f59af1b0b24",
+      "hierarchy_sha256": "ef213b12f0cec732fb34e5b14350670e443244066317e02f5b31c72e4d48a5e4",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "76-media-providers-top",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/76-media-providers-top/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/76-media-providers-top/window.xml",
+      "preserved_screenshot": "76-media-providers-top.png",
+      "screenshot_sha256": "2ce153c0e5eca3d3abb177dd8e67c318ea72181d61350c8912895d6bce263193",
+      "hierarchy_sha256": "cc990bdd15228bdd34729a00f911b3627d01f68eeef0d40e3d97a12f707876d5",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "77-media-providers-lower",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/77-media-providers-lower/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/77-media-providers-lower/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "0df468c7ca7bf9cca466be87b2ee41a6c1a31f63e6d3530e48dbfb52c8167231",
+      "hierarchy_sha256": "b3b04327443e1270a8c23424f6617bb6eef00b2eb20c300fd3c4e6bebc9658ad",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "78-trakt-pending",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/78-trakt-pending/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/78-trakt-pending/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "10abb966be44b05c0e904dc7e54987a7ad368144ffef44e4f06f12a9f60c6ffb",
+      "hierarchy_sha256": "dd73181dd498ef74e5744fac60eb8939af80423c76a0fbe217c9e74756cba50e",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "79-trakt-account",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/79-trakt-account/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/79-trakt-account/window.xml",
+      "preserved_screenshot": "79-trakt-account.png",
+      "screenshot_sha256": "5fca29f57e90fb77257ce0b61d956f046230d40070f935c713e3775b92919b22",
+      "hierarchy_sha256": "fb2ea9a254796beb2ded5745a1d2e8ef002799f10965ea8806e00e3a5035bbf4",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "80-trakt-advanced",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/80-trakt-advanced/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/80-trakt-advanced/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "7f8cae5b0b4407576da148e426ec359c360ce5027f98b1e4110b4a240cd25b97",
+      "hierarchy_sha256": "9f7d35b56b9eb3b9767d77580577db37e0c804b9b39daccdbd27f4b0578186af",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "81-tmdb-key",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/81-tmdb-key/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/81-tmdb-key/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "27f1418ab84efab1ba66b1e22f0df1755fa4a8a20e83457122dd6c2c841b5acd",
+      "hierarchy_sha256": "e8ae67bbfb5169fa38c4980a1b99e225ec5e5ca71805497f0a38e2830bca2792",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "82-help-support",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/82-help-support/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/82-help-support/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "1378f71e91c40808c4194388ed22e7e91fec93d6485fff2c1ae323b065281216",
+      "hierarchy_sha256": "97d2696ffa2e9f608038592fdb2301e9992c53dc990fbb8a33ab2ee2f2f981fe",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "83-help-support-lower",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/83-help-support-lower/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/83-help-support-lower/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "eae78d030e00b5706940d58ab88d4c07e348ec66aa127c4d4649e440386e7176",
+      "hierarchy_sha256": "d8444cdb9a0cd9f7cd3e9dfbbfe7e4bbfe4c4410f6c5a9cdde00aeb11b878980",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "84-help-widget-answer",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/84-help-widget-answer/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/84-help-widget-answer/window.xml",
+      "preserved_screenshot": "84-help-widget-answer.png",
+      "screenshot_sha256": "810155933ef036b0510d4d32cb57d8827942e917b8c08c2bfa76c06010be789b",
+      "hierarchy_sha256": "d72f2376a6b2c78c60987a9ead3a285aa00fd778550ac40dddb745fefff03cee",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "85-help-media-answer",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/85-help-media-answer/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/85-help-media-answer/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "162544dcf30b56e38840120375f725c0ce7aba0e29fc99c8c11348abfd941b2b",
+      "hierarchy_sha256": "a36612683f9d09136ff81c1409fdded9d05527d921c53ccd23af6754f1e4d9aa",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "86-feedback-form",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/86-feedback-form/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/86-feedback-form/window.xml",
+      "preserved_screenshot": "86-feedback-form.png",
+      "screenshot_sha256": "8113ac80a6927bac783fc22f21430c69a64a40b533fe8be0cdaf652fe8e5d159",
+      "hierarchy_sha256": "d59d94f212d99e240965b31779fa3dd9220d4725a4f6b961ac52fd984d52b882",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "87-feature-request",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/87-feature-request/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/87-feature-request/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "73ebd5ba9d0d23787cbe8baf05b12c21b43b9d959e9968da14b0b7a9f77c0acd",
+      "hierarchy_sha256": "0a629bbc480630fc6a63ba98f3819b432bf3dccdcb26f2f2ce6942f2f0995c3b",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "88-experience-survey",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/88-experience-survey/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/88-experience-survey/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "7c81f96734807bf25446382b47a62aabe31bc8c4463051f09ed96baf56914f83",
+      "hierarchy_sha256": "88f28b910252dbb829281a74c50198bcf47c8687d661c6a252d6b7c9ce542ad4",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "89-experience-survey-ideas",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/89-experience-survey-ideas/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/89-experience-survey-ideas/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "158ee5027d1c3e6d8e1bfa4db86fe7767ad8d2d2ea9fc169c007bad6a16975b2",
+      "hierarchy_sha256": "53ce255d66f6c05aa73edd5011bee3a5536939b3673099b0b857e0b5e7d31181",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "90-settings-about-links",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/90-settings-about-links/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/90-settings-about-links/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "759ce9b1df8687900b3106cfddbf696fb4315af63ecde78e7af92d9192b413cc",
+      "hierarchy_sha256": "79509af80583d4e5dd756ac79bbed13fea7008fa124bcc2d1b9953733884653a",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "91-app-updates",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/91-app-updates/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/91-app-updates/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "96156ba8dbdc9c5d28c0317637843436f84632d7f88076d4a55012cf95cdbbb0",
+      "hierarchy_sha256": "c1a6dae5ee4d2c8b0ef5b385868e10cce3de7ae35f6b25b08fe4f3aa8a8a8f76",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "92-about-cobalt",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/92-about-cobalt/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/92-about-cobalt/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "eac10bd0c7873ee01157d37e58cc6a890491ebed198b1086753107f51de76bd4",
+      "hierarchy_sha256": "de08133b827706f83bf6b0bc7c3364bc1bc559483eb58e8e5232c6c608622ef9",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "93-privacy-policy",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/93-privacy-policy/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/93-privacy-policy/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "4710fd7e587be7b6195d6e3aee13d2f1643b67c6c3ed8c11e2ebefb98fffdf48",
+      "hierarchy_sha256": "1bb2907fa6c0eea903f27b838e2c94ad0aa14980e6a274223c7b1af235580e60",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "94-privacy-policy-lower",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/94-privacy-policy-lower/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/94-privacy-policy-lower/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "b9cc0b319428032a43c4973c7d98908f516113a635055f4b9850f7e066f0e676",
+      "hierarchy_sha256": "4f25be650039ad7ff22e54996a497cf66c58ffeb472a47b16be94b46c87a286d",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "95-terms",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/95-terms/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/95-terms/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "d6f5456311cfe89e45b8bdd73899a6387bb0fcd235e0e0af153e3a81eda93f6f",
+      "hierarchy_sha256": "003ccc8f3fd02ed000e03551f743d67e919433f15cf1e8930e9bf0fe7e733666",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "96-open-source-licenses",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/96-open-source-licenses/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/96-open-source-licenses/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "d7fd73b69fb12959f5b0aef8a261b2c4573ea917a7e12c36ffd53432005728e7",
+      "hierarchy_sha256": "2810c03f4d4f7316a2f0b32736ca9a90032509ed88e22079e038c8208239091c",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "97-search",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/97-search/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/97-search/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "2106f8fbfeb83fb0bf499da80a19e2bc1d8757e87c2e9b8173c7b49c74f74258",
+      "hierarchy_sha256": "42397bc9928aaf8097a8edb5e6a22fd0a949dd1151fffa87080a78329af0cfae",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "98-search-no-results",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/98-search-no-results/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/98-search-no-results/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "7cbbdf6b50245424a58ba3eb75d162d3571468184140d442b097ab7325f4222d",
+      "hierarchy_sha256": "c62cb1f046836f72274f084453443ab279e262d058534476f2a36dae810d2f0c",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "99-note-reader",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/99-note-reader/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/99-note-reader/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "fe8f20c3c22e6087ac0521df01d3424be6a6c6deb90c1878ae545248ab49af04",
+      "hierarchy_sha256": "f6dd543516b592904f5b45af789f22cf25dd8a609caf1fa43ed54a24e01b1e78",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "100-note-actions",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/100-note-actions/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/100-note-actions/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "6e54c31302c7f642c66db2b8fe4138479ee61fb9ff3db6f9e17481d8a919110c",
+      "hierarchy_sha256": "3210301a52aa90b308a064a1e884a596471c3eb9c2ab526959691946d3d19b12",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "101-folders",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/101-folders/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/101-folders/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "9ad27e612cddb15f0bcf5af214487aa7494f108382bc3f60552213701c77a3de",
+      "hierarchy_sha256": "bbb2f65cddeddf89274abc366c819aafaaa21ac01f8748c875b55a2359ac2eb5",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "102-search-keyboard-dismissed",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/102-search-keyboard-dismissed/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/102-search-keyboard-dismissed/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "90d363cf486e9559750c2454263208f1e8acf18714d426df870b641a89bbb545",
+      "hierarchy_sha256": "42397bc9928aaf8097a8edb5e6a22fd0a949dd1151fffa87080a78329af0cfae",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "103-folders",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/103-folders/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/103-folders/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "bb523a615f426fdba70bf2e5b08976ccf522efddf1d5cdede561d0cdfff8edf5",
+      "hierarchy_sha256": "b35b0669b1c9e08a7bddd07670cf27fd3081b5af3e4d5f9bfc275521a9f7960d",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "104-folders-no-results",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/104-folders-no-results/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/104-folders-no-results/window.xml",
+      "preserved_screenshot": "104-folders-no-results.png",
+      "screenshot_sha256": "177d1c8f7a36799634911624fbe5c790fcb20cffe58fd04208066c305984f869",
+      "hierarchy_sha256": "e829644a88162395aaa90ecc23ff1ea2d7c4a558ec7bf6c29780c06931aa9fa9",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "105-folder-customize",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/105-folder-customize/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/105-folder-customize/window.xml",
+      "preserved_screenshot": "105-folder-customize.png",
+      "screenshot_sha256": "41556185534ca0269e0064d623d7a8611897ef1590675a978fe247bc5e87b5fd",
+      "hierarchy_sha256": "b2c7b7958b4228b4324e5f5cbbc9e72d9d66aae93f6f35d28a281f238f254352",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "106-media",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/106-media/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/106-media/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "5acf1066b1eccc889ea39c9804d83300e0b447f087721878d1238c7c5ac26938",
+      "hierarchy_sha256": "77dc0f5a597439bbba3ec8203c253f6cefd6894ee4c8fa2b478825a4bf715c71",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "107-media-detail",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/107-media-detail/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/107-media-detail/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "202d0a6bf69e16aa50578f5265ef11afbf20c183c8b76550d71b9442e5ac5114",
+      "hierarchy_sha256": "eeeac71d27bb1e85b283c4bf88c79c90b9b53c0b57d7a0262ebd1f15f9f43e8f",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "108-media-detail-lower",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/108-media-detail-lower/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/108-media-detail-lower/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "ad0f201f83aa975f96419dec7de3a0e586a89cdfb799657fc7759a6c8dc18cae",
+      "hierarchy_sha256": "46bbe8d472859829719b6c158a2364f8079cf85952e4c31ebf36062064a05689",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "109-media-filter",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/109-media-filter/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/109-media-filter/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "3700aba668477d38c817303fe59412f410f8ea723ced4e3ea80899756a918e7f",
+      "hierarchy_sha256": "9b8b87fdc97521f13de9ce7aa57656ba3b43d397a25cc43467692ff840152bd9",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "110-media-search",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/110-media-search/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/110-media-search/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "cee2db4e3b4ea1e78d6fdd6edd5a0138e8e993f2ff05cb4c2fb79ef106f98575",
+      "hierarchy_sha256": "7960d7183694c0c929002c5edd3693f3b868fe9c988849a4b2bed8cec5570b05",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "111-home-final-pass",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/111-home-final-pass/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/111-home-final-pass/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "4aa6af9466b1c24f9875d7cf0fd8662be4d9ffdaac47a8e245cc7a20ce6c0ae4",
+      "hierarchy_sha256": "52948f5033ff0bc9df4d7e07dd1243dd55b9b728b2c2f04622a6c1074c15f9d1",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "112-capture-options",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/112-capture-options/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/112-capture-options/window.xml",
+      "preserved_screenshot": null,
+      "screenshot_sha256": "d184578308e3c226741939f7e90cb48a6e6f4f4a94a847228c6af4a8a2231ee5",
+      "hierarchy_sha256": "ac5396e3e505539870764e2e6c3f4277dc5b0a085a6c23107709ebeeca9a7820",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "113-note-capture",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/113-note-capture/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/113-note-capture/window.xml",
+      "preserved_screenshot": "113-note-capture.png",
+      "screenshot_sha256": "4a2c441fe795aed23d4a00cb85bbfa7c2f3563a727c9d6e2a3e340ac137e3c67",
+      "hierarchy_sha256": "142bf56a3ab2e926954dd7ef017e2dc0546ed1993a5302d744f7d2e2363d199e",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "test-reminders-320dp",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/test-reminders-320dp/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/test-reminders-320dp/window.xml",
+      "preserved_screenshot": "test-reminders-320dp.png",
+      "screenshot_sha256": "2510f223c1f462dedf098ad2b6a5dd1dfe5f0623c99be05b2931aaabdc5f7ce1",
+      "hierarchy_sha256": "cffa6a6f1fa6fa7875c0358ff03d64abc36d5497ef9bfc72d39c4b419180d2f3",
+      "width_px": 960,
+      "height_px": 2136
+    },
+    {
+      "observation": "test-reminders-320dp-font2",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/test-reminders-320dp-font2/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/test-reminders-320dp-font2/window.xml",
+      "preserved_screenshot": "test-reminders-320dp-font2.png",
+      "screenshot_sha256": "a14281468046fa9cd67639b5b4ad526bddd3f9cf994c1469c7ae7d98fadaa11a",
+      "hierarchy_sha256": "94cd3d52605a7b76da5b4177bb39108183d11ce4688aa1a253ebb0c7d6884752",
+      "width_px": 960,
+      "height_px": 2136
+    },
+    {
+      "observation": "test-reminders-320dp-font2-controls",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/test-reminders-320dp-font2-controls/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/test-reminders-320dp-font2-controls/window.xml",
+      "preserved_screenshot": "test-reminders-320dp-font2-controls.png",
+      "screenshot_sha256": "e5818f13db768ac75fc4d6d9e376729921b41393769d800c4d9d942abae5f964",
+      "hierarchy_sha256": "21d5462205bea49c817114bf054e780e29ec4deecaf5047448cc7344ee150389",
+      "width_px": 960,
+      "height_px": 2136
+    },
+    {
+      "observation": "test-reminders-448dp-font2",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/test-reminders-448dp-font2/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/test-reminders-448dp-font2/window.xml",
+      "preserved_screenshot": "test-reminders-448dp-font2.png",
+      "screenshot_sha256": "ff756ac67e4770d58b501143f5d6ceff640dfaf557e4aff61932fdf4a393a1ab",
+      "hierarchy_sha256": "9d2819128a7e2656b07b4a6185c22a7dd00b0a9167e8ec379974079eab16e688",
+      "width_px": 1344,
+      "height_px": 2992
+    },
+    {
+      "observation": "test-reminders-font2-controls",
+      "original_screenshot": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/test-reminders-font2-controls/screen.png",
+      "original_ui_hierarchy": "/tmp/cobalt-layout-writing-live-audit-2026-11-15/test-reminders-font2-controls/window.xml",
+      "preserved_screenshot": "test-reminders-font2-controls.png",
+      "screenshot_sha256": "b86472ed56eb978038aa4311ad6934c7787f276d5b72c5572241e9942700f791",
+      "hierarchy_sha256": "ae73318fee26ba9b1d33b0dc089af1546617fc9826076b662a6e4dd70289fa32",
+      "width_px": 1344,
+      "height_px": 2992
+    }
+  ]
+}

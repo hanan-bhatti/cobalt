@@ -1,0 +1,47 @@
+{
+  "date": "2026-11-17",
+  "scope": "Targeted host tests and Android emulator debug build",
+  "package": "com.hanan_bhatti.cobalt.debug",
+  "apk_sha256": "52fa54f4ec5ad1db56cc0292f4111c12f1d7f5d903208f61989eedb9e2d9a71f",
+  "tests": {
+    "com.example.ui.screens.TextAndFontsSettingsScreenTest": {
+      "tests": 5,
+      "failures": 0,
+      "errors": 0
+    },
+    "com.example.ui.screens.AppearancePreviewTest": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0
+    },
+    "com.example.ui.theme.TypographyPrefsTest": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0
+    },
+    "com.example.ui.components.HeatmapSummaryTest": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0
+    }
+  },
+  "screenshots": [
+    "settings.png",
+    "appearance.png",
+    "text-fonts.png",
+    "text-controls.png",
+    "blur-effects.png",
+    "appearance-landscape.png",
+    "text-fonts-landscape.png",
+    "predictive-back-sheet.png"
+  ],
+  "checks": {
+    "predictive_back_cancel_and_commit": true,
+    "font_choice_and_size_persistence": true,
+    "reset_with_undo": true,
+    "both_blur_sliders_and_guidance": true,
+    "portrait_and_landscape_preview_proportions": true,
+    "original_test_preferences_restored": true,
+    "font_scale_and_rotation_restored": true
+  }
+}
