@@ -1,0 +1,63 @@
+{
+  "date": "2026-11-17",
+  "branch": "main",
+  "tests": [
+    {
+      "suite": "com.example.ui.screens.NotesAndFoldersSettingsScreenTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "suite": "com.example.util.FolderRankingEngineTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0
+    },
+    {
+      "suite": "com.example.ui.components.HeatmapSummaryTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0
+    }
+  ],
+  "manual": {
+    "switch_and_alphabetical_example": true,
+    "help_sheet_back_cancel_commit": true,
+    "archive_sheet_cancel_and_selection": true,
+    "category_choice_updates_overview": true,
+    "page_back_cancel_commit": true,
+    "both_preferences_persist_after_cold_start": true,
+    "heatmap_choice_updates_overview": true
+  },
+  "responsive": {
+    "light_theme_and_choice_sheet": true,
+    "340dp_large_text_controls_and_choices_reachable": true,
+    "landscape_large_text_controls_and_help_reachable": true,
+    "preferences_and_device_configuration_restored": true,
+    "full_landscape_pinned_explanation_captured": true,
+    "final_restoration_confirmed_on_disk_and_in_ui": true
+  },
+  "preserved_from_task_baseline": [
+    "app/src/main/kotlin/com/example/ui/components/ScreenWrapper.kt",
+    "app/src/main/kotlin/com/example/ui/navigation/Transitions.kt",
+    "app/src/main/kotlin/com/example/ui/components/ExpressiveSwitch.kt",
+    "app/src/main/kotlin/com/example/ui/components/SettingsScreenComponents.kt",
+    "app/src/main/kotlin/com/example/MainActivity.kt"
+  ],
+  "apk_sha256": "95ee9962077921e87b5285c01d2f0b565e4eb01e16015379c0f23e8e4f0a9c87",
+  "screenshots": "Captured using adb exec-out screencap on emulator-5554; contact sheets retain complete captures and filename labels.",
+  "device_configuration": {
+    "font_scale": "1.0",
+    "accelerometer_rotation": "1",
+    "user_rotation": "0",
+    "wm_size": "Physical size: 1344x2992",
+    "wm_density": "Physical density: 480",
+    "night_mode": "Night mode: no"
+  },
+  "figma": {
+    "page": "369:76",
+    "main_board": "466:20299",
+    "sheets_board": "472:20467"
+  }
+}

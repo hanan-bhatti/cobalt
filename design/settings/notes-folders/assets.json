@@ -1,0 +1,65 @@
+{
+  "method": "Existing Cobalt Android vector geometry reused for editable Figma icons. Archive icons and tick/cross switches reuse approved Figma components.",
+  "icons": [
+    {
+      "role": "folder",
+      "source": "app/src/main/res/drawable/ic_custom_folder.xml",
+      "target": "design/settings/notes-folders/assets/ic_custom_folder.svg",
+      "source_sha256": "0669eaeebfb37f508cfe4a98af8ddad6db6f223c26bf146d13b292f2d82417d6"
+    },
+    {
+      "role": "info",
+      "source": "app/src/main/res/drawable/ic_custom_info.xml",
+      "target": "design/settings/notes-folders/assets/ic_custom_info.svg",
+      "source_sha256": "837eb8e99679af809bbe36460e4fd98b6d0728ec55400d8dc0de7f1002b894cd"
+    },
+    {
+      "role": "history",
+      "source": "app/src/main/res/drawable/ic_custom_history.xml",
+      "target": "design/settings/notes-folders/assets/ic_custom_history.svg",
+      "source_sha256": "f82ad0fb2d3f86ebc5420fa2e09076047a9ce828b27945508aee9170d22092d1"
+    },
+    {
+      "role": "text",
+      "source": "app/src/main/res/drawable/ic_custom_text.xml",
+      "target": "design/settings/notes-folders/assets/ic_custom_text.svg",
+      "source_sha256": "26fc1faa7256f818cef6084da337ef3938fddf89960ae39a19a56411de31c539"
+    },
+    {
+      "role": "pin",
+      "source": "app/src/main/res/drawable/ic_custom_pin.xml",
+      "target": "design/settings/notes-folders/assets/ic_custom_pin.svg",
+      "source_sha256": "bf659529de49c67cc26114a2be6db3da309c06d23d7af85c3cdfe283504385d1"
+    },
+    {
+      "role": "chevron_right",
+      "source": "app/src/main/res/drawable/ic_custom_chevron_right.xml",
+      "target": "design/settings/notes-folders/assets/ic_custom_chevron_right.svg",
+      "source_sha256": "fd070370fec07e08cd4da94bb2d8567c99881358752877918d826e203e5ea86d"
+    },
+    {
+      "role": "close",
+      "source": "app/src/main/res/drawable/ic_custom_close.xml",
+      "target": "design/settings/notes-folders/assets/ic_custom_close.svg",
+      "source_sha256": "ff9f4afe4cd7382c1b3183cebcf2d3fa8fa39c271ea440fbe3b29bf36d00de20"
+    },
+    {
+      "role": "check",
+      "source": "app/src/main/res/drawable/ic_custom_check.xml",
+      "target": "design/settings/notes-folders/assets/ic_custom_check.svg",
+      "source_sha256": "6f8a948b3e40772f1e9a01cbd4fb590482f031a93239e17b49cd3bbc0398a28f"
+    },
+    {
+      "role": "work",
+      "source": "app/src/main/res/drawable/ic_custom_work.xml",
+      "target": "design/settings/notes-folders/assets/ic_custom_work.svg",
+      "source_sha256": "a2ef29f89db96eecd5ffff43dedbf2fe1ffeb84e71b7c4406f8dedc2f6f2904d"
+    },
+    {
+      "role": "idea",
+      "source": "app/src/main/res/drawable/ic_custom_idea.xml",
+      "target": "design/settings/notes-folders/assets/ic_custom_idea.svg",
+      "source_sha256": "84700138da74d52334aa4506d13cf20a32bd6449d7c8f4ef40de671b451c8ea6"
+    }
+  ]
+}
