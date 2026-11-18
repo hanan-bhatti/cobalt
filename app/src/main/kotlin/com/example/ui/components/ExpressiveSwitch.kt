@@ -1,5 +1,7 @@
 package com.example.ui.components
 
+import com.example.R
+import androidx.compose.ui.res.painterResource
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -7,9 +9,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -52,7 +51,7 @@ fun ExpressiveSwitch(
                 label = "switch_thumb_icon"
             ) { isChecked ->
                 Icon(
-                    imageVector = if (isChecked) Icons.Rounded.Check else Icons.Rounded.Close,
+                    painter = painterResource(if (isChecked) R.drawable.ic_custom_check else R.drawable.ic_custom_close),
                     contentDescription = null,
                     modifier = Modifier.size(SwitchDefaults.IconSize)
                 )

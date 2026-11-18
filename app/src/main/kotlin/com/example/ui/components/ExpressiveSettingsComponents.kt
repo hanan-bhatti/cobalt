@@ -22,15 +22,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Clear
-import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -60,10 +57,14 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
@@ -121,7 +122,7 @@ fun SettingsSubsectionHeader(
                     modifier = Modifier.size(24.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Info,
+                        painter = painterResource(R.drawable.ic_custom_info),
                         contentDescription = "More information",
                         tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
                         modifier = Modifier.size(16.dp)
@@ -231,7 +232,7 @@ fun ExpressiveSettingsSectionHeader(
                     modifier = Modifier.size(24.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Info,
+                        painter = painterResource(R.drawable.ic_custom_info),
                         contentDescription = "More information",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         modifier = Modifier.size(18.dp)
@@ -307,23 +308,31 @@ fun ExpressiveSettingsSwitchItem(
     subtitle: String? = null,
     leadingIcon: (@Composable () -> Unit)? = null,
     shape: Shape = RoundedCornerShape(24.dp),
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    compact: Boolean = false
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = if (compact) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surfaceContainer,
         shape = shape,
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth().then(
+            if (compact) Modifier.toggleable(
+                value = checked,
+                enabled = enabled,
+                role = Role.Switch,
+                onValueChange = onCheckedChange
+            ) else Modifier
+        )
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = 16.dp, vertical = if (compact) 16.dp else 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (compact) 12.dp else 14.dp)
         ) {
             if (leadingIcon != null) {
                 Box(
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(if (compact) 40.dp else 24.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     leadingIcon()
@@ -336,8 +345,8 @@ fun ExpressiveSettingsSwitchItem(
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium,
+                    fontWeight = if (compact) FontWeight.Medium else FontWeight.SemiBold,
                     color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
                 if (subtitle != null) {
@@ -352,7 +361,8 @@ fun ExpressiveSettingsSwitchItem(
             ExpressiveSwitch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
-                enabled = enabled
+                enabled = enabled,
+                modifier = if (compact) Modifier.clearAndSetSemantics { } else Modifier
             )
         }
     }
@@ -371,12 +381,13 @@ fun ExpressiveSettingsNavigationItem(
     trailingBadge: String? = null,
     trailingContent: (@Composable () -> Unit)? = null,
     shape: Shape = RoundedCornerShape(24.dp),
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    compact: Boolean = false
 ) {
     Surface(
         onClick = onClick,
         enabled = enabled,
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = if (compact) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surfaceContainer,
         shape = shape,
         modifier = modifier.fillMaxWidth()
     ) {
@@ -385,11 +396,11 @@ fun ExpressiveSettingsNavigationItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.spacedBy(if (compact) 12.dp else 14.dp)
         ) {
             if (leadingIcon != null) {
                 Box(
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(if (compact) 40.dp else 24.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     leadingIcon()
@@ -402,8 +413,8 @@ fun ExpressiveSettingsNavigationItem(
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium,
+                    fontWeight = if (compact) FontWeight.Medium else FontWeight.SemiBold,
                     color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
                 if (subtitle != null) {
@@ -418,6 +429,13 @@ fun ExpressiveSettingsNavigationItem(
             if (trailingContent != null) {
                 trailingContent()
             } else if (trailingBadge != null) {
+                if (compact) {
+                    Text(
+                        text = trailingBadge,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     shape = CircleShape
@@ -430,13 +448,14 @@ fun ExpressiveSettingsNavigationItem(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }
+                }
             }
 
             Icon(
                 painter = painterResource(id = R.drawable.ic_custom_chevron_right),
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(if (compact) 24.dp else 18.dp)
             )
         }
     }
@@ -455,13 +474,34 @@ fun ExpressiveSettingsSelectorItem(
     modifier: Modifier = Modifier,
     description: String? = null,
     leadingIcon: (@Composable () -> Unit)? = null,
-    shape: Shape = RoundedCornerShape(24.dp)
+    shape: Shape = RoundedCornerShape(24.dp),
+    optionColor: ((String) -> Color)? = null,
+    sheetContent: (@Composable (onDismiss: () -> Unit) -> Unit)? = null,
+    compact: Boolean = false,
+    selectedValueInDescription: Boolean = false,
+    enabled: Boolean = true
 ) {
     var showSheet by remember { mutableStateOf(false) }
     val selectedOption = options[selectedKey] ?: selectedKey
 
+    if (compact) {
+        ExpressiveSettingsNavigationItem(
+            title = title,
+            subtitle = if (selectedValueInDescription && description != null) {
+                stringResource(R.string.settings_selected_detail, selectedOption, description)
+            } else description,
+            trailingBadge = if (selectedValueInDescription) null else selectedOption,
+            leadingIcon = leadingIcon,
+            onClick = { showSheet = true },
+            modifier = modifier,
+            shape = shape,
+            enabled = enabled,
+            compact = true
+        )
+    } else {
     Surface(
         onClick = { showSheet = true },
+        enabled = enabled,
         color = MaterialTheme.colorScheme.surfaceContainer,
         shape = shape,
         modifier = modifier.fillMaxWidth()
@@ -508,20 +548,32 @@ fun ExpressiveSettingsSelectorItem(
                         shape = CircleShape,
                         modifier = Modifier.align(Alignment.Start)
                     ) {
-                        Text(
-                            text = selectedOption,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold,
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
-                        )
+                        ) {
+                            optionColor?.invoke(selectedKey)?.let { color ->
+                                Box(Modifier.size(16.dp).background(color, CircleShape))
+                                Spacer(Modifier.width(8.dp))
+                            }
+                            Text(
+                                text = selectedOption,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
         }
     }
 
-    if (showSheet) {
+    }
+
+    if (showSheet && sheetContent != null) {
+        sheetContent { showSheet = false }
+    } else if (showSheet) {
         ModalBottomSheet(
             onDismissRequest = { showSheet = false },
             containerColor = MaterialTheme.colorScheme.surface,
@@ -547,8 +599,9 @@ fun ExpressiveSettingsSelectorItem(
                 ) {
                     items(options.entries.toList()) { (key, optionLabel) ->
                         val isSelected = key == selectedKey
-                        val containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer
-                        val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                        val swatchColor = optionColor?.invoke(key)
+                        val containerColor = if (swatchColor != null) swatchColor.copy(alpha = if (isSelected) 0.24f else 0.12f) else if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer
+                        val contentColor = if (swatchColor != null) MaterialTheme.colorScheme.onSurface else if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
 
                         Surface(
                             onClick = {
@@ -567,6 +620,10 @@ fun ExpressiveSettingsSelectorItem(
                                     .padding(horizontal = 20.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                if (swatchColor != null) {
+                                    Box(Modifier.size(28.dp).background(swatchColor, CircleShape))
+                                    Spacer(Modifier.width(16.dp))
+                                }
                                 Text(
                                     text = optionLabel,
                                     style = MaterialTheme.typography.titleMedium,
@@ -577,7 +634,7 @@ fun ExpressiveSettingsSelectorItem(
 
                                 if (isSelected) {
                                     Icon(
-                                        imageVector = Icons.Rounded.Check,
+                                        painter = painterResource(R.drawable.ic_custom_check),
                                         contentDescription = "Selected",
                                         tint = contentColor
                                     )
@@ -724,7 +781,7 @@ fun ExpressiveSearchableModelSelectorItem(
                     placeholder = { Text("Search Gemini models...") },
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Rounded.Search,
+                            painter = painterResource(R.drawable.ic_custom_search),
                             contentDescription = "Search"
                         )
                     },
@@ -732,7 +789,7 @@ fun ExpressiveSearchableModelSelectorItem(
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { searchQuery = "" }) {
                                 Icon(
-                                    imageVector = Icons.Rounded.Clear,
+                                    painter = painterResource(R.drawable.ic_custom_close),
                                     contentDescription = "Clear search"
                                 )
                             }
@@ -814,7 +871,7 @@ fun ExpressiveSearchableModelSelectorItem(
 
                                     if (isSelected) {
                                         Icon(
-                                            imageVector = Icons.Rounded.CheckCircle,
+                                            painter = painterResource(R.drawable.ic_custom_success_circle),
                                             contentDescription = "Selected",
                                             tint = MaterialTheme.colorScheme.primary
                                         )
@@ -1018,20 +1075,22 @@ fun ExpressiveTypographySliderItem(
     endHint: @Composable (() -> Unit)? = null,
     shape: Shape = RoundedCornerShape(24.dp),
     enabled: Boolean = true,
-    disabledHint: String? = null
+    disabledHint: String? = null,
+    leadingIcon: (@Composable () -> Unit)? = null,
+    compact: Boolean = false
 ) {
     val context = LocalContext.current
     var lastHapticValue by remember { mutableStateOf(value) }
 
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = if (compact) MaterialTheme.colorScheme.surfaceContainerLow else MaterialTheme.colorScheme.surfaceContainer,
         shape = shape,
         modifier = modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp)
+                .padding(horizontal = 16.dp, vertical = if (compact) 12.dp else 14.dp)
         ) {
             // Header Row: Title, Subtitle, and Value Badge
             Row(
@@ -1039,11 +1098,15 @@ fun ExpressiveTypographySliderItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                if (leadingIcon != null) {
+                    Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) { leadingIcon() }
+                    Spacer(Modifier.width(8.dp))
+                }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium,
+                        fontWeight = if (compact) FontWeight.Medium else FontWeight.SemiBold,
                         color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
                     if (subtitle != null) {
@@ -1065,6 +1128,13 @@ fun ExpressiveTypographySliderItem(
 
                 Spacer(modifier = Modifier.width(10.dp))
 
+                if (compact) {
+                    Text(
+                        text = valueDisplay,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceContainerLowest,
                     shape = CircleShape
@@ -1076,6 +1146,7 @@ fun ExpressiveTypographySliderItem(
                         color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                     )
+                }
                 }
             }
 
@@ -1142,7 +1213,8 @@ fun ExpressiveTypographySliderItem(
 fun FloatingScrollbarSettingsItem(
     viewModel: CobaltViewModel,
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(24.dp)
+    shape: Shape = RoundedCornerShape(24.dp),
+    compact: Boolean = false
 ) {
     var showSheet by remember { mutableStateOf(false) }
     val enabled by viewModel.floatingScrollbarEnabled.collectAsState()
@@ -1159,6 +1231,70 @@ fun FloatingScrollbarSettingsItem(
         home && activeCount == 1 -> "Home only"
         mediaHub && activeCount == 1 -> "Media Hub only"
         else -> "$activeCount screens"
+    }
+
+    if (compact) {
+        val summary = if (enabled && activeCount > 0) {
+            pluralStringResource(R.plurals.settings_scrollbar_screen_count, activeCount, activeCount)
+        } else stringResource(R.string.settings_off)
+        ExpressiveSettingsNavigationItem(
+            title = stringResource(R.string.settings_scrollbar),
+            subtitle = stringResource(R.string.settings_scrollbar_summary),
+            trailingBadge = summary,
+            leadingIcon = { SettingsIconBadge(R.drawable.ic_settings_scroll) },
+            onClick = { showSheet = true },
+            modifier = modifier,
+            shape = shape,
+            compact = true
+        )
+        if (showSheet) {
+            SettingsBottomSheet(
+                stringResource(R.string.settings_scrollbar),
+                stringResource(R.string.settings_scrollbar_sheet_description),
+                { showSheet = false }
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()).padding(bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    ExpressiveSettingsSwitchItem(
+                        title = stringResource(R.string.settings_scrollbar_enabled),
+                        subtitle = stringResource(R.string.settings_scrollbar_enabled_description),
+                        checked = enabled,
+                        onCheckedChange = viewModel::setFloatingScrollbarEnabled,
+                        compact = true
+                    )
+                    Column {
+                        SettingsGroupLabel(stringResource(R.string.settings_scrollbar_destinations))
+                        ExpressiveSettingsGroup {
+                            ExpressiveSettingsSwitchItem(
+                                title = stringResource(R.string.settings_scrollbar_notes),
+                                subtitle = stringResource(R.string.settings_scrollbar_notes_description),
+                                checked = notes, enabled = enabled,
+                                onCheckedChange = viewModel::setFloatingScrollbarNotes,
+                                shape = connectedPillShape(0, 3), compact = true
+                            )
+                            ExpressiveSettingsSwitchItem(
+                                title = stringResource(R.string.settings_home),
+                                subtitle = stringResource(R.string.settings_scrollbar_home_description),
+                                checked = home, enabled = enabled,
+                                onCheckedChange = viewModel::setFloatingScrollbarHome,
+                                shape = connectedPillShape(1, 3), compact = true
+                            )
+                            ExpressiveSettingsSwitchItem(
+                                title = stringResource(R.string.settings_scrollbar_media),
+                                subtitle = stringResource(R.string.settings_scrollbar_media_description),
+                                checked = mediaHub, enabled = enabled,
+                                onCheckedChange = viewModel::setFloatingScrollbarMediaHub,
+                                shape = connectedPillShape(2, 3), compact = true
+                            )
+                        }
+                    }
+                    Text(stringResource(R.string.settings_scrollbar_settings_excluded), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        return
     }
 
     Surface(
@@ -1351,7 +1487,7 @@ fun FloatingScrollbarSettingsItem(
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Outlined.Info,
+                                painter = painterResource(R.drawable.ic_custom_info),
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(18.dp)
