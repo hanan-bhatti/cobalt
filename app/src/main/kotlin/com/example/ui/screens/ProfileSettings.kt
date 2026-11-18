@@ -63,10 +63,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.OpenInNew
-import androidx.compose.material.icons.outlined.Warning
-import androidx.compose.material.icons.outlined.Info
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import androidx.compose.material3.Button
@@ -125,8 +121,6 @@ import com.example.ui.components.connectedPillShape
 import com.example.ui.components.rememberCollapsibleTopBarState
 import com.example.ui.viewmodel.CobaltViewModel
 import com.example.utils.DevicePerformance
-import com.example.widget.QuickCaptureWidgetReceiver
-import com.example.widget.RecentItemsWidgetReceiver
 
 /**
  * Settings Categories representing distinct configuration areas in Cobalt.
@@ -153,8 +147,8 @@ enum class SettingsCategory(
         iconRes = R.drawable.ic_custom_reminder
     ),
     INTELLIGENCE(
-        title = "Intelligence & Gemini AI",
-        subtitle = "API key, vision OCR models, and detection sensitivity",
+        title = "AI models",
+        subtitle = "Providers, text capture and voice notes",
         iconRes = R.drawable.ic_custom_ai_brain
     ),
     FLOATING_DOCK(
@@ -164,7 +158,7 @@ enum class SettingsCategory(
     ),
     WIDGETS(
         title = "Home Screen Widgets",
-        subtitle = "Launcher shortcuts, quick capture action, and recent notes",
+        subtitle = "Preview, personalize, and place your collections",
         iconRes = R.drawable.ic_settings_widgets
     ),
     STORAGE_RECOVERY(
@@ -173,7 +167,7 @@ enum class SettingsCategory(
         iconRes = R.drawable.ic_custom_storage
     ),
     DATA_MIGRATION(
-        title = "Data Migration",
+        title = "Note storage update",
         subtitle = "Note storage update and verification results",
         iconRes = R.drawable.ic_custom_sync
     ),
@@ -183,8 +177,8 @@ enum class SettingsCategory(
         iconRes = R.drawable.ic_custom_globe
     ),
     SYSTEM_HEALTH(
-        title = "System & Background Health",
-        subtitle = "Battery optimization and background persistence",
+        title = "Background activity",
+        subtitle = "Battery settings and background updates",
         iconRes = R.drawable.ic_settings_system_health
     )
 }
@@ -315,15 +309,18 @@ fun SettingsScreen(
     onNavigateToArchiveSettings: (() -> Unit)? = null,
     onNavigateToRemindersSettings: (() -> Unit)? = null,
     onNavigateToTextFontsSettings: (() -> Unit)? = null
+    , onNavigateToScreeningWidgetSettings: (() -> Unit)? = null
 ) {
     var selectedCategory by remember { mutableStateOf<SettingsCategory?>(null) }
     var showEdgePanelSettings by remember { mutableStateOf(false) }
     var showWidgetSettings by remember { mutableStateOf(false) }
+    var showScreeningWidgetSettings by remember { mutableStateOf(false) }
     var showEdgeAnimSettings by remember { mutableStateOf(false) }
     var showTextFontsSettings by remember { mutableStateOf(false) }
 
-    BackHandler(enabled = (onNavigateToCategory == null && selectedCategory != null) || (onNavigateToEdgePanelSettings == null && showEdgePanelSettings) || (onNavigateToWidgetSettings == null && showWidgetSettings) || (onNavigateToEdgeAnimSettings == null && showEdgeAnimSettings) || (onNavigateToTextFontsSettings == null && showTextFontsSettings)) {
+    BackHandler(enabled = (onNavigateToCategory == null && selectedCategory != null) || (onNavigateToEdgePanelSettings == null && showEdgePanelSettings) || (onNavigateToWidgetSettings == null && showWidgetSettings) || (onNavigateToScreeningWidgetSettings == null && showScreeningWidgetSettings) || (onNavigateToEdgeAnimSettings == null && showEdgeAnimSettings) || (onNavigateToTextFontsSettings == null && showTextFontsSettings)) {
         when {
+            showScreeningWidgetSettings -> showScreeningWidgetSettings = false
             showTextFontsSettings -> showTextFontsSettings = false
             showEdgeAnimSettings -> showEdgeAnimSettings = false
             showWidgetSettings -> showWidgetSettings = false
@@ -337,13 +334,18 @@ fun SettingsScreen(
         return
     }
 
-    if (showEdgePanelSettings && onNavigateToEdgePanelSettings == null) {
-        EdgePanelSettingsScreen(viewModel = viewModel, onNavigateBack = { showEdgePanelSettings = false })
+    if (showEdgePanelSettings && !showEdgeAnimSettings && onNavigateToEdgePanelSettings == null) {
+        EdgePanelSettingsScreen(viewModel = viewModel, onNavigateBack = { showEdgePanelSettings = false },
+            onNavigateToAnimation = onNavigateToEdgeAnimSettings ?: { showEdgeAnimSettings = true })
         return
     }
 
     if (showWidgetSettings && onNavigateToWidgetSettings == null) {
         WidgetSettingsScreen(viewModel = viewModel, onNavigateBack = { showWidgetSettings = false })
+        return
+    }
+    if (showScreeningWidgetSettings && onNavigateToScreeningWidgetSettings == null) {
+        ScreeningWidgetSettingsScreen(viewModel, onNavigateBack = { showScreeningWidgetSettings = false })
         return
     }
 
@@ -359,6 +361,7 @@ fun SettingsScreen(
             onNavigateBack = { selectedCategory = null },
             onNavigateToEdgePanelSettings = onNavigateToEdgePanelSettings ?: { showEdgePanelSettings = true },
             onNavigateToWidgetSettings = onNavigateToWidgetSettings ?: { showWidgetSettings = true },
+            onNavigateToScreeningWidgetSettings = onNavigateToScreeningWidgetSettings ?: { showScreeningWidgetSettings = true },
             onNavigateToEdgeAnimSettings = onNavigateToEdgeAnimSettings ?: { showEdgeAnimSettings = true },
             onNavigateToGeminiUsage = onNavigateToGeminiUsage ?: {},
             onNavigateToArchiveSettings = onNavigateToArchiveSettings ?: {},
@@ -465,7 +468,24 @@ fun SettingsCategoryDetailScreen(
     onNavigateToArchiveSettings: () -> Unit = {},
     onNavigateToRemindersSettings: () -> Unit = {},
     onNavigateToTextFontsSettings: () -> Unit = {}
+    , onNavigateToScreeningWidgetSettings: () -> Unit = {}
 ) {
+    if (category == SettingsCategory.SYSTEM_HEALTH) {
+        BackgroundActivitySettingsScreen(onNavigateBack)
+        return
+    }
+    if (category == SettingsCategory.INTELLIGENCE) {
+        AiModelsSettingsScreen(viewModel, onNavigateBack, onNavigateToGeminiUsage)
+        return
+    }
+    if (category == SettingsCategory.APPEARANCE) {
+        AppearanceSettingsScreen(viewModel, onNavigateBack, onNavigateToTextFontsSettings)
+        return
+    }
+    if (category == SettingsCategory.ORGANIZATION) {
+        ArchiveOrganizationSettingsScreen(viewModel, onNavigateBack)
+        return
+    }
     if (category == SettingsCategory.STORAGE_RECOVERY) {
         NoteStorageManagementScreen(onBack = onNavigateBack)
         return
@@ -485,16 +505,12 @@ fun SettingsCategoryDetailScreen(
     val density = LocalDensity.current
 
     var hasOverlayPermission by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
-    var isIgnoringBattery by remember {
-        mutableStateOf(com.example.utils.BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context))
-    }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 hasOverlayPermission = Settings.canDrawOverlays(context)
-                isIgnoringBattery = com.example.utils.BatteryOptimizationHelper.isIgnoringBatteryOptimizations(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -528,261 +544,12 @@ fun SettingsCategoryDetailScreen(
                 // ==========================================
                 // SUBPAGE: APPEARANCE & DISPLAY
                 // ==========================================
-                SettingsCategory.APPEARANCE -> {
-                    item {
-                        val hidden by viewModel.settingsRepository.hideRecents.collectAsState()
-                        ExpressiveSettingsSwitchItem(title = "Hide content in Recents",
-                            subtitle = "Also blocks screenshots and screen recording while Cobalt is open",
-                            checked = hidden, onCheckedChange = viewModel.settingsRepository::setHideRecents,
-                            shape = RoundedCornerShape(20.dp))
-                    }
-                    item {
-                        SettingsSubsectionHeader(
-                            title = "Text & Typography",
-                            description = "Local fonts, body font size, line height, and live preview.",
-                            tooltipText = "Configure reading typography for notes and editor with 100% offline FOSS fonts."
-                        )
-
-                        ExpressiveSettingsGroup {
-                            com.example.ui.components.ExpressiveSettingsNavigationItem(
-                                title = "Text & fonts",
-                                subtitle = "Font families, weight, size, line height & live preview",
-                                leadingIcon = {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_custom_text),
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                },
-                                onClick = onNavigateToTextFontsSettings,
-                                shape = RoundedCornerShape(24.dp)
-                            )
-                        }
-                    }
-                    item {
-                        SettingsSubsectionHeader(
-                            title = "Theme & Color Palette",
-                            description = "Choose app visual mode and wallpaper dynamic color extraction.",
-                            tooltipText = "When Dynamic Color is enabled on Android 12+, Cobalt extracts harmonious accent colors directly from your active wallpaper."
-                        )
-
-                        val themeMode by viewModel.settingsRepository.themeMode.collectAsState()
-                        val themeOptions = mapOf(
-                            "System Default" to "System Default",
-                            "Light" to "Light Mode",
-                            "Dark" to "Dark Mode"
-                        )
-                        val hasDynamicColor = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                        val dynamicColorEnabled by viewModel.settingsRepository.dynamicColor.collectAsState()
-                        val totalThemeItems = if (hasDynamicColor) 2 else 1
-                        var idx = 0
-
-                        ExpressiveSettingsGroup {
-                            ExpressiveSettingsSelectorItem(
-                                title = "App Theme",
-                                description = "Light, dark, or system-following interface mode",
-                                options = themeOptions,
-                                selectedKey = themeMode,
-                                onSelectionChanged = { viewModel.settingsRepository.setThemeMode(it) },
-                                shape = connectedPillShape(idx++, totalThemeItems)
-                            )
-                            if (hasDynamicColor) {
-                                ExpressiveSettingsSwitchItem(
-                                    title = "Dynamic Color",
-                                    subtitle = "Adapt accent palette dynamically from wallpaper",
-                                    checked = dynamicColorEnabled,
-                                    onCheckedChange = { viewModel.settingsRepository.setDynamicColor(it) },
-                                    shape = connectedPillShape(idx++, totalThemeItems)
-                                )
-                            }
-                        }
-                    }
-
-                    item {
-                        SettingsSubsectionHeader(
-                            title = "Navigation & Fast Scroll",
-                            description = "Tactile floating pill for rapid scrolling across long screens.",
-                            tooltipText = "The floating scrollbar appears on scroll and lets you drag up/down or tap arrows to jump instantly."
-                        )
-
-                        ExpressiveSettingsGroup {
-                            com.example.ui.components.FloatingScrollbarSettingsItem(viewModel = viewModel)
-                        }
-                    }
-
-                    item {
-                        val isBlurCapable = DevicePerformance.isDeviceCapableOfBlur(context)
-                        val forceDisableBlur by viewModel.forceDisableBlur.collectAsState()
-                        val blurRadius by viewModel.blurRadius.collectAsState()
-                        val blurOpacity by viewModel.blurOpacity.collectAsState()
-
-                        if (isBlurCapable) {
-                            SettingsSubsectionHeader(
-                                title = "Frosted Glass Blur",
-                                description = "Translucent background blur on toolbars, side dock, and dialogs.",
-                                tooltipText = "Frosted glass blur requires hardware acceleration. You can adjust the radius and opacity to balance readability and aesthetics."
-                            )
-
-                            val totalBlurItems = if (!forceDisableBlur) 4 else 1
-                            var blurIdx = 0
-
-                            ExpressiveSettingsGroup {
-                                ExpressiveSettingsSwitchItem(
-                                    title = "Enable Blur Effects",
-                                    subtitle = "Translucent frosted glass across navigation and dock",
-                                    checked = !forceDisableBlur,
-                                    onCheckedChange = { viewModel.setForceDisableBlur(!it) },
-                                    shape = connectedPillShape(blurIdx++, totalBlurItems)
-                                )
-
-                                if (!forceDisableBlur) {
-                                    ExpressiveSettingsSliderItem(
-                                        title = "Blur Diffusion Radius",
-                                        subtitle = "Softness intensity of background blur",
-                                        value = blurRadius.toFloat(),
-                                        valueDisplay = "${blurRadius}dp",
-                                        onValueChange = { viewModel.setBlurRadius(it.toInt()) },
-                                        valueRange = 5f..50f,
-                                        shape = connectedPillShape(blurIdx++, totalBlurItems)
-                                    )
-
-                                    ExpressiveSettingsSliderItem(
-                                        title = "Surface Tint Opacity",
-                                        subtitle = "Density of tinted overlay over blurred elements",
-                                        value = blurOpacity,
-                                        valueDisplay = "${(blurOpacity * 100).toInt()}%",
-                                        onValueChange = { viewModel.setBlurOpacity(it) },
-                                        valueRange = 0.05f..0.80f,
-                                        shape = connectedPillShape(blurIdx++, totalBlurItems)
-                                    )
-
-                                    // Dynamic 10x10 (100 combinations) debounced single-line guidance
-                                    val currentGuidance = remember(blurRadius, blurOpacity) {
-                                        val rBucket = ((blurRadius - 5) / 45f * 9f).roundToInt().coerceIn(0, 9)
-                                        val oBucket = ((blurOpacity - 0.05f) / 0.75f * 9f).roundToInt().coerceIn(0, 9)
-                                        blurGuidanceMatrix[rBucket][oBucket]
-                                    }
-                                    var debouncedGuidance by remember { mutableStateOf(currentGuidance) }
-                                    LaunchedEffect(currentGuidance) {
-                                        delay(200) // 200ms debounce prevents CPU strain during fast sliding
-                                        debouncedGuidance = currentGuidance
-                                    }
-
-                                    Surface(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        shape = connectedPillShape(blurIdx++, totalBlurItems),
-                                        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f)
-                                    ) {
-                                        AnimatedContent(
-                                            targetState = debouncedGuidance,
-                                            transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(180)) },
-                                            label = "blur_slider_guidance"
-                                        ) { guidanceText ->
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Outlined.Info,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                                Text(
-                                                    text = guidanceText,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    item {
-                        SettingsSubsectionHeader(
-                            title = "Haptic Tactile Feedback",
-                            description = "Physical tactile vibrations for navigation, switches, and capture.",
-                            tooltipText = "Cobalt uses Android's haptic vibrator engine to provide subtle tactile clicks when toggling switches or capturing memories."
-                        )
-
-                        var hapticsEnabled by remember {
-                            mutableStateOf(com.example.util.HapticManager.isHapticsEnabled(context))
-                        }
-
-                        ExpressiveSettingsGroup {
-                            ExpressiveSettingsSwitchItem(
-                                title = "Tactile Vibrations",
-                                subtitle = "Subtle vibration for switches, gestures, and actions",
-                                checked = hapticsEnabled,
-                                onCheckedChange = { enabled ->
-                                    com.example.util.HapticManager.setHapticsEnabled(context, enabled)
-                                    hapticsEnabled = enabled
-                                    if (enabled) {
-                                        com.example.util.HapticManager.performSuccess(context)
-                                    }
-                                },
-                                shape = RoundedCornerShape(24.dp)
-                            )
-                        }
-                    }
-                }
+                SettingsCategory.APPEARANCE -> Unit
 
                 // ==========================================
                 // SUBPAGE: ARCHIVE & ORGANIZATION
                 // ==========================================
-                SettingsCategory.ORGANIZATION -> {
-                    item {
-                        SettingsSubsectionHeader(
-                            title = "Smart Folder Ranking",
-                            description = "Prioritize frequently used folders in capture rows and dialogs.",
-                            tooltipText = "When enabled, folders in capture rows and move dialogs are dynamically sorted based on your recent activity, folder assignment frequency, and content affinity."
-                        )
-
-                        val isFolderRankingEnabled by viewModel.settingsRepository.isFolderRankingEnabled.collectAsState()
-                        ExpressiveSettingsGroup {
-                            ExpressiveSettingsSwitchItem(
-                                title = "Smart Folder Ranking",
-                                subtitle = "Adaptive suggestions & usage-based sorting",
-                                checked = isFolderRankingEnabled,
-                                onCheckedChange = { viewModel.settingsRepository.setFolderRankingEnabled(it) },
-                                shape = RoundedCornerShape(24.dp)
-                            )
-                        }
-                    }
-
-                    item {
-                        SettingsSubsectionHeader(
-                            title = "Profile Archive Display Style",
-                            description = "Choose how your archive is visualised on the profile screen.",
-                            tooltipText = "Switch between category counter tiles and an interactive GitHub-style contribution heatmap."
-                        )
-
-                        val profileArchiveStyle by viewModel.settingsRepository.profileArchiveStyle.collectAsState()
-                        val archiveStyleOptions = mapOf(
-                            "pills" to "Category Piles Grid",
-                            "heatmap" to "GitHub-Style Activity Heatmap"
-                        )
-                        ExpressiveSettingsGroup {
-                            ExpressiveSettingsSelectorItem(
-                                title = "Archive Display Style",
-                                description = if (profileArchiveStyle == "heatmap") "GitHub-Style Activity Heatmap" else "Category Piles Grid",
-                                options = archiveStyleOptions,
-                                selectedKey = profileArchiveStyle,
-                                onSelectionChanged = { viewModel.settingsRepository.setProfileArchiveStyle(it) },
-                                shape = RoundedCornerShape(24.dp)
-                            )
-                        }
-                    }
-                }
+                SettingsCategory.ORGANIZATION -> Unit
 
                 // ==========================================
                 // SUBPAGE: ADAPTIVE REMINDERS
@@ -809,341 +576,8 @@ fun SettingsCategoryDetailScreen(
                 // ==========================================
                 // SUBPAGE: INTELLIGENCE & GEMINI AI
                 // ==========================================
-                SettingsCategory.INTELLIGENCE -> {
-                    item {
-                        SettingsSubsectionHeader(
-                            title = "Gemini API Credentials",
-                            description = "Enter your Google AI Studio key to power image OCR and smart note summarization.",
-                            tooltipText = "Your API key is stored securely in encrypted local private preferences and only used for your own document extraction requests."
-                        )
+                SettingsCategory.INTELLIGENCE -> Unit
 
-                        var apiKey by remember { mutableStateOf("") }
-                        val currentKey by viewModel.settingsRepository.geminiApiKey.collectAsState()
-                        LaunchedEffect(currentKey) { apiKey = currentKey }
-                        var keyVisibility by remember { mutableStateOf(false) }
-                        val focusManager = LocalFocusManager.current
-
-                        ExpressiveSettingsGroup {
-                            Surface(
-                                color = MaterialTheme.colorScheme.surfaceContainer,
-                                shape = connectedPillShape(0, 2),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Text(
-                                        text = "API Key",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = "Used for on-device OCR and memory extraction",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(modifier = Modifier.height(10.dp))
-
-                                    OutlinedTextField(
-                                        value = apiKey,
-                                        onValueChange = {
-                                            apiKey = it
-                                            viewModel.settingsRepository.setGeminiApiKey(it)
-                                        },
-                                        placeholder = { Text("Enter your Gemini API key") },
-                                        leadingIcon = {
-                                            Icon(
-                                                painter = painterResource(id = R.drawable.ic_custom_key),
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        },
-                                        trailingIcon = {
-                                            val iconResId = if (keyVisibility) R.drawable.ic_custom_eye else R.drawable.ic_custom_eye_off
-                                            val description = if (keyVisibility) "Hide key" else "Show key"
-                                            IconButton(onClick = { keyVisibility = !keyVisibility }) {
-                                                Icon(
-                                                    painter = painterResource(id = iconResId),
-                                                    contentDescription = description,
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                            }
-                                        },
-                                        singleLine = true,
-                                        textStyle = MaterialTheme.typography.bodyLarge,
-                                        visualTransformation = if (keyVisibility) VisualTransformation.None else PasswordVisualTransformation(),
-                                        shape = RoundedCornerShape(12.dp),
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest
-                                        ),
-                                        modifier = Modifier.fillMaxWidth(),
-                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                                        keyboardActions = KeyboardActions(
-                                            onDone = {
-                                                viewModel.settingsRepository.setGeminiApiKey(apiKey)
-                                                focusManager.clearFocus()
-                                            }
-                                        )
-                                    )
-                                }
-                            }
-
-                            Surface(
-                                onClick = {
-                                    com.example.util.CobaltCustomTabsLauncher.launch(
-                                        context = context,
-                                        url = "https://aistudio.google.com/apikey"
-                                    )
-                                },
-                                color = MaterialTheme.colorScheme.surfaceContainer,
-                                shape = connectedPillShape(1, 2),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Text(
-                                            text = "Get your Gemini API Key from Google AI Studio",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_custom_chevron_right),
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    item {
-                        SettingsSubsectionHeader(
-                            title = "Vision OCR & Multimodal Model",
-                            description = "Select the Gemini model variant used to analyze screenshots and documents.",
-                            tooltipText = "Gemini Flash models are faster and cost-efficient for quick OCR, while Pro models offer deeper reasoning for structured notes."
-                        )
-
-                        val models by viewModel.availableModels.collectAsState()
-                        val selectedModel by viewModel.settingsRepository.selectedModel.collectAsState()
-
-                        ExpressiveSettingsGroup {
-                            ExpressiveSearchableModelSelectorItem(
-                                title = "OCR Vision Model",
-                                description = "Multimodal model for OCR recognition",
-                                models = models,
-                                selectedModel = selectedModel,
-                                onModelSelected = { viewModel.settingsRepository.setSelectedModel(it) },
-                                onRefreshModels = { viewModel.fetchAvailableModels(isUserTriggered = true) },
-                                shape = RoundedCornerShape(24.dp)
-                            )
-                        }
-                    }
-
-                    item {
-                        SettingsSubsectionHeader(
-                            title = "Custom OCR System Prompt",
-                            description = "Customize the prompt used by Gemini when extracting text and formatting captured screenshots.",
-                            tooltipText = "Leave empty to use the system default extraction rules (which include markdown formatting, RTL script preservation, and exact URL extraction). Custom prompts let you inject specialized instructions or tailored outputs."
-                        )
-
-                        val customPrompt by viewModel.settingsRepository.customOcrPrompt.collectAsState()
-                        var promptTextState by remember { mutableStateOf("") }
-                        LaunchedEffect(customPrompt) {
-                            promptTextState = customPrompt
-                        }
-
-                        ExpressiveSettingsGroup {
-                            Surface(
-                                color = MaterialTheme.colorScheme.surfaceContainer,
-                                shape = RoundedCornerShape(24.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
-                                            Text(
-                                                text = "System Prompt",
-                                                style = MaterialTheme.typography.titleMedium,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Surface(
-                                                color = if (customPrompt.isNotBlank()) {
-                                                    MaterialTheme.colorScheme.primaryContainer
-                                                } else {
-                                                    MaterialTheme.colorScheme.surfaceContainerHigh
-                                                },
-                                                shape = RoundedCornerShape(8.dp)
-                                            ) {
-                                                Text(
-                                                    text = if (customPrompt.isNotBlank()) "Custom Active" else "Default Active",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = FontWeight.Medium,
-                                                    color = if (customPrompt.isNotBlank()) {
-                                                        MaterialTheme.colorScheme.onPrimaryContainer
-                                                    } else {
-                                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                                    },
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                                )
-                                            }
-                                        }
-
-                                        if (customPrompt.isNotBlank()) {
-                                            OutlinedButton(
-                                                onClick = {
-                                                    viewModel.settingsRepository.resetCustomOcrPrompt()
-                                                    promptTextState = ""
-                                                },
-                                                shape = RoundedCornerShape(12.dp),
-                                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                                modifier = Modifier.height(32.dp)
-                                            ) {
-                                                Text(
-                                                    text = "Reset Default",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = FontWeight.SemiBold
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = if (customPrompt.isNotBlank()) {
-                                            "Using your custom system prompt for image and document text recognition."
-                                        } else {
-                                            "Using default prompt with markdown rules, RTL preservation, and URL extraction."
-                                        },
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Spacer(modifier = Modifier.height(12.dp))
-
-                                    OutlinedTextField(
-                                        value = promptTextState,
-                                        onValueChange = {
-                                            promptTextState = it
-                                            viewModel.settingsRepository.setCustomOcrPrompt(it)
-                                        },
-                                        placeholder = {
-                                            Text(
-                                                text = SettingsRepository.DEFAULT_OCR_PROMPT,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                            )
-                                        },
-                                        minLines = 4,
-                                        maxLines = 10,
-                                        textStyle = MaterialTheme.typography.bodyMedium,
-                                        shape = RoundedCornerShape(14.dp),
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest
-                                        ),
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    item {
-                        SettingsSubsectionHeader(
-                            title = "Detection Sensitivity",
-                            description = "Threshold for text recognition in low-contrast screenshots.",
-                            tooltipText = "High sensitivity captures small or faint text but may pick up background noise. Medium is balanced for everyday captures."
-                        )
-
-                        val sensitivity by viewModel.settingsRepository.ocrSensitivity.collectAsState()
-
-                        ExpressiveSettingsGroup {
-                            ExpressiveSegmentedChoiceItem(
-                                title = "Sensitivity Level",
-                                subtitle = "Low, Medium, or High extraction threshold",
-                                options = listOf("Low", "Medium", "High"),
-                                selectedOption = sensitivity,
-                                onOptionSelected = { viewModel.settingsRepository.setOcrSensitivity(it) },
-                                shape = RoundedCornerShape(24.dp)
-                            )
-                        }
-                    }
-
-                    item {
-                        SettingsSubsectionHeader(
-                            title = "Audio Speech-to-Text Model",
-                            description = "Select the dedicated Gemini model used to transcribe voice memos and spoken audio.",
-                            tooltipText = "Dedicated transcription models convert speech to structured text directly with high accuracy and speed without needing complex prompts."
-                        )
-
-                        val audioModels by viewModel.availableAudioModels.collectAsState()
-                        val selectedAudioModel by viewModel.settingsRepository.selectedAudioModel.collectAsState()
-
-                        ExpressiveSettingsGroup {
-                            ExpressiveSearchableModelSelectorItem(
-                                title = "Speech-to-Text Model",
-                                description = "Model for audio memo transcription",
-                                models = audioModels,
-                                selectedModel = selectedAudioModel,
-                                onModelSelected = { viewModel.settingsRepository.setSelectedAudioModel(it) },
-                                onRefreshModels = { viewModel.fetchAvailableModels(isUserTriggered = true) },
-                                shape = RoundedCornerShape(24.dp)
-                            )
-                        }
-                    }
-
-                    item {
-                        SettingsSubsectionHeader(
-                            title = "Gemini Token & Request Metrics",
-                            description = "Inspect token consumption, request counts, and task activity for OCR and voice transcription.",
-                            tooltipText = "View detailed analytics on your token consumption and API activity in a clean dedicated metrics dashboard."
-                        )
-
-                        ExpressiveSettingsGroup {
-                            ExpressiveSettingsNavigationItem(
-                                title = "AI Token & Request Usage",
-                                subtitle = "Detailed tokens, OCR requests & speech metrics",
-                                onClick = onNavigateToGeminiUsage,
-                                shape = RoundedCornerShape(24.dp)
-                            )
-                        }
-                    }
-                }
-
-                // ==========================================
-                // SUBPAGE: FLOATING DOCK & CAPTURE
-                // ==========================================
                 SettingsCategory.FLOATING_DOCK -> {
                     item {
                         SettingsSubsectionHeader(
@@ -1181,7 +615,7 @@ fun SettingsCategoryDetailScreen(
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Outlined.Warning,
+                                                painter = painterResource(R.drawable.ic_custom_warning_triangle),
                                                 contentDescription = null,
                                                 tint = MaterialTheme.colorScheme.error,
                                                 modifier = Modifier.size(20.dp)
@@ -1261,174 +695,13 @@ fun SettingsCategoryDetailScreen(
                 // SUBPAGE: HOME SCREEN WIDGETS
                 // ==========================================
                 SettingsCategory.WIDGETS -> {
-                    item {
-                        val appWidgetManager = remember { AppWidgetManager.getInstance(context) }
-                        val recentWidgetIds = remember {
-                            appWidgetManager.getAppWidgetIds(ComponentName(context, RecentItemsWidgetReceiver::class.java))
-                        }
-                        val quickWidgetIds = remember {
-                            appWidgetManager.getAppWidgetIds(ComponentName(context, QuickCaptureWidgetReceiver::class.java))
-                        }
-                        val totalActiveWidgets = recentWidgetIds.size + quickWidgetIds.size
-
-                        SettingsSubsectionHeader(
-                            title = "Home Screen Widgets",
-                            description = if (totalActiveWidgets > 0) "$totalActiveWidgets active widget${if (totalActiveWidgets > 1) "s" else ""} on your launcher."
-                                          else "No widgets added to home screen yet.",
-                            tooltipText = "Widgets provide instant one-tap note capture and dynamic feeds of your recent ideas directly on your Android launcher."
-                        )
-
-                        if (totalActiveWidgets == 0) {
-                            ExpressiveSettingsGroup {
-                                Surface(
-                                    color = MaterialTheme.colorScheme.surfaceContainer,
-                                    shape = RoundedCornerShape(24.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        Text(
-                                            text = "Add Widgets to Your Home Screen",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = "Pin quick capture or recent note widgets directly to your launcher for instant access.",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                            ) {
-                                                OutlinedButton(
-                                                    onClick = {
-                                                        if (appWidgetManager.isRequestPinAppWidgetSupported) {
-                                                            val component = ComponentName(context, QuickCaptureWidgetReceiver::class.java)
-                                                            appWidgetManager.requestPinAppWidget(component, null, null)
-                                                        } else {
-                                                            Toast.makeText(context, "Long-press home screen to add Cobalt widget", Toast.LENGTH_LONG).show()
-                                                        }
-                                                    },
-                                                    modifier = Modifier.weight(1f),
-                                                    shape = RoundedCornerShape(12.dp)
-                                                ) {
-                                                    Text(text = "Add Quick Action", maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                                }
-
-                                                Button(
-                                                    onClick = {
-                                                        if (appWidgetManager.isRequestPinAppWidgetSupported) {
-                                                            val component = ComponentName(context, RecentItemsWidgetReceiver::class.java)
-                                                            appWidgetManager.requestPinAppWidget(component, null, null)
-                                                        } else {
-                                                            Toast.makeText(context, "Long-press home screen to add Cobalt widget", Toast.LENGTH_LONG).show()
-                                                        }
-                                                    },
-                                                    modifier = Modifier.weight(1f),
-                                                    shape = RoundedCornerShape(12.dp)
-                                                ) {
-                                                    Text(text = "Add Recent Notes", maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-                            ExpressiveSettingsGroup {
-                                ExpressiveSettingsNavigationItem(
-                                    title = "Widget Customization & Actions",
-                                    subtitle = "Configure action buttons, category filters, and opacity",
-                                    onClick = onNavigateToWidgetSettings,
-                                    shape = connectedPillShape(0, 2)
-                                )
-
-                                ExpressiveSettingsNavigationItem(
-                                    title = "Force Refresh All Widgets",
-                                    subtitle = "Immediately sync active widgets with latest notes",
-                                    onClick = {
-                                        com.example.widget.WidgetUpdater.update(context)
-                                        Toast.makeText(context, "All widgets refreshed successfully!", Toast.LENGTH_SHORT).show()
-                                    },
-                                    shape = connectedPillShape(1, 2)
-                                )
-                            }
-                        }
-                    }
+                    item { WidgetGalleryList(viewModel, onOpenFolio = onNavigateToWidgetSettings, onOpenScreening = onNavigateToScreeningWidgetSettings) }
                 }
 
                 // ==========================================
                 // SUBPAGE: SYSTEM & BACKGROUND HEALTH
                 // ==========================================
-                SettingsCategory.SYSTEM_HEALTH -> {
-                    item {
-                        val isColorOS = remember { com.example.utils.BatteryOptimizationHelper.isColorOSDevice() }
-                        val titleText = if (isColorOS) "Fix Widget & Dock Loading" else "Allow Background Activity"
-                        val subtextText = if (isColorOS) {
-                            "ColorOS/Oppo/Realme battery managers can aggressively suspend background tasks. Allowing background activity ensures widgets and the floating dock stay updated."
-                        } else {
-                            "Android battery optimization may throttle background updates. Allow background activity to ensure widgets and edge capture function reliably."
-                        }
-
-                        SettingsSubsectionHeader(
-                            title = "Battery & Background Persistence",
-                            description = subtextText,
-                            tooltipText = "Cobalt only uses background execution when updating home screen widgets or running enabled reminders and Trakt tasks."
-                        )
-
-                        ExpressiveSettingsGroup {
-                            Surface(
-                                color = MaterialTheme.colorScheme.surfaceContainer,
-                                shape = RoundedCornerShape(24.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    Text(
-                                        text = if (isIgnoringBattery) "Background Activity Allowed" else "Background Throttling Active",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isIgnoringBattery) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = if (isIgnoringBattery) "Cobalt is exempt from aggressive battery optimization. Widgets and capture services will run reliably."
-                                               else "Tap below to request battery exemption in Android system settings.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-
-                                    if (!isIgnoringBattery) {
-                                        Button(
-                                            onClick = {
-                                                com.example.utils.BatteryOptimizationHelper.requestIgnoreBatteryOptimizations(context)
-                                            },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = MaterialTheme.colorScheme.primary,
-                                                contentColor = MaterialTheme.colorScheme.onPrimary
-                                            ),
-                                            shape = RoundedCornerShape(14.dp),
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Text(text = titleText, fontWeight = FontWeight.Bold)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                SettingsCategory.SYSTEM_HEALTH -> Unit
             }
         }
 
@@ -1441,254 +714,3 @@ fun SettingsCategoryDetailScreen(
         )
     }
 }
-
-/**
- * Handle Position & Geometry Settings Screen with Collapsible Top Bar.
- */
-@Composable
-fun EdgePanelSettingsScreen(viewModel: CobaltViewModel, onNavigateBack: () -> Unit) {
-    val lazyListState = rememberLazyListState()
-    val topBarState = rememberCollapsibleTopBarState(lazyListState, maxHeight = 160.dp)
-    val density = LocalDensity.current
-
-    val side by viewModel.settingsRepository.edgePanelSide.collectAsState()
-    val positionY by viewModel.settingsRepository.edgePanelYPercent.collectAsState()
-    val opacity by viewModel.settingsRepository.edgePanelOpacity.collectAsState()
-    val height by viewModel.settingsRepository.edgePanelHeight.collectAsState()
-    val thickness by viewModel.settingsRepository.edgePanelThickness.collectAsState()
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .nestedScroll(topBarState.nestedScrollConnection)
-    ) {
-        val currentTopBarHeightDp = with(density) { topBarState.heightPx.toDp() }
-        val bottomNavPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-
-        LazyColumn(
-            state = lazyListState,
-            contentPadding = PaddingValues(
-                top = currentTopBarHeightDp + 12.dp,
-                start = 16.dp,
-                end = 16.dp,
-                bottom = bottomNavPadding + 88.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-            modifier = Modifier.fillMaxSize()
-        ) {
-            item {
-                SettingsSubsectionHeader(
-                    title = "Screen Anchor Side",
-                    description = "Choose which edge of the screen the floating handle docks to."
-                )
-
-                ExpressiveSettingsGroup {
-                    ExpressiveSegmentedChoiceItem(
-                        title = "Dock Side",
-                        subtitle = "Select Left or Right screen boundary",
-                        options = listOf("Left", "Right"),
-                        selectedOption = side,
-                        onOptionSelected = { viewModel.settingsRepository.setEdgePanelSide(it) },
-                        shape = RoundedCornerShape(24.dp)
-                    )
-                }
-            }
-
-            item {
-                SettingsSubsectionHeader(
-                    title = "Handle Geometry & Appearance",
-                    description = "Fine-tune vertical position, dimensions, and idle surface opacity."
-                )
-
-                ExpressiveSettingsGroup {
-                    ExpressiveSettingsSliderItem(
-                        title = "Vertical Position",
-                        subtitle = "Percentage offset along the screen edge",
-                        value = positionY,
-                        valueDisplay = "${(positionY * 100).toInt()}%",
-                        onValueChange = { viewModel.settingsRepository.setEdgePanelYPercent(it) },
-                        valueRange = 0f..1f,
-                        shape = connectedPillShape(0, 4)
-                    )
-
-                    ExpressiveSettingsSliderItem(
-                        title = "Handle Opacity",
-                        subtitle = "Transparency when idle on screen",
-                        value = opacity,
-                        valueDisplay = "${(opacity * 100).toInt()}%",
-                        onValueChange = { viewModel.settingsRepository.setEdgePanelOpacity(it) },
-                        valueRange = 0.1f..1f,
-                        shape = connectedPillShape(1, 4)
-                    )
-
-                    ExpressiveSettingsSliderItem(
-                        title = "Handle Height",
-                        subtitle = "Touch target height in dp",
-                        value = height.toFloat(),
-                        valueDisplay = "${height}dp",
-                        onValueChange = { viewModel.settingsRepository.setEdgePanelHeight(it.toInt()) },
-                        valueRange = 50f..200f,
-                        shape = connectedPillShape(2, 4)
-                    )
-
-                    ExpressiveSettingsSliderItem(
-                        title = "Handle Width / Thickness",
-                        subtitle = "Touch target protrusion in dp",
-                        value = thickness.toFloat(),
-                        valueDisplay = "${thickness}dp",
-                        onValueChange = { viewModel.settingsRepository.setEdgePanelThickness(it.toInt()) },
-                        valueRange = 5f..30f,
-                        shape = connectedPillShape(3, 4)
-                    )
-                }
-            }
-        }
-
-        CollapsibleCommonTopBar(
-            title = "Handle Position & Style",
-            subtitle = "Screen edge anchor, size, and opacity",
-            collapseFraction = topBarState.collapseFraction,
-            headerHeight = currentTopBarHeightDp,
-            onBackClick = onNavigateBack
-        )
-    }
-}
-
-/**
- * 10x10 (100 combinations) guidance matrix providing a concise, user-friendly
- * 1-line explanation of the trade-offs (GPU speed, blur aesthetics, legibility, and contrast)
- * for each blur radius (0..9) and tint opacity (0..9) combination.
- */
-private val blurGuidanceMatrix: Array<Array<String>> = arrayOf(
-    // Radius 0: 5-9dp (Ultra Crisp / Minimal Diffusion)
-    arrayOf(
-        "⚡ Ultra-crisp & zero GPU lag; minimal glass frost effect.",
-        "⚡ Sharp underlying text with light tint; near-instant rendering.",
-        "⚡ Crisp details with faint tint; good for rapid glanceability.",
-        "⚡ Sharp edges with clear separation; very low battery impact.",
-        "⚡ Crisp background with balanced tint; text is easily readable.",
-        "⚡ Crisp background with medium-dark tint; high contrast.",
-        "⚡ Near-solid surface with razor-sharp edges; high legibility.",
-        "⚡ Solid card feel with crisp backdrop; minimal frosted sheen.",
-        "⚡ Deep dark tint with sharp underlying shadows; ultra-fast.",
-        "⚡ Near-opaque solid card with zero blur; maximum readability."
-    ),
-    // Radius 1: 10-14dp (Very Light Diffusion)
-    arrayOf(
-        "✨ Subtle frost with faint tint; underlying shapes clearly visible.",
-        "✨ Delicate frosted shimmer; smooth speed with light glass feel.",
-        "✨ Light frosted texture; good balance of clarity and glass tone.",
-        "✨ Clean light frost; text stands out softly over wallpaper.",
-        "✨ Moderate tint over light blur; comfortable everyday contrast.",
-        "✨ Noticeable card presence; softly dims background elements.",
-        "✨ Strong card contrast with light frosted edges; clean reading.",
-        "✨ Deep tint with light frost; focused content, high speed.",
-        "✨ Dark solid tint with subtle frosted borders; high contrast.",
-        "✨ Heavy protective tint with faint frost; maximum text priority."
-    ),
-    // Radius 2: 15-19dp (Gentle Diffusion)
-    arrayOf(
-        "✨ Silky light frost; bright background colors shine through.",
-        "✨ Gentle frosted glass; elegant look with fast frame rates.",
-        "✨ Soft glass layer; wallpaper details gently smoothed out.",
-        "✨ Well-defined frosted card; comfortable daily balance.",
-        "✨ Balanced glass feel; background clutter gently reduced.",
-        "✨ Cozy frosted depth; good separation from vibrant wallpapers.",
-        "✨ Deep glass tint; prevents wallpaper patterns from bleeding.",
-        "✨ High-contrast glass card; crisp typography, subtle frost.",
-        "✨ Rich dark glass; heavy contrast with smooth peripheral blur.",
-        "✨ Near-solid frosted container; high readability on any screen."
-    ),
-    // Radius 3: 20-24dp (Soft Diffusion)
-    arrayOf(
-        "💎 Smooth glass diffusion; wallpaper shines through softly.",
-        "💎 Graceful frosted sheen; soft background with nimble UI.",
-        "💎 Modern frosted acrylic; pleasant aesthetic with clear text.",
-        "💎 Balanced everyday glass: gentle blur with comfortable tint.",
-        "💎 Harmonious glass tone; clean legibility on bright wallpapers.",
-        "💎 Deep frosted panel; background noise comfortably faded.",
-        "💎 Bold frosted presence; strong contrast against busy apps.",
-        "💎 High-legibility frosted shield; sharp icons, low distraction.",
-        "💎 Deep tinted glass; smooth background masking, clear focus.",
-        "💎 Very dark frosted card; excellent daytime outdoor clarity."
-    ),
-    // Radius 4: 25-29dp (Balanced Mid-Diffusion)
-    arrayOf(
-        "💎 Silky authentic glass; background softened into glowing shapes.",
-        "💎 Natural frosted glass; refined blur with light glass shine.",
-        "💎 Classic frosted acrylic: balanced blur, light tint, fluid motion.",
-        "💎 Optimal sweet spot: authentic glass look and crisp typography.",
-        "💎 Rich frosted glass: great depth, smooth contrast, fluid FPS.",
-        "💎 Solid frosted glass: background softened, zero eye strain.",
-        "💎 Pronounced card surface: excellent contrast on bright photos.",
-        "💎 Strong frosted shield: dark tint prevents wallpaper glare.",
-        "💎 Deep velvet frost: heavy tint with smooth Gaussian blur.",
-        "💎 Bold velvet card: strong contrast with deep frosted backdrop."
-    ),
-    // Radius 5: 30-34dp (Medium-Heavy Diffusion)
-    arrayOf(
-        "🌟 Dreamy glass diffusion; background colors glow softly.",
-        "🌟 Velvety frosted glass; smooth bokeh with bright backdrop.",
-        "🌟 Luxurious glass feel; deep background softening, clear text.",
-        "🌟 Premium frosted acrylic: soft background bokeh, crisp labels.",
-        "🌟 Elegant depth of field: smooth blur with balanced contrast.",
-        "🌟 Substantial frosted depth: completely diffuses background.",
-        "🌟 High-contrast acrylic: deep tint ensures effortless reading.",
-        "🌟 Heavy tinted frost: masks complex wallpapers completely.",
-        "🌟 Deep studio frost: bold contrast with velvety smooth blur.",
-        "🌟 Near-opaque frosted card: zero background distraction."
-    ),
-    // Radius 6: 35-39dp (Heavy Diffusion)
-    arrayOf(
-        "🌟 Atmospheric glass glow; background icons turn into soft color.",
-        "🌟 Rich frosted depth; smooth bokeh feel with bright tint.",
-        "🌟 Silky studio glass: heavy background softening with clarity.",
-        "🌟 Plush frosted glass: deep blur hides launcher icon clutter.",
-        "🌟 Refined frosted acrylic: deep depth of field, balanced tint.",
-        "🌟 High-depth frosted card: background noise completely gone.",
-        "🌟 Strong contrast acrylic: high legibility with heavy bokeh.",
-        "🌟 Dense frosted tint: strong protection against busy backgrounds.",
-        "🌟 Deep luxury frost: rich dark backdrop with velvet blur.",
-        "🌟 Heavy dark acrylic: maximum contrast with profound blur."
-    ),
-    // Radius 7: 40-44dp (Profound Diffusion)
-    arrayOf(
-        "🔮 Ethereal glass diffusion; background becomes abstract art.",
-        "🔮 Deep bokeh glass; smooth atmospheric blur with light tint.",
-        "🔮 Velvety atmospheric glass: dreamy background, sharp text.",
-        "🔮 Heavy frosted glass: background elements completely merged.",
-        "🔮 Lush frosted acrylic: deep diffusion with balanced tint.",
-        "🔮 Substantial dark frost: heavy background concealment.",
-        "🔮 Strong frosted contrast: excellent reading comfort.",
-        "🔮 Dense protective glass: strong tint prevents any visual clash.",
-        "🔮 Deep velvet shield: rich dark blur with studio-grade depth.",
-        "🔮 Maximal dark frost: heavy diffusion with dark solid feel."
-    ),
-    // Radius 8: 45-49dp (Very Heavy Diffusion)
-    arrayOf(
-        "🔮 Extreme blur diffusion; background details completely erased.",
-        "🔮 Ultra-soft frosted glass; profound bokeh with light tint.",
-        "🔮 Dreamy luxury glass: rich blur diffusion, clear foreground.",
-        "🔮 Deep atmospheric acrylic: high blur hides background noise.",
-        "🔮 Balanced heavy frost: full background blur with smooth tint.",
-        "🔮 Dense frosted surface: high legibility, velvet background.",
-        "🔮 Strong dark acrylic: deep tint with profound background blur.",
-        "🔮 Heavy dark frosted card: zero background interference.",
-        "🔮 Deep studio velvet: ultra-heavy blur with rich dark tint.",
-        "🔮 Maximum dark studio frost: deep blur, maximum contrast."
-    ),
-    // Radius 9: 50dp (Maximum Diffusion)
-    arrayOf(
-        "🔮 Maximum blur: background is pure abstract gradient light.",
-        "🔮 Ultra-deep bokeh: maximum diffusion with bright transparency.",
-        "🔮 Velvet atmospheric frost: total background smoothing.",
-        "🔮 High-end frosted glass: maximum blur with light clean tint.",
-        "🔮 Supreme frosted balance: ultra-deep blur with optimal tint.",
-        "🔮 Luxurious dark frost: complete background concealment.",
-        "🔮 Heavy dark acrylic: supreme contrast with maximal blur.",
-        "🔮 Maximum frosted shield: complete background distraction shield.",
-        "🔮 Deep velvet acrylic: ultra-heavy blur with deep dark tint.",
-        "🔮 Studio-grade frosted glass: maximum opacity and maximum blur."
-    )
-)

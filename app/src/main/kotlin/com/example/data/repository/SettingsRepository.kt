@@ -74,6 +74,7 @@ class SettingsRepository(private val context: Context) {
             .putString(KEY_TYPOGRAPHY_PRESET, validated.preset.key)
             .apply()
         _typographyPrefs.value = validated
+        com.example.widget.WidgetUpdater.update(context)
     }
 
     fun resetTypographyToDefaults() {
@@ -159,24 +160,6 @@ class SettingsRepository(private val context: Context) {
 
     private val _floatingScrollbarMediaHub = MutableStateFlow(prefs.getBoolean(KEY_FLOATING_SCROLLBAR_MEDIA_HUB, true))
     val floatingScrollbarMediaHub: StateFlow<Boolean> = _floatingScrollbarMediaHub.asStateFlow()
-
-    private val _widgetTheme = MutableStateFlow(prefs.getString(KEY_WIDGET_THEME, "System") ?: "System")
-    val widgetTheme: StateFlow<String> = _widgetTheme.asStateFlow()
-
-    private val _widgetOpacity = MutableStateFlow(prefs.getFloat(KEY_WIDGET_OPACITY, 0.85f))
-    val widgetOpacity: StateFlow<Float> = _widgetOpacity.asStateFlow()
-
-    private val _widgetShowHeader = MutableStateFlow(prefs.getBoolean(KEY_WIDGET_SHOW_HEADER, true))
-    val widgetShowHeader: StateFlow<Boolean> = _widgetShowHeader.asStateFlow()
-
-    private val _widgetCategoryFilter = MutableStateFlow(prefs.getString(KEY_WIDGET_CATEGORY_FILTER, "All") ?: "All")
-    val widgetCategoryFilter: StateFlow<String> = _widgetCategoryFilter.asStateFlow()
-
-    private val _widgetMaxItems = MutableStateFlow(prefs.getInt(KEY_WIDGET_MAX_ITEMS, 10))
-    val widgetMaxItems: StateFlow<Int> = _widgetMaxItems.asStateFlow()
-
-    private val _quickCaptureAction = MutableStateFlow(prefs.getString(KEY_QUICK_CAPTURE_ACTION, "TEXT") ?: "TEXT")
-    val quickCaptureAction: StateFlow<String> = _quickCaptureAction.asStateFlow()
 
     private val _isAutoUpdateCheckEnabled = MutableStateFlow(prefs.getBoolean(KEY_AUTO_UPDATE_CHECK, false))
     val isAutoUpdateCheckEnabled: StateFlow<Boolean> = _isAutoUpdateCheckEnabled.asStateFlow()
@@ -264,58 +247,6 @@ class SettingsRepository(private val context: Context) {
         com.example.widget.WidgetUpdater.update(context)
     }
 
-    fun setWidgetTheme(theme: String) {
-        prefs.edit().putString(KEY_WIDGET_THEME, theme).commit()
-        _widgetTheme.value = theme
-        com.example.widget.WidgetUpdater.update(context)
-    }
-
-    fun setWidgetOpacity(opacity: Float) {
-        prefs.edit().putFloat(KEY_WIDGET_OPACITY, opacity).commit()
-        _widgetOpacity.value = opacity
-        com.example.widget.WidgetUpdater.update(context)
-    }
-
-    fun setWidgetShowHeader(show: Boolean) {
-        prefs.edit().putBoolean(KEY_WIDGET_SHOW_HEADER, show).commit()
-        _widgetShowHeader.value = show
-        com.example.widget.WidgetUpdater.update(context)
-    }
-
-    fun setWidgetCategoryFilter(category: String) {
-        prefs.edit().putString(KEY_WIDGET_CATEGORY_FILTER, category).commit()
-        _widgetCategoryFilter.value = category
-        com.example.widget.WidgetUpdater.update(context)
-    }
-
-    fun setWidgetMaxItems(max: Int) {
-        prefs.edit().putInt(KEY_WIDGET_MAX_ITEMS, max).commit()
-        _widgetMaxItems.value = max
-        com.example.widget.WidgetUpdater.update(context)
-    }
-
-    fun getQuickCaptureActionForSlot(slotIndex: Int): String {
-        return prefs.getString("${KEY_QUICK_CAPTURE_ACTION}_$slotIndex", null)
-            ?: if (slotIndex == 0) _quickCaptureAction.value else when (slotIndex % 3) {
-                1 -> "LINK"
-                2 -> "AUDIO"
-                else -> "TEXT"
-            }
-    }
-
-    fun setQuickCaptureAction(action: String) {
-        setQuickCaptureActionForSlot(0, action)
-    }
-
-    fun setQuickCaptureActionForSlot(slotIndex: Int, action: String) {
-        prefs.edit().putString("${KEY_QUICK_CAPTURE_ACTION}_$slotIndex", action).commit()
-        if (slotIndex == 0) {
-            prefs.edit().putString(KEY_QUICK_CAPTURE_ACTION, action).commit()
-            _quickCaptureAction.value = action
-        }
-        com.example.widget.WidgetUpdater.update(context)
-    }
-
     fun setFloatingOcrEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_FLOATING_OCR, enabled).apply()
         _isFloatingOcrEnabled.value = enabled
@@ -362,29 +293,21 @@ class SettingsRepository(private val context: Context) {
     }
 
     fun applyEdgePanelAnimPreset(preset: String) {
-        setEdgePanelAnimPreset(preset)
-        when (preset) {
-            "Fluid" -> {
-                setEdgePanelAnimStiffness(320f)
-                setEdgePanelAnimDamping(0.68f)
-            }
-            "Bouncy" -> {
-                setEdgePanelAnimStiffness(320f)
-                setEdgePanelAnimDamping(0.58f)
-            }
-            "Snappy" -> {
-                setEdgePanelAnimStiffness(650f)
-                setEdgePanelAnimDamping(0.85f)
-            }
-            "Instant" -> {
-                setEdgePanelAnimStiffness(1000f)
-                setEdgePanelAnimDamping(1.0f)
-            }
-            else -> { // "Smooth" (Default Oppo-like fluid water-drop physics)
-                setEdgePanelAnimStiffness(340f)
-                setEdgePanelAnimDamping(0.72f)
-            }
-        }
+        val physics = com.example.ui.dock.sideDockPhysics(preset)
+        writeEdgePanelAnimation(preset, physics.openingStiffness, physics.openingDamping)
+    }
+
+    fun setCustomEdgePanelAnimation(stiffness: Float, damping: Float) {
+        writeEdgePanelAnimation("Custom", stiffness.coerceIn(120f, 900f), damping.coerceIn(0.45f, 1f))
+    }
+
+    private fun writeEdgePanelAnimation(preset: String, stiffness: Float, damping: Float) {
+        prefs.edit().putString(KEY_EDGE_ANIM_PRESET, preset)
+            .putFloat(KEY_EDGE_ANIM_STIFFNESS, stiffness)
+            .putFloat(KEY_EDGE_ANIM_DAMPING, damping).apply()
+        _edgePanelAnimPreset.value = preset
+        _edgePanelAnimStiffness.value = stiffness
+        _edgePanelAnimDamping.value = damping
     }
 
     fun setHasDismissedOnboarding(dismissed: Boolean) {
@@ -490,7 +413,7 @@ class SettingsRepository(private val context: Context) {
                 prefs.getString(KEY_CUSTOM_OCR_PROMPT, "") ?: ""
 
             KEY_OCR_SENSITIVITY -> _ocrSensitivity.value = prefs.getString(KEY_OCR_SENSITIVITY, "Medium") ?: "Medium"
-            KEY_THEME_MODE -> _themeMode.value = prefs.getString(KEY_THEME_MODE, "System Default") ?: "System Default"
+            KEY_THEME_MODE -> _themeMode.value = prefs.getString(KEY_THEME_MODE, "Light") ?: "Light"
             KEY_FLOATING_OCR -> _isFloatingOcrEnabled.value = prefs.getBoolean(KEY_FLOATING_OCR, false)
             KEY_EDGE_HEIGHT -> _edgePanelHeight.value = prefs.getInt(KEY_EDGE_HEIGHT, 100)
             KEY_EDGE_THICKNESS -> _edgePanelThickness.value = prefs.getInt(KEY_EDGE_THICKNESS, 6)
@@ -513,12 +436,6 @@ class SettingsRepository(private val context: Context) {
             KEY_FLOATING_SCROLLBAR_HOME -> _floatingScrollbarHome.value = prefs.getBoolean(KEY_FLOATING_SCROLLBAR_HOME, true)
             KEY_FLOATING_SCROLLBAR_MEDIA_HUB -> _floatingScrollbarMediaHub.value = prefs.getBoolean(KEY_FLOATING_SCROLLBAR_MEDIA_HUB, true)
             KEY_AUTO_UPDATE_CHECK -> _isAutoUpdateCheckEnabled.value = prefs.getBoolean(KEY_AUTO_UPDATE_CHECK, false)
-            KEY_WIDGET_THEME -> _widgetTheme.value = prefs.getString(KEY_WIDGET_THEME, "System") ?: "System"
-            KEY_WIDGET_OPACITY -> _widgetOpacity.value = prefs.getFloat(KEY_WIDGET_OPACITY, 0.85f)
-            KEY_WIDGET_SHOW_HEADER -> _widgetShowHeader.value = prefs.getBoolean(KEY_WIDGET_SHOW_HEADER, true)
-            KEY_WIDGET_CATEGORY_FILTER -> _widgetCategoryFilter.value = prefs.getString(KEY_WIDGET_CATEGORY_FILTER, "All") ?: "All"
-            KEY_WIDGET_MAX_ITEMS -> _widgetMaxItems.value = prefs.getInt(KEY_WIDGET_MAX_ITEMS, 10)
-            KEY_QUICK_CAPTURE_ACTION -> _quickCaptureAction.value = prefs.getString(KEY_QUICK_CAPTURE_ACTION, "TEXT") ?: "TEXT"
             KEY_EDGE_ANIM_PRESET -> _edgePanelAnimPreset.value = prefs.getString(KEY_EDGE_ANIM_PRESET, "Smooth") ?: "Smooth"
             KEY_EDGE_ANIM_STIFFNESS -> _edgePanelAnimStiffness.value = prefs.getFloat(KEY_EDGE_ANIM_STIFFNESS, 340f)
             KEY_EDGE_ANIM_DAMPING -> _edgePanelAnimDamping.value = prefs.getFloat(KEY_EDGE_ANIM_DAMPING, 0.72f)
@@ -584,12 +501,6 @@ URL EXTRACTION RULES for urls:
         private const val KEY_FLOATING_SCROLLBAR_HOME = "floating_scrollbar_home"
         private const val KEY_FLOATING_SCROLLBAR_MEDIA_HUB = "floating_scrollbar_media_hub"
         private const val KEY_AUTO_UPDATE_CHECK = "auto_update_check_enabled"
-        private const val KEY_WIDGET_THEME = "widget_theme"
-        private const val KEY_WIDGET_OPACITY = "widget_opacity"
-        private const val KEY_WIDGET_SHOW_HEADER = "widget_show_header"
-        private const val KEY_WIDGET_CATEGORY_FILTER = "widget_category_filter"
-        private const val KEY_WIDGET_MAX_ITEMS = "widget_max_items"
-        private const val KEY_QUICK_CAPTURE_ACTION = "quick_capture_action"
         private const val KEY_EDGE_ANIM_PRESET = "edge_panel_anim_preset"
         private const val KEY_EDGE_ANIM_STIFFNESS = "edge_panel_anim_stiffness"
         private const val KEY_EDGE_ANIM_DAMPING = "edge_panel_anim_damping"

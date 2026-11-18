@@ -24,6 +24,11 @@ import com.example.notes.NoteSizePolicy
 
 @Dao
 interface SavedItemDao {
+    @Query("SELECT id, type, substr(title, 1, 180) AS title, timestamp, updatedAt, foldersJson, substr(linkTitle, 1, 180) AS linkTitle, CASE WHEN upper(type) IN ('TEXT', 'CODE') THEN substr(CASE WHEN bodyLocation = 'FILE' THEN preview ELSE content END, 1, 240) ELSE '' END AS excerpt, CASE WHEN upper(type) IN ('IMAGE', 'VIDEO') THEN substr(content, 1, 2048) ELSE '' END AS mediaPath, substr(thumbnailPath, 1, 2048) AS thumbnailPath, substr(linkImage, 1, 2048) AS linkImage, substr(linkDescription, 1, 240) AS linkDescription FROM saved_items WHERE isDeleted = 0 AND isArchived = 0")
+    suspend fun getFolioItems(): List<com.example.widget.FolioItemRow>
+
+    @Query("SELECT id, type, substr(title, 1, 180) AS title, timestamp, updatedAt, foldersJson, substr(linkTitle, 1, 180) AS linkTitle, CASE WHEN upper(type) IN ('TEXT', 'CODE') THEN substr(CASE WHEN bodyLocation = 'FILE' THEN preview ELSE content END, 1, 240) ELSE '' END AS excerpt, CASE WHEN upper(type) IN ('IMAGE', 'VIDEO') THEN substr(content, 1, 2048) ELSE '' END AS mediaPath, substr(thumbnailPath, 1, 2048) AS thumbnailPath, substr(linkImage, 1, 2048) AS linkImage, substr(linkDescription, 1, 240) AS linkDescription FROM saved_items WHERE isDeleted = 0 AND isArchived = 0")
+    fun observeFolioItems(): Flow<List<com.example.widget.FolioItemRow>>
     @Query("SELECT EXISTS(SELECT 1 FROM saved_items WHERE id != :excluded AND isDeleted = 0 AND upper(type) = 'MEDIA' AND lower(mediaType) = :kind AND ((traktId = :trakt AND :trakt > 0) OR (tmdbId = :tmdb AND :tmdb > 0) OR (imdbId = :imdb AND :imdb != '')))")
     suspend fun hasOtherMediaIdentity(excluded: String, kind: String, trakt: Long, tmdb: Int, imdb: String): Boolean
 
@@ -45,6 +50,13 @@ interface SavedItemDao {
     suspend fun otherMediaPaths(excludedId: String): List<OwnedMediaPaths>
     @Query("SELECT id, content AS path, thumbnailPath, isDeleted, type FROM saved_items WHERE upper(type) IN ('LINK', 'IMAGE', 'VIDEO', 'AUDIO', 'MEDIA')")
     suspend fun mediaStorageItems(): List<MediaStorageItem>
+    /** Screening reads media only, never note bodies. */
+    @Query("SELECT * FROM saved_items WHERE upper(type) = 'MEDIA' AND isDeleted = 0")
+    suspend fun screeningMedia(): List<SavedItemEntity>
+
+    @Query("SELECT * FROM saved_items WHERE upper(type) = 'MEDIA' AND isDeleted = 0")
+    fun observeScreeningMedia(): Flow<List<SavedItemEntity>>
+
     @Query("SELECT id FROM saved_items WHERE upper(type) = 'MEDIA' AND isDeleted = 0")
     suspend fun activeMediaIds(): List<String>
     @Query("SELECT id, mediaType, traktId, tmdbId, imdbId, watchStatus, inWatchlist, userRating, lastWatchedAt, timestamp, showProgressJson FROM saved_items WHERE upper(type) = 'MEDIA' AND isDeleted = 0 AND lower(mediaType) IN ('movie', 'tv') AND id > :after ORDER BY id LIMIT 100")

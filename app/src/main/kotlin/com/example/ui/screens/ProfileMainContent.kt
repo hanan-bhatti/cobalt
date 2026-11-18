@@ -52,9 +52,6 @@ import com.example.ui.components.bounceClick
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import android.widget.Toast
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import android.Manifest
@@ -79,7 +76,20 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.KeyboardActions
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.Role
+import com.example.ui.components.ExpressiveSettingsNavigationItem
+import com.example.ui.components.SettingsBottomSheet
+import com.example.ui.components.SettingsGroupLabel
+import com.example.ui.components.SettingsIconBadge
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ProfileMainContent(
     viewModel: CobaltViewModel,
@@ -88,342 +98,256 @@ fun ProfileMainContent(
     onNavigateToSettings: () -> Unit,
     onNavigateToMovieApiKey: () -> Unit = {},
     onNavigateToTraktSync: () -> Unit = {},
-    onNavigateToCategory: (String) -> Unit = {}
+    onNavigateToCategory: (String) -> Unit = {},
+    onNavigateToPreferences: (SettingsCategory) -> Unit = { onNavigateToSettings() },
+    onNavigateToWidgets: () -> Unit = { onNavigateToPreferences(SettingsCategory.WIDGETS) },
+    onNavigateToSideDock: () -> Unit = { onNavigateToPreferences(SettingsCategory.FLOATING_DOCK) },
+    showBackButton: Boolean = false
 ) {
-
-    val allItems by viewModel.allItems.collectAsState()
-    val tmdbApiKey by viewModel.tmdbApiKey.collectAsState()
-    var showSurveySheet by remember { mutableStateOf(false) }
-
-    val totalItems = allItems.size
-    val totalLinks = allItems.count { it.type == SavedItemType.LINK }
-    val totalImages = allItems.count { it.type == SavedItemType.IMAGE }
-    val totalVideos = allItems.count { it.type == SavedItemType.VIDEO }
-    val totalText = allItems.count { it.type == SavedItemType.TEXT }
-    val totalCode = allItems.count { it.type == SavedItemType.CODE }
-    val totalAudio = allItems.count { it.type == SavedItemType.AUDIO }
-    val totalMedia = allItems.count { it.type == SavedItemType.MEDIA }
-
-    val profileArchiveStyle by viewModel.settingsRepository.profileArchiveStyle.collectAsState()
-
+    val items by viewModel.allItems.collectAsState()
+    val archiveStyle by viewModel.settingsRepository.profileArchiveStyle.collectAsState()
+    val dockEnabled by viewModel.settingsRepository.isFloatingOcrEnabled.collectAsState()
     val context = LocalContext.current
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(scrollBehavior.nestedScrollConnection),
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_nav_settings_outline),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    text = "Settings",
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                                Text(
-                                    text = "SETTINGS",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.secondary,
-                                    letterSpacing = 1.sp
-                                )
-                            }
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background
-                    ),
-                    scrollBehavior = scrollBehavior
-                )
-            },
-            containerColor = MaterialTheme.colorScheme.background
-        ) { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 100.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
-            ) {
-            // DOWNLOAD PROGRESS
-
-            // YOUR ARCHIVE
-            SectionContainer(title = "YOUR ARCHIVE") {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            Text(text = "$totalItems", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = "items captured", fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 6.dp))
-                        }
-
-                        // Style Toggle (Pills vs GitHub-Style Heatmap)
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                        ) {
-                            Row(modifier = Modifier.padding(3.dp)) {
-                                val isHeatmap = profileArchiveStyle == "heatmap"
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(9.dp))
-                                        .background(if (!isHeatmap) MaterialTheme.colorScheme.primary else Color.Transparent)
-                                        .clickable { viewModel.settingsRepository.setProfileArchiveStyle("pills") }
-                                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                                ) {
-                                    Text(
-                                        text = "Piles",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (!isHeatmap) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(9.dp))
-                                        .background(if (isHeatmap) MaterialTheme.colorScheme.primary else Color.Transparent)
-                                        .clickable { viewModel.settingsRepository.setProfileArchiveStyle("heatmap") }
-                                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                                ) {
-                                    Text(
-                                        text = "Heatmap",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isHeatmap) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-
-                    if (profileArchiveStyle == "heatmap") {
-                        com.example.ui.components.KnowledgeHeatmap(
-                            items = allItems,
-                            weeksToShow = 20,
-                            modifier = Modifier.padding(vertical = 12.dp)
-                        )
-                    } else {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                ArchiveStatRow(
-                                    iconResId = R.drawable.ic_custom_link, count = totalLinks, label = "Links",
-                                    baseColor = CategoryLink,
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { onNavigateToCategory("Links") }
-                                )
-                                ArchiveStatRow(
-                                    iconResId = R.drawable.ic_custom_image, count = totalImages, label = "Images",
-                                    baseColor = CategoryImage,
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { onNavigateToCategory("Images") }
-                                )
-                            }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                ArchiveStatRow(
-                                    iconResId = R.drawable.ic_custom_video, count = totalVideos, label = "Videos",
-                                    baseColor = CategoryVideo,
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { onNavigateToCategory("Videos") }
-                                )
-                                ArchiveStatRow(
-                                    iconResId = R.drawable.ic_custom_text, count = totalText, label = "Text",
-                                    baseColor = CategoryText,
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { onNavigateToCategory("Text") }
-                                )
-                            }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                ArchiveStatRow(
-                                    iconResId = R.drawable.ic_custom_code, count = totalCode, label = "Code",
-                                    baseColor = CategoryCode,
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { onNavigateToCategory("Code") }
-                                )
-                                ArchiveStatRow(
-                                    iconResId = R.drawable.ic_custom_voice, count = totalAudio, label = "Audio",
-                                    baseColor = CategoryAudio,
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { onNavigateToCategory("Audio") }
-                                )
-                            }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                ArchiveStatRow(
-                                    iconResId = R.drawable.ic_custom_movie, count = totalMedia, label = "Movies & Anime",
-                                    baseColor = CategoryMedia,
-                                    modifier = Modifier.weight(1f),
-                                    onClick = { onNavigateToCategory("Movies & Anime") }
-                                )
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
-                        }
-                    }
-                }
+    val aiRevision by com.example.data.remote.ai.AiProviderStore.changes.collectAsState()
+    val aiConnection = remember(aiRevision) { com.example.data.remote.ai.AiProviderStore(context).connection() }
+    val geminiKey = aiConnection.key
+    val reminders = remember(context) { com.example.util.AdaptiveReminderStore(context) }
+    var remindersEnabled by remember { mutableStateOf(reminders.isRemindersEnabled) }
+    var overlayAllowed by remember { mutableStateOf(android.provider.Settings.canDrawOverlays(context)) }
+    var notificationsAllowed by remember { mutableStateOf(androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()) }
+    var showActivity by rememberSaveable { mutableStateOf(false) }
+    var showSurvey by rememberSaveable { mutableStateOf(false) }
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(owner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                remindersEnabled = reminders.isRemindersEnabled
+                overlayAllowed = android.provider.Settings.canDrawOverlays(context)
+                notificationsAllowed = androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()
             }
-
-            // PREFERENCES & TOOLS
-            SectionContainer(title = "PREFERENCES & TOOLS") {
-                ClickableRow(
-                    title = "Appearance & Preferences",
-                    subtitle = "Theme, frosted blur, Gemini AI, and floating capture dock",
-                    leadingIconRes = R.drawable.ic_custom_settings,
-                    onClick = onNavigateToSettings
-                )
-
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                ClickableRow(
-                    title = "Media & Providers",
-                    subtitle = "Trakt, TMDB, Jikan and search preferences",
-                    leadingIconRes = R.drawable.ic_custom_movie,
-                    onClick = onNavigateToTraktSync
-                )
-            }
-
-            // 1. HELP & COMMUNITY
-            SectionContainer(title = "HELP & COMMUNITY") {
-                Column {
-                    ClickableRow(
-                        title = "Help & Support",
-                        subtitle = "Frequently asked questions & guides",
-                        leadingIconRes = R.drawable.ic_custom_help,
-                        onClick = { onNavigateToLegal("support") }
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-                    ClickableRow(
-                        title = "Feedback & Bug Reports",
-                        subtitle = "Report bugs or request new features",
-                        leadingIconRes = R.drawable.ic_custom_feedback,
-                        onClick = { onNavigateToLegal("feedback") }
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-                    ClickableRow(
-                        title = "App experience survey",
-                        subtitle = "A few taps to share your experience by email",
-                        leadingIconRes = R.drawable.ic_custom_survey,
-                        onClick = { showSurveySheet = true }
-                    )
-                }
-            }
-
-            // 2. UPDATES & ABOUT
-            SectionContainer(title = "UPDATES & ABOUT") {
-                Column {
-                    ClickableRow(
-                        title = "App Updates & Release Notes",
-                        subtitle = "v${com.example.util.AppVersionManager.currentVersionName} • Check for updates",
-                        leadingIconRes = R.drawable.ic_custom_sync,
-                        onClick = { onNavigateToLegal("release_updates") }
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-                    ClickableRow(
-                        title = "About Cobalt",
-                        subtitle = "Universal capture & personal archive",
-                        leadingIconRes = R.drawable.ic_custom_info,
-                        onClick = { onNavigateToLegal("about") }
-                    )
-                }
-            }
-
-            // 3. LEGAL & PRIVACY
-            SectionContainer(title = "LEGAL & PRIVACY") {
-                Column {
-                    ClickableRow(
-                        title = "Privacy Policy",
-                        subtitle = "Data protection & privacy rights",
-                        leadingIconRes = R.drawable.ic_custom_lock,
-                        onClick = { onNavigateToLegal("privacy") }
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-                    ClickableRow(
-                        title = "Terms & Conditions",
-                        subtitle = "GNU AGPL v3 license terms",
-                        leadingIconRes = R.drawable.ic_custom_terms,
-                        onClick = { onNavigateToLegal("terms") }
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), modifier = Modifier.padding(horizontal = 16.dp))
-                    ClickableRow(
-                        title = "Open Source Licenses",
-                        subtitle = "Third-party libraries & bundled OFL fonts",
-                        leadingIconRes = R.drawable.ic_custom_code,
-                        onClick = { onNavigateToLegal("licenses") }
-                    )
-                }
-            }
-
-            if (showSurveySheet) {
-                com.example.ui.components.SurveyBottomSheet(
-                    viewModel = viewModel,
-                    onDismissRequest = { showSurveySheet = false }
-                )
-            }
-
-            // App Version Info Footer
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { onNavigateToLegal("release_updates") }
-                    .padding(vertical = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Cobalt",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "Version ${com.example.util.AppVersionManager.currentVersionName} (${com.example.util.AppVersionManager.currentVersionCode})",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(40.dp))
         }
+        owner.lifecycle.addObserver(observer)
+        onDispose { owner.lifecycle.removeObserver(observer) }
+    }
+    val stats = remember(items) { archiveCategoryStats(items) }
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    val listState = rememberLazyListState()
+    val off = stringResource(R.string.settings_off)
+    val on = stringResource(R.string.settings_on)
+    val permissionNeeded = stringResource(R.string.settings_permission_needed)
 
+    Scaffold(
+        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineLarge) },
+                navigationIcon = {
+                    if (showBackButton) IconButton(onClick = onNavigateBack) {
+                        Icon(painterResource(R.drawable.ic_custom_back), stringResource(R.string.settings_back))
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                scrollBehavior = scrollBehavior
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize().padding(padding).testTag("settings_overview_list"),
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 104.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            item(key = "archive_preview") {
+                Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = RoundedCornerShape(24.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(Modifier.weight(1f)) {
+                                Text(stringResource(R.string.settings_archive), style = MaterialTheme.typography.titleLarge)
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.Center) {
+                                    Text(
+                                        pluralStringResource(R.plurals.settings_saved_item_count, items.size, java.text.NumberFormat.getInstance().format(items.size)),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.heightIn(min = 48.dp).wrapContentHeight(Alignment.CenterVertically)
+                                    )
+                                    TextButton(onClick = { showActivity = true }, contentPadding = PaddingValues(0.dp)) {
+                                        Text(stringResource(R.string.settings_view_activity), style = MaterialTheme.typography.labelLarge)
+                                    }
+                                }
+                            }
+                            ArchiveViewToggle(archiveStyle == "heatmap", viewModel.settingsRepository::setProfileArchiveStyle)
+                        }
+                        if (archiveStyle == "heatmap") {
+                            com.example.ui.components.KnowledgeHeatmap(items, compact = true)
+                        } else {
+                            ArchiveCategoryGrid(stats, onNavigateToCategory, isDark)
+                        }
+                    }
+                }
+            }
+            item(key = "personalize") {
+                SettingsOverviewGroup(stringResource(R.string.settings_personalize)) {
+                    SettingsOverviewRow(R.string.settings_appearance, R.string.settings_appearance_summary, R.drawable.ic_settings_appearance, SettingsCategory.APPEARANCE, isDark, onClick = { onNavigateToPreferences(SettingsCategory.APPEARANCE) })
+                    SettingsOverviewRow(R.string.settings_notes_folders, R.string.settings_notes_folders_summary, R.drawable.ic_custom_organization, SettingsCategory.ORGANIZATION, isDark, onClick = { onNavigateToPreferences(SettingsCategory.ORGANIZATION) })
+                    SettingsOverviewRow(R.string.settings_widgets, R.string.settings_widgets_summary, R.drawable.ic_settings_widgets, SettingsCategory.WIDGETS, isDark, onClick = onNavigateToWidgets)
+                }
+            }
+            item(key = "capture_reminders") {
+                SettingsOverviewGroup(stringResource(R.string.settings_capture_reminders)) {
+                    SettingsOverviewRow(R.string.settings_side_dock, R.string.settings_side_dock_summary, R.drawable.ic_settings_floating_dock, SettingsCategory.FLOATING_DOCK, isDark, if (!dockEnabled) off else if (!overlayAllowed) permissionNeeded else on, onNavigateToSideDock)
+                    SettingsOverviewRow(R.string.settings_gemini, R.string.settings_gemini_summary, R.drawable.ic_settings_intelligence, SettingsCategory.INTELLIGENCE, isDark, if (aiConnection.provider == com.example.data.remote.ai.AiProvider.CUSTOM && aiConnection.baseUrl.isNotBlank() && geminiKey.isBlank()) "Endpoint saved" else stringResource(if (geminiKey.isBlank()) R.string.settings_not_set_up else R.string.settings_key_saved)) { onNavigateToPreferences(SettingsCategory.INTELLIGENCE) }
+                    SettingsOverviewRow(R.string.settings_reminders, R.string.settings_reminders_summary, R.drawable.ic_custom_reminder, SettingsCategory.REMINDERS, isDark, if (!remindersEnabled) off else if (!notificationsAllowed) permissionNeeded else on) { onNavigateToPreferences(SettingsCategory.REMINDERS) }
+                }
+            }
+            item(key = "library_device") {
+                SettingsOverviewGroup(stringResource(R.string.settings_library_device)) {
+                    SettingsOverviewRow(R.string.settings_media_providers, R.string.settings_media_providers_summary, R.drawable.ic_custom_movie, null, isDark, onClick = onNavigateToTraktSync)
+                    SettingsOverviewRow(R.string.settings_storage, R.string.settings_storage_summary, R.drawable.ic_custom_storage, SettingsCategory.STORAGE_RECOVERY, isDark) { onNavigateToPreferences(SettingsCategory.STORAGE_RECOVERY) }
+                    SettingsOverviewRow(R.string.settings_storage_update, R.string.settings_storage_update_summary, R.drawable.ic_custom_sync, null, isDark) { onNavigateToPreferences(SettingsCategory.DATA_MIGRATION) }
+                    if (com.example.util.AppFeatureFlags.webCompanion) {
+                        SettingsOverviewRow(R.string.settings_web_companion, R.string.settings_web_companion_summary, R.drawable.ic_custom_globe, SettingsCategory.WEB_COMPANION, isDark) { onNavigateToPreferences(SettingsCategory.WEB_COMPANION) }
+                    }
+                    SettingsOverviewRow(R.string.settings_background, R.string.settings_background_summary, R.drawable.ic_settings_system_health, SettingsCategory.SYSTEM_HEALTH, isDark) { onNavigateToPreferences(SettingsCategory.SYSTEM_HEALTH) }
+                }
+            }
+            item(key = "help_about") {
+                SettingsOverviewGroup(stringResource(R.string.settings_help_about)) {
+                    SettingsOverviewRow(R.string.settings_help, R.string.settings_help_summary, R.drawable.ic_custom_help, null, isDark) { onNavigateToLegal("support") }
+                    SettingsOverviewRow(R.string.settings_feedback, R.string.settings_feedback_summary, R.drawable.ic_custom_feedback, null, isDark) { onNavigateToLegal("feedback") }
+                    SettingsOverviewRow(R.string.settings_survey, R.string.settings_survey_summary, R.drawable.ic_custom_survey, null, isDark) { showSurvey = true }
+                    SettingsOverviewRow(R.string.settings_updates, R.string.settings_updates_summary, R.drawable.ic_custom_sync, null, isDark, com.example.util.AppVersionManager.currentVersionName) { onNavigateToLegal("release_updates") }
+                    SettingsOverviewRow(R.string.settings_about, R.string.settings_about_summary, R.drawable.ic_custom_info, null, isDark) { onNavigateToLegal("about") }
+                }
+            }
+            item(key = "legal_version") {
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally), modifier = Modifier.fillMaxWidth()) {
+                        TextButton(onClick = { onNavigateToLegal("privacy") }) { Text(stringResource(R.string.settings_privacy), style = MaterialTheme.typography.labelLarge) }
+                        TextButton(onClick = { onNavigateToLegal("terms") }) { Text(stringResource(R.string.settings_terms), style = MaterialTheme.typography.labelLarge) }
+                        TextButton(onClick = { onNavigateToLegal("licenses") }) { Text(stringResource(R.string.settings_licenses), style = MaterialTheme.typography.labelLarge) }
+                    }
+                    Text(stringResource(R.string.settings_app_version, com.example.util.AppVersionManager.currentVersionName, com.example.util.AppVersionManager.currentVersionCode), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+    if (showActivity) {
+        SettingsBottomSheet(stringResource(R.string.settings_activity_title), stringResource(R.string.settings_activity_description), { showActivity = false }) {
+            Column(Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                com.example.ui.components.KnowledgeHeatmap(items, compact = true)
+                SettingsGroupLabel(stringResource(R.string.settings_categories))
+                ArchiveCategoryGrid(stats, { category -> showActivity = false; onNavigateToCategory(category) }, isDark)
+            }
+        }
+    }
+    if (showSurvey) {
+        com.example.ui.components.SurveyBottomSheet(viewModel, onDismissRequest = { showSurvey = false })
+    }
+}
 
+@Composable
+private fun SettingsOverviewGroup(title: String, content: @Composable () -> Unit) {
+    Column {
+        SettingsGroupLabel(title)
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = RoundedCornerShape(24.dp)) {
+            Column { content() }
+        }
+    }
+}
+
+@Composable
+private fun SettingsOverviewRow(
+    title: Int,
+    subtitle: Int,
+    icon: Int,
+    category: SettingsCategory?,
+    isDark: Boolean,
+    value: String? = null,
+    onClick: () -> Unit
+) {
+    val accent = when (title) {
+        R.string.settings_appearance -> com.example.ui.theme.MainSettingsAccent.APPEARANCE
+        R.string.settings_notes_folders -> com.example.ui.theme.MainSettingsAccent.NOTES_FOLDERS
+        R.string.settings_widgets -> com.example.ui.theme.MainSettingsAccent.WIDGETS
+        R.string.settings_side_dock -> com.example.ui.theme.MainSettingsAccent.SIDE_DOCK
+        R.string.settings_gemini -> com.example.ui.theme.MainSettingsAccent.AI_MODELS
+        R.string.settings_reminders -> com.example.ui.theme.MainSettingsAccent.REMINDERS
+        R.string.settings_media_providers -> com.example.ui.theme.MainSettingsAccent.MEDIA_ACCOUNTS
+        R.string.settings_storage -> com.example.ui.theme.MainSettingsAccent.STORAGE
+        R.string.settings_storage_update -> com.example.ui.theme.MainSettingsAccent.STORAGE_UPDATE
+        R.string.settings_background -> com.example.ui.theme.MainSettingsAccent.BACKGROUND_ACTIVITY
+        R.string.settings_web_companion -> com.example.ui.theme.MainSettingsAccent.WEB_COMPANION
+        R.string.settings_help -> com.example.ui.theme.MainSettingsAccent.HELP
+        R.string.settings_feedback -> com.example.ui.theme.MainSettingsAccent.FEEDBACK
+        R.string.settings_survey -> com.example.ui.theme.MainSettingsAccent.SURVEY
+        R.string.settings_updates -> com.example.ui.theme.MainSettingsAccent.UPDATES
+        else -> com.example.ui.theme.MainSettingsAccent.ABOUT
+    }.colors(isDark)
+    ExpressiveSettingsNavigationItem(
+        title = stringResource(title),
+        subtitle = stringResource(subtitle),
+        leadingIcon = {
+            SettingsIconBadge(icon, containerColor = accent.container, iconColor = accent.icon)
+        },
+        trailingBadge = value,
+        onClick = onClick,
+        shape = RoundedCornerShape(0.dp),
+        compact = true
+    )
+}
+
+@Composable
+private fun ArchiveViewToggle(isHeatmap: Boolean, onSelect: (String) -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(12.dp)) {
+        Row {
+            listOf(
+                Triple(true, R.drawable.ic_archive_heatmap, R.string.settings_show_heatmap),
+                Triple(false, R.drawable.ic_archive_categories, R.string.settings_show_categories)
+            ).forEach { (heatmap, icon, description) ->
+                Box(
+                    modifier = Modifier.size(48.dp).selectable(selected = isHeatmap == heatmap, role = Role.RadioButton, onClick = { onSelect(if (heatmap) "heatmap" else "pills") }),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(Modifier.size(36.dp).background(if (isHeatmap == heatmap) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(9.dp)), contentAlignment = Alignment.Center) {
+                        Icon(painterResource(icon), stringResource(description), tint = if (isHeatmap == heatmap) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+private data class ArchiveCategoryStat(val label: Int, val filter: String, val icon: Int, val count: Int, val color: Color)
+
+private fun archiveCategoryStats(items: List<com.example.data.model.SavedItem>): List<ArchiveCategoryStat> = listOf(
+    ArchiveCategoryStat(R.string.settings_category_links, "Links", R.drawable.ic_custom_link, items.count { it.type == SavedItemType.LINK }, CategoryLink),
+    ArchiveCategoryStat(R.string.settings_category_images, "Images", R.drawable.ic_custom_image, items.count { it.type == SavedItemType.IMAGE }, CategoryImage),
+    ArchiveCategoryStat(R.string.settings_category_videos, "Videos", R.drawable.ic_custom_video, items.count { it.type == SavedItemType.VIDEO }, CategoryVideo),
+    ArchiveCategoryStat(R.string.settings_category_text, "Text", R.drawable.ic_custom_text, items.count { it.type == SavedItemType.TEXT }, CategoryText),
+    ArchiveCategoryStat(R.string.settings_category_code, "Code", R.drawable.ic_custom_code, items.count { it.type == SavedItemType.CODE }, CategoryCode),
+    ArchiveCategoryStat(R.string.settings_category_audio, "Audio", R.drawable.ic_custom_voice, items.count { it.type == SavedItemType.AUDIO }, CategoryAudio),
+    ArchiveCategoryStat(R.string.settings_category_media, "Movies & Anime", R.drawable.ic_custom_movie, items.count { it.type == SavedItemType.MEDIA }, CategoryMedia)
+)
+
+@Composable
+private fun ArchiveCategoryGrid(stats: List<ArchiveCategoryStat>, onSelect: (String) -> Unit, isDark: Boolean) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        stats.chunked(2).forEach { pair ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                pair.forEach { stat ->
+                    val color = stat.color.toThemeColor(isDark)
+                    Surface(onClick = { onSelect(stat.filter) }, color = color.copy(alpha = if (isDark) 0.16f else 0.1f), shape = RoundedCornerShape(12.dp), modifier = Modifier.weight(1f)) {
+                        Row(Modifier.heightIn(min = 48.dp).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(painterResource(stat.icon), null, tint = color, modifier = Modifier.size(20.dp))
+                            Text(stringResource(stat.label), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                            Text(java.text.NumberFormat.getInstance().format(stat.count), style = MaterialTheme.typography.labelLarge)
+                        }
+                    }
+                }
+                if (pair.size == 1) Spacer(Modifier.weight(1f))
+            }
         }
     }
 }

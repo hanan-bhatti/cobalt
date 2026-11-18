@@ -19,6 +19,7 @@
 package com.example
 
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import android.content.Intent
 import android.net.Uri
@@ -79,9 +80,6 @@ import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.FoldersScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.viewmodel.CobaltViewModel
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
 import com.example.ui.components.CustomBottomBar
 import com.example.ui.components.BottomBarItem
 import com.example.ui.components.ScreenWrapper
@@ -108,30 +106,12 @@ import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.roundToInt
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.outlined.Person
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.Archive
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Search
 
 class MainActivity : ComponentActivity() {
     private val viewModel: CobaltViewModel by viewModels()
@@ -545,40 +525,67 @@ class MainActivity : ComponentActivity() {
                                             ProfileMainContent(
                                                 viewModel = viewModel,
                                                 onNavigateBack = { navController.popBackStack() },
-                                                onNavigateToLegal = { route -> navController.navigate(route) },
+                                                onNavigateToLegal = { navController.navigate(it) },
+                                                onNavigateToSettings = { navController.navigate("settings") },
+                                                onNavigateToMovieApiKey = { navController.navigate("movie_api_key") },
+                                                onNavigateToTraktSync = { navController.navigate("trakt_sync_settings") },
                                                 onNavigateToCategory = { category ->
                                                     viewModel.setFolderFilter(category)
                                                     navController.navigate("home") {
                                                         popUpTo("home") { inclusive = false }
                                                     }
                                                 },
-                                                onNavigateToSettings = { navController.navigate("settings") },
-                                                onNavigateToMovieApiKey = { navController.navigate("movie_api_key") },
-                                                onNavigateToTraktSync = { navController.navigate("trakt_sync_settings") }
+                                                onNavigateToPreferences = { category ->
+                                                    val route = when (category) {
+                                                        SettingsCategory.ORGANIZATION -> "archive_organization_settings"
+                                                        SettingsCategory.REMINDERS -> "adaptive_reminders_settings"
+                                                        SettingsCategory.WIDGETS -> "widget_settings"
+                                                        SettingsCategory.FLOATING_DOCK -> "edge_panel_settings"
+                                                        else -> "settings_category/${category.name}"
+                                                    }
+                                                    navController.navigate(route)
+                                                },
+                                                onNavigateToWidgets = { navController.navigate("widgets") },
+                                                onNavigateToSideDock = { navController.navigate("edge_panel_settings") },
+                                                showBackButton = false
                                             )
+                                        }
+                                    }
+                                    composable("trash") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            val trashContext = androidx.compose.ui.platform.LocalContext.current
+                                            val trashManager = androidx.compose.runtime.remember(trashContext) { com.example.notes.TrashManager(trashContext) }
+                                            com.example.ui.screens.NoteTrashScreen(trashManager, onBack = { navController.popBackStack() })
                                         }
                                     }
                                     composable("settings") {
                                         ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
-                                            com.example.ui.screens.SettingsScreen(
+                                            ProfileMainContent(
                                                 viewModel = viewModel,
                                                 onNavigateBack = { navController.popBackStack() },
+                                                onNavigateToLegal = { navController.navigate(it) },
+                                                onNavigateToSettings = { navController.navigate("settings") },
+                                                onNavigateToMovieApiKey = { navController.navigate("movie_api_key") },
+                                                onNavigateToTraktSync = { navController.navigate("trakt_sync_settings") },
                                                 onNavigateToCategory = { category ->
-                                                    if (category == com.example.ui.screens.SettingsCategory.ORGANIZATION) {
-                                                        navController.navigate("archive_organization_settings")
-                                                    } else if (category == com.example.ui.screens.SettingsCategory.REMINDERS) {
-                                                        navController.navigate("adaptive_reminders_settings")
-                                                    } else {
-                                                        navController.navigate("settings_category/${category.name}")
+                                                    viewModel.setFolderFilter(category)
+                                                    navController.navigate("home") {
+                                                        popUpTo("home") { inclusive = false }
                                                     }
                                                 },
-                                                onNavigateToEdgePanelSettings = { navController.navigate("edge_panel_settings") },
-                                                onNavigateToWidgetSettings = { navController.navigate("widget_settings") },
-                                                onNavigateToEdgeAnimSettings = { navController.navigate("edge_anim_settings") },
-                                                onNavigateToGeminiUsage = { navController.navigate("gemini_usage") },
-                                                onNavigateToArchiveSettings = { navController.navigate("archive_organization_settings") },
-                                                onNavigateToRemindersSettings = { navController.navigate("adaptive_reminders_settings") },
-                                                onNavigateToTextFontsSettings = { navController.navigate("text_fonts_settings") }
+                                                onNavigateToPreferences = { category ->
+                                                    val route = when (category) {
+                                                        SettingsCategory.ORGANIZATION -> "archive_organization_settings"
+                                                        SettingsCategory.REMINDERS -> "adaptive_reminders_settings"
+                                                        SettingsCategory.WIDGETS -> "widget_settings"
+                                                        SettingsCategory.FLOATING_DOCK -> "edge_panel_settings"
+                                                        else -> "settings_category/${category.name}"
+                                                    }
+                                                    navController.navigate(route)
+                                                },
+                                                onNavigateToWidgets = { navController.navigate("widgets") },
+                                                onNavigateToSideDock = { navController.navigate("edge_panel_settings") },
+                                                showBackButton = true
                                             )
                                         }
                                     }
@@ -597,6 +604,7 @@ class MainActivity : ComponentActivity() {
                                                 onNavigateBack = { navController.popBackStack() },
                                                 onNavigateToEdgePanelSettings = { navController.navigate("edge_panel_settings") },
                                                 onNavigateToWidgetSettings = { navController.navigate("widget_settings") },
+                                                onNavigateToScreeningWidgetSettings = { navController.navigate("screening_widget_settings") },
                                                 onNavigateToEdgeAnimSettings = { navController.navigate("edge_anim_settings") },
                                                 onNavigateToGeminiUsage = { navController.navigate("gemini_usage") },
                                                 onNavigateToArchiveSettings = { navController.navigate("archive_organization_settings") },
@@ -629,10 +637,42 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
                                     }
+                                    composable("screening_recommendations?itemId={itemId}&source={source}", arguments = listOf(
+                                        navArgument("itemId") { type = NavType.StringType; nullable = true; defaultValue = null },
+                                        navArgument("source") { type = NavType.StringType; defaultValue = "ALL" }
+                                    )) { entry ->
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.ScreeningRecommendationsScreen(viewModel, onNavigateBack = { navController.popBackStack() },
+                                                initialItemId = entry.arguments?.getString("itemId")?.takeIf { it.isNotBlank() },
+                                                source = runCatching { com.example.widget.ScreeningSource.valueOf(entry.arguments?.getString("source").orEmpty()) }.getOrDefault(com.example.widget.ScreeningSource.ALL),
+                                                onTaste = { itemId, source -> navController.navigate("screening_taste?itemId=${android.net.Uri.encode(itemId.orEmpty())}&source=${source.name}") })
+                                        }
+                                    }
+                                    composable("screening_taste?itemId={itemId}&source={source}", arguments = listOf(
+                                        navArgument("itemId") { type = NavType.StringType; nullable = true; defaultValue = null },
+                                        navArgument("source") { type = NavType.StringType; defaultValue = "ALL" }
+                                    )) { entry ->
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.ScreeningTasteScreen(viewModel, onNavigateBack = { navController.popBackStack() },
+                                                initialItemId = entry.arguments?.getString("itemId")?.takeIf { it.isNotBlank() },
+                                                source = runCatching { com.example.widget.ScreeningSource.valueOf(entry.arguments?.getString("source").orEmpty()) }.getOrDefault(com.example.widget.ScreeningSource.ALL))
+                                        }
+                                    }
+                                    composable("screening_morning_settings") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.ScreeningMorningSettingsScreen(onNavigateBack = { navController.popBackStack() })
+                                        }
+                                    }
+                                    composable("screening_feedback/{token}") { entry ->
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.ScreeningQuestionScreen(entry.arguments?.getString("token").orEmpty(), viewModel, onNavigateBack = { navController.popBackStack() })
+                                        }
+                                    }
                                     composable("adaptive_reminders_settings") {
                                         ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
                                             com.example.ui.screens.AdaptiveRemindersSettingsScreen(
                                                 viewModel = viewModel,
+                                                onScreening = { navController.navigate("screening_recommendations") },
                                                 onNavigateBack = { navController.popBackStack() }
                                             )
                                         }
@@ -665,8 +705,17 @@ class MainActivity : ComponentActivity() {
                                         ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
                                             com.example.ui.screens.EdgePanelSettingsScreen(
                                                 viewModel = viewModel,
-                                                onNavigateBack = { navController.popBackStack() }
+                                                onNavigateBack = { navController.popBackStack() },
+                                                onNavigateToAnimation = { navController.navigate("edge_anim_settings") }
                                             )
+                                        }
+                                    }
+                                    composable("widgets") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.WidgetGalleryScreen(viewModel,
+                                                onBack = { navController.popBackStack() },
+                                                onOpenFolio = { navController.navigate("widget_settings") },
+                                                onOpenScreening = { navController.navigate("screening_widget_settings") })
                                         }
                                     }
                                     composable("widget_settings") {
@@ -675,6 +724,15 @@ class MainActivity : ComponentActivity() {
                                                 viewModel = viewModel,
                                                 onNavigateBack = { navController.popBackStack() }
                                             )
+                                        }
+                                    }
+                                    composable("screening_widget_settings") {
+                                        ScreenWrapper(navController = navController, viewModel = viewModel, animatedVisibilityScope = this) {
+                                            com.example.ui.screens.ScreeningWidgetSettingsScreen(viewModel,
+                                                onNavigateBack = { navController.popBackStack() },
+                                                onRecommendations = { itemId, source -> navController.navigate("screening_recommendations?itemId=${android.net.Uri.encode(itemId.orEmpty())}&source=${source.name}") },
+                                                onTaste = { itemId, source -> navController.navigate("screening_taste?itemId=${android.net.Uri.encode(itemId.orEmpty())}&source=${source.name}") },
+                                                onMorningCheckIn = { navController.navigate("screening_morning_settings") })
                                         }
                                     }
                                     composable("edge_anim_settings") {
@@ -949,11 +1007,15 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         if (com.example.notes.StartupCrashGuard.isSafeMode || com.example.notes.NoteMigrationManager.shouldPauseBackground(this)) return
         handleIntent(intent)
-        pendingNavDestination.value = intent.getStringExtra("NAVIGATE_TO")
+        intent.getStringExtra("NAVIGATE_TO")?.let { pendingNavDestination.value = it }
     }
 
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
+
+        intent.getStringExtra(com.example.media.recommendation.ScreeningNotifications.EXTRA_TOKEN)?.let { token ->
+            pendingNavDestination.value = "screening_feedback/${Uri.encode(token)}"
+        }
 
         val reminderItemId = intent.getStringExtra(com.example.util.AdaptiveReminderNotificationHelper.EXTRA_REMINDER_ITEM_ID)
         if (reminderItemId != null) {
@@ -970,6 +1032,18 @@ class MainActivity : ComponentActivity() {
             viewModel.openItemById(openItemId)
         }
 
+        if (intent.action == "com.example.ACTION_OPEN_FOLIO_FOLDER" || intent.action == "com.example.ACTION_FOLIO_CAPTURE") {
+            val name = intent.getStringExtra("FOLIO_FOLDER")
+            lifecycleScope.launch {
+                val exists = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    com.example.data.repository.CobaltRepository(applicationContext).getAllFolderEntitiesFlow().first().any { it.name == name }
+                }
+                if (!exists) pendingNavDestination.value = "widget_settings"
+                else if (intent.action == "com.example.ACTION_OPEN_FOLIO_FOLDER") pendingNavDestination.value = "folder/${Uri.encode(name)}"
+                else viewModel.startManualCapture(com.example.data.model.SavedItemType.TEXT, initialFolders = listOfNotNull(name))
+            }
+            return
+        }
         val action = intent.action
         val type = intent.type
 
