@@ -1,0 +1,233 @@
+<section id="cobalt-learning-example" data-viz-composition>
+  <style>
+    #cobalt-learning-example { display: grid; gap: calc(var(--font-size-base) * 1); }
+    #cobalt-learning-example .example-heading { display: grid; gap: calc(var(--font-size-base) * .25); }
+    #cobalt-learning-example .example-section { display: grid; gap: calc(var(--font-size-base) * .5); }
+    #cobalt-learning-example .example-evidence { display: grid; gap: calc(var(--font-size-base) * .5); margin-top: calc(var(--font-size-base) * .5); }
+  </style>
+
+  <div class="example-heading">
+    <h2>How a rating changes recommendations</h2>
+    <p class="text-small text-muted">Fictional titles · current genre-scoring formula · no personal data loaded</p>
+  </div>
+
+  <div class="viz-controls">
+    <label class="form-label" for="cobalt-example-rating">
+      Cold Case rating: <output id="cobalt-example-rating-value" class="tabular-nums" for="cobalt-example-rating">9/10</output>
+      <input class="form-range" id="cobalt-example-rating" type="range" min="1" max="10" step="1" value="9" disabled>
+    </label>
+    <label class="form-label" for="cobalt-example-film">
+      Title to inspect
+      <select class="form-select" id="cobalt-example-film" disabled>
+        <option value="midnight">Midnight Signal</option>
+        <option value="orbit">Orbit</option>
+        <option value="short-break">A Short Break</option>
+      </select>
+    </label>
+  </div>
+
+  <section id="cobalt-example-taste" class="example-section" data-viz-composition>
+    <div class="example-heading">
+      <h3>What the feedback suggests</h3>
+      <p class="text-small text-muted">Negative: less often · positive: more often · no feedback stays unknown</p>
+    </div>
+    <div data-viz-container></div>
+    <script type="application/json" data-viz-chart>
+      {
+        "id": "cobalt-example-taste",
+        "title": "Example genre preferences",
+        "showHeader": false,
+        "description": "Fictional evidence. Counts refer to distinct example titles for each genre; a title can contribute to more than one genre. Values are preference weights, not enjoyment probabilities.",
+        "summary": "Thriller has two contributing titles, Crime one, Science fiction one, Drama three, Comedy one and Horror one. Adventure has no feedback and is unknown.",
+        "height": 280,
+        "spec": {
+          "type": "horizontalBar",
+          "x": "preference",
+          "y": "genre",
+          "xLabel": "Preference weight",
+          "xDomain": [-1, 1],
+          "showValues": true,
+          "sortOrder": "original",
+          "valueFormat": { "style": "decimal", "maximumFractionDigits": 2 }
+        },
+        "columns": ["genre", "preference"],
+        "rows": [
+          ["Thriller · 2 titles", 0.2839506172839506],
+          ["Crime · 1 title", 0.19444444444444445],
+          ["Science fiction · 1 title", 0.19444444444444445],
+          ["Drama · 3 titles", 0.21565656565656566],
+          ["Comedy · 1 title", -0.08333333333333333],
+          ["Horror · 1 title", -0.25],
+          ["Adventure · no feedback", null]
+        ]
+      }
+    </script>
+  </section>
+
+  <p id="cobalt-example-effect" class="text-small" aria-live="polite">Cold Case's rating influences Thriller and Crime. Adventure has no feedback.</p>
+
+  <hr>
+
+  <section id="cobalt-example-score" class="example-section" data-viz-composition>
+    <div class="example-heading">
+      <h3>How the title's points add up</h3>
+      <p id="cobalt-example-score-label" class="text-small text-muted">Midnight Signal · Thriller / Crime · raw ranking points before variety and selection</p>
+    </div>
+    <div data-viz-container></div>
+    <script type="application/json" data-viz-chart>
+      {
+        "id": "cobalt-example-score",
+        "title": "Example title score",
+        "showHeader": false,
+        "description": "Midnight Signal is a fictional unwatched 98-minute film saved 45 days ago and suggested twice. All candidates start with 20 base points. The ending is the raw score, before diversity and shortlist selection.",
+        "summary": "20 base points plus 18 rediscovery points, 4.305555555555555 taste points, 5.742962094733643 age points, minus 3 repeat points and plus 3 runtime points equals 48.0485176502892 raw ranking points.",
+        "height": 300,
+        "spec": {
+          "type": "waterfall",
+          "x": "factor",
+          "y": "points",
+          "yLabel": "Ranking points",
+          "beginning": 20,
+          "ending": 48.0485176502892,
+          "valueFormat": { "style": "decimal", "maximumFractionDigits": 2 }
+        },
+        "columns": ["factor", "points"],
+        "rows": [
+          ["Rediscover", 18],
+          ["Taste", 4.305555555555555],
+          ["Age", 5.742962094733643],
+          ["Repeats", -3],
+          ["Runtime", 3]
+        ]
+      }
+    </script>
+  </section>
+
+  <details>
+    <summary>Evidence behind this example</summary>
+    <div class="example-evidence text-small">
+      <div id="cobalt-example-source-rating">Cold Case · rating 9/10 · Thriller and Crime</div>
+      <div>Star Road · rating 9/10 · Science fiction and Drama</div>
+      <div>Small Town · rating 7/10 · Drama</div>
+      <div>Sunday · rating 4/10 · Comedy</div>
+      <div>Late Shift · Good pick response 60 days ago · Thriller</div>
+      <div>Dark House · Not interested response · Horror</div>
+      <div>Long Road · completed without a rating · Drama</div>
+    </div>
+  </details>
+
+  <script>
+    (() => {
+      /* BEGIN SCREENING EXAMPLE CALCULATIONS */
+      const exampleGenres = ["Thriller", "Crime", "Science fiction", "Drama", "Comedy", "Horror", "Adventure"];
+      const exampleFilms = {
+        midnight: { title: "Midnight Signal", genres: ["Thriller", "Crime"], ageDays: 45, runtime: 98, shown: 2, watching: false },
+        orbit: { title: "Orbit", genres: ["Science fiction", "Drama"], ageDays: 16, runtime: 115, shown: 0, watching: true, idleDays: 3 },
+        "short-break": { title: "A Short Break", genres: ["Comedy"], ageDays: 10, runtime: 88, shown: 0, watching: false }
+      };
+      function buildScreeningExample(rating, filmId) {
+        if (!Number.isInteger(rating) || rating < 1 || rating > 10) throw new Error("Example rating must be an integer from 1 to 10");
+        if (!Object.hasOwn(exampleFilms, filmId)) throw new Error("Unknown example title");
+        const evidence = [
+          { id: "cold-case", genres: ["Thriller", "Crime"], reward: (rating - 5.5) / 4.5, weight: 1 },
+          { id: "star-road", genres: ["Science fiction", "Drama"], reward: (9 - 5.5) / 4.5, weight: 1 },
+          { id: "small-town", genres: ["Drama"], reward: (7 - 5.5) / 4.5, weight: 1 },
+          { id: "sunday", genres: ["Comedy"], reward: (4 - 5.5) / 4.5, weight: 1 },
+          { id: "late-shift", genres: ["Thriller"], reward: 1, weight: Math.pow(2, -60 / 60) },
+          { id: "dark-house", genres: ["Horror"], reward: -1, weight: 1 },
+          { id: "long-road", genres: ["Drama"], reward: 0.15, weight: 0.5 }
+        ];
+        const profile = exampleGenres.map(genre => {
+          const values = evidence.filter(e => e.genres.includes(genre));
+          const mass = values.reduce((sum, e) => sum + e.weight, 0);
+          const value = values.length ? values.reduce((sum, e) => sum + e.reward * e.weight, 0) / (3 + mass) : null;
+          const count = new Set(values.map(e => e.id)).size;
+          const label = count ? `${genre} · ${count} ${count === 1 ? "title" : "titles"}` : `${genre} · no feedback`;
+          return { genre, count, mass, value, label };
+        });
+        const film = exampleFilms[filmId];
+        const affinity = film.genres.reduce((sum, genre) => sum + (profile.find(p => p.genre === genre).value ?? 0), 0) / film.genres.length;
+        const movements = [[film.watching ? "Continue" : film.ageDays >= 30 ? "Rediscover" : "Watchlist", film.watching ? 20 : film.ageDays >= 30 ? 18 : 12]];
+        if (film.watching) movements.push(["Recent progress", 8 * Math.exp(-film.idleDays / 14)]);
+        movements.push(["Taste", affinity * 18]);
+        movements.push(["Age", Math.log1p(film.ageDays) * 1.5]);
+        movements.push(["Repeats", -Math.min(12, film.shown * 1.5)]);
+        movements.push(["Runtime", !film.watching && film.runtime > 0 && film.runtime <= 100 ? 3 : 0]);
+        const rawScore = 20 + movements.reduce((sum, row) => sum + row[1], 0);
+        const profileConfig = {
+          id: "cobalt-example-taste", title: "Example genre preferences", showHeader: false,
+          description: "Fictional evidence. Counts refer to distinct example titles for each genre; a title can contribute to more than one genre. Values are preference weights, not enjoyment probabilities.",
+          summary: `Example Cold Case rating ${rating}/10. Thriller preference ${profile[0].value}; Crime preference ${profile[1].value}. Adventure has no feedback and is unknown.`,
+          height: 280,
+          spec: { type: "horizontalBar", x: "preference", y: "genre", xLabel: "Preference weight", xDomain: [-1, 1], showValues: true, sortOrder: "original", valueFormat: { style: "decimal", maximumFractionDigits: 2 } },
+          columns: ["genre", "preference"], rows: profile.map(p => [p.label, p.value])
+        };
+        const scoreConfig = {
+          id: "cobalt-example-score", title: "Example title score", showHeader: false,
+          description: `Fictional title ${film.title}. All candidates start with 20 base points. Ending is the raw score, before diversity and shortlist selection.`,
+          summary: `20 base points ${movements.map(row => `${row[1] >= 0 ? "plus" : "minus"} ${Math.abs(row[1])} ${row[0]} points`).join(", ")} equals ${rawScore} raw ranking points.`,
+          height: 300,
+          spec: { type: "waterfall", x: "factor", y: "points", yLabel: "Ranking points", beginning: 20, ending: rawScore, valueFormat: { style: "decimal", maximumFractionDigits: 2 } },
+          columns: ["factor", "points"], rows: movements
+        };
+        return { profile, film, rawScore, profileConfig, scoreConfig };
+      }
+      /* END SCREENING EXAMPLE CALCULATIONS */
+
+      const root = document.getElementById("cobalt-learning-example");
+      const input = root.querySelector("#cobalt-example-rating");
+      const select = root.querySelector("#cobalt-example-film");
+      const format = new Intl.NumberFormat("en", { maximumFractionDigits: 2 });
+      const defaults = { version: 1, rating: 9, filmId: "midnight" };
+      let state = { ...defaults };
+      function restore(value) {
+        const saved = value?.modelContent?.screeningExample ?? value?.screeningExample;
+        if (saved?.version === 1 && Number.isInteger(saved.rating) && saved.rating >= 1 && saved.rating <= 10 && Object.hasOwn(exampleFilms, saved.filmId)) {
+          state = { version: 1, rating: saved.rating, filmId: saved.filmId };
+        } else state = { ...defaults };
+      }
+      function drawLabels() {
+        const result = buildScreeningExample(state.rating, state.filmId);
+        input.value = String(state.rating);
+        select.value = state.filmId;
+        input.setAttribute("aria-valuetext", `${state.rating} out of 10`);
+        root.querySelector("#cobalt-example-rating-value").textContent = `${state.rating}/10`;
+        root.querySelector("#cobalt-example-source-rating").textContent = `Cold Case · rating ${state.rating}/10 · Thriller and Crime`;
+        root.querySelector("#cobalt-example-score-label").textContent = `${result.film.title} · ${result.film.genres.join(" / ")} · raw ranking points before variety and selection`;
+        root.querySelector("#cobalt-example-effect").textContent = `Cold Case rating ${state.rating}/10 → Thriller ${format.format(result.profile[0].value)}, Crime ${format.format(result.profile[1].value)}. ${result.film.title}: ${format.format(result.rawScore)} ranking points.`;
+        root.dispatchEvent(new CustomEvent("screening-example-change"));
+      }
+      function change() {
+        state = { version: 1, rating: Number(input.value), filmId: select.value };
+        drawLabels();
+        window.openai?.setWidgetState?.({ modelContent: { screeningExample: state }, privateContent: null }).catch(() => {});
+      }
+      restore(window.openai?.widgetState);
+      root.screeningExampleApi = { current: () => buildScreeningExample(state.rating, state.filmId) };
+      input.addEventListener("input", change);
+      select.addEventListener("change", change);
+      const receiveState = event => {
+        if (!root.isConnected) { window.removeEventListener("openai:set_globals", receiveState); return; }
+        if (Object.hasOwn(event.detail?.globals ?? {}, "widgetState")) { restore(event.detail.globals.widgetState); drawLabels(); }
+      };
+      window.addEventListener("openai:set_globals", receiveState);
+      drawLabels();
+    })();
+  </script>
+  <script type="module">
+    import { mountChart } from "https://persistent.oaistatic.com/plugins/visualize/charts/1.2.3/element.js";
+    const root = document.getElementById("cobalt-learning-example");
+    const taste = root.querySelector("#cobalt-example-taste");
+    const score = root.querySelector("#cobalt-example-score");
+    const initial = root.screeningExampleApi.current();
+    const tasteChart = mountChart(taste.querySelector("[data-viz-container]"), initial.profileConfig);
+    const scoreChart = mountChart(score.querySelector("[data-viz-container]"), initial.scoreConfig);
+    root.addEventListener("screening-example-change", () => {
+      const result = root.screeningExampleApi.current();
+      tasteChart.config = result.profileConfig;
+      scoreChart.config = result.scoreConfig;
+    });
+    root.querySelector("#cobalt-example-rating").disabled = false;
+    root.querySelector("#cobalt-example-film").disabled = false;
+  </script>
+</section>

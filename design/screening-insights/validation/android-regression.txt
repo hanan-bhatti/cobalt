@@ -1,0 +1,26 @@
+Recorded AndroidJUnitRunner result · 14 November 2026
+Device: emulator-5554
+Application: com.hanan_bhatti.cobalt.debug
+
+Command:
+adb -s emulator-5554 shell am instrument -w -r -e class com.example.media.recommendation.ScreeningDeviceTest,com.example.media.recommendation.ScreeningProgressDeviceTest,com.example.media.recommendation.ScreeningWidgetDeviceTest com.hanan_bhatti.cobalt.debug.test/androidx.test.runner.AndroidJUnitRunner
+
+Passed:
+ScreeningDeviceTest.confirmedFinishOnMissingProviderIdKeepsEpisodeHistoryAndHasNoSyncOutbox
+ScreeningDeviceTest.removedTitleIgnoresOldNotificationAction
+ScreeningDeviceTest.actualNotificationActionPersistsIdempotentlyWithoutChangingWatchProgress
+ScreeningProgressDeviceTest.movieActivityDisplaysRealFractionalPlaybackAndRemovesUnknownProgress
+ScreeningWidgetDeviceTest.realThumbPendingIntentsSwitchClearAndLeaveThePickAndWatchStatusIntact
+ScreeningWidgetDeviceTest.rendererMatchesAndroidWallpaperPaletteInBothAppModes
+
+Runner summary:
+Time: 5.399
+OK (6 tests)
+INSTRUMENTATION_CODE: -1
+
+Separate native UI result:
+ScreeningTasteDeviceTest.sixtyGenresStayAccessibleThroughOthersAtLargeText
+Time: 22.014
+OK (1 test)
+
+The separate-process persistence result is recorded in persistence-seed.txt and persistence-verify.txt.

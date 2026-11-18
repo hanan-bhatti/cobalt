@@ -1,0 +1,24 @@
+{
+  "boardId": "293:2528",
+  "bounds": {
+    "x": 6648,
+    "y": 160,
+    "width": 3456,
+    "height": 1366
+  },
+  "placeholder": false,
+  "rootCount": 121,
+  "nodeCount": 8317,
+  "reactionCount": 553,
+  "routeIssues": [],
+  "horizontalOverflow": [],
+  "typeCounts": {
+    "FRAME": 297,
+    "TEXT": 205,
+    "INSTANCE": 142,
+    "GROUP": 163,
+    "VECTOR": 298,
+    "RECTANGLE": 64
+  },
+  "imageFilledNodes": 0
+}
