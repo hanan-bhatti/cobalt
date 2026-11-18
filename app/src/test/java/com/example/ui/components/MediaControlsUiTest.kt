@@ -73,6 +73,19 @@ class MediaControlsUiTest {
         compose.setContent { MaterialTheme { SeasonEpisodeRow(episode,null) } }
         compose.onNodeWithText("In progress · 35%").assertIsDisplayed()
     }
+    @Test fun movieDetailsShowFractionalPlaybackAndAccessibleProgress() {
+        var progress by mutableStateOf<Double?>(35.5)
+        compose.setContent { MaterialTheme { MediaMoviePlaybackProgress(progress) } }
+        compose.onNodeWithText("Watch progress").assertIsDisplayed()
+        compose.onNodeWithText("35.5%").assertIsDisplayed()
+        compose.onNodeWithText("Saved playback position from Trakt").assertIsDisplayed()
+        compose.onNode(SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.ProgressBarRangeInfo,
+            androidx.compose.ui.semantics.ProgressBarRangeInfo(.355f, 0f..1f))).assertExists()
+        for (value in listOf(null, 0.0, 100.0, -1.0, Double.NaN)) {
+            compose.runOnIdle { progress = value }; compose.waitForIdle()
+            compose.onNodeWithText("Watch progress").assertDoesNotExist()
+        }
+    }
     @Test fun mangaMoreInfoShowsCatalogueFactsRatingAndSourceWithoutASynopsis() {
         compose.setContent { MaterialTheme { Surface { MediaMoreInfoContent(SavedItem(type = SavedItemType.MEDIA,
             title = "Manga", content = "", mediaType = "manga", rating = 9.5,

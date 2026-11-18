@@ -371,6 +371,7 @@ class FakeTraktApiService : TraktApiService {
     override suspend fun getMovieStats(id: String) = TraktStatsResponse()
     override suspend fun getMoviePeople(id: String) = TraktCastResponse()
     override suspend fun getPlaybackEpisodes(page: Int, limit: Int): List<TraktPlaybackEpisode> = emptyList()
+    override suspend fun getPlaybackMovies(page: Int, limit: Int): List<TraktPlaybackMovie> = emptyList()
     override suspend fun getMovieSummary(id: String): TraktMovie = TraktMovie()
     override suspend fun getShowSummary(id: String): TraktShow = TraktShow()
     override suspend fun searchMedia(query: String, limit: Int): List<TraktSearchResult> = emptyList()

@@ -62,6 +62,7 @@ class TraktSyncWorker(
                 isBackground = true
             )
             if (result.isSuccess) {
+                com.example.widget.WidgetUpdater.update(applicationContext)
                 Result.success()
             } else {
                 Log.w(TAG, "Sync finished with failure: ${result.exceptionOrNull()?.message}")

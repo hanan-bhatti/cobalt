@@ -36,9 +36,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -91,6 +88,28 @@ fun TraktSyncSettingsScreen(
     val isConnected by authManager.isConnected.collectAsState()
     val currentUser by authManager.currentUser.collectAsState()
     val syncStatus by TraktSyncEngine.syncStatus.collectAsState()
+    val lastSyncAt by remember(authManager) { authManager.observeLastSyncTimestamp() }
+        .collectAsState(initial = authManager.getLastSyncTimestamp())
+    var clockNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(isConnected) {
+        while (isConnected) {
+            clockNow = System.currentTimeMillis()
+            kotlinx.coroutines.delay(30_000)
+        }
+    }
+    val elapsed = (clockNow - lastSyncAt).coerceAtLeast(0)
+    val lastSyncLabel = when {
+        lastSyncAt <= 0 -> "Not synced yet"
+        lastSyncAt > clockNow + 60_000 || elapsed >= 7L * 24 * 60 * 60 * 1000 -> {
+            val locale = java.util.Locale.getDefault()
+            val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "dMMMyyyy")
+            "Last synced " + java.text.SimpleDateFormat(pattern, locale).format(java.util.Date(lastSyncAt))
+        }
+        elapsed < 60_000 -> "Last synced just now"
+        else -> "Last synced " + android.text.format.DateUtils.getRelativeTimeSpanString(lastSyncAt, clockNow,
+            android.text.format.DateUtils.MINUTE_IN_MILLIS, android.text.format.DateUtils.FORMAT_ABBREV_RELATIVE)
+    }
+
     val deviceAuthState by authManager.deviceAuthState.collectAsState()
 
     var isSyncWatched by remember { mutableStateOf(authManager.isSyncWatchedEnabled()) }
@@ -239,9 +258,8 @@ fun TraktSyncSettingsScreen(
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    val lastSummary = authManager.getLastSyncSummary()
                                     Text(
-                                        text = lastSummary ?: "Connected and ready to sync",
+                                        text = lastSyncLabel,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -289,7 +307,7 @@ fun TraktSyncSettingsScreen(
                                     }
                                 }
                                 is TraktSyncStatus.Success -> {
-                                    Surface(
+                                    if (!status.summary.startsWith("Everything is already up-to-date", ignoreCase = true)) Surface(
                                         shape = RoundedCornerShape(16.dp),
                                         color = Color(0xFF10B981).copy(alpha = 0.12f),
                                         border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.35f)),
@@ -307,7 +325,7 @@ fun TraktSyncSettingsScreen(
                                                 modifier = Modifier.size(18.dp)
                                             )
                                             Text(
-                                                text = status.summary,
+                                                text = status.summary.replace("Trakt downloads are up-to-date.", "Download check complete."),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 fontWeight = FontWeight.SemiBold,
                                                 color = Color(0xFF10B981)
@@ -380,7 +398,7 @@ fun TraktSyncSettingsScreen(
                                         Text("Syncing...", fontWeight = FontWeight.SemiBold)
                                     } else {
                                         Icon(
-                                            imageVector = Icons.Rounded.Refresh,
+                                            painter = painterResource(R.drawable.ic_custom_sync),
                                             contentDescription = null,
                                             modifier = Modifier.size(18.dp)
                                         )
@@ -784,7 +802,7 @@ fun TraktSyncSettingsScreen(
                         is TraktDeviceAuthState.Success -> {
                             Spacer(modifier = Modifier.height(8.dp))
                             Icon(
-                                imageVector = Icons.Rounded.Check,
+                                painter = painterResource(R.drawable.ic_custom_check),
                                 contentDescription = null,
                                 tint = Color(0xFF10B981),
                                 modifier = Modifier.size(48.dp)

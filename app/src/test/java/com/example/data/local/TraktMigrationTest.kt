@@ -74,10 +74,11 @@ class TraktMigrationTest {
             }).build()
         FrameworkSQLiteOpenHelperFactory().create(config).use { it.writableDatabase }
         val room = androidx.room.Room.databaseBuilder(context, AppDatabase::class.java, name)
-            .addMigrations(AppDatabase.MIGRATION_13_14, AppDatabase.MIGRATION_14_15).allowMainThreadQueries().build()
+            .addMigrations(AppDatabase.MIGRATION_13_14, AppDatabase.MIGRATION_14_15, AppDatabase.MIGRATION_15_16).allowMainThreadQueries().build()
         try {
             val db = room.openHelper.writableDatabase // Runs Room's complete schema validation.
-            assertEquals(15, db.version)
+            assertEquals(16, db.version)
+            db.query("SELECT count(*) FROM trakt_playback_cache").use { assertTrue(it.moveToFirst()); assertEquals(0, it.getInt(0)) }
             db.query("SELECT content, userRating, mediaFactsJson FROM saved_items WHERE id='preserved'").use {
                 assertTrue(it.moveToFirst()); assertEquals("original body", it.getString(0))
                 assertEquals(8, it.getInt(1)); assertTrue(it.isNull(2))

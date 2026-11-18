@@ -64,7 +64,7 @@ class NoteMigrationTest {
                     .addCallback(object : androidx.room.RoomDatabase.Callback() {
                         override fun onOpen(db: androidx.sqlite.db.SupportSQLiteDatabase) { db.execSQL("PRAGMA synchronous=EXTRA") }
                     })
-                    .addMigrations(AppDatabase.MIGRATION_8_9, AppDatabase.MIGRATION_9_10, AppDatabase.MIGRATION_10_11, AppDatabase.MIGRATION_11_12, AppDatabase.MIGRATION_12_13, AppDatabase.MIGRATION_13_14, AppDatabase.MIGRATION_14_15).build().also { room = it }
+                    .addMigrations(AppDatabase.MIGRATION_8_9, AppDatabase.MIGRATION_9_10, AppDatabase.MIGRATION_10_11, AppDatabase.MIGRATION_11_12, AppDatabase.MIGRATION_12_13, AppDatabase.MIGRATION_13_14, AppDatabase.MIGRATION_14_15, AppDatabase.MIGRATION_15_16).build().also { room = it }
                 val bodyStore = PrivateMarkdownStore(context, database = database).also { store = it }
                 database.openHelper.writableDatabase // Runs Android Room's generated migration validator.
                 val dao = database.savedItemDao()

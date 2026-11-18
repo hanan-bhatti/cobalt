@@ -236,6 +236,9 @@ object TraktSyncEngine {
                     if (dirtyCategories["watchlist"] == null && remoteWatchlist <= lastSyncTime) shouldSyncWatchlist = false
 
                     if (!shouldSyncShows && !shouldSyncMovies && !shouldSyncRatings && !shouldSyncWatchlist) {
+                        // Playback updates do not necessarily change watched-history activities.
+                        TraktPlaybackRepository.refresh(context, force = true, db = db)
+                        if (authManager.isSessionInvalid(sessionEpoch)) return@withContext Result.failure(IllegalStateException("Trakt account changed"))
                         Log.i(TAG, "All Trakt categories are up-to-date with local library. Skipping download.")
                         val pending = db.traktOutboxDao().pendingCount(authManager.syncSessionId())
                         val summary = TraktSyncSummary(pendingChanges = pending)
@@ -878,6 +881,8 @@ object TraktSyncEngine {
             TraktOutbox.drain(context, getApiService(), db)
 
             // Sync successfully finished - clear checkpoints
+            // Playback is optional read-only account data; an unavailable endpoint cannot fail library sync.
+            TraktPlaybackRepository.refresh(context, force = true, db = db)
             val finalized = authManager.runIfSessionValid(sessionEpoch) {
                 authManager.markSyncContractCurrent()
                 authManager.clearSyncCheckpoint()

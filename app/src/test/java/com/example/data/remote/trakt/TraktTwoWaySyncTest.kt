@@ -35,6 +35,28 @@ class TraktTwoWaySyncTest {
         override fun close() { TraktSyncEngine.apiServiceProvider = null; TraktAuthManager.setInstanceForTesting(null); db.close() }
     }
 
+    @Test fun playbackRefreshesEvenWhenWatchedHistoryHasNoNewActivity() = runBlocking {
+        Fixture().use { f ->
+            val saved = f.movie("paused", trakt = 42)
+            f.auth.markLibrarySeeded(f.auth.syncSessionId())
+            var progress = 35.5
+            var calls = 0
+            f.api(object : TraktApiService by f.fake {
+                override suspend fun getPlaybackMovies(page: Int, limit: Int): List<TraktPlaybackMovie> {
+                    calls++
+                    return listOf(TraktPlaybackMovie(progress, movie = TraktMovie(ids = TraktIds(trakt = 42))))
+                }
+            })
+            assertTrue(TraktSyncEngine.performSync(f.context, db = f.db).isSuccess)
+            progress = 62.3
+            assertTrue(TraktSyncEngine.performSync(f.context, db = f.db).isSuccess)
+            assertEquals(2, calls)
+            assertEquals(62.3, f.db.traktPlaybackDao().positions(f.auth.playbackSession.value!!).single().progress,.00001)
+            assertEquals(saved.watchStatus,f.db.savedItemDao().getItemById(saved.id)!!.watchStatus)
+            assertNull(f.db.savedItemDao().getItemById(saved.id)!!.lastWatchedAt)
+        }
+    }
+
     @Test fun preLoginTmdbSaveUploadsThenMergesInboundWithoutDuplicatingOrReplacingLocalNotes() = runBlocking {
         Fixture().use { f ->
             f.movie("before-login", tmdb = 550, rating = 8, watchlist = true)

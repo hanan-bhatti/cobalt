@@ -29,6 +29,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -132,6 +134,12 @@ class TraktAuthManager(
 
     private val _isConnected = MutableStateFlow(hasValidToken())
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
+
+    // Durable owner changes on login, including replacing an already connected account.
+    private val _playbackSession = MutableStateFlow(if (hasValidToken()) playbackSessionId() else null)
+    val playbackSession: StateFlow<String?> = _playbackSession.asStateFlow()
+
+    private fun playbackSessionId(): String = prefs.getString("playback_session_id", null) ?: syncSessionId()
 
     private val _currentUser = MutableStateFlow(loadCachedUser())
     val currentUser: StateFlow<TraktUser?> = _currentUser.asStateFlow()
@@ -273,6 +281,15 @@ class TraktAuthManager(
     fun setSyncTvProgressEnabled(enabled: Boolean) = setSyncPreference(KEY_SYNC_TV_PROGRESS, "shows", enabled)
 
     fun getLastSyncTimestamp(): Long = prefs.getLong(KEY_LAST_SYNC_TIMESTAMP, 0L)
+    fun observeLastSyncTimestamp(): kotlinx.coroutines.flow.Flow<Long> = callbackFlow {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == null || key == KEY_LAST_SYNC_TIMESTAMP) trySend(getLastSyncTimestamp())
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        trySend(getLastSyncTimestamp())
+        awaitClose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+
     fun setLastSyncTimestamp(timestamp: Long) = prefs.edit().putLong(KEY_LAST_SYNC_TIMESTAMP, timestamp).apply()
 
     internal fun isSyncContractCurrent(): Boolean = prefs.getInt(KEY_SYNC_CONTRACT, 0) == SYNC_CONTRACT_VERSION
@@ -716,6 +733,12 @@ class TraktAuthManager(
         secrets.putAll(mapOf(KEY_ACCESS_TOKEN to token.access_token, KEY_REFRESH_TOKEN to token.refresh_token))
         prefs.edit().putLong(KEY_EXPIRES_AT, expiresAt).apply()
 
+        if (newSession) {
+            _playbackSession.value = null
+            check(prefs.edit().putString("playback_session_id", java.util.UUID.randomUUID().toString()).commit()) { "Could not retain playback ownership" }
+        }
+        _playbackSession.value = playbackSessionId()
+
         _isConnected.value = true
     }
 
@@ -836,6 +859,8 @@ class TraktAuthManager(
                     TraktSyncEngine.onSessionInvalidated()
 
                     com.example.data.local.AppDatabase.getDatabase(context).traktOutboxDao().clearSession(syncSessionId())
+                    com.example.data.local.AppDatabase.getDatabase(context).traktPlaybackDao().clear()
+                    _playbackSession.value = null
 
                     // 4. Wipe local credentials, session data, user profiles, and sync checkpoints
                     prefs.edit().clear().apply()
@@ -846,6 +871,7 @@ class TraktAuthManager(
                     _isConnected.value = false
                     _currentUser.value = null
                 }
+                runCatching { com.example.widget.ScreeningWidgetProvider.showSaved(context) }
 
                 // 5. Attempt remote server-side revocation bounded by timeout
                 var serverRevoked = false

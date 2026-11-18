@@ -444,3 +444,7 @@ data class TraktSearchResult(val type: String = "", val movie: TraktMovie? = nul
 @JsonClass(generateAdapter = true)
 data class TraktPlaybackEpisode(val progress: Double = 0.0, val paused_at: String? = null,
     val episode: TraktSeasonEpisodeItem? = null, val show: TraktShow? = null)
+
+@JsonClass(generateAdapter = true)
+data class TraktPlaybackMovie(val progress: Double = 0.0, val paused_at: String? = null,
+    val movie: TraktMovie? = null)

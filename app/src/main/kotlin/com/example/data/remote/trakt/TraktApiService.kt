@@ -167,6 +167,9 @@ interface TraktApiService {
     @GET("sync/playback/episodes")
     suspend fun getPlaybackEpisodes(@Query("page") page: Int = 1, @Query("limit") limit: Int = 100): List<TraktPlaybackEpisode>
 
+    @GET("sync/playback/movies")
+    suspend fun getPlaybackMovies(@Query("page") page: Int = 1, @Query("limit") limit: Int = 100): List<TraktPlaybackMovie>
+
     @GET("shows/{id}/progress/watched")
     suspend fun getShowWatchedProgress(
         @retrofit2.http.Path("id") id: String

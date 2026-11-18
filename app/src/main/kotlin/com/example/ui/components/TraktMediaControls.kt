@@ -31,6 +31,7 @@ import com.example.data.model.TvShowProgress
 import com.example.data.remote.trakt.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.flowOf
 import java.util.Locale
 
 internal fun SavedItem.hasTraktIdentity() = mediaType in listOf("movie", "tv") &&
@@ -43,6 +44,17 @@ fun TraktMediaControls(item: SavedItem, notify: (String) -> Unit) {
     val context = LocalContext.current
     val auth = remember(context) { TraktAuthManager.getInstance(context) }
     val connected by auth.isConnected.collectAsState()
+    val playbackSession by auth.playbackSession.collectAsState()
+    val playbackDao = remember(context) { AppDatabase.getDatabase(context).traktPlaybackDao() }
+    val positions by remember(playbackSession) {
+        playbackSession?.let(playbackDao::observe) ?: flowOf(emptyList())
+    }.collectAsState(initial = emptyList())
+    val playback = TraktPlaybackRepository.find(item, positions.filter { it.session == playbackSession })
+    LaunchedEffect(item.id, playbackSession) {
+        if (playbackSession != null && item.mediaType == "movie" && TraktPlaybackRepository.refresh(context)) {
+            com.example.widget.WidgetUpdater.update(context)
+        }
+    }
     val scope = rememberCoroutineScope()
     var busy by remember(item.id) { mutableStateOf(false) }
     var choice by remember(item.id, item.userRating) { mutableIntStateOf(item.userRating ?: 0) }
@@ -60,7 +72,8 @@ fun TraktMediaControls(item: SavedItem, notify: (String) -> Unit) {
     MediaActivityContent(item.copy(userRating = choice.takeIf { it > 0 }), busy,
         onRate = { choice = it }, onRatingCommit = { score -> change { TraktSyncEngine.rateItem(context, item, score) } },
         onWatchlist = { change { TraktSyncEngine.toggleWatchlist(context, item, !item.inWatchlist) } },
-        onSeason = { season = it }, onStatus = { status -> change { TraktSyncEngine.setWatchStatus(context, item, status) } })
+        onSeason = { season = it }, onStatus = { status -> change { TraktSyncEngine.setWatchStatus(context, item, status) } },
+        playbackProgress = playback?.progress)
     season?.let { number ->
         TraktEpisodeSheet(item, number, onSeason = { season = it }, onDismiss = { season = null })
     }
@@ -69,8 +82,10 @@ fun TraktMediaControls(item: SavedItem, notify: (String) -> Unit) {
 /** One frameless activity area; the poster's status is the only watch-status label. */
 @Composable
 internal fun MediaActivityContent(item: SavedItem, busy: Boolean, onRate: (Int) -> Unit,
-    onWatchlist: () -> Unit, onSeason: (Int) -> Unit, onStatus: (String) -> Unit, onRatingCommit: (Int) -> Unit) {
+    onWatchlist: () -> Unit, onSeason: (Int) -> Unit, onStatus: (String) -> Unit, onRatingCommit: (Int) -> Unit,
+    playbackProgress: Double? = null) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (item.mediaType == "movie") MediaMoviePlaybackProgress(playbackProgress)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("Your rating", style = MaterialTheme.typography.titleSmall)
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -115,6 +130,22 @@ internal fun MediaActivityContent(item: SavedItem, busy: Boolean, onRate: (Int) 
 }
 
 internal fun seasonLabel(number: Int) = if (number == 0) "Specials" else "Season $number"
+
+@Composable
+internal fun MediaMoviePlaybackProgress(progress: Double?) {
+    if (progress == null || !progress.isFinite() || progress <= 0.0 || progress >= 100.0) return
+    Column(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Watch progress", style = MaterialTheme.typography.titleSmall)
+            Text("${String.format(Locale.US, "%.1f", progress).removeSuffix(".0")}%", style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary)
+        }
+        LinearProgressIndicator(progress = { (progress / 100.0).toFloat() },
+            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)))
+        Text("Saved playback position from Trakt", style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
 
 @Composable
 internal fun MediaWatchProgress(progress: TvShowProgress) {

@@ -25,8 +25,9 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [SavedItemEntity::class, CustomFolderEntity::class, NoteSearchEntity::class, TrashEntryEntity::class, LinkPreviewEntity::class, TraktOutboxEntity::class, TraktEpisodeEntity::class, MediaTombstoneEntity::class, NoteChunkEntity::class, NoteNodeEntity::class, NoteRootEntity::class, NoteHistoryStateEntity::class], version = 15, exportSchema = false)
+@Database(entities = [SavedItemEntity::class, CustomFolderEntity::class, NoteSearchEntity::class, TrashEntryEntity::class, LinkPreviewEntity::class, TraktOutboxEntity::class, TraktEpisodeEntity::class, TraktPlaybackEntity::class, MediaTombstoneEntity::class, NoteChunkEntity::class, NoteNodeEntity::class, NoteRootEntity::class, NoteHistoryStateEntity::class], version = 16, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
+    abstract fun traktPlaybackDao(): TraktPlaybackDao
     abstract fun mediaTombstoneDao(): MediaTombstoneDao
     abstract fun traktEpisodeDao(): TraktEpisodeDao
     abstract fun traktOutboxDao(): TraktOutboxDao
@@ -121,6 +122,12 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS trakt_playback_cache (session TEXT NOT NULL, `key` TEXT NOT NULL, kind TEXT NOT NULL, traktId INTEGER, tmdbId INTEGER, imdbId TEXT, season INTEGER, episode INTEGER, progress REAL NOT NULL, pausedAt TEXT, PRIMARY KEY(session, `key`))")
+            }
+        }
+
         private fun ensureMediaMetadata(db: SupportSQLiteDatabase) {
             fun addIfMissing(table: String, column: String) {
                 val exists = db.query("PRAGMA table_info(`$table`)").use { cursor ->
@@ -152,7 +159,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "cobalt_db"
                 )
-                .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
+                .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
                 // API 24+ includes vendor SQLite engines predating the WAL-reset fix.
                 // Use one framework-managed rollback writer until a patched bundled
                 // engine can replace every openHelper caller together.
