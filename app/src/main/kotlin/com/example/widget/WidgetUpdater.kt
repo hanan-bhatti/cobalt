@@ -19,21 +19,31 @@
 package com.example.widget
 
 import android.content.Context
-import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 
 object WidgetUpdater {
-    fun update(context: Context) {
-        val appContext = context.applicationContext
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                QuickCaptureWidget().updateAll(appContext)
-                RecentItemsWidget().updateAll(appContext)
-            } catch (e: Exception) {
-                // Ignore background widget update failures safely
+    private val requests = Channel<Context>(Channel.CONFLATED)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    init {
+        scope.launch {
+            for (context in requests) {
+                delay(150)
+                runCatching { FolioWidgetProvider.showSaved(context); ScreeningWidgetProvider.showSaved(context) }
+                coroutineScope {
+                    val folio = async { runCatching { FolioWidgetProvider.updateAll(context) }.getOrDefault(false) }
+                    val screening = async { runCatching { ScreeningWidgetProvider.updateAll(context) }.getOrDefault(false) }
+                    if (!folio.await()) runCatching { FolioRefreshWorker.enqueue(context) }
+                    if (!screening.await()) runCatching { ScreeningWidgetRefreshWorker.enqueue(context) }
+                }
             }
         }
     }
+    fun update(context: Context) { requests.trySend(context.applicationContext) }
 }

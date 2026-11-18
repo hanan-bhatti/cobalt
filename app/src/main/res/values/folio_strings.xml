@@ -1,0 +1,4 @@
+<resources>
+    <string name="folio_widget_name">Pocket Folio</string>
+    <string name="folio_widget_description">Your chosen Cobalt folder, with two saved items ready to open.</string>
+</resources>

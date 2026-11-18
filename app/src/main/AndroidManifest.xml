@@ -69,6 +69,15 @@
 
         </activity>
 
+        <receiver android:name=".media.recommendation.ScreeningFeedbackReceiver" android:exported="false" />
+        <receiver android:name=".media.recommendation.ScreeningTimeChangeReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Shared content is reviewed before explicit Save. -->
         <activity
             android:name=".QuickShareActivity"
@@ -150,27 +159,25 @@
             </intent-filter>
         </activity>
 
-        <receiver
-            android:name=".widget.RecentItemsWidgetReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/recent_items_widget_info" />
+        <receiver android:name=".widget.FolioWidgetProvider" android:label="Pocket Folio" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/folio_widget_info" />
         </receiver>
-
-        <receiver
-            android:name=".widget.QuickCaptureWidgetReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/quick_capture_widget_info" />
+        <service android:name=".widget.FolioListService" android:exported="false" android:permission="android.permission.BIND_REMOTEVIEWS" />
+        <receiver android:name=".widget.FolioPinReceiver" android:exported="false" />
+        <activity android:name=".widget.FolioConfigurationActivity" android:exported="true" android:theme="@style/Theme.MyApplication">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
+        </activity>
+        <receiver android:name=".widget.ScreeningWidgetProvider" android:label="@string/screening_widget_name" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/screening_widget_info" />
         </receiver>
+        <receiver android:name=".widget.ScreeningPinReceiver" android:exported="false" />
+        <receiver android:name=".widget.ScreeningNextReceiver" android:exported="false" />
+        <receiver android:name=".widget.ScreeningThumbReceiver" android:exported="false" />
+        <activity android:name=".widget.ScreeningConfigurationActivity" android:exported="true" android:theme="@style/Theme.MyApplication">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
+        </activity>
 
         <receiver
             android:name=".util.CobaltCustomTabsActionReceiver"

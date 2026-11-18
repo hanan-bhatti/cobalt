@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/screening_root" android:layout_width="match_parent" android:layout_height="match_parent">
+    <ImageView android:id="@+id/screening_image" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:scaleType="fitXY" android:importantForAccessibility="no" android:src="@drawable/widget_screening_shape" />
+    <TextView android:id="@+id/screening_initial_message" android:layout_width="match_parent" android:layout_height="match_parent"
+        android:gravity="center" android:padding="24dp" android:text="Screening Card · Your next watch in Cobalt" android:textColor="#442B1F" />
+    <TextView android:id="@+id/screening_body" android:layout_width="match_parent" android:layout_height="match_parent" />
+    <LinearLayout android:id="@+id/screening_feedback" android:layout_width="108dp" android:layout_height="56dp"
+        android:layout_gravity="bottom|right" android:layout_margin="16dp" android:orientation="horizontal" android:padding="4dp">
+        <TextView android:id="@+id/screening_like" android:layout_width="48dp" android:layout_height="48dp" />
+        <TextView android:layout_width="4dp" android:layout_height="48dp" android:importantForAccessibility="no" />
+        <TextView android:id="@+id/screening_dislike" android:layout_width="48dp" android:layout_height="48dp" />
+    </LinearLayout>
+</FrameLayout>

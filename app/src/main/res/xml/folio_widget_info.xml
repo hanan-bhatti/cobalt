@@ -1,0 +1,7 @@
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp" android:minHeight="196dp" android:minResizeWidth="180dp" android:minResizeHeight="142dp"
+    android:targetCellWidth="4" android:targetCellHeight="3" android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="1800000" android:initialLayout="@layout/folio_widget"
+    android:previewLayout="@layout/folio_widget" android:previewImage="@drawable/widget_folio_shape"
+    android:configure="com.example.widget.FolioConfigurationActivity" android:widgetFeatures="reconfigurable"
+    android:widgetCategory="home_screen" android:description="@string/folio_widget_description" />

@@ -1,0 +1,4 @@
+<resources>
+    <string name="screening_widget_name">Screening Card</string>
+    <string name="screening_widget_description">A movie or show from your Cobalt library, with artwork, progress and a fresh next pick.</string>
+</resources>

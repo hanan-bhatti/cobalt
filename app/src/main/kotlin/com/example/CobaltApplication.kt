@@ -12,6 +12,7 @@ import coil.decode.VideoFrameDecoder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 
 class CobaltApplication : Application(), ImageLoaderFactory {
     companion object {
@@ -33,7 +34,10 @@ class CobaltApplication : Application(), ImageLoaderFactory {
                 isAppInForeground = startedActivities > 0
             }
             override fun onActivityCreated(activity: android.app.Activity, savedInstanceState: android.os.Bundle?) {}
-            override fun onActivityResumed(activity: android.app.Activity) {}
+            override fun onActivityResumed(activity: android.app.Activity) {
+                com.example.media.recommendation.ScreeningReadModel.get(this@CobaltApplication).refreshIfExpired()
+                com.example.widget.WidgetInventory.get(this@CobaltApplication).refresh()
+            }
             override fun onActivityPaused(activity: android.app.Activity) {}
             override fun onActivitySaveInstanceState(activity: android.app.Activity, outState: android.os.Bundle) {}
             override fun onActivityDestroyed(activity: android.app.Activity) {}
@@ -51,11 +55,19 @@ class CobaltApplication : Application(), ImageLoaderFactory {
         // Install local reporting first so the startup guard chains to it.
         com.example.util.LocalCrashReporter.init(this)
         com.example.notes.StartupCrashGuard.install(this)
+        com.example.media.recommendation.ScreeningReadModel.get(this)
+        com.example.widget.WidgetInventory.get(this)
         // Defer expiry if WorkManager is temporarily unavailable; opening Trash also retries.
         runCatching { com.example.notes.TrashCleanupWorker.schedule(this) }
 
         // Trigger one-time legacy path title cleanup off the main thread (Issue #21)
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            // Give the first read priority over optional widget observation/writes. This never gates the activity.
+            kotlinx.coroutines.withTimeoutOrNull(1_000) {
+                com.example.media.recommendation.ScreeningReadModel.get(this@CobaltApplication).state.first { it.ready || it.error != null }
+            }
+            com.example.widget.WidgetUpdater.update(this@CobaltApplication)
+            runCatching { com.example.media.recommendation.ScreeningWork.schedule(this@CobaltApplication) }
             // Wake durable link jobs after a crash between the item commit and WorkManager enqueue.
             runCatching { com.example.links.LinkPreviewWorker.schedule(this@CobaltApplication) }
             if (!com.example.notes.StartupCrashGuard.shouldPause(this@CobaltApplication) &&
@@ -73,6 +85,11 @@ class CobaltApplication : Application(), ImageLoaderFactory {
             }
             com.example.data.cleanup.LegacyPathTitleCleanup.runCleanup(this@CobaltApplication)
         }
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        com.example.widget.WidgetUpdater.update(this)
     }
 
     override fun newImageLoader(): ImageLoader {
