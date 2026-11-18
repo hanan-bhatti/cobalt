@@ -82,7 +82,7 @@ object AdaptiveReminderEngine {
         val eligible = allItems.filter { item ->
             !item.isArchived &&
             !item.isDeleted &&
-            (item.type != SavedItemType.MEDIA || !item.isUnavailable) &&
+            item.type != SavedItemType.MEDIA &&
             (now - item.timestamp >= 24L * 60L * 60L * 1000L) // At least 24 hours old
         }
 
