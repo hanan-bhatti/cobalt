@@ -526,24 +526,31 @@ class CobaltRepository(
         saved
     }
 
-    /** Targeted compare-and-set update: a late fetch cannot restore a deleted item or older fields. */
-    suspend fun processNextLinkPreview(): Boolean = withContext(Dispatchers.IO) {
-        val request = db.linkPreviewDao().next() ?: return@withContext false
+    suspend fun processNextLinkPreview(): Boolean {
+        val request = withContext(Dispatchers.IO) { db.linkPreviewDao().next() } ?: return false
+        return processLinkPreview(request)
+    }
+
+    /** A stale fetch cannot overwrite a newer edit, resurrect Trash or change an imported title. */
+    suspend fun processLinkPreview(request: com.example.data.local.LinkPreviewEntity, updateWidgets: Boolean = true): Boolean = withContext(Dispatchers.IO) {
         val before = savedItemDao.getItemById(request.itemId) ?: return@withContext false
+        if (before.isDeleted || before.content != request.url) return@withContext false
         val metadata = fetchLinkMetadata(request.url)
         db.withTransaction {
             val current = db.linkPreviewDao().get(request.itemId)
-            if (current?.generation == request.generation) {
-                val found = metadata.title != null || metadata.description != null || metadata.imageUrl != null
+            if (current?.generation == request.generation && current.pending) {
                 val description = com.example.links.LinkDescriptionPolicy.automatic(
                     before.linkDescription, metadata.description, current.replaceFallback)
                 savedItemDao.applyLinkPreview(request.itemId, request.url, before.title, before.linkDescription,
-                    metadata.title, description, metadata.imageUrl)
+                    metadata.title, description, metadata.imageUrl, preserveTitle = current.preserveTitle)
+                val missingDescription = description.isNullOrBlank()
+                val missingImage = metadata.imageUrl.isNullOrBlank() && before.linkImage.isNullOrBlank() && before.thumbnailPath.isNullOrBlank()
+                val missingTitle = metadata.title.isNullOrBlank() && before.linkTitle.isNullOrBlank()
                 db.linkPreviewDao().put(current.copy(replaceFallback = current.replaceFallback && metadata.description.isNullOrBlank(),
-                    attempts = current.attempts + 1, pending = !found && current.attempts < 2))
+                    attempts = current.attempts + 1, pending = (missingDescription || missingImage || missingTitle) && current.attempts < 2))
             }
         }
-        com.example.widget.WidgetUpdater.update(context)
+        if (updateWidgets) com.example.widget.WidgetUpdater.update(context)
         true
     }
 

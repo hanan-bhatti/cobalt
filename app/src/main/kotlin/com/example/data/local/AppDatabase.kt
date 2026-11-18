@@ -25,7 +25,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [SavedItemEntity::class, CustomFolderEntity::class, NoteSearchEntity::class, TrashEntryEntity::class, LinkPreviewEntity::class, TraktOutboxEntity::class, TraktEpisodeEntity::class, TraktPlaybackEntity::class, MediaTombstoneEntity::class, NoteChunkEntity::class, NoteNodeEntity::class, NoteRootEntity::class, NoteHistoryStateEntity::class], version = 16, exportSchema = false)
+@Database(entities = [SavedItemEntity::class, CustomFolderEntity::class, NoteSearchEntity::class, TrashEntryEntity::class, LinkPreviewEntity::class, TraktOutboxEntity::class, TraktEpisodeEntity::class, TraktPlaybackEntity::class, MediaTombstoneEntity::class, NoteChunkEntity::class, NoteNodeEntity::class, NoteRootEntity::class, NoteHistoryStateEntity::class], version = 17, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun traktPlaybackDao(): TraktPlaybackDao
     abstract fun mediaTombstoneDao(): MediaTombstoneDao
@@ -128,6 +128,12 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE link_preview_queue ADD COLUMN preserveTitle INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         private fun ensureMediaMetadata(db: SupportSQLiteDatabase) {
             fun addIfMissing(table: String, column: String) {
                 val exists = db.query("PRAGMA table_info(`$table`)").use { cursor ->
@@ -159,7 +165,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "cobalt_db"
                 )
-                .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
+                .addMigrations(MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
                 // API 24+ includes vendor SQLite engines predating the WAL-reset fix.
                 // Use one framework-managed rollback writer until a patched bundled
                 // engine can replace every openHelper caller together.

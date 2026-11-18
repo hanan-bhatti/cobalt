@@ -10,7 +10,8 @@ data class LinkPreviewEntity(
     val replaceFallback: Boolean = false,
     val pending: Boolean = true,
     val attempts: Int = 0,
-    val generation: String = java.util.UUID.randomUUID().toString()
+    val generation: String = java.util.UUID.randomUUID().toString(),
+    @ColumnInfo(defaultValue = "0") val preserveTitle: Boolean = false
 )
 
 @Dao
@@ -19,6 +20,10 @@ interface LinkPreviewDao {
     suspend fun get(id: String): LinkPreviewEntity?
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun put(value: LinkPreviewEntity)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun putAll(values: List<LinkPreviewEntity>)
+    @Query("SELECT p.* FROM link_preview_queue p INNER JOIN saved_items s ON s.id = p.itemId WHERE p.pending = 1 AND s.isDeleted = 0 AND s.content = p.url AND upper(s.type) = 'LINK' ORDER BY p.attempts, p.itemId LIMIT :limit")
+    suspend fun nextBatch(limit: Int): List<LinkPreviewEntity>
     @Query("SELECT p.* FROM link_preview_queue p INNER JOIN saved_items s ON s.id = p.itemId WHERE p.pending = 1 AND s.isDeleted = 0 AND s.content = p.url AND upper(s.type) = 'LINK' ORDER BY p.attempts LIMIT 1")
     suspend fun next(): LinkPreviewEntity?
 }

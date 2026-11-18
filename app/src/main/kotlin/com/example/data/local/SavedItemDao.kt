@@ -35,8 +35,8 @@ interface SavedItemDao {
     @Query("SELECT * FROM saved_items WHERE upper(type) = 'MEDIA' AND isDeleted = 0 AND title LIKE '%' || :query || '%' ORDER BY updatedAt DESC LIMIT 40")
     suspend fun searchCachedMedia(query: String): List<SavedItemEntity>
 
-    @Query("UPDATE saved_items SET title = CASE WHEN title = :oldTitle THEN COALESCE(:pageTitle, title) ELSE title END, linkTitle = COALESCE(:pageTitle, linkTitle), linkDescription = :description, linkImage = COALESCE(:image, linkImage) WHERE id = :id AND content = :url AND isDeleted = 0 AND linkDescription IS :oldDescription")
-    suspend fun applyLinkPreview(id: String, url: String, oldTitle: String, oldDescription: String?, pageTitle: String?, description: String?, image: String?): Int
+    @Query("UPDATE saved_items SET title = CASE WHEN :preserveTitle = 0 AND title = :oldTitle THEN COALESCE(:pageTitle, title) ELSE title END, linkTitle = COALESCE(:pageTitle, linkTitle), linkDescription = CASE WHEN linkDescription IS :oldDescription THEN :description ELSE linkDescription END, linkImage = COALESCE(:image, linkImage) WHERE id = :id AND content = :url AND isDeleted = 0")
+    suspend fun applyLinkPreview(id: String, url: String, oldTitle: String, oldDescription: String?, pageTitle: String?, description: String?, image: String?, preserveTitle: Boolean = false): Int
 
     @Query("SELECT isDeleted FROM saved_items WHERE id = :id")
     suspend fun isItemDeleted(id: String): Boolean?
