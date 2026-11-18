@@ -360,7 +360,8 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                     // Extracted Results / Error bottom review panel
                     var userSelectedTab by remember { mutableStateOf<String?>(null) }
                     val activeTab = userSelectedTab ?: if (extractedLinks.isNotEmpty()) "Links" else "Note"
-                    var noteTitle by remember { mutableStateOf("Extracted Note") }
+                    // The ViewModel owns the AI title and tracks manual edits across OCR requests.
+                    val noteTitle = activeItem?.title.orEmpty()
                     var isPreviewMode by remember { mutableStateOf(true) }
                     val customFolders by viewModel.customFolders.collectAsState()
                     val customFolderEntities by viewModel.customFolderEntities.collectAsState()
@@ -380,14 +381,6 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                     var selectedFolders by remember { mutableStateOf(emptySet<String>()) }
                     var showNewFolderDialog by remember { mutableStateOf(false) }
                     var newFolderName by remember { mutableStateOf("") }
-
-                    LaunchedEffect(activeItem?.extractedText) {
-                        val text = activeItem?.extractedText
-                        if (!text.isNullOrBlank()) {
-                            val firstLine = text.lineSequence().firstOrNull { it.isNotBlank() } ?: "Extracted Note"
-                            noteTitle = if (firstLine.length > 30) firstLine.take(27) + "..." else firstLine
-                        }
-                    }
 
                     AnimatedVisibility(
                         visible = !isOcrLoading && (activeItem?.extractedText != null || extractedLinks.isNotEmpty() || ocrError != null),
@@ -729,7 +722,9 @@ class OcrCaptureActivity : ComponentActivity(), ScreenCaptureService.CaptureCall
                                             // Title field
                                             OutlinedTextField(
                                                 value = noteTitle,
-                                                onValueChange = { noteTitle = it },
+                                                onValueChange = { title ->
+                                                    viewModel.updateActiveCaptureItem { it.copy(title = title) }
+                                                },
                                                 label = { Text("Note Title") },
                                                 singleLine = true,
                                                 textStyle = MaterialTheme.typography.titleMedium.copy(
