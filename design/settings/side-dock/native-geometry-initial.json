@@ -1,0 +1,20 @@
+[
+  {
+    "state": "top",
+    "position": 0.058440614,
+    "attrs": "mAttrs={(0,-1109)(66x300) gr=END CENTER sim={adjust=pan} ty=APPLICATION_OVERLAY fmt=TRANSLUCENT",
+    "frame": "Frames: parent=[0,0][1344,2920] display=[0,159][1344,2920] frame=[1278,201][1344,501] last=[1278,201][1344,501] insetsChanged=false"
+  },
+  {
+    "state": "bottom",
+    "position": 0.9043012,
+    "attrs": "mAttrs={(0,1015)(66x300) gr=END CENTER sim={adjust=pan} ty=APPLICATION_OVERLAY fmt=TRANSLUCENT",
+    "frame": "Frames: parent=[0,0][1344,2920] display=[0,159][1344,2920] frame=[1278,2325][1344,2625] last=[1278,2325][1344,2625] insetsChanged=false"
+  },
+  {
+    "state": "middle",
+    "position": 0.4268707,
+    "attrs": "mAttrs={(0,-183)(66x300) gr=END CENTER sim={adjust=pan} ty=APPLICATION_OVERLAY fmt=TRANSLUCENT",
+    "frame": "Frames: parent=[0,0][1344,2920] display=[0,159][1344,2920] frame=[1278,1127][1344,1427] last=[1278,1127][1344,1427] insetsChanged=false"
+  }
+]

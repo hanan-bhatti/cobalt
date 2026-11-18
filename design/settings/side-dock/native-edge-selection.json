@@ -1,0 +1,54 @@
+{
+  "viewportDp": [
+    448,
+    997
+  ],
+  "fontScale": 1.0,
+  "theme": "Dark",
+  "cases": [
+    {
+      "edge": "Right",
+      "taps": 1,
+      "targetBoundsPx": [
+        898,
+        2343,
+        1236,
+        2487
+      ],
+      "preference": {
+        "floating_ocr_enabled": "true",
+        "edge_panel_side": "Right"
+      },
+      "selected": true,
+      "sheetOpened": false,
+      "realHandleBoundsPx": [
+        1278,
+        1059,
+        1344,
+        1359
+      ]
+    },
+    {
+      "edge": "Left",
+      "taps": 1,
+      "targetBoundsPx": [
+        564,
+        2343,
+        901,
+        2487
+      ],
+      "preference": {
+        "floating_ocr_enabled": "true",
+        "edge_panel_side": "Left"
+      },
+      "selected": true,
+      "sheetOpened": false,
+      "realHandleBoundsPx": [
+        0,
+        1059,
+        66,
+        1359
+      ]
+    }
+  ]
+}

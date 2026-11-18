@@ -1,0 +1,32 @@
+{
+  "preset": "Bouncy",
+  "device": "emulator-5554",
+  "resolution": [
+    672,
+    1496
+  ],
+  "events": [
+    {
+      "event": "miniature replay",
+      "seconds": 1.0
+    },
+    {
+      "event": "miniature replay",
+      "seconds": 3.285
+    },
+    {
+      "event": "real overlay open",
+      "seconds": 5.654
+    },
+    {
+      "event": "real overlay Back",
+      "seconds": 7.959
+    }
+  ],
+  "previewBoundsPx": [
+    182,
+    816,
+    478,
+    1476
+  ]
+}

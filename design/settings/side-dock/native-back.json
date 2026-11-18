@@ -1,0 +1,6 @@
+{
+  "device": "emulator-5554",
+  "animationPageCancelStaysOnAnimation": true,
+  "animationPageCommitReturnsToSideDock": true,
+  "input": "Android touchscreen events from adb"
+}

@@ -1,0 +1,18 @@
+{
+  "apk": "app/build/outputs/apk/debug/app-debug.apk",
+  "sha256": "ceb2659c9934ff3f5f15831ed31c791d078ff7e6ea3883c538f070a4a073998e",
+  "testedClasses": {
+    "SideDockMotionTest": 5,
+    "SideDockPreferencesTest": 2,
+    "SideDockSettingsScreenTest": 5,
+    "AppearancePreviewTest": 2,
+    "DockNotePreviewTest": 3,
+    "DockSelectionContextMenuTest": 1
+  },
+  "tests": 18,
+  "failures": 0,
+  "buildLog": "/tmp/cobalt-side-dock-final-validation.log",
+  "platform": "native Android Compose",
+  "device": "emulator-5554",
+  "detector": "No HTML/CSS detector ran; it does not inspect native Compose."
+}

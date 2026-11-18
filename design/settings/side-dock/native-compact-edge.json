@@ -1,0 +1,25 @@
+{
+  "viewportDp": [
+    340,
+    660
+  ],
+  "fontScale": 1.3,
+  "theme": "Dark",
+  "dockEnabled": false,
+  "case": {
+    "edge": "Left",
+    "taps": 1,
+    "targetBoundsPx": [
+      108,
+      1308,
+      511,
+      1452
+    ],
+    "preference": {
+      "floating_ocr_enabled": "false",
+      "edge_panel_side": "Left"
+    },
+    "selected": true,
+    "sheetOpened": false
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "device": "emulator-5554",
+  "sdk": 37,
+  "animatorDurationScale": 0,
+  "statusTextVerified": true,
+  "replayFrames": [
+    "phone-motion-off-replay-open.png",
+    "phone-motion-off-replay-closed.png"
+  ]
+}

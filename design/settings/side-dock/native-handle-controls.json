@@ -1,0 +1,20 @@
+[
+  {
+    "control": "Height",
+    "value": 125.0,
+    "frame": "Frames: parent=[0,0][1344,2920] display=[0,159][1344,2920] frame=[0,1089][66,1464] last=[0,1089][66,1464] insetsChanged=false",
+    "passed": true
+  },
+  {
+    "control": "Width",
+    "value": 18.0,
+    "frame": "Frames: parent=[0,0][1344,2920] display=[0,159][1344,2920] frame=[0,1089][102,1464] last=[0,1089][102,1464] insetsChanged=false",
+    "passed": true
+  },
+  {
+    "control": "Opacity",
+    "value": 0.55,
+    "frame": "Frames: parent=[0,0][1344,2920] display=[0,159][1344,2920] frame=[0,1089][102,1464] last=[0,1089][102,1464] insetsChanged=false",
+    "passed": true
+  }
+]

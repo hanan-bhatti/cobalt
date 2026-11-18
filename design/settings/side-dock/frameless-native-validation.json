@@ -1,0 +1,57 @@
+{
+  "checks": [
+    {
+      "scenario": "Phone main \u00b7 final APK",
+      "passed": true
+    },
+    {
+      "scenario": "Phone Animation \u00b7 centered preview",
+      "passed": true
+    },
+    {
+      "scenario": "Every preset and Replay",
+      "passed": false,
+      "error": "{'rotation': '0'}"
+    },
+    {
+      "scenario": "Open production overlay",
+      "passed": true
+    },
+    {
+      "scenario": "Dock Off hides controls",
+      "passed": true
+    },
+    {
+      "scenario": "Missing permission hides all dock controls",
+      "passed": false,
+      "error": "Control not reachable: Side dock"
+    },
+    {
+      "scenario": "Appearance has no preview",
+      "passed": true
+    },
+    {
+      "scenario": "Phone light",
+      "passed": true
+    },
+    {
+      "scenario": "320 dp with larger text \u00b7 main",
+      "passed": true
+    },
+    {
+      "scenario": "320 dp with larger text \u00b7 animation",
+      "passed": true
+    },
+    {
+      "scenario": "Expanded landscape \u00b7 main",
+      "passed": true
+    },
+    {
+      "scenario": "Expanded landscape \u00b7 Animation",
+      "passed": true
+    }
+  ],
+  "systemSettingsRestored": true,
+  "apk": "app/build/outputs/apk/debug/app-debug.apk",
+  "platform": "Android emulator SDK 37; native Compose"
+}

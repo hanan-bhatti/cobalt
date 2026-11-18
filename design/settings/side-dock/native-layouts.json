@@ -1,0 +1,32 @@
+[
+  {
+    "name": "compact-light",
+    "sizePx": [
+      1020,
+      1980
+    ],
+    "fontScale": 1.3,
+    "theme": "Light",
+    "dockEnabled": false
+  },
+  {
+    "name": "tablet-dark",
+    "sizePx": [
+      2400,
+      3000
+    ],
+    "fontScale": 1.0,
+    "theme": "Dark",
+    "dockEnabled": true
+  },
+  {
+    "name": "landscape-dark",
+    "sizePx": [
+      2992,
+      1344
+    ],
+    "fontScale": 1.0,
+    "theme": "Dark",
+    "dockEnabled": true
+  }
+]

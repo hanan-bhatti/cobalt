@@ -1,0 +1,38 @@
+[
+  {
+    "preset": "Smooth",
+    "stiffness": 340.0,
+    "damping": 0.72,
+    "passed": true
+  },
+  {
+    "preset": "Fluid",
+    "stiffness": 320.0,
+    "damping": 0.68,
+    "passed": true
+  },
+  {
+    "preset": "Bouncy",
+    "stiffness": 320.0,
+    "damping": 0.58,
+    "passed": true
+  },
+  {
+    "preset": "Snappy",
+    "stiffness": 650.0,
+    "damping": 0.85,
+    "passed": true
+  },
+  {
+    "preset": "Instant",
+    "stiffness": 1000.0,
+    "damping": 1.0,
+    "passed": true
+  },
+  {
+    "preset": "Custom",
+    "stiffness": 510.0,
+    "damping": 0.73,
+    "passed": true
+  }
+]

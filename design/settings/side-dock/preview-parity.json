@@ -1,0 +1,32 @@
+{
+  "device": "emulator-5554",
+  "displayPx": [
+    1344,
+    2992
+  ],
+  "density": 3,
+  "previewBoundsPx": [
+    182,
+    816,
+    478,
+    1476
+  ],
+  "preset": "Bouncy",
+  "expectedCardRectPx": [
+    468,
+    519,
+    1308,
+    1899
+  ],
+  "surfaceDp": [
+    280,
+    460
+  ],
+  "uniformScale": 0.22058823529411764,
+  "navigationInsetCorrectionDp": 12,
+  "sourceVideo": "design/settings/side-dock/real-motion.mp4",
+  "miniatureFrameSeconds": 1.9,
+  "overlayFrameSeconds": 7.7,
+  "comparisonImage": ".impeccable/review/side-dock/parity-comparison.png",
+  "claim": "The miniature and overlay share production spring specifications, morph rendering, and placement geometry. Hardware frame timing is not certified."
+}

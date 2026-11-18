@@ -1,0 +1,32 @@
+[
+  {
+    "resource": "ic_settings_dock_left",
+    "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/programming/sidebar-left_navigation-menu-side-panel-options-settings-temp.svg",
+    "sha256": "5107a57a4f95358fdba70c161826cc2a6c9ee90a046b67a3a6d0bb30d423b1d3",
+    "rotation": 0
+  },
+  {
+    "resource": "ic_settings_dock_right",
+    "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/programming/sidebar-right_navigation-panel-side-menu-user-interface-layout-temp.svg",
+    "sha256": "b4addd0513e08ca240d669a7f850832de7b99b816cdb9687e2a792ffe49207be",
+    "rotation": 0
+  },
+  {
+    "resource": "ic_settings_dock_replay",
+    "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/arrow/repeat_loop-cycle-repeat-action-replay-restart.svg",
+    "sha256": "bf0f4a4dd8e2b91dcbbde1dd55c6e681ceaba2f4e76543aaeb66513d8189544d",
+    "rotation": 0
+  },
+  {
+    "resource": "ic_settings_dock_width",
+    "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/design-tools/ruler_measurement-length-dimensions-tool-linear-temp.svg",
+    "sha256": "db9995317d18b3b5bd0e595e6872e5cb9123b51195d80f451447c6839e69d910",
+    "rotation": 0
+  },
+  {
+    "resource": "ic_settings_dock_height",
+    "source": "/home/hanan-bhatti/glyphgoblin/scripts/public/iconsax/linear/design-tools/ruler_measurement-length-dimensions-tool-linear-temp.svg",
+    "sha256": "db9995317d18b3b5bd0e595e6872e5cb9123b51195d80f451447c6839e69d910",
+    "rotation": 90
+  }
+]
