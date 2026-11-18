@@ -42,7 +42,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,6 +57,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.text.NumberFormat
 import java.util.concurrent.TimeUnit
 
 data class HeatmapDay(
@@ -66,7 +72,8 @@ data class HeatmapDay(
 fun KnowledgeHeatmap(
     items: List<SavedItem>,
     modifier: Modifier = Modifier,
-    weeksToShow: Int = 20
+    weeksToShow: Int = 20,
+    compact: Boolean = false
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
     val emptyCellColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
@@ -193,6 +200,15 @@ fun KnowledgeHeatmap(
     }
 
     var selectedDay by remember { mutableStateOf<HeatmapDay?>(null) }
+    val longestVisibleStreak = remember(heatmapDays) {
+        var current = 0
+        var longest = 0
+        heatmapDays.forEach { day ->
+            current = if (day.count > 0) current + 1 else 0
+            longest = maxOf(longest, current)
+        }
+        longest
+    }
     val scrollState = rememberScrollState(initial = Int.MAX_VALUE)
 
     // Cell layout geometry (in dp)
@@ -204,6 +220,8 @@ fun KnowledgeHeatmap(
             .fillMaxWidth()
             .padding(vertical = 4.dp)
     ) {
+        // The compact Settings preview keeps its summary below the grid.
+        if (!compact) {
         // Streak & Total Info Strip
         Row(
             modifier = Modifier
@@ -265,6 +283,7 @@ fun KnowledgeHeatmap(
         }
 
         Spacer(modifier = Modifier.height(6.dp))
+        }
 
         // Heatmap Grid with Horizontal Scrolling
         Row(
@@ -272,6 +291,7 @@ fun KnowledgeHeatmap(
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp)
         ) {
+            if (!compact) {
             // Day of week labels (M, W, F)
             Column(
                 modifier = Modifier
@@ -285,6 +305,7 @@ fun KnowledgeHeatmap(
                 Spacer(modifier = Modifier.height(cellSizeDp - 3.dp))
                 Text(text = "F", fontSize = 9.sp, color = onSurfaceVariant.copy(alpha = 0.6f))
             }
+            }
 
             // Scrollable Weeks Canvas
             Box(
@@ -294,16 +315,16 @@ fun KnowledgeHeatmap(
             ) {
                 Column {
                     // Month labels row
-                    Row(
+                    Box(
                         modifier = Modifier
-                            .height(16.dp)
+                            .height(if (compact) 20.dp else 16.dp)
                             .width(((cellSizeDp + cellSpacingDp) * weeksToShow))
                     ) {
                         monthLabels.forEach { (weekIdx, label) ->
                             val offset = ((cellSizeDp + cellSpacingDp) * weekIdx)
                             Text(
                                 text = label,
-                                fontSize = 9.sp,
+                                fontSize = if (compact) 11.sp else 9.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = onSurfaceVariant.copy(alpha = 0.7f),
                                 modifier = Modifier.absoluteOffset(x = offset)
@@ -373,7 +394,21 @@ fun KnowledgeHeatmap(
 
         Spacer(modifier = Modifier.height(10.dp))
 
+        if (compact) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                selectedDay?.let { day ->
+                    Text(
+                        pluralStringResource(R.plurals.settings_activity_day, day.count, NumberFormat.getInstance().format(day.count), day.dateString),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = primaryColor
+                    )
+                }
+                CompactHeatmapSummary(totalRecentCaptures, longestVisibleStreak, primaryColor, emptyCellColor)
+            }
+        }
+
         // Selected Day Pill or Legend
+        if (!compact) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -383,20 +418,20 @@ fun KnowledgeHeatmap(
         ) {
             // Selected day feedback
             AnimatedVisibility(
-                visible = selectedDay != null,
+                visible = !compact && selectedDay != null,
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
                 selectedDay?.let { day ->
                     Text(
-                        text = "${day.count} ${if (day.count == 1) "item" else "items"} on ${day.dateString}",
+                        text = pluralStringResource(R.plurals.settings_activity_day, day.count, NumberFormat.getInstance().format(day.count), day.dateString),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = primaryColor
                     )
                 }
             }
-            if (selectedDay == null) {
+            if (!compact && selectedDay == null) {
                 Text(
                     text = "Tap any day to view activity",
                     style = MaterialTheme.typography.labelSmall,
@@ -405,21 +440,63 @@ fun KnowledgeHeatmap(
             }
 
             // Legend: Less [][][][] More
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(3.dp)
-            ) {
-                Text(text = "Less", fontSize = 9.sp, color = onSurfaceVariant.copy(alpha = 0.5f))
-                Spacer(modifier = Modifier.width(2.dp))
-                Box(modifier = Modifier.size(9.dp).clip(RoundedCornerShape(2.dp)).background(emptyCellColor))
-                Box(modifier = Modifier.size(9.dp).clip(RoundedCornerShape(2.dp)).background(primaryColor.copy(alpha = 0.35f)))
-                Box(modifier = Modifier.size(9.dp).clip(RoundedCornerShape(2.dp)).background(primaryColor.copy(alpha = 0.60f)))
-                Box(modifier = Modifier.size(9.dp).clip(RoundedCornerShape(2.dp)).background(primaryColor.copy(alpha = 0.85f)))
-                Box(modifier = Modifier.size(9.dp).clip(RoundedCornerShape(2.dp)).background(primaryColor))
-                Spacer(modifier = Modifier.width(2.dp))
-                Text(text = "More", fontSize = 9.sp, color = onSurfaceVariant.copy(alpha = 0.5f))
-            }
+            HeatmapLegend(primaryColor, emptyCellColor, onSurfaceVariant.copy(alpha = 0.5f))
         }
+        }
+    }
+}
+
+/** Count and streak stay together; the legend wraps as one item when space is short. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun CompactHeatmapSummary(
+    savedCount: Int,
+    longestStreak: Int,
+    primaryColor: Color = MaterialTheme.colorScheme.primary,
+    emptyColor: Color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+    modifier: Modifier = Modifier
+) {
+    val foreground = MaterialTheme.colorScheme.onSurfaceVariant
+    val numberFormat = NumberFormat.getInstance()
+    val savedDescription = pluralStringResource(R.plurals.settings_recent_saved_count, savedCount, numberFormat.format(savedCount))
+    val streakDescription = pluralStringResource(R.plurals.settings_activity_streak, longestStreak, numberFormat.format(longestStreak))
+    FlowRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Row(
+            modifier = Modifier.heightIn(min = 24.dp).testTag("heatmap_summary_stats"),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                pluralStringResource(R.plurals.settings_recent_saved_compact, savedCount, numberFormat.format(savedCount)),
+                style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, color = foreground,
+                modifier = Modifier.clearAndSetSemantics { contentDescription = savedDescription }
+            )
+            Box(Modifier.size(2.dp).background(foreground.copy(alpha = 0.5f), CircleShape))
+            Text(
+                pluralStringResource(R.plurals.settings_activity_streak_compact, longestStreak, numberFormat.format(longestStreak)),
+                style = MaterialTheme.typography.bodySmall, color = foreground,
+                modifier = Modifier.clearAndSetSemantics { contentDescription = streakDescription }
+            )
+        }
+        HeatmapLegend(primaryColor, emptyColor, foreground, Modifier.testTag("heatmap_summary_legend"), compact = true)
+    }
+}
+
+@Composable
+private fun HeatmapLegend(primary: Color, empty: Color, foreground: Color, modifier: Modifier = Modifier, compact: Boolean = false) {
+    val labelStyle = if (compact) MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, lineHeight = 16.sp) else MaterialTheme.typography.bodyLarge.copy(fontSize = 9.sp)
+    Row(modifier.then(if (compact) Modifier.heightIn(min = 24.dp) else Modifier), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(stringResource(R.string.settings_heatmap_less), style = labelStyle, color = foreground)
+        Spacer(Modifier.width(2.dp))
+        listOf(empty, primary.copy(alpha = 0.35f), primary.copy(alpha = 0.60f), primary.copy(alpha = 0.85f), primary).forEach {
+            Box(Modifier.size(9.dp).clip(RoundedCornerShape(2.dp)).background(it))
+        }
+        Spacer(Modifier.width(2.dp))
+        Text(stringResource(R.string.settings_heatmap_more), style = labelStyle, color = foreground)
     }
 }
 

@@ -21,116 +21,165 @@ package com.example.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.R
 import com.example.ui.components.CollapsibleCommonTopBar
 import com.example.ui.components.ExpressiveSettingsGroup
+import com.example.ui.components.ExpressiveSettingsNavigationItem
 import com.example.ui.components.ExpressiveSettingsSelectorItem
 import com.example.ui.components.ExpressiveSettingsSwitchItem
-import com.example.ui.components.SettingsSubsectionHeader
+import com.example.ui.components.SettingsChoice
+import com.example.ui.components.SettingsChoiceSheet
+import com.example.ui.components.SettingsGroupLabel
+import com.example.ui.components.SettingsIconBadge
+import com.example.ui.components.connectedPillShape
 import com.example.ui.components.rememberCollapsibleTopBarState
 import com.example.ui.viewmodel.CobaltViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArchiveOrganizationSettingsScreen(
     viewModel: CobaltViewModel,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isFolderRankingEnabled by viewModel.settingsRepository.isFolderRankingEnabled.collectAsState()
-    val profileArchiveStyle by viewModel.settingsRepository.profileArchiveStyle.collectAsState()
+    val repository = viewModel.settingsRepository
+    val folderSuggestionsEnabled by repository.isFolderRankingEnabled.collectAsState()
+    val archiveStyle by repository.profileArchiveStyle.collectAsState()
 
-    val lazyListState = rememberLazyListState()
-    val topBarState = rememberCollapsibleTopBarState(lazyListState, maxHeight = 160.dp)
-    val density = LocalDensity.current
+    NotesAndFoldersSettingsContent(
+        folderSuggestionsEnabled = folderSuggestionsEnabled,
+        archiveStyle = archiveStyle,
+        onFolderSuggestionsChanged = repository::setFolderRankingEnabled,
+        onArchiveStyleChanged = repository::setProfileArchiveStyle,
+        onNavigateBack = onNavigateBack,
+        modifier = modifier
+    )
+}
+
+/** Uses the existing Settings route and top bar; navigation owns predictive Back. */
+@Composable
+internal fun NotesAndFoldersSettingsContent(
+    folderSuggestionsEnabled: Boolean,
+    archiveStyle: String,
+    onFolderSuggestionsChanged: (Boolean) -> Unit,
+    onArchiveStyleChanged: (String) -> Unit,
+    onNavigateBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showSuggestionsHelp by rememberSaveable { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val topBarState = rememberCollapsibleTopBarState(listState, maxHeight = 160.dp)
+    val topPadding = with(LocalDensity.current) { topBarState.heightPx.toDp() }
+    val bottomPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val archiveTitle = stringResource(R.string.settings_notes_archive_view)
+    val archiveDescription = stringResource(R.string.settings_notes_archive_sheet_description)
+    val archiveChoices = listOf(
+        SettingsChoice(
+            "heatmap", stringResource(R.string.settings_archive_heatmap_option),
+            stringResource(R.string.settings_notes_archive_heatmap_description), R.drawable.ic_archive_heatmap
+        ),
+        SettingsChoice(
+            "pills", stringResource(R.string.settings_archive_categories_option),
+            stringResource(R.string.settings_notes_archive_categories_description), R.drawable.ic_archive_categories
+        )
+    )
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
+        modifier.fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .nestedScroll(topBarState.nestedScrollConnection)
     ) {
-        val currentTopBarHeightDp = with(density) { topBarState.heightPx.toDp() }
-        val bottomNavPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-
         LazyColumn(
-            state = lazyListState,
+            state = listState,
             contentPadding = PaddingValues(
-                top = currentTopBarHeightDp + 12.dp,
-                start = 16.dp,
-                end = 16.dp,
-                bottom = bottomNavPadding + 32.dp
+                top = topPadding + 12.dp,
+                start = 20.dp,
+                end = 20.dp,
+                bottom = bottomPadding + 24.dp
             ),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-            modifier = Modifier.fillMaxSize()
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+            modifier = Modifier.fillMaxSize().testTag("notes_folders_settings_list")
         ) {
-            // Subsection 1: Smart Folder Ranking
-            item {
-                SettingsSubsectionHeader(
-                    title = "Smart Folder Ranking",
-                    description = "Prioritize frequently used folders in capture rows and dialogs.",
-                    tooltipText = "When enabled, folders in capture rows and move dialogs are dynamically sorted based on your recent activity, folder assignment frequency, and content affinity."
-                )
-
-                ExpressiveSettingsGroup {
-                    ExpressiveSettingsSwitchItem(
-                        title = "Smart Folder Ranking",
-                        subtitle = "Adaptive suggestions & usage-based sorting",
-                        checked = isFolderRankingEnabled,
-                        onCheckedChange = { viewModel.settingsRepository.setFolderRankingEnabled(it) },
-                        shape = RoundedCornerShape(24.dp)
-                    )
+            item(key = "folder_suggestions") {
+                Column {
+                    SettingsGroupLabel(stringResource(R.string.settings_folder_suggestions))
+                    FolderOrderPreview(folderSuggestionsEnabled)
+                    Spacer(Modifier.height(12.dp))
+                    ExpressiveSettingsGroup {
+                        ExpressiveSettingsSwitchItem(
+                            title = stringResource(R.string.settings_use_folder_suggestions),
+                            subtitle = stringResource(R.string.settings_folder_suggestions_description),
+                            checked = folderSuggestionsEnabled,
+                            onCheckedChange = onFolderSuggestionsChanged,
+                            shape = connectedPillShape(0, 2), compact = true
+                        )
+                        ExpressiveSettingsNavigationItem(
+                            title = stringResource(R.string.settings_folder_suggestions_how),
+                            subtitle = stringResource(R.string.settings_folder_suggestions_how_summary),
+                            leadingIcon = { SettingsIconBadge(R.drawable.ic_custom_info) },
+                            onClick = { showSuggestionsHelp = true },
+                            shape = connectedPillShape(1, 2), compact = true
+                        )
+                    }
                 }
             }
-
-            // Subsection 2: Profile Archive Display Style
-            item {
-                SettingsSubsectionHeader(
-                    title = "Profile Archive Display Style",
-                    description = "Choose how your archive is visualised on the profile screen.",
-                    tooltipText = "Switch between category counter tiles and an interactive GitHub-style contribution heatmap."
-                )
-
-                val archiveStyleOptions = mapOf(
-                    "pills" to "Category Piles Grid",
-                    "heatmap" to "GitHub-Style Activity Heatmap"
-                )
-
-                ExpressiveSettingsGroup {
+            item(key = "settings_archive") {
+                Column {
+                    SettingsGroupLabel(stringResource(R.string.settings_notes_archive_section))
                     ExpressiveSettingsSelectorItem(
-                        title = "Archive Display Style",
-                        description = if (profileArchiveStyle == "heatmap") "GitHub-Style Activity Heatmap" else "Category Piles Grid",
-                        options = archiveStyleOptions,
-                        selectedKey = profileArchiveStyle,
-                        onSelectionChanged = { viewModel.settingsRepository.setProfileArchiveStyle(it) },
-                        shape = RoundedCornerShape(24.dp)
+                        title = archiveTitle,
+                        description = stringResource(R.string.settings_notes_archive_location),
+                        options = archiveChoices.associate { it.key to it.label },
+                        selectedKey = archiveStyle,
+                        onSelectionChanged = onArchiveStyleChanged,
+                        leadingIcon = {
+                            SettingsIconBadge(if (archiveStyle == "heatmap") R.drawable.ic_archive_heatmap else R.drawable.ic_archive_categories)
+                        },
+                        shape = RoundedCornerShape(24.dp), compact = true,
+                        selectedValueInDescription = true,
+                        sheetContent = { dismiss ->
+                            SettingsChoiceSheet(
+                                archiveTitle, archiveDescription, archiveChoices, archiveStyle,
+                                onArchiveStyleChanged, dismiss
+                            )
+                        }
                     )
                 }
             }
         }
 
         CollapsibleCommonTopBar(
-            title = "Archive & Folders",
-            subtitle = "Smart folder ranking & activity style",
+            title = stringResource(R.string.settings_notes_folders),
+            subtitle = stringResource(R.string.settings_notes_folders_subtitle),
             collapseFraction = topBarState.collapseFraction,
-            headerHeight = currentTopBarHeightDp,
+            headerHeight = topPadding,
             onBackClick = onNavigateBack
         )
+    }
+    if (showSuggestionsHelp) {
+        FolderSuggestionsHelpSheet(onDismiss = { showSuggestionsHelp = false })
     }
 }
